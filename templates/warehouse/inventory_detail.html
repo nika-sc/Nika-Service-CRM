@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Инвентаризация: {{ inventory.name }} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title"><i class="fas fa-clipboard-check me-2"></i>{{ inventory.name }}</h3>
+                <div>
+                    {% if inventory.status == 'draft' %}
+                    <button class="btn btn-success" onclick="completeInventory({{ inventory.id }})">
+                        <i class="fas fa-check me-1"></i>Завершить инвентаризацию
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('warehouse.inventory_list') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Название:</th>
+                                <td>{{ inventory.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Дата:</th>
+                                <td>{{ inventory.inventory_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>Статус:</th>
+                                <td>
+                                    {% if inventory.status == 'draft' %}
+                                    <span class="badge bg-secondary">Черновик</span>
+                                    {% elif inventory.status == 'completed' %}
+                                    <span class="badge bg-success">Завершена</span>
+                                    {% elif inventory.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Отменена</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if inventory.completed_at %}
+                            <tr>
+                                <th>Завершена:</th>
+                                <td>{{ inventory.completed_at }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Создал:</th>
+                                <td>{{ inventory.created_by_username or '-' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        {% if inventory.notes %}
+                        <h5>Примечания:</h5>
+                        <p>{{ inventory.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <h5 class="mb-3">Позиции инвентаризации</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Артикул</th>
+                                <th>По складу</th>
+                                <th>Фактически</th>
+                                <th>Разница</th>
+                                <th>Примечания</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in inventory.get('items', []) %}
+                            <tr>
+                                <td>{{ item.part_name }}</td>
+                                <td>{{ item.part_number }}</td>
+                                <td>{{ item.stock_quantity }}</td>
+                                <td>{{ item.actual_quantity }}</td>
+                                <td>
+                                    {% if item.difference > 0 %}
+                                    <span class="text-success">+{{ item.difference }}</span>
+                                    {% elif item.difference < 0 %}
+                                    <span class="text-danger">{{ item.difference }}</span>
+                                    {% else %}
+                                    <span>0</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Позиции не найдены</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function completeInventory(inventoryId) {
+    if (!confirm('Завершить инвентаризацию? Это применит корректировки остатков товаров. Отменить действие будет невозможно.')) {
+        return;
+    }
+    
+    fetch(`/warehouse/inventory/${inventoryId}/complete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Инвентаризация успешно завершена. Остатки товаров обновлены.');
+            window.location.reload();
+        } else {
+            alert(data.error || 'Ошибка при завершении инвентаризации');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при завершении инвентаризации');
+    });
+}
+</script>
+{% endblock %}
+

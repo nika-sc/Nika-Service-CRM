@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Остатки на складе — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter me-2"></i>Фильтры</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="mb-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ search_query }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="category" class="form-select">
+                                <option value="">Все категории</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="low_stock" value="1" {% if low_stock_only %}checked{% endif %}>
+                                <label class="form-check-label">Низкий остаток</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">Поиск</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-boxes me-2"></i>Список товаров</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Артикул</th>
+                                <th>Категория</th>
+                                <th>Остаток</th>
+                                <th>Мин. остаток</th>
+                                <th>Розничная цена</th>
+                                <th>Закупочная цена</th>
+                                <th>Маржа</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr {% if item.is_low_stock %}class="table-warning"{% endif %}>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.part_number or '-' }}</td>
+                                <td>{{ item.category or '-' }}</td>
+                                <td>{{ item.stock_quantity }}</td>
+                                <td>{{ item.min_quantity }}</td>
+                                <td>{{ item.retail_price or 0 }} ₽</td>
+                                <td>{{ item.purchase_price or 0 }} ₽</td>
+                                <td>{{ item.margin or 0 }} ₽</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Товары не найдены</h5>
+                                        <p>Попробуйте изменить параметры поиска.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if pages > 1 %}
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page - 1 }}&q={{ search_query }}&category={{ category }}">Предыдущая</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link">{{ page }} / {{ pages }}</span></li>
+                        {% if page < pages %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}&q={{ search_query }}&category={{ category }}">Следующая</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

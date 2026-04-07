@@ -1,0 +1,87 @@
+<!-- Модальное окно: детали заявки -->
+<div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white rounded-top">
+                <h5 class="modal-title" id="orderModalLabel">
+                    <i class="fas fa-file-invoice me-2"></i>Заявка <span id="modalOrderId">—</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="orderModalLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Загрузка...</p>
+                </div>
+                <div id="orderModalContent" class="d-none">
+                    <div class="p-4">
+                        <div class="card mb-3 border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-laptop me-1"></i> Устройство</h6>
+                                <p id="modalDevice" class="card-text mb-0">—</p>
+                                <p id="modalModel" class="card-text text-muted small mb-0 mt-1">—</p>
+                            </div>
+                        </div>
+                        <div class="card mb-3 border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-clipboard-list me-1"></i> Описание / Симптомы</h6>
+                                <p id="modalSymptoms" class="card-text mb-2">—</p>
+                                <h6 class="card-subtitle mb-2 text-muted small"><i class="fas fa-eye me-1"></i> Внешний вид</h6>
+                                <p id="modalAppearance" class="card-text mb-0">—</p>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="card h-100 border-0 bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-tools me-1"></i> Услуги</h6>
+                                        <div id="modalServices" class="small">—</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100 border-0 bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-cogs me-1"></i> Запчасти</h6>
+                                        <div id="modalParts" class="small">—</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mb-3 border-success">
+                            <div class="card-body py-3">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="text-muted small">Сумма</div>
+                                        <strong id="modalTotal">—</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-muted small">Оплачено</div>
+                                        <strong id="modalPaid" class="text-success">—</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-muted small">К оплате</div>
+                                        <strong id="modalDebt" class="text-danger">—</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="card-subtitle mb-0 text-muted"><i class="fas fa-credit-card me-1"></i> Платежи</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnPrintReceipt">
+                                        <i class="fas fa-print me-1"></i> Печать чека
+                                    </button>
+                                </div>
+                                <div id="modalPayments" class="small">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="orderModalError" class="d-none alert alert-danger m-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="printReceiptArea" class="d-none" style="position: absolute; left: -9999px;"></div>

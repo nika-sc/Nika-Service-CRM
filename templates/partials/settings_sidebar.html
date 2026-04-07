@@ -1,0 +1,90 @@
+<!-- Боковое меню настроек -->
+<aside class="settings-sidebar">
+    <ul class="settings-menu" id="settingsMenu" role="tablist">
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' %} active{% endif %}" href="{{ url_for('main.settings') }}">
+                <i class="fas fa-cog"></i>
+                <span>Общие настройки</span>
+            </a>
+        </li>
+        {% if has_permission('manage_statuses') %}
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if '/settings/statuses' in request.path %} active{% endif %}" href="{{ url_for('statuses_page.statuses_settings_page') }}">
+                <i class="fas fa-tags"></i>
+                <span>Статусы заявок</span>
+            </a>
+        </li>
+        {% endif %}
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#print-templates' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='print-templates') }}">
+                <i class="fas fa-print"></i>
+                <span>Формы для печати</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link" href="{{ url_for('finance.categories') }}">
+                <i class="fas fa-list-alt"></i>
+                <span>Статьи доходов и расходов</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#device-data' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='device-data') }}">
+                <i class="fas fa-laptop"></i>
+                <span>Данные об устройстве</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#services' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='services') }}">
+                <i class="fas fa-cogs"></i>
+                <span>Услуги</span>
+            </a>
+        </li>
+        {% if has_permission('manage_users') %}
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if '/settings/employees' in request.path %} active{% endif %}" href="{{ url_for('main.employees_page') }}">
+                <i class="fas fa-users"></i>
+                <span>Сотрудники</span>
+            </a>
+        </li>
+        {% endif %}
+        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if '/settings/user-permissions' in request.path %} active{% endif %}" href="{{ url_for('main.user_permissions_page') }}">
+                <i class="fas fa-user-shield"></i>
+                <span>Права пользователей</span>
+            </a>
+        </li>
+        {% endif %}
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#permissions' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='permissions') }}">
+                <i class="fas fa-key"></i>
+                <span>Права доступа</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#roles' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='roles') }}">
+                <i class="fas fa-user-shield"></i>
+                <span>Роли</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#notifications' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='notifications') }}">
+                <i class="fas fa-bell"></i>
+                <span>Уведомления сотрудникам</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#client-notifications' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='client-notifications') }}">
+                <i class="fas fa-user-check"></i>
+                <span>Уведомления клиентам</span>
+            </a>
+        </li>
+        <li class="settings-menu-item">
+            <a class="settings-menu-link{% if request.path == '/settings' and '#director-notifications' in request.url %} active{% endif %}" href="{{ url_for('main.settings', _anchor='director-notifications') }}">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Уведомления директору</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+

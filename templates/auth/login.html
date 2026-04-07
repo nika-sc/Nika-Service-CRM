@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Вход в систему — Nika CRM</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    
+    <!-- Font Awesome 7 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <main class="container" role="main">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card login-card">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-tools fa-3x text-primary mb-3"></i>
+                            <h2 class="card-title">Nika CRM</h2>
+                            <p class="text-muted">Войдите в систему</p>
+                        </div>
+                        
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <form method="POST" action="{{ url_for('main.login') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Имя пользователя
+                                </label>
+                                <input type="text" class="form-control" id="username" name="username" required autofocus>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>Пароль
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" value="1">
+                                <label class="form-check-label" for="remember_me">Запомнить меня</label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Войти
+                                </button>
+                            </div>
+                        </form>
+                        
+                        {% if config.DEBUG %}
+                        <div class="mt-4 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                По умолчанию: admin / admin
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="text-center text-muted py-3" style="position: fixed; bottom: 0; left: 0; right: 0; font-size: 0.85rem;">
+        Nika CRM &copy; 2026
+    </footer>
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>
+

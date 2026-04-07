@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+
+{% block title %}Касса - Nika CRM{% endblock %}
+
+{% block styles %}
+<style>
+    .stat-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .income-card { border-left: 4px solid #28a745; }
+    .expense-card { border-left: 4px solid #dc3545; }
+    .balance-card { border-left: 4px solid #007bff; }
+    
+    .transaction-row {
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    .transaction-row:hover {
+        background: var(--bs-light);
+    }
+    .transaction-row.income { border-left-color: #28a745; }
+    .transaction-row.expense { border-left-color: #dc3545; }
+    
+    .category-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+    .category-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .quick-filter-btn {
+        border-radius: 20px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .payment-method-icon {
+        width: 24px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        <!-- Боковое меню кассы -->
+        {% include 'finance/_sidebar_menu.html' %}
+        
+        <!-- Основной контент -->
+        <div class="page-content">
+<div class="py-4">
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-cash-register text-primary me-2"></i>Касса</h4>
+            <p class="text-muted mb-0">Учет доходов и расходов</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
+                <i class="fas fa-plus me-1"></i> Приход
+            </button>
+            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                <i class="fas fa-minus me-1"></i> Расход
+            </button>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transferBetweenMethodsModal">
+                <i class="fas fa-exchange-alt me-1"></i> Перевод между кассами
+            </button>
+            <a href="{{ url_for('finance.categories') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-cog me-1"></i> Статьи
+            </a>
+        </div>
+    </div>
+    
+    <!-- Фильтр периода -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-3 align-items-end">
+                {% include 'partials/period_filter.html' %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- Статистика: порядок — Итоговый баланс, Остаток на начало, Приход, Расход -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Итоговый баланс -->
+        <div class="col-md-3">
+            <div class="card stat-card balance-card h-100 {% if summary.balance < 0 %}border-danger{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1">
+                                <strong>Итоговый баланс</strong>
+                                {% if summary.balance < 0 %}
+                                <span class="badge bg-danger ms-2">
+                                    <i class="fas fa-exclamation-triangle"></i> Отрицательный
+                                </span>
+                                {% endif %}
+                            </p>
+                            <div class="stat-value {% if summary.balance >= 0 %}text-primary{% else %}text-danger fw-bold{% endif %}">
+                                {{ "%.2f"|format(summary.balance) }} ₽
+                            </div>
+                            <p class="small text-muted mb-0 mt-1">На конец периода: остаток на начало + приход − расход</p>
+                        </div>
+                        <div class="rounded-circle {% if summary.balance >= 0 %}bg-primary{% else %}bg-danger{% endif %} bg-opacity-10 p-3 flex-shrink-0">
+                            <i class="fas {% if summary.balance >= 0 %}fa-wallet text-primary{% else %}fa-exclamation-circle text-danger{% endif %} fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 2. Остаток на начало -->
+        <div class="col-md-3">
+            <div class="card stat-card h-100" style="border-left: 4px solid #6c757d;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1"><strong>Остаток на начало</strong></p>
+                            <div class="stat-value text-secondary">{{ "%.2f"|format(summary.opening_balance) }} ₽</div>
+                            <p class="small text-muted mb-0 mt-1">Сумма в кассе на дату начала выбранного периода</p>
+                        </div>
+                        <div class="rounded-circle bg-secondary bg-opacity-10 p-3 flex-shrink-0">
+                            <i class="fas fa-calendar-day text-secondary fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 3. Приход за период -->
+        <div class="col-md-3">
+            <div class="card stat-card income-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1"><strong>Приход за период</strong></p>
+                            <div class="stat-value text-success">{{ "%.2f"|format(summary.total_income) }} ₽</div>
+                            <p class="small text-muted mb-0 mt-1">Все поступления за выбранный период</p>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3 flex-shrink-0">
+                            <i class="fas fa-arrow-down text-success fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 4. Расход за период -->
+        <div class="col-md-3">
+            <div class="card stat-card expense-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1"><strong>Расход за период</strong></p>
+                            <div class="stat-value text-danger">{{ "%.2f"|format(summary.total_expense) }} ₽</div>
+                            <p class="small text-muted mb-0 mt-1">Все списания за выбранный период</p>
+                        </div>
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-3 flex-shrink-0">
+                            <i class="fas fa-arrow-up text-danger fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- По способам оплаты -->
+    <div class="row g-3 mb-4">
+        {% for method, totals in summary.by_payment_method.items() %}
+        {% set balance_method = (summary.balance_by_method or {}).get(method, 0) %}
+        {% set open_method = (summary.opening_balance_by_method or {}).get(method, 0) %}
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm h-100 {% if method == 'cash' and balance_method < 0 %}border-warning{% endif %}">
+                <div class="card-body text-center py-3">
+                    {% if method == 'cash' %}
+                    <i class="fas fa-money-bill-wave text-success fa-2x mb-2"></i>
+                    <p class="mb-1 small text-muted">{{ payment_method_settings.cash_label }}</p>
+                    {% elif method == 'transfer' %}
+                    <i class="fas fa-exchange-alt text-info fa-2x mb-2"></i>
+                    <p class="mb-1 small text-muted">{{ payment_method_settings.transfer_label }}</p>
+                    {% elif method == 'card' %}
+                    <i class="fas fa-credit-card text-primary fa-2x mb-2"></i>
+                    <p class="mb-1 small text-muted">{{ payment_method_settings.card_label or 'Карта' }}</p>
+                    {% else %}
+                    <i class="fas fa-question-circle text-secondary fa-2x mb-2"></i>
+                    <p class="mb-1 small text-muted">{{ payment_method_settings.card_label or method or 'Прочее' }}</p>
+                    {% endif %}
+                    <p class="small text-muted mb-1 mb-md-2">За выбранный период (без переноса с прошлых дней):</p>
+                    <div>
+                        <span class="text-success">+{{ "%.2f"|format(totals.income) }}</span>
+                        <span class="mx-1">/</span>
+                        <span class="text-danger">-{{ "%.2f"|format(totals.expense) }}</span>
+                    </div>
+                    <p class="small text-muted mb-0 mt-2">Остаток на конец периода: <strong class="{% if balance_method >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ "%.2f"|format(balance_method) }} ₽</strong></p>
+                    {% if open_method != 0 %}
+                    <p class="small text-muted mb-0 mt-1">Как посчитано: {{ "%.2f"|format(open_method) }} ₽ на начало + {{ "%.2f"|format(totals.income) }} ₽ приход − {{ "%.2f"|format(totals.expense) }} ₽ расход = <strong>{{ "%.2f"|format(balance_method) }} ₽</strong></p>
+                    {% endif %}
+                    {% if method == 'cash' and balance_method < 0 %}
+                    <p class="small text-warning mb-0 mt-1 fw-bold"><i class="fas fa-hand-holding-usd"></i> Доложить в наличку: <strong>{{ "%.2f"|format(-balance_method) }} ₽</strong><br><span class="text-muted">чтобы покрыть расход по наличным (зарплата и др.)</span></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Таблица транзакций -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-list me-2"></i>Операции</h6>
+            <div class="d-flex gap-2">
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=income" 
+                   class="btn btn-sm {% if selected_type == 'income' %}btn-success{% else %}btn-outline-success{% endif %} quick-filter-btn">
+                    Приходы
+                </a>
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=expense"
+                   class="btn btn-sm {% if selected_type == 'expense' %}btn-danger{% else %}btn-outline-danger{% endif %} quick-filter-btn">
+                    Расходы
+                </a>
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}"
+                   class="btn btn-sm {% if not selected_type %}btn-secondary{% else %}btn-outline-secondary{% endif %} quick-filter-btn">
+                    Все
+                </a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 140px;">Дата и время</th>
+                        <th>Описание</th>
+                        <th>Статья</th>
+                        <th style="width: 80px;">Способ</th>
+                        <th class="text-end" style="width: 120px;">Сумма</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr class="transaction-row {{ t.transaction_type }}">
+                        <td>
+                            <small>{{ (t.created_at or t.transaction_date)|format_date(true) }}</small>
+                        </td>
+                        <td>
+                            {% if t.order_uuid and t.order_id and t.description and t.order_uuid in (t.description or '') %}
+                                {{ (t.description or '')|replace(t.order_uuid, t.order_id) }}
+                            {% else %}
+                                {{ t.description or '-' }}
+                            {% endif %}
+                            {% if t.order_id %}
+                            <a href="{{ url_for('orders.order_detail', order_id=t.order_uuid or t.order_id) }}" class="badge bg-info text-decoration-none me-1">
+                                Заявка #{{ t.order_id }}
+                            </a>
+                            {% endif %}
+                            {% if t.shop_sale_id %}
+                            <a href="{{ url_for('shop.sale_detail', sale_id=t.shop_sale_id) }}" class="badge bg-warning text-decoration-none me-1">
+                                Магазин #{{ t.shop_sale_id }}
+                            </a>
+                            {% endif %}
+                            {% if t.salary_employee_id and t.salary_employee_role %}
+                            <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=t.salary_employee_id, role=t.salary_employee_role) }}" class="badge bg-primary text-decoration-none me-1">
+                                <i class="fas fa-user me-1"></i>{{ t.salary_employee_name or ('Мастер' if t.salary_employee_role == 'master' else 'Менеджер') }} #{{ t.salary_employee_id }}
+                            </a>
+                            {% endif %}
+                            {% if t.payment_id %}
+                            <a href="{{ url_for('finance.payment_detail', payment_id=t.payment_id) }}" class="badge bg-secondary text-decoration-none">Чек #{{ t.payment_id }}</a>
+                            {% else %}
+                            <span class="badge bg-secondary">Операция #{{ t.id }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="category-badge" style="background: {{ t.category_color }}20;">
+                                <span class="category-dot" style="background: {{ t.category_color }};"></span>
+                                {{ t.category_name }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="payment-method-icon">
+                                {% if t.payment_method == 'cash' %}
+                                <i class="fas fa-money-bill-wave text-success" title="{{ payment_method_settings.cash_label or 'Наличные' }}"></i>
+                                {% elif t.payment_method == 'transfer' %}
+                                <i class="fas fa-exchange-alt text-info" title="{{ payment_method_settings.transfer_label or 'Перевод' }}"></i>
+                                {% elif t.payment_method == 'card' %}
+                                <i class="fas fa-credit-card text-primary" title="{{ payment_method_settings.card_label or 'Карта' }}"></i>
+                                {% else %}
+                                <i class="fas fa-question-circle text-secondary" title="{{ payment_method_settings.cash_label or 'Наличные' }}"></i>
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if t.transaction_type == 'income' %}
+                            <span class="text-success fw-bold">+{{ "%.2f"|format(t.amount) }} ₽</span>
+                            {% else %}
+                            <span class="text-danger fw-bold">-{{ "%.2f"|format(t.amount) }} ₽</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-link text-danger p-0 delete-transaction" 
+                                    data-id="{{ t.id }}" title="Удалить">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p class="mb-0">Нет операций за выбранный период</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Добавить приход -->
+<div class="modal fade" id="addIncomeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Добавить приход</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="incomeForm">
+                <div class="modal-body">
+                    <input type="hidden" name="transaction_type" value="income">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Статья дохода *</label>
+                        <select class="form-select" name="category_id" required>
+                            <option value="">Выберите статью...</option>
+                            {% for cat in income_categories %}
+                            <option value="{{ cat.id }}" data-color="{{ cat.color }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Сумма *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Способ оплаты</label>
+                        <select class="form-select" name="payment_method">
+                            <option value="cash">{{ payment_method_settings.cash_label }}</option>
+                            <option value="transfer">{{ payment_method_settings.transfer_label }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="form-control" name="description" placeholder="Необязательно">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i>Добавить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Добавить расход -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-minus me-2"></i>Добавить расход</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="expenseForm">
+                <div class="modal-body">
+                    <input type="hidden" name="transaction_type" value="expense">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Статья расхода *</label>
+                        <select class="form-select" name="category_id" required>
+                            <option value="">Выберите статью...</option>
+                            {% for cat in expense_categories %}
+                            <option value="{{ cat.id }}" data-color="{{ cat.color }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Сумма *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Способ оплаты</label>
+                        <select class="form-select" name="payment_method">
+                            <option value="cash">{{ payment_method_settings.cash_label }}</option>
+                            <option value="transfer">{{ payment_method_settings.transfer_label }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="form-control" name="description" placeholder="Необязательно">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-check me-1"></i>Добавить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Перевод между кассами -->
+<div class="modal fade" id="transferBetweenMethodsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Перевод между кассами</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="transferBetweenMethodsForm">
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Создаётся списание с одной статьи и зачисление на другую. Итоговый баланс кассы не меняется.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Списать с *</label>
+                        <select class="form-select" name="from_method" required>
+                            <option value="transfer" selected>{{ payment_method_settings.transfer_label }}</option>
+                            <option value="cash">{{ payment_method_settings.cash_label }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Зачислить на *</label>
+                        <select class="form-select" name="to_method" required>
+                            <option value="cash" selected>{{ payment_method_settings.cash_label }}</option>
+                            <option value="transfer">{{ payment_method_settings.transfer_label }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Сумма *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required placeholder="0.00">
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примечание</label>
+                        <input type="text" class="form-control" name="description" placeholder="Необязательно">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-exchange-alt me-1"></i>Выполнить перевод
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    
+    // Обработка форм
+    ['incomeForm', 'expenseForm'].forEach(formId => {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch('/finance/api/transactions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert(result.error || 'Ошибка при добавлении');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Ошибка сети');
+                }
+            });
+        }
+    });
+
+    // Перевод между кассами
+    const transferForm = document.getElementById('transferBetweenMethodsForm');
+    if (transferForm) {
+        transferForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = {
+                from_method: formData.get('from_method'),
+                to_method: formData.get('to_method'),
+                amount: parseFloat(formData.get('amount')) || 0,
+                description: (formData.get('description') || '').trim()
+            };
+            if (data.from_method === data.to_method) {
+                alert('Выберите разные способы оплаты для списания и зачисления.');
+                return;
+            }
+            try {
+                const response = await fetch('{{ url_for("finance.api_transfer_between_methods") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message || 'Перевод выполнен.');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('transferBetweenMethodsModal'));
+                    if (modal) modal.hide();
+                    location.reload();
+                } else {
+                    alert(result.error || 'Ошибка при переводе');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка сети');
+            }
+        });
+    }
+    
+    // Удаление транзакции (отмена + сторно)
+    document.querySelectorAll('.delete-transaction').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('Отменить эту операцию? Будет создана сторно-операция для компенсации.')) return;
+            
+            const id = this.dataset.id;
+            const row = this.closest('tr');
+            
+            try {
+                console.log(`Отмена транзакции ${id}...`);
+                
+                const response = await fetch(`/finance/api/transactions/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        reason: 'Отмена через интерфейс кассы'
+                    })
+                });
+                
+                console.log(`Ответ сервера: status=${response.status}, ok=${response.ok}`);
+                
+                // Проверяем статус ответа
+                if (!response.ok) {
+                    // Пытаемся получить JSON с ошибкой
+                    let errorMsg = 'Ошибка при отмене операции';
+                    try {
+                        const errorData = await response.json();
+                        console.error('Ошибка от сервера:', errorData);
+                        errorMsg = errorData.error || errorData.message || errorMsg;
+                    } catch (e) {
+                        // Если не удалось распарсить JSON, используем статус
+                        console.error('Не удалось распарсить JSON ошибки:', e);
+                        errorMsg = `Ошибка ${response.status}: ${response.statusText}`;
+                    }
+                    alert('❌ ' + errorMsg);
+                    return;
+                }
+                
+                // Парсим успешный ответ
+                const result = await response.json();
+                console.log('Результат:', result);
+                
+                if (result.success) {
+                    // Показываем сообщение об успехе
+                    alert(result.message || 'Операция отменена. Создана сторно-операция.');
+                    // Обновляем страницу, чтобы показать сторно
+                    location.reload();
+                } else {
+                    // Показываем конкретную ошибку
+                    const errorMsg = result.error || 'Ошибка при отмене операции';
+                    console.error('Ошибка в результате:', errorMsg);
+                    alert('❌ ' + errorMsg);
+                }
+            } catch (err) {
+                console.error('Исключение при отмене операции:', err);
+                console.error('Stack:', err.stack);
+                alert('Ошибка сети при отмене операции: ' + (err.message || err.toString()));
+            }
+        });
+    });
+});
+</script>
+</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

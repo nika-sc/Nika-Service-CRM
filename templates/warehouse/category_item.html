@@ -1,0 +1,76 @@
+{# Рекурсивный рендер дерева категорий (любой глубины). #}
+{% set is_active = (category == cat.name) %}
+{% set depth = depth|default(0) %}
+{% set has_children = cat.children|length > 0 if cat.children else false %}
+{% set category_id = 'cat-' ~ cat.id %}
+
+<div class="category-tree-item" data-depth="{{ depth }}" data-category-id="{{ cat.id }}">
+    <div class="category-item-wrapper d-flex align-items-center{% if is_active %} active{% endif %}">
+        {# Индикатор уровня вложенности #}
+        <div class="category-indent" style="width: {{ depth * 20 }}px;">
+            {% if depth > 0 %}
+                <div class="category-connector"></div>
+            {% endif %}
+        </div>
+        
+        {# Кнопка сворачивания/разворачивания #}
+        {% if has_children %}
+        <button type="button" class="category-toggle btn btn-link p-0 me-1" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#{{ category_id }}-children"
+                aria-expanded="true"
+                style="width: 20px; height: 20px; line-height: 1;">
+            <i class="fas fa-chevron-down category-chevron"></i>
+        </button>
+        {% else %}
+        <div style="width: 20px;"></div>
+        {% endif %}
+        
+        {# Ссылка на категорию #}
+        <a href="{{ url_for('warehouse.parts_list', category=cat.name) }}"
+           class="category-link flex-grow-1 d-flex align-items-center py-2 px-2 rounded{% if is_active %} active{% endif %}">
+            <i class="fas {% if has_children %}fa-folder{% else %}fa-folder-open{% endif %} me-2 category-icon"></i>
+            <span class="category-name">{{ cat.name }}</span>
+            {% if has_children %}
+                <span class="badge bg-secondary ms-2 category-count">{{ cat.children|length }}</span>
+            {% endif %}
+        </a>
+
+        {# Кнопки действий (показываются при hover) #}
+        <div class="category-actions d-flex gap-1 ms-2">
+            <button type="button" class="btn btn-sm btn-success category-action-btn"
+                    data-cat-id="{{ cat.id }}"
+                    onclick="handleAddCategory(event, this);"
+                    title="Добавить подкатегорию">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-warning category-action-btn"
+                    data-cat-id="{{ cat.id }}"
+                    data-cat-name="{{ cat.name|e }}"
+                    data-cat-desc="{{ (cat.description or '')|e }}"
+                    data-cat-parent="{{ cat.parent_id if cat.parent_id is not none else '' }}"
+                    onclick="handleEditCategory(event, this);"
+                    title="Редактировать">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-danger category-action-btn"
+                    data-cat-id="{{ cat.id }}"
+                    data-cat-name="{{ cat.name|e }}"
+                    onclick="handleDeleteCategory(event, this);"
+                    title="Удалить">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    
+    {# Подкатегории (сворачиваемые) #}
+    {% if has_children %}
+    <div class="category-children collapse show ms-4" id="{{ category_id }}-children">
+        {% for child in cat.children %}
+            {% with cat=child, depth=depth+1 %}
+                {% include 'warehouse/category_item.html' %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

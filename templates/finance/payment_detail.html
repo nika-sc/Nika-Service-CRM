@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Чек #{{ payment.id }} - Nika CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt text-primary me-2"></i>Чек #{{ payment.id }}
+                    </h5>
+                    <a href="{{ url_for('reports.cash_report') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Назад
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Информация -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Дата и время</small>
+                            <strong>
+                                {% if payment.payment_date %}
+                                    {{ payment.payment_date|format_date(true) }}
+                                {% elif payment.created_at %}
+                                    {{ payment.created_at|format_date(true) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Клиент</small>
+                            <strong>
+                                {% if payment.customer_id %}
+                                    <a href="{{ url_for('customers.client_detail', client_id=payment.customer_id) }}" class="text-decoration-none">
+                                        <i class="fas fa-user me-1"></i>{{ payment.customer_name }}
+                                    </a>
+                                    {% if payment.customer_phone %}
+                                        <br><small class="text-muted">{{ payment.customer_phone }}</small>
+                                    {% endif %}
+                                {% elif payment.customer_name %}
+                                    {{ payment.customer_name }}
+                                    {% if payment.customer_phone %}
+                                        <br><small class="text-muted">{{ payment.customer_phone }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Заявка</small>
+                            <strong>
+                                {% if payment.order_uuid %}
+                                    <a href="{{ url_for('orders.order_detail', order_id=payment.order_uuid) }}" class="text-decoration-none">
+                                        <i class="fas fa-file-alt me-1"></i>Заявка #{{ payment.order_internal_id or payment.order_uuid }}
+                                    </a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        {% if payment.device_type or payment.device_id %}
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Устройство</small>
+                            <strong>
+                                {% if payment.device_id %}
+                                    <a href="{{ url_for('orders.device_history', device_id=payment.device_id) }}" class="text-decoration-none">
+                                        <i class="fas fa-laptop me-1"></i>
+                                        {{ payment.device_type }}
+                                        {% if payment.brand %}
+                                            {{ payment.brand }}
+                                        {% endif %}
+                                        {% if payment.model %}
+                                            {{ payment.model }}
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    {{ payment.device_type }}
+                                    {% if payment.brand %}
+                                        {{ payment.brand }}
+                                    {% endif %}
+                                    {% if payment.model %}
+                                        {{ payment.model }}
+                                    {% endif %}
+                                {% endif %}
+                            </strong>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Способ оплаты</small>
+                            <strong>
+                                {% if payment.payment_type == 'cash' %}
+                                <i class="fas fa-money-bill-wave text-success me-1"></i>Наличные
+                                {% elif payment.payment_type == 'card' %}
+                                <i class="fas fa-credit-card text-primary me-1"></i>Карта
+                                {% elif payment.payment_type == 'transfer' %}
+                                <i class="fas fa-exchange-alt text-info me-1"></i>Перевод
+                                {% else %}
+                                {{ payment.payment_type }}
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Создал</small>
+                            <strong>{{ payment.created_by_username or 'Система' }}</strong>
+                        </div>
+                    </div>
+                    
+                    {% if payment.comment %}
+                    <div class="alert alert-secondary">
+                        <i class="fas fa-comment me-2"></i>{{ payment.comment }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Позиции заявки (если есть) -->
+                    {% if payment.services or payment.parts %}
+                    <h6 class="mb-3"><i class="fas fa-list me-2"></i>Позиции заявки</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Наименование</th>
+                                    <th>Тип</th>
+                                    <th class="text-center">Кол-во</th>
+                                    <th class="text-end">Цена</th>
+                                    <th class="text-end">Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in payment.services %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-cog text-info me-1"></i>{{ service.name }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">Услуга</span>
+                                    </td>
+                                    <td class="text-center">{{ service.quantity }}</td>
+                                    <td class="text-end">{{ "%.2f"|format(service.price) }} ₽</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(service.total) }} ₽</td>
+                                </tr>
+                                {% endfor %}
+                                {% for part in payment.parts %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-box text-warning me-1"></i>{{ part.name }}
+                                        {% if part.part_number %}
+                                        <small class="text-muted">({{ part.part_number }})</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning">Товар</span>
+                                    </td>
+                                    <td class="text-center">{{ part.quantity }}</td>
+                                    <td class="text-end">{{ "%.2f"|format(part.price) }} ₽</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(part.total) }} ₽</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    <td colspan="4" class="text-end">Итого по заявке:</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(payment.order_total) }} ₽</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Оплата -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Сумма оплаты</h6>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <h4 class="mb-0 text-success">{{ "%.2f"|format(payment.amount) }} ₽</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Статьи доходов/расходов - Nika CRM{% endblock %}
+
+{% block styles %}
+<style>
+    .category-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .category-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        transition: background 0.2s;
+    }
+    .category-item:last-child {
+        border-bottom: none;
+    }
+    .category-item:hover {
+        background: var(--bs-light);
+    }
+    .category-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    .category-name {
+        flex: 1;
+        font-weight: 500;
+    }
+    .category-desc {
+        font-size: 0.8rem;
+        color: var(--bs-secondary);
+    }
+    .category-system {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.4rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        <!-- Боковое меню кассы -->
+        {% include 'finance/_sidebar_menu.html' %}
+        
+        <!-- Основной контент -->
+        <div class="page-content">
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-tags text-primary me-2"></i>Статьи доходов и расходов</h4>
+            <p class="text-muted mb-0">Настройка категорий для учета финансов</p>
+        </div>
+        <div>
+            <a href="{{ url_for('finance.cash') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Назад к кассе
+            </a>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Доходы -->
+        <div class="col-lg-6">
+            <div class="card category-card h-100">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-arrow-down me-2"></i>Статьи доходов</h5>
+                    <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addCategoryModal" 
+                            onclick="document.getElementById('categoryType').value='income'">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% for cat in income_categories %}
+                    <div class="category-item" data-id="{{ cat.id }}">
+                        <span class="category-color" style="background: {{ cat.color }};"></span>
+                        <div class="flex-grow-1">
+                            <div class="category-name">{{ cat.name }}</div>
+                            {% if cat.description %}
+                            <div class="category-desc">{{ cat.description }}</div>
+                            {% endif %}
+                        </div>
+                        {% if cat.is_system %}
+                        <span class="badge bg-secondary category-system me-2">Системная</span>
+                        {% else %}
+                        <button class="btn btn-sm btn-link text-warning edit-category p-1" 
+                                data-id="{{ cat.id }}" data-name="{{ cat.name }}" 
+                                data-description="{{ cat.description or '' }}" data-color="{{ cat.color }}"
+                                data-type="income" title="Редактировать">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-link text-danger delete-category p-1" 
+                                data-id="{{ cat.id }}" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">Нет статей доходов</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Расходы -->
+        <div class="col-lg-6">
+            <div class="card category-card h-100">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-arrow-up me-2"></i>Статьи расходов</h5>
+                    <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addCategoryModal"
+                            onclick="document.getElementById('categoryType').value='expense'">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% for cat in expense_categories %}
+                    <div class="category-item" data-id="{{ cat.id }}">
+                        <span class="category-color" style="background: {{ cat.color }};"></span>
+                        <div class="flex-grow-1">
+                            <div class="category-name">{{ cat.name }}</div>
+                            {% if cat.description %}
+                            <div class="category-desc">{{ cat.description }}</div>
+                            {% endif %}
+                        </div>
+                        {% if cat.is_system %}
+                        <span class="badge bg-secondary category-system me-2">Системная</span>
+                        {% else %}
+                        <button class="btn btn-sm btn-link text-warning edit-category p-1" 
+                                data-id="{{ cat.id }}" data-name="{{ cat.name }}" 
+                                data-description="{{ cat.description or '' }}" data-color="{{ cat.color }}"
+                                data-type="expense" title="Редактировать">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-link text-danger delete-category p-1" 
+                                data-id="{{ cat.id }}" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">Нет статей расходов</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления/редактирования -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalTitle">Добавить статью</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="categoryForm">
+                <div class="modal-body">
+                    <input type="hidden" id="categoryId" name="id">
+                    <input type="hidden" id="categoryType" name="type" value="expense">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Название *</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="form-control" id="categoryDescription" name="description">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Цвет</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% for color in ['#28a745', '#17a2b8', '#ffc107', '#dc3545', '#fd7e14', '#6610f2', '#20c997', '#e83e8c', '#6c757d', '#343a40'] %}
+                            <label class="color-option">
+                                <input type="radio" name="color" value="{{ color }}" class="d-none" {% if loop.first %}checked{% endif %}>
+                                <span class="color-swatch" style="background: {{ color }}; width: 32px; height: 32px; display: inline-block; border-radius: 6px; cursor: pointer; border: 2px solid transparent;"></span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-1"></i>Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+    
+    // Стиль для выбранного цвета
+    document.querySelectorAll('.color-option input').forEach(input => {
+        input.addEventListener('change', function() {
+            document.querySelectorAll('.color-swatch').forEach(s => s.style.borderColor = 'transparent');
+            this.nextElementSibling.style.borderColor = '#000';
+        });
+        if (input.checked) {
+            input.nextElementSibling.style.borderColor = '#000';
+        }
+    });
+    
+    // Редактирование
+    document.querySelectorAll('.edit-category').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('categoryModalTitle').textContent = 'Редактировать статью';
+            document.getElementById('categoryId').value = this.dataset.id;
+            document.getElementById('categoryType').value = this.dataset.type;
+            document.getElementById('categoryName').value = this.dataset.name;
+            document.getElementById('categoryDescription').value = this.dataset.description;
+            
+            const color = this.dataset.color;
+            document.querySelectorAll('.color-option input').forEach(input => {
+                input.checked = input.value === color;
+                input.nextElementSibling.style.borderColor = input.checked ? '#000' : 'transparent';
+            });
+            
+            modal.show();
+        });
+    });
+    
+    // Сброс формы при открытии для нового
+    document.getElementById('addCategoryModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('categoryModalTitle').textContent = 'Добавить статью';
+        document.getElementById('categoryForm').reset();
+        document.getElementById('categoryId').value = '';
+        document.querySelectorAll('.color-option input').forEach((input, i) => {
+            input.checked = i === 0;
+            input.nextElementSibling.style.borderColor = i === 0 ? '#000' : 'transparent';
+        });
+    });
+    
+    // Отправка формы
+    document.getElementById('categoryForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        const id = data.id;
+        delete data.id;
+        
+        const url = id ? `/finance/api/categories/${id}` : '/finance/api/categories';
+        const method = id ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.error || 'Ошибка при сохранении');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка сети');
+        }
+    });
+    
+    // Удаление
+    document.querySelectorAll('.delete-category').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('Удалить эту статью?')) return;
+            
+            const id = this.dataset.id;
+            
+            try {
+                const response = await fetch(`/finance/api/categories/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.closest('.category-item').remove();
+                } else {
+                    alert(result.message || 'Ошибка при удалении');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка сети');
+            }
+        });
+    });
+});
+</script>
+</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

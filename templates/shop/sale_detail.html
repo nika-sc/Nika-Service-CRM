@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Продажа #{{ sale.id }} - Nika CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt text-primary me-2"></i>Продажа #{{ sale.id }}
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnPrintReceipt" onclick="printSalesReceipt();" title="Печать по шаблону «Товарный чек» из настроек">
+                            <i class="fas fa-receipt me-1"></i> Товарный чек
+                        </button>
+                        {% if sale.final_amount is not none and sale.final_amount > 0 %}
+                        <button class="btn btn-outline-info btn-sm" onclick="recalculateSalary({{ sale.id }});" title="Пересчитать начисления зарплаты по этой продаже">
+                            <i class="fas fa-calculator me-1"></i> Зарплата
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-outline-warning btn-sm" onclick="refundSale({{ sale.id }});">
+                            <i class="fas fa-undo me-1"></i> Возврат
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteSale({{ sale.id }});">
+                            <i class="fas fa-trash me-1"></i> Удалить
+                        </button>
+                        <a href="{{ url_for('shop.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> Назад
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Информация -->
+                    <div class="row g-3 mb-4">
+                        {% if sale.final_amount is not none and sale.final_amount < 0 %}
+                        <div class="col-12">
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-undo me-1"></i> Это возврат по продаже
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Дата и время</small>
+                            <strong>
+                                {% if sale.created_at %}
+                                    {{ sale.created_at|format_date(true) }}
+                                {% elif sale.sale_date %}
+                                    {{ sale.sale_date|format_date(true) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Клиент</small>
+                            <strong>
+                                {% if sale.customer_full_name %}
+                                    {{ sale.customer_full_name }}
+                                    {% if sale.customer_phone %}
+                                        <br><small class="text-muted">{{ sale.customer_phone }}</small>
+                                    {% endif %}
+                                {% elif sale.customer_name %}
+                                    {{ sale.customer_name }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Заявка</small>
+                            <strong>
+                                {% if sale.order_uuid %}
+                                    <a href="{{ url_for('orders.order_detail', order_id=sale.order_uuid) }}" class="text-decoration-none">
+                                        <i class="fas fa-file-alt me-1"></i>Заявка #{{ sale.order_uuid }}
+                                    </a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Мастер</small>
+                            <strong>{{ sale.master_name or '—' }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Способ оплаты</small>
+                            <strong>
+                                {% if sale.payment_method == 'cash' %}
+                                <i class="fas fa-money-bill-wave text-success me-1"></i>Наличные
+                                {% elif sale.payment_method == 'card' %}
+                                <i class="fas fa-credit-card text-primary me-1"></i>Карта
+                                {% elif sale.payment_method == 'transfer' %}
+                                <i class="fas fa-exchange-alt text-info me-1"></i>Перевод
+                                {% else %}
+                                {{ sale.payment_method }}
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Создал</small>
+                            <strong>{{ sale.created_by_username or '—' }}</strong>
+                        </div>
+                    </div>
+                    
+                    {% if sale.comment %}
+                    <div class="alert alert-secondary">
+                        <i class="fas fa-comment me-2"></i>{{ sale.comment }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Позиции -->
+                    <h6 class="mb-3"><i class="fas fa-list me-2"></i>Позиции</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Наименование</th>
+                                    <th>Тип</th>
+                                    <th class="text-center">Кол-во</th>
+                                    <th class="text-end">Цена</th>
+                                    <th class="text-end">Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set sale_items = sale.get('items', []) %}
+                                {% for item in sale_items %}
+                                <tr>
+                                    <td>
+                                        {% if item.item_type == 'service' %}
+                                        <i class="fas fa-cog text-info me-1"></i>{{ item.service_name or 'Услуга' }}
+                                        {% else %}
+                                        <i class="fas fa-box text-warning me-1"></i>{{ item.part_name or 'Товар' }}
+                                        {% if item.part_sku %}
+                                        <small class="text-muted">({{ item.part_sku }})</small>
+                                        {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.item_type == 'service' %}
+                                        <span class="badge bg-info">Услуга</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Товар</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-end">{{ "%.2f"|format(item.price) }} ₽</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(item.total) }} ₽</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    <td colspan="4" class="text-end">Итого:</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(sale.total_amount) }} ₽</td>
+                                </tr>
+                                {% if sale.discount > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end text-danger">Скидка:</td>
+                                    <td class="text-end text-danger">-{{ "%.2f"|format(sale.discount) }} ₽</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="table-success">
+                                    <td colspan="4" class="text-end"><strong>К оплате:</strong></td>
+                                    <td class="text-end"><strong>{{ "%.2f"|format(sale.final_amount) }} ₽</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end">Оплачено:</td>
+                                    <td class="text-end">{{ "%.2f"|format(sale.paid_amount) }} ₽</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <!-- Прибыль -->
+                    {% set ns = namespace(total_cost=0) %}
+                    {% for item in sale_items %}
+                        {% if item.item_type == 'part' %}
+                            {% set ns.total_cost = ns.total_cost + (item.purchase_price or 0) * item.quantity %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set total_cost = ns.total_cost %}
+                    {% set profit = (sale.final_amount or 0) - total_cost %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <small class="text-muted">Себестоимость</small>
+                                    <h5 class="mb-0 text-danger">{{ "%.2f"|format(total_cost) }} ₽</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <small class="text-muted">Выручка</small>
+                                    <h5 class="mb-0 text-primary">{{ "%.2f"|format(sale.final_amount) }} ₽</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card {% if profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                                <div class="card-body text-center">
+                                    <small style="opacity: 0.8;">Прибыль</small>
+                                    <h5 class="mb-0">{{ "%.2f"|format(profit) }} ₽</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Скрытый блок с отрендеренным товарным чеком для печати (шаблон из настроек) #}
+<div id="salesReceiptTemplateRendered" class="d-none">
+    {{ sales_receipt_template_rendered|safe if sales_receipt_template_rendered else '' }}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function printSalesReceipt() {
+    const el = document.getElementById('salesReceiptTemplateRendered');
+    const html = el ? (el.innerHTML || '').trim() : '';
+    if (!html) {
+        alert('Шаблон «Товарный чек» не настроен. Настройте его в разделе Настройки → Шаблоны для печати заявок.');
+        return;
+    }
+    const printPageSize = '{{ settings.print_page_size|default("A4") }}';
+    const printMarginMm = Number('{{ settings.print_margin_mm if settings.print_margin_mm is not none else 3 }}') || 3;
+    const w = window.open('', '_blank', 'width=1000,height=800');
+    if (!w) {
+        alert('Разрешите всплывающие окна для печати.');
+        return;
+    }
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Товарный чек</title><style>@page{size:' + printPageSize + ';margin:' + printMarginMm + 'mm;}html,body{font-family:Arial,sans-serif;margin:0;padding:0;}body{padding:0;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #ddd;padding:6px;}</style></head><body>' + html + '</body></html>');
+    w.document.close();
+    w.focus();
+    w.print();
+}
+
+function refundSale(saleId) {
+    const reason = prompt('Укажите причину возврата (опционально):') || '';
+    if (!confirm('Выполнить возврат по продаже?')) {
+        return;
+    }
+    fetch(`/shop/api/sales/${saleId}/refund`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ reason })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Ошибка возврата: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(() => alert('Ошибка возврата'));
+}
+
+function deleteSale(saleId) {
+    const reason = prompt('Укажите причину удаления (опционально):') || '';
+    if (!confirm('Удалить продажу? Это выполнит возврат средств и товаров.')) {
+        return;
+    }
+    fetch(`/shop/api/sales/${saleId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ reason })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '{{ url_for("shop.index") }}';
+        } else {
+            alert('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(() => alert('Ошибка удаления'));
+}
+
+function recalculateSalary(saleId) {
+    if (!confirm('Пересчитать начисления зарплаты по этой продаже? Старые начисления будут заменены.')) return;
+    fetch(`/shop/api/sales/${saleId}/recalculate-salary`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Готово. Создано начислений: ' + (data.accruals_count || 0));
+            location.reload();
+        } else {
+            alert('Ошибка: ' + (data.error || 'Не удалось пересчитать'));
+        }
+    })
+    .catch(() => alert('Ошибка запроса'));
+}
+</script>
+{% endblock %}
+

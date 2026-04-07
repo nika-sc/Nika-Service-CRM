@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Вход в личный кабинет - Nika CRM</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    
+    <!-- Font Awesome 7 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header h2 {
+            color: #667eea;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-user-circle fa-3x text-primary mb-3"></i>
+            <h2>Личный кабинет</h2>
+            <p class="text-muted">Войдите для доступа к вашим заявкам</p>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+        
+        {% if needs_password_change %}
+        <div class="alert alert-warning">
+            <i class="fas fa-key me-2"></i>
+            <strong>Первый вход!</strong> Для безопасности необходимо сменить пароль.
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('customer_portal.portal_login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="change_password" value="{{ 'true' if needs_password_change else 'false' }}">
+            
+            <div class="mb-3">
+                <label for="phone" class="form-label">Телефон</label>
+                <input type="tel" class="form-control" id="phone" name="phone" 
+                       value="{{ phone or '' }}" 
+                       {% if needs_password_change %}readonly{% else %}required{% endif %} 
+                       placeholder="+7 (999) 123-45-67">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">{% if needs_password_change %}Текущий пароль{% else %}Пароль{% endif %}</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            
+            {% if needs_password_change %}
+            <div class="mb-3">
+                <label for="new_password" class="form-label">Новый пароль <span class="text-danger">*</span></label>
+                <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6">
+                <small class="form-text text-muted">Минимум 6 символов</small>
+            </div>
+            <div class="mb-3">
+                <label for="new_password_confirm" class="form-label">Подтвердите новый пароль <span class="text-danger">*</span></label>
+                <input type="password" class="form-control" id="new_password_confirm" name="new_password_confirm" required minlength="6">
+            </div>
+            {% endif %}
+            
+            <button type="submit" class="btn btn-primary w-100">
+                {% if needs_password_change %}
+                <i class="fas fa-key me-2"></i>Сменить пароль и войти
+                {% else %}
+                <i class="fas fa-sign-in-alt me-2"></i>Войти
+                {% endif %}
+            </button>
+        </form>
+        
+        {% if needs_password_change %}
+        <script>
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const newPassword = document.getElementById('new_password').value;
+                const confirmPassword = document.getElementById('new_password_confirm').value;
+                
+                if (newPassword !== confirmPassword) {
+                    e.preventDefault();
+                    alert('Пароли не совпадают!');
+                    return false;
+                }
+                
+                if (newPassword.length < 6) {
+                    e.preventDefault();
+                    alert('Новый пароль должен быть не менее 6 символов!');
+                    return false;
+                }
+            });
+        </script>
+        {% endif %}
+        
+        <div class="mt-3 text-center">
+            <small class="text-muted">
+                Нет доступа? Обратитесь в сервисный центр
+            </small>
+        </div>
+    </div>
+    
+    <footer class="text-center text-muted py-3 mt-4" style="font-size: 0.85rem;">
+        Nika CRM &copy; 2026
+    </footer>
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

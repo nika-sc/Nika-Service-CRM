@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-search me-2"></i>Результаты поиска
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="/search" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Введите запрос для поиска..." autofocus>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Поиск
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="type" value="orders" id="filterOrders" checked>
+                                <label class="form-check-label" for="filterOrders">Заявки</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="type" value="customers" id="filterCustomers" checked>
+                                <label class="form-check-label" for="filterCustomers">Клиенты</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="type" value="parts" id="filterParts" checked>
+                                <label class="form-check-label" for="filterParts">Товары</label>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    {% if query %}
+                        {% if results %}
+                            <!-- Заявки -->
+                            {% if results.orders %}
+                            <div class="mb-4">
+                                <h5><i class="fas fa-file-alt me-2"></i>Заявки ({{ results.orders|length }})</h5>
+                                <div class="list-group">
+                                    {% for order in results.orders %}
+                                    <a href="/order/{{ order.id }}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                Заявка #{{ order.id }}
+                                                <span class="badge" style="background-color: {{ order.status_color or '#6c757d' }}; color: white;">
+                                                    {{ order.status_name or 'Без статуса' }}
+                                                </span>
+                                            </h6>
+                                            <small>{{ order.created_at|format_date(true) }}</small>
+                                        </div>
+                                        <p class="mb-1"><strong>{{ order.client_name }}</strong> - {{ order.phone }}</p>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Клиенты -->
+                            {% if results.customers %}
+                            <div class="mb-4">
+                                <h5><i class="fas fa-users me-2"></i>Клиенты ({{ results.customers|length }})</h5>
+                                <div class="list-group">
+                                    {% for customer in results.customers %}
+                                    <a href="/clients/{{ customer.id }}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ customer.name }}</h6>
+                                            <small>{{ customer.created_at|format_date(true) }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ customer.phone }}{% if customer.email %} - {{ customer.email }}{% endif %}</p>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Товары -->
+                            {% if results.parts %}
+                            <div class="mb-4">
+                                <h5><i class="fas fa-box me-2"></i>Товары ({{ results.parts|length }})</h5>
+                                <div class="list-group">
+                                    {% for part in results.parts %}
+                                    <a href="/warehouse/parts/{{ part.id }}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ part.name }}</h6>
+                                            <small>{{ part.price|default(0)|round(2) }} ₽</small>
+                                        </div>
+                                        <p class="mb-1">
+                                            {% if part.article %}Артикул: {{ part.article }}{% endif %}
+                                            {% if part.category_name %} | {{ part.category_name }}{% endif %}
+                                            {% if part.stock_quantity is not none %} | Остаток: {{ part.stock_quantity }}{% endif %}
+                                        </p>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if not results.orders and not results.customers and not results.parts %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>Ничего не найдено по запросу "{{ query }}"
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>Введите запрос для поиска
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Введите запрос для поиска
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

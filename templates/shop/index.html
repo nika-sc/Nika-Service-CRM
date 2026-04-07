@@ -1,0 +1,1086 @@
+{% extends "base.html" %}
+
+{% block title %}Магазин - Nika CRM{% endblock %}
+
+{% block styles %}
+<style>
+    .period-filter {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .period-filter .btn-period {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid #e0e0e0;
+        background: #fff;
+        color: #495057;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .period-filter .btn-period:hover {
+        background: #f8f9fa;
+        border-color: #9e9e9e;
+    }
+    
+    .period-filter .btn-period.active {
+        background: #6c757d;
+        border-color: #6c757d;
+        color: #fff;
+    }
+    
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #212529;
+    }
+    
+    .sale-row {
+        transition: all 0.2s;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    
+    .sale-row:hover {
+        background: #f8f9fa;
+    }
+    
+    /* Модальное окно */
+    .modal-content {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .search-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+        outline: none;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        margin-top: 0.5rem;
+    }
+    
+    .search-result-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+        transition: all 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .cart-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .cart-item-info {
+        flex: 1;
+    }
+    
+    .cart-item-name {
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 0.25rem;
+    }
+    
+    .cart-item-type {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .cart-item-price {
+        font-weight: 700;
+        color: #198754;
+        margin: 0 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .cart-item-quantity {
+        width: 80px;
+        margin-right: 1rem;
+    }
+    
+    .cart-item-remove {
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+    
+    .cart-item-remove:hover {
+        color: #c82333;
+    }
+    
+    .total-section {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-top: 1.5rem;
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    .total-row.final {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #198754;
+        border-top: 2px solid #e9ecef;
+        padding-top: 0.75rem;
+        margin-top: 0.75rem;
+    }
+    
+    .payment-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .payment-method {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .payment-method label {
+        flex: 1;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+    }
+    
+    .payment-method input[type="radio"]:checked + label {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    .payment-method input[type="radio"] {
+        display: none;
+    }
+    
+    .customer-search-box {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .customer-search-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .customer-search-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+        outline: none;
+    }
+    
+    .customer-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1001;
+        margin-top: 0.5rem;
+    }
+    
+    .customer-result-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .customer-result-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .customer-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .customer-info {
+        flex: 1;
+    }
+    
+    .customer-name {
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .customer-phone {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .customer-link {
+        color: #0d6efd;
+        text-decoration: none;
+        font-size: 0.875rem;
+    }
+    
+    .customer-link:hover {
+        text-decoration: underline;
+    }
+    
+    .selected-customer {
+        background: #e7f1ff;
+        border: 2px solid #0d6efd;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .selected-customer-info {
+        flex: 1;
+    }
+    
+    .selected-customer-name {
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .selected-customer-phone {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .remove-customer {
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+    
+    .remove-customer:hover {
+        color: #c82333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0"><i class="fas fa-store me-2 text-muted"></i>Магазин</h2>
+        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addSaleModal">
+            <i class="fas fa-plus me-2"></i>Добавить продажу
+        </button>
+                    </div>
+                    
+    <!-- Фильтр периода -->
+    <div class="period-filter">
+        {% for preset_key, preset_name in period_presets %}
+        <a href="{{ url_for('shop.index', preset=preset_key, show_refunds=show_refunds) }}" 
+           class="btn-period{% if preset == preset_key %} active{% endif %}">
+            {{ preset_name }}
+        </a>
+        {% endfor %}
+        <div class="ms-auto d-flex gap-2 align-items-center">
+            <span class="text-muted small">Показать:</span>
+            <a href="{{ url_for('shop.index', preset=preset, show_refunds='all') }}" 
+               class="btn-period{% if show_refunds == 'all' %} active{% endif %}">
+                Все
+            </a>
+            <a href="{{ url_for('shop.index', preset=preset, show_refunds='exclude') }}" 
+               class="btn-period{% if show_refunds == 'exclude' %} active{% endif %}">
+                Только продажи
+            </a>
+            <a href="{{ url_for('shop.index', preset=preset, show_refunds='only') }}" 
+               class="btn-period{% if show_refunds == 'only' %} active{% endif %}">
+                Только возвраты
+            </a>
+        </div>
+    </div>
+                    
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-label">Продаж</div>
+            <div class="stat-value">{{ statistics.sales_count }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #198754;">
+            <div class="stat-label">Выручка</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.total_amount) }} ₽</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #ffc107;">
+            <div class="stat-label">Средний чек</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.avg_amount) }} ₽</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #dc3545;">
+            <div class="stat-label">Возвраты</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.get('refunds_amount', 0)) }} ₽</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #0d6efd;">
+            <div class="stat-label">Итого</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.get('net_amount', statistics.total_amount)) }} ₽</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #6c757d;">
+            <div class="stat-label">Скидки</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.total_discount) }} ₽</div>
+        </div>
+    </div>
+                    
+    <!-- Список продаж -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>Продажи
+                <span class="badge bg-primary ms-2">{{ sales|length }}</span>
+            </h5>
+                            </div>
+        <div class="card-body p-0">
+            {% if sales %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Клиент</th>
+                            <th>Позиций</th>
+                            <th>Сумма</th>
+                            <th>Скидка</th>
+                            <th>Итого</th>
+                            <th>Оплата</th>
+                            <th>Менеджер</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr class="sale-row" onclick="window.location.href='{{ url_for('shop.sale_detail', sale_id=sale.id) }}'">
+                            <td>{{ sale.sale_date|format_date(true) }}</td>
+                            <td>{{ sale.customer_name or '—' }}</td>
+                            <td>{{ sale.items_count or 0 }}</td>
+                            <td>{{ "%.2f"|format(sale.total_amount or 0) }} ₽</td>
+                            <td>{{ "%.2f"|format(sale.discount or 0) }} ₽</td>
+                            <td><strong>{{ "%.2f"|format(sale.final_amount or 0) }} ₽</strong></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if sale.paid_amount else 'warning' }}">
+                                    {{ sale.payment_method or 'cash' }}
+                                </span>
+                            </td>
+                            <td>{{ sale.created_by_username or '—' }}</td>
+                            <td>
+                                {% if sale.final_amount is not none and sale.final_amount < 0 %}
+                                    <span class="badge bg-warning text-dark">Возврат</span>
+                                {% else %}
+                                    <span class="badge bg-success">Продажа</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('shop.sale_detail', sale_id=sale.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); printSale({{ sale.id }});">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation(); refundSale({{ sale.id }});">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteSale({{ sale.id }});">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                                {% endfor %}
+                    </tbody>
+                </table>
+                        </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Нет продаж за выбранный период</p>
+                        </div>
+            {% endif %}
+                            </div>
+                        </div>
+                        </div>
+
+<!-- Модальное окно добавления продажи -->
+<div class="modal fade" id="addSaleModal" tabindex="-1" aria-labelledby="addSaleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSaleModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Новая продажа
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+            <div class="modal-body">
+                <!-- Поиск товаров и услуг -->
+                <div class="search-box">
+                    <input type="text" 
+                           class="form-control search-input" 
+                           id="searchInput" 
+                           placeholder="Поиск по названию или артикулу...">
+                    <div class="search-results" id="searchResults" style="display: none;"></div>
+                </div>
+                
+                <!-- Каталог: выбор вручную -->
+                <div class="mb-3">
+                    <h6 class="mb-2"><i class="fas fa-list me-2"></i>Выбор из каталога</h6>
+                    <ul class="nav nav-tabs nav-tabs-sm" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" href="#catalogServices" data-bs-toggle="tab">Услуги</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#catalogParts" data-bs-toggle="tab">Товары</a></li>
+                    </ul>
+                    <div class="tab-content border border-top-0 rounded-bottom p-2" style="max-height: 220px; overflow-y: auto;">
+                        <div class="tab-pane fade show active" id="catalogServices">
+                            <div id="catalogServicesList" class="list-group list-group-flush"></div>
+                            <div id="catalogServicesLoad" class="text-muted small py-2">Загрузка...</div>
+                        </div>
+                        <div class="tab-pane fade" id="catalogParts">
+                            <div id="catalogPartsList" class="list-group list-group-flush"></div>
+                            <div id="catalogPartsLoad" class="text-muted small py-2">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Корзина -->
+                <div id="cartItems">
+                    <p class="text-muted text-center py-3">Добавьте товары или услуги</p>
+        </div>
+        
+                <!-- Итого -->
+                <div class="total-section" id="totalSection" style="display: none;">
+                    <div class="total-row">
+                        <span>Сумма:</span>
+                        <span id="totalAmount">0.00 ₽</span>
+                </div>
+                    <div class="total-row">
+                        <span>Скидка:</span>
+                        <span id="totalDiscount">0.00 ₽</span>
+                            </div>
+                    <div class="total-row final">
+                        <span>Итого:</span>
+                        <span id="finalAmount">0.00 ₽</span>
+                            </div>
+                            </div>
+                
+                <!-- Клиент -->
+                <div class="payment-section" id="customerSection" style="display: none;">
+                    <h6 class="mb-3">
+                        <i class="fas fa-user me-2"></i>Клиент
+                    </h6>
+                    
+                    <!-- Выбранный клиент -->
+                    <div id="selectedCustomer" style="display: none;" class="selected-customer">
+                        <div class="selected-customer-info">
+                            <div class="selected-customer-name" id="selectedCustomerName"></div>
+                            <div class="selected-customer-phone" id="selectedCustomerPhone"></div>
+                                </div>
+                        <div>
+                            <a href="#" id="customerLink" class="customer-link me-2" >
+                                <i class="fas fa-external-link-alt me-1"></i>Личный кабинет
+                            </a>
+                            <i class="fas fa-times remove-customer" onclick="removeCustomer()"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Поиск клиента -->
+                    <div class="customer-search-box">
+                        <input type="text" 
+                               class="form-control customer-search-input" 
+                               id="customerSearchInput" 
+                               placeholder="Поиск клиента по имени или телефону...">
+                        <div class="customer-results" id="customerResults" style="display: none;"></div>
+                            </div>
+                        </div>
+                
+                <!-- Исполнитель -->
+                <div class="payment-section" id="executorSection" style="display: none;">
+                    <h6 class="mb-3">
+                        <i class="fas fa-user-tie me-2"></i>Исполнитель
+                    </h6>
+                    <select class="form-select" id="executorSelect">
+                        <option value="">Не выбран</option>
+                        {% for master in masters %}
+                        <option value="{{ master.id }}">{{ master.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Выберите исполнителя для начисления зарплаты</small>
+                            </div>
+                
+                <!-- Оплата -->
+                <div class="payment-section" id="paymentSection" style="display: none;">
+                    <h6 class="mb-3">Способ оплаты</h6>
+                    <div class="payment-method">
+                        {% for pm in payment_method_options %}
+                        <input type="radio" name="payment_method" id="payment_option_{{ loop.index0 }}" value="{{ pm.value|e }}" {% if loop.first %}checked{% endif %}>
+                        <label for="payment_option_{{ loop.index0 }}">
+                            <i class="fas fa-{{ 'money-bill-wave' if pm.value == 'cash' else 'university' if pm.value == 'transfer' else 'credit-card' }} me-2"></i>{{ pm.label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discountInput" class="form-label">Скидка (₽)</label>
+                        <input type="number" class="form-control" id="discountInput" value="0" min="0" step="0.01">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="commentInput" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="commentInput" rows="2" placeholder="Комментарий к продаже"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveSaleBtn" disabled>
+                    <i class="fas fa-save me-2"></i>Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let cart = [];
+    let searchTimeout;
+    let customerSearchTimeout;
+    let selectedCustomerData = null;
+    
+    function escapeHtml(text) {
+        if (text == null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+    
+    // Функция отображения результатов поиска
+    function displaySearchResults(results) {
+        const searchResults = document.getElementById('searchResults');
+        if (!searchResults) return;
+        
+        searchResults.innerHTML = results.map(item => `
+            <div class="search-result-item" onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                <div class="fw-bold">${escapeHtml(item.label)}</div>
+                <small class="text-muted">${item.type === 'service' ? 'Услуга' : 'Товар'}</small>
+                        </div>
+                    `).join('');
+        searchResults.style.display = 'block';
+    }
+    
+    // Обработчик поиска товаров и услуг (используем делегирование событий)
+    document.addEventListener('input', function(event) {
+        // Проверяем, что событие произошло в поле поиска товаров/услуг
+        if (event.target && event.target.id === 'searchInput') {
+            const searchInput = event.target;
+            const searchResults = document.getElementById('searchResults');
+            
+            if (!searchResults) {
+                console.error('Элемент searchResults не найден');
+                return;
+            }
+            
+            const query = searchInput.value.trim();
+            
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 1) {
+                searchResults.style.display = 'none';
+            return;
+        }
+        
+            console.log('Поиск:', query); // Отладка
+            
+            searchTimeout = setTimeout(() => {
+                const url = `{{ url_for('shop.api_search') }}?q=${encodeURIComponent(query)}`;
+                console.log('Запрос к:', url); // Отладка
+                
+                fetch(url)
+                    .then(response => {
+                        console.log('Ответ получен, статус:', response.status); // Отладка
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Результаты поиска:', data); // Отладка
+                        if (data.success && data.results && data.results.length > 0) {
+                            displaySearchResults(data.results);
+                } else {
+                            searchResults.innerHTML = '<div class="search-result-item text-muted">Ничего не найдено</div>';
+                            searchResults.style.display = 'block';
+                }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка поиска:', error);
+                        searchResults.innerHTML = '<div class="search-result-item text-danger">Ошибка поиска. Проверьте консоль.</div>';
+                        searchResults.style.display = 'block';
+                    });
+        }, 300);
+        }
+    });
+    
+    // Инициализация при загрузке страницы
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const cartItems = document.getElementById('cartItems');
+    const totalSection = document.getElementById('totalSection');
+    const customerSection = document.getElementById('customerSection');
+    const executorSection = document.getElementById('executorSection');
+    const paymentSection = document.getElementById('paymentSection');
+    const saveSaleBtn = document.getElementById('saveSaleBtn');
+    
+    const customerSearchInput = document.getElementById('customerSearchInput');
+    const customerResults = document.getElementById('customerResults');
+    const selectedCustomer = document.getElementById('selectedCustomer');
+    const selectedCustomerName = document.getElementById('selectedCustomerName');
+    const selectedCustomerPhone = document.getElementById('selectedCustomerPhone');
+    const customerLink = document.getElementById('customerLink');
+    
+    // Логирование при открытии модального окна для отладки
+    const addSaleModal = document.getElementById('addSaleModal');
+    if (addSaleModal) {
+        addSaleModal.addEventListener('shown.bs.modal', function() {
+            console.log('Модальное окно открыто');
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                console.log('Поле поиска найдено, готово к использованию');
+            } else {
+                console.error('Поле поиска не найдено!');
+            }
+            loadCatalog();
+        });
+    }
+    
+    function loadCatalog() {
+        fetch('{{ url_for("shop.api_catalog") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+                const servicesList = document.getElementById('catalogServicesList');
+                const servicesLoad = document.getElementById('catalogServicesLoad');
+                const partsList = document.getElementById('catalogPartsList');
+                const partsLoad = document.getElementById('catalogPartsLoad');
+                if (data.services && data.services.length > 0) {
+                    servicesLoad.style.display = 'none';
+                    servicesList.innerHTML = data.services.map(s => `
+                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2" onclick="event.preventDefault(); addToCart(${JSON.stringify(s).replace(/"/g, '&quot;')});">
+                            ${escapeHtml(s.label)}
+                        </a>
+                    `).join('');
+                } else {
+                    servicesLoad.textContent = 'Нет услуг в каталоге';
+                }
+                if (data.parts && data.parts.length > 0) {
+                    partsLoad.style.display = 'none';
+                    partsList.innerHTML = data.parts.map(p => `
+                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2" onclick="event.preventDefault(); addToCart(${JSON.stringify(p).replace(/"/g, '&quot;')});">
+                            ${escapeHtml(p.label)}
+                        </a>
+                    `).join('');
+                } else {
+                    partsLoad.textContent = 'Нет товаров в каталоге';
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки каталога:', err);
+                document.getElementById('catalogServicesLoad').textContent = 'Ошибка загрузки';
+                document.getElementById('catalogPartsLoad').textContent = 'Ошибка загрузки';
+            });
+    }
+    
+    // Добавление в корзину
+    window.addToCart = function(item) {
+        // Проверяем, есть ли уже такой товар/услуга
+        const existingIndex = cart.findIndex(cartItem => 
+            cartItem.id === item.id && cartItem.type === item.type
+        );
+        
+        if (existingIndex >= 0) {
+            cart[existingIndex].quantity += 1;
+        } else {
+        cart.push({
+            id: item.id,
+            name: item.name,
+                type: item.type,
+                price: parseFloat(item.price) || 0,
+                quantity: 1,
+                sku: item.sku || '',
+                purchase_price: item.purchase_price || 0
+            });
+        }
+        
+        updateCart();
+        
+        // Очищаем поле поиска
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        if (searchInput) searchInput.value = '';
+        if (searchResults) searchResults.style.display = 'none';
+    };
+    
+    // Обновление корзины
+    function updateCart() {
+        if (cart.length === 0) {
+            cartItems.innerHTML = '<p class="text-muted text-center py-3">Добавьте товары или услуги</p>';
+            totalSection.style.display = 'none';
+            paymentSection.style.display = 'none';
+            saveSaleBtn.disabled = true;
+            return;
+        }
+        
+        cartItems.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.name}</div>
+                    <div class="cart-item-type">
+                        ${item.type === 'service' ? '🔧 Услуга' : '📦 Товар'}
+                        ${item.sku ? ` (${item.sku})` : ''}
+                        </div>
+                    </div>
+                    <div class="cart-item-price">${(item.price * item.quantity).toFixed(2)} ₽</div>
+                <input type="number" 
+                       class="form-control cart-item-quantity" 
+                       value="${item.quantity}" 
+                       min="1" 
+                       onchange="updateQuantity(${index}, this.value)">
+                <i class="fas fa-times cart-item-remove" onclick="removeFromCart(${index})"></i>
+                </div>
+        `).join('');
+        
+        updateTotal();
+        totalSection.style.display = 'block';
+        customerSection.style.display = 'block';
+        executorSection.style.display = 'block';
+        paymentSection.style.display = 'block';
+        saveSaleBtn.disabled = false;
+    }
+    
+    // Обновление количества
+    window.updateQuantity = function(index, quantity) {
+        const qty = parseInt(quantity) || 1;
+        if (qty < 1) return;
+        cart[index].quantity = qty;
+        updateCart();
+    };
+    
+    // Удаление из корзины
+    window.removeFromCart = function(index) {
+        cart.splice(index, 1);
+        updateCart();
+    };
+    
+    // Обновление итогов
+    function updateTotal() {
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+        const final = Math.max(0, total - discount);
+        
+        document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ₽';
+        document.getElementById('totalDiscount').textContent = discount.toFixed(2) + ' ₽';
+        document.getElementById('finalAmount').textContent = final.toFixed(2) + ' ₽';
+    }
+    
+    document.getElementById('discountInput').addEventListener('input', updateTotal);
+    
+    // Сохранение продажи
+    saveSaleBtn.addEventListener('click', function() {
+        if (cart.length === 0) {
+            alert('Добавьте хотя бы одну позицию');
+            return;
+        }
+        
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+        const comment = document.getElementById('commentInput').value.trim();
+        const executorId = document.getElementById('executorSelect').value;
+        
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const finalAmount = Math.max(0, total - discount);
+        
+        const saleData = {
+            items: cart.map(item => ({
+            type: item.type,
+            service_id: item.type === 'service' ? item.id : null,
+            part_id: item.type === 'part' ? item.id : null,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+            })),
+            customer_id: selectedCustomerData ? selectedCustomerData.id : null,
+            customer_name: selectedCustomerData ? selectedCustomerData.name : null,
+            customer_phone: selectedCustomerData ? selectedCustomerData.phone : null,
+            master_id: executorId ? parseInt(executorId) : null,
+            discount: discount,
+            payment_method: paymentMethod,
+            paid_amount: finalAmount,
+            comment: comment || null
+        };
+        
+        // Отправка на сервер
+        fetch('{{ url_for("shop.api_create_sale") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+                },
+            body: JSON.stringify(saleData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Закрываем модальное окно и перезагружаем страницу
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addSaleModal'));
+                modal.hide();
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось сохранить продажу'));
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Ошибка при сохранении продажи');
+        });
+    });
+    
+    // Поиск клиентов
+    customerSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(customerSearchTimeout);
+        
+        if (query.length < 2) {
+            customerResults.style.display = 'none';
+            return;
+        }
+        
+        customerSearchTimeout = setTimeout(() => {
+            fetch(`{{ url_for('shop.api_search_customers') }}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.customers.length > 0) {
+                        displayCustomerResults(data.customers);
+                    } else {
+                        customerResults.innerHTML = '<div class="customer-result-item text-muted">Клиент не найден</div>';
+                        customerResults.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка поиска клиента:', error);
+                });
+        }, 300);
+    });
+    
+    function displayCustomerResults(customers) {
+        customerResults.innerHTML = customers.map(customer => `
+            <div class="customer-result-item" onclick="selectCustomer(${JSON.stringify(customer).replace(/"/g, '&quot;')})">
+                <div class="customer-info">
+                    <div class="customer-name">${escapeHtml(customer.name)}</div>
+                    ${customer.phone ? `<div class="customer-phone">${escapeHtml(customer.phone)}</div>` : ''}
+                </div>
+                <a href="/clients/${customer.id}" class="customer-link" onclick="event.stopPropagation();" >
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+        `).join('');
+        customerResults.style.display = 'block';
+            }
+    
+    window.selectCustomer = function(customer) {
+        selectedCustomerData = customer;
+        selectedCustomerName.textContent = customer.name;
+        selectedCustomerPhone.textContent = customer.phone || 'Телефон не указан';
+        customerLink.href = `/clients/${customer.id}`;
+        selectedCustomer.style.display = 'block';
+        customerSearchInput.value = '';
+        customerResults.style.display = 'none';
+    };
+    
+    window.removeCustomer = function() {
+        selectedCustomerData = null;
+        selectedCustomer.style.display = 'none';
+        customerSearchInput.value = '';
+    };
+    
+    // Закрытие результатов поиска при клике вне
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+        if (!customerSearchInput.contains(e.target) && !customerResults.contains(e.target) && !selectedCustomer.contains(e.target)) {
+            customerResults.style.display = 'none';
+        }
+    });
+    
+    // Очистка корзины при закрытии модального окна
+    document.getElementById('addSaleModal').addEventListener('hidden.bs.modal', function() {
+        cart = [];
+        updateCart();
+        searchInput.value = '';
+        document.getElementById('discountInput').value = '0';
+        document.getElementById('commentInput').value = '';
+        const firstPm = document.querySelector('input[name="payment_method"]');
+        if (firstPm) firstPm.checked = true;
+        selectedCustomerData = null;
+        selectedCustomer.style.display = 'none';
+        customerSearchInput.value = '';
+        customerResults.style.display = 'none';
+        document.getElementById('executorSelect').value = '';
+    });
+
+    window.printSale = function(saleId) {
+        window.open(`/shop/sale/${saleId}`, '_blank');
+    };
+
+    window.refundSale = function(saleId) {
+        const reason = prompt('Укажите причину возврата (опционально):') || '';
+        if (!confirm('Выполнить возврат по продаже?')) {
+            return;
+        }
+        fetch(`/shop/api/sales/${saleId}/refund`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка возврата: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(() => alert('Ошибка возврата'));
+    };
+
+    window.deleteSale = function(saleId) {
+        const reason = prompt('Укажите причину удаления (опционально):') || '';
+        if (!confirm('Удалить продажу? Это выполнит возврат средств и товаров.')) {
+            return;
+        }
+        fetch(`/shop/api/sales/${saleId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(() => alert('Ошибка удаления'));
+    };
+});
+</script>
+{% endblock %}

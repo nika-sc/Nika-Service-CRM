@@ -1,0 +1,36 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Платежи{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-credit-card me-2"></i>История платежей</h4>
+
+{% if payments %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Заявка</th>
+                <th>Сумма</th>
+                <th>Тип оплаты</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>{{ payment.payment_date|format_date(true) if payment.payment_date else '—' }}</td>
+                <td><a href="#" class="order-link" data-order-id="{{ payment.order_id }}">#{{ payment.order_id }}</a></td>
+                <td>{% if payment.kind|default('')|lower == 'refund' %}<span class="text-danger">−{{ payment.amount|default(0)|round(2) }} ₽</span>{% else %}{{ payment.amount|default(0)|round(2) }} ₽{% endif %}</td>
+                <td>{{ payment|format_payment_row_type }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>История платежей пуста
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Инвентаризация — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-filter me-2"></i>Фильтры</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" class="mb-3">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <select name="status" class="form-select">
+                                        <option value="">Все статусы</option>
+                                        <option value="draft" {% if status == 'draft' %}selected{% endif %}>Черновик</option>
+                                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Завершена</option>
+                                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Отменена</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}" placeholder="Дата от">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}" placeholder="Дата до">
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-primary w-100">Фильтр</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="card-title"><i class="fas fa-clipboard-check me-2"></i>Инвентаризационные ведомости</h3>
+                        <a href="{{ url_for('warehouse.new_inventory') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Новая инвентаризация
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Название</th>
+                                        <th>Дата</th>
+                                        <th>Статус</th>
+                                        <th>Позиций</th>
+                                        <th>Создал</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inv in inventories %}
+                                    <tr>
+                                        <td>{{ inv.id }}</td>
+                                        <td>
+                                            <a href="{{ url_for('warehouse.inventory_detail', inventory_id=inv.id) }}" class="text-decoration-none">
+                                                {{ inv.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ inv.inventory_date }}</td>
+                                        <td>
+                                            {% if inv.status == 'draft' %}
+                                            <span class="badge bg-secondary">Черновик</span>
+                                            {% elif inv.status == 'completed' %}
+                                            <span class="badge bg-success">Завершена</span>
+                                            {% elif inv.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Отменена</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ inv.items_count if inv.items_count is not none else (inv.get('items')|length if inv.get('items') else 0) }}</td>
+                                        <td>{{ inv.created_by_username or '-' }}</td>
+                                        <td>
+                                            <a href="{{ url_for('warehouse.inventory_detail', inventory_id=inv.id) }}" class="btn btn-sm btn-info" title="Просмотр">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if inv.status == 'draft' %}
+                                            <button class="btn btn-sm btn-success" onclick="completeInventory({{ inv.id }})" title="Завершить">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <div class="alert alert-info mb-0">
+                                                <i class="fas fa-info-circle"></i> Инвентаризации не найдены
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function completeInventory(inventoryId) {
+    if (!confirm('Завершить инвентаризацию? Это применит корректировки остатков товаров.')) {
+        return;
+    }
+    
+    fetch(`/warehouse/inventory/${inventoryId}/complete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || 'Ошибка при завершении инвентаризации');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при завершении инвентаризации');
+    });
+}
+</script>
+{% endblock %}
+

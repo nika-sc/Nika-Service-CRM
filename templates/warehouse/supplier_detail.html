@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Поставщик: {{ supplier.name }} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title"><i class="fas fa-truck me-2"></i>{{ supplier.name }}</h3>
+                <div>
+                    <a href="{{ url_for('warehouse.edit_supplier', supplier_id=supplier.id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i>Редактировать
+                    </a>
+                    <a href="{{ url_for('warehouse.suppliers_list') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Название:</th>
+                                <td>{{ supplier.name }}</td>
+                            </tr>
+                            {% if supplier.contact_person %}
+                            <tr>
+                                <th>Контактное лицо:</th>
+                                <td>{{ supplier.contact_person }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if supplier.phone %}
+                            <tr>
+                                <th>Телефон:</th>
+                                <td><a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a></td>
+                            </tr>
+                            {% endif %}
+                            {% if supplier.email %}
+                            <tr>
+                                <th>Email:</th>
+                                <td><a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></td>
+                            </tr>
+                            {% endif %}
+                            {% if supplier.address %}
+                            <tr>
+                                <th>Адрес:</th>
+                                <td>{{ supplier.address }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if supplier.inn %}
+                            <tr>
+                                <th>ИНН:</th>
+                                <td>{{ supplier.inn }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Статус:</th>
+                                <td>
+                                    {% if supplier.is_active %}
+                                    <span class="badge bg-success">Активен</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Неактивен</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        {% if supplier.comment %}
+                        <h5>Комментарий:</h5>
+                        <p>{{ supplier.comment }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+

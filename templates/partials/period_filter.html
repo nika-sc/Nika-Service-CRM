@@ -1,0 +1,72 @@
+<!-- Period Filter Component -->
+<!-- Usage: include 'partials/period_filter.html' -->
+<!-- Requires: date_from and date_to variables in context -->
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/period_filter.css') }}">
+<script src="{{ url_for('static', filename='js/period_filter.js') }}" defer></script>
+
+<div class="period-filter-container mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <!-- Quick period buttons -->
+        <div class="btn-group flex-wrap" role="group" aria-label="Period filter">
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="today">
+                Сегодня
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="yesterday">
+                Вчера
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="day-before">
+                Позавчера
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="last-7-days">
+                7 дней
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="last-30-days">
+                30 дней
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="week">
+                Неделя
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="month">
+                Месяц
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="quarter">
+                Квартал
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="half-year">
+                Полгода
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="last-month">
+                Прошлый месяц
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="year">
+                Год
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="year-to-date">
+                С начала года
+            </button>
+        </div>
+        
+        <!-- Custom date range -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <div class="input-group input-group-sm" style="width: auto;">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" class="form-control" name="date_from" id="periodDateFrom" 
+                       value="{{ date_from or '' }}" placeholder="От">
+            </div>
+            <span class="text-muted">—</span>
+            <div class="input-group input-group-sm" style="width: auto;">
+                <input type="date" class="form-control" name="date_to" id="periodDateTo" 
+                       value="{{ date_to or '' }}" placeholder="До">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-filter me-1"></i> Применить
+            </button>
+            {% if date_from or date_to %}
+            <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm" title="Сбросить фильтр">
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

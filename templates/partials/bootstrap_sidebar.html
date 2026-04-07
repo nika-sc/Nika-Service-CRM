@@ -1,0 +1,225 @@
+<!-- Bootstrap 5 Sidebar (no-print: скрывать при печати) -->
+<div class="bootstrap-sidebar d-flex flex-column flex-shrink-0 bg-light no-print" style="width: 5.5rem; position: fixed; left: 0; top: 44px; height: calc(100vh - 44px); z-index: 1020;">
+    <a href="{{ url_for('main.home') }}" class="sidebar-brand-link nav-link d-flex flex-column align-items-center justify-content-center p-3 py-2 border-bottom text-decoration-none text-center{% if request.path == '/' %} active{% endif %}" title="Nika CRM">
+        <i class="fas fa-tachometer-alt" style="font-size: 1.5rem; display: block; text-align: center;"></i>
+        <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Nika CRM</small>
+    </a>
+    <ul class="nav nav-pills nav-flush flex-column mb-auto">
+        {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
+        <li>
+            <a href="{{ url_for('orders.all_orders') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}" 
+               title="Заявки">
+                <i class="fas fa-file-alt" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Заявки</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_permission('view_customers') %}
+        <li>
+            <a href="{{ url_for('customers.clients') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/clients' or '/clients/' in request.path %} active{% endif %}" 
+               title="Клиенты">
+                <i class="fas fa-users" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Клиенты</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_any_permission('view_warehouse', 'manage_warehouse') %}
+        <li>
+            <a href="{{ url_for('warehouse.parts_list') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/warehouse' in request.path and '/purchases' not in request.path %} active{% endif %}" 
+               title="Склад">
+                <i class="fas fa-boxes" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Склад</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_any_permission('view_shop', 'manage_shop') %}
+        <li>
+            <a href="{{ url_for('shop.index') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/shop' in request.path %} active{% endif %}" 
+               title="Магазин">
+                <i class="fas fa-shopping-cart" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Магазин</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_any_permission('view_finance', 'manage_finance') %}
+        <li>
+            <a href="{{ url_for('finance.cash') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/finance' in request.path %} active{% endif %}" 
+               title="Касса">
+                <i class="fas fa-cash-register" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Касса</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_permission('view_reports') %}
+        <li>
+            <a href="{{ url_for('reports.dashboard') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/reports' in request.path %} active{% endif %}" 
+               title="Отчеты">
+                <i class="fas fa-chart-pie" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Отчеты</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_permission('salary.view') %}
+        <li>
+            <a href="{{ url_for('salary_dashboard.index') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/salary' in request.path and '/reports/salary' not in request.path %} active{% endif %}" 
+               title="Зарплата">
+                <i class="fas fa-user-tie" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Зарплата</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_permission('manage_users') %}
+        <li>
+            <a href="{{ url_for('main.settings') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/settings' or '/settings/' in request.path %} active{% endif %}" 
+               title="Настройки">
+                <i class="fas fa-sliders-h" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Настройки</small>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+    <div class="dropdown border-top">
+        <a href="#" class="d-flex flex-column align-items-center justify-content-center p-2 link-dark text-decoration-none dropdown-toggle" 
+           id="dropdownUser3" data-bs-toggle="dropdown" aria-expanded="false" title="Пользователь">
+            <i class="fas fa-user-circle" style="font-size: 1.5rem; display: block; text-align: center;"></i>
+            <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Профиль</small>
+        </a>
+        <ul class="dropdown-menu text-small shadow" aria-labelledby="dropdownUser3" style="position: fixed; left: 5.5rem; bottom: 0; margin-bottom: 0; transform: none;">
+            {% if has_permission('manage_users') %}
+            <li><a class="dropdown-item" href="{{ url_for('main.settings') }}">Настройки</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="POST" action="{{ url_for('main.logout') }}" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="dropdown-item">Выход</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<style>
+/* Стили для подписей в боковом меню */
+.bootstrap_sidebar .nav-link {
+    text-align: center;
+}
+
+.bootstrap_sidebar .nav-link i {
+    width: 100%;
+    text-align: center;
+}
+
+.bootstrap_sidebar .nav-link small {
+    color: inherit;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+}
+
+.bootstrap_sidebar .nav-link.active small,
+.bootstrap_sidebar .nav-link:hover small {
+    color: inherit;
+}
+
+.bootstrap_sidebar .nav-link.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+.bootstrap_sidebar .nav-link.active small {
+    color: #fff;
+}
+
+.bootstrap_sidebar .nav-link.active i {
+    color: #fff;
+}
+
+/* Иконка в верхней части */
+.bootstrap_sidebar > a:first-child i,
+.bootstrap_sidebar .sidebar-brand-link i {
+    width: 100%;
+    text-align: center;
+}
+
+.bootstrap_sidebar > a:first-child small,
+.bootstrap_sidebar .sidebar-brand-link small {
+    width: 100%;
+    text-align: center;
+}
+
+/* Название Nika CRM в топе — оранжевый цвет */
+.bootstrap_sidebar .sidebar-brand-link,
+.bootstrap_sidebar .sidebar-brand-link small,
+.bootstrap_sidebar .sidebar-brand-link i {
+    color: #e67e22 !important;
+}
+
+.bootstrap_sidebar .sidebar-brand-link:hover,
+.bootstrap_sidebar .sidebar-brand-link:hover small,
+.bootstrap_sidebar .sidebar-brand-link:hover i {
+    color: #f39c12 !important;
+}
+
+.bootstrap_sidebar .sidebar-brand-link.active,
+.bootstrap_sidebar .sidebar-brand-link.active small,
+.bootstrap_sidebar .sidebar-brand-link.active i {
+    color: #fff !important;
+}
+
+/* Dropdown профиль */
+.bootstrap_sidebar .dropdown-toggle i {
+    width: 100%;
+    text-align: center;
+}
+
+.bootstrap_sidebar .dropdown-toggle small {
+    width: 100%;
+    text-align: center;
+}
+
+/* Темная тема */
+.theme-dark .bootstrap_sidebar {
+    background-color: #1e1e1e !important;
+}
+
+.theme-dark .bootstrap_sidebar .nav-link {
+    color: #e0e0e0;
+}
+
+.theme-dark .bootstrap_sidebar .nav-link:hover {
+    background-color: #2d2d2d !important;
+    color: #fff;
+}
+
+.theme-dark .bootstrap_sidebar .nav-link.active {
+    background-color: #4d8af0;
+    color: #fff;
+}
+
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active),
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active) small,
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active) i {
+    color: #e67e22 !important;
+}
+
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active):hover,
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active):hover small,
+.theme-dark .bootstrap_sidebar .sidebar-brand-link:not(.active):hover i {
+    color: #f39c12 !important;
+}
+
+/* Профиль внизу (dropdown) — тот же цвет в тёмной теме */
+.theme-dark .bootstrap_sidebar .dropdown-toggle.link-dark {
+    color: #e0e0e0 !important;
+}
+
+.theme-dark .bootstrap_sidebar .dropdown-toggle.link-dark:hover {
+    color: #fff !important;
+    background-color: #2d2d2d !important;
+}
+</style>
+

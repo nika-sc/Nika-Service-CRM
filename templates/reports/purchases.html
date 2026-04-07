@@ -1,0 +1,83 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по закупкам — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#purchasesCalculationMethod" aria-expanded="false" aria-controls="purchasesCalculationMethod">
+            <i class="fas fa-question-circle me-1"></i>Методика расчета
+        </button>
+    </div>
+    <div class="collapse mb-3" id="purchasesCalculationMethod">
+        <div class="card border-info">
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Всего закупок:</strong> количество документов закупки за выбранный период.</li>
+                    <li><strong>Общая сумма:</strong> сумма полей закупок за выбранный период.</li>
+                    <li><strong>Позиций:</strong> количество товарных строк внутри каждой закупки.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title text-white"><i class="fas fa-info-circle me-2"></i>Сводная информация</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Всего закупок:</strong> <span class="h5">{{ report.total_count }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Общая сумма:</strong> <span class="h5 text-primary">{{ report.total_amount }} ₽</span></p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Детализация по закупкам</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Поставщик</th>
+                                <th>Дата</th>
+                                <th>Сумма</th>
+                                <th>Позиций</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for purchase in report.purchases %}
+                            <tr>
+                                <td>{{ purchase.id }}</td>
+                                <td>{{ purchase.supplier_name }}</td>
+                                <td>{{ purchase.purchase_date|format_date(true) }}</td>
+                                <td>{{ purchase.total_amount }} ₽</td>
+                                <td>{{ purchase.items_count or 0 }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Закупок не найдено</h5>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+{% endblock %}
