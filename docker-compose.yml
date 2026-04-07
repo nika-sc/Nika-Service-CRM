@@ -10,9 +10,8 @@ services:
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
-      - DB_DRIVER=${DB_DRIVER:-sqlite}
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DATABASE_URL=${DATABASE_URL:-}
-      - DATABASE_PATH=/app/database/service_center.db
       - RATELIMIT_STORAGE_URI=${RATELIMIT_STORAGE_URI:-memory://}
       - TIMEZONE_OFFSET=${TIMEZONE_OFFSET:-3}
       - MAIL_SERVER=${MAIL_SERVER:-}

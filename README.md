@@ -24,7 +24,7 @@
 - **Services** - бизнес-логика
 - **Models** - модели данных
 - **Queries** - оптимизированные SQL запросы
-- **Database** - база данных SQLite
+- **Database** - база данных PostgreSQL
 
 ## Возможности
 
@@ -247,7 +247,7 @@
 - **Flask-Login** - аутентификация
 - **Flask-WTF** - CSRF защита
 - **Flask-Limiter** - rate limiting
-- **SQLite** - база данных
+- **PostgreSQL** - основная база данных
 - **Jinja2** - шаблонизатор
 
 ## Установка
@@ -256,6 +256,7 @@
 
 - Python 3.8 или выше
 - pip
+- PostgreSQL 14+ (локально или в Docker)
 
 ### Шаги установки
 
@@ -284,25 +285,74 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-5. Настройте переменные окружения (опционально):
-```bash
-# Windows
-set FLASK_DEBUG=True
-set SECRET_KEY=your-secret-key
+5. Создайте `.env` из примера:
 
-# Linux/Mac
-export FLASK_DEBUG=True
-export SECRET_KEY=your-secret-key
+```bash
+cp .env.example .env
 ```
 
-6. Запустите приложение:
+6. Подготовьте PostgreSQL базу:
+```sql
+CREATE DATABASE nikacrm;
+```
+
+7. Настройте переменные окружения:
+```bash
+# Windows
+set SECRET_KEY=your-secret-key
+set DB_DRIVER=postgres
+set DATABASE_URL=postgresql://<user>:<password>@localhost:5432/nikacrm
+set FLASK_DEBUG=True
+
+# Linux/Mac
+export SECRET_KEY=your-secret-key
+export DB_DRIVER=postgres
+export DATABASE_URL=postgresql://<user>:<password>@localhost:5432/nikacrm
+export FLASK_DEBUG=True
+```
+
+8. Примените миграции:
+```bash
+python scripts/run_migrations.py
+```
+
+9. Запустите приложение:
 ```bash
 python run.py
 ```
 
 Приложение будет доступно по адресу: http://127.0.0.1:5000
 
-**База данных:** Система поставляется с готовой базой `database/service_center.db`, в которой уже есть справочники и настройки по умолчанию. Миграции нужны только при обновлении версии (см. раздел «Миграции» ниже).
+**База данных:** В репозитории нет готовой рабочей файловой БД. Схема создается миграциями в PostgreSQL.  
+Базовые справочники и начальные данные добавляются миграциями и сервисной логикой при первом запуске.
+
+### Параллельный запуск второй копии (порт `5001`) на той же PostgreSQL базе
+
+Если у вас уже работает основная копия на `http://127.0.0.1:5000`, для теста ветки `Nika-Service-CRM` поднимайте отдельный инстанс:
+
+1. Запустите вторую копию с отдельным портом и той же строкой подключения, что у `master`:
+```bash
+# Windows (PowerShell)
+$env:DB_DRIVER="postgres"
+$env:DATABASE_URL="postgresql://<user>:<password>@localhost:5432/nikacrm"
+$env:APP_PORT="5001"
+python run.py
+
+# Linux/Mac
+export DB_DRIVER=postgres
+export DATABASE_URL=postgresql://<user>:<password>@localhost:5432/nikacrm
+export APP_PORT=5001
+python run.py
+```
+
+После этого вторая копия будет доступна на `http://127.0.0.1:5001`.
+
+Упрощенный запуск для Windows:
+```powershell
+.\scripts\run_oss_5001.ps1 -DatabaseUrl "postgresql://<user>:<password>@localhost:5432/nikacrm"
+```
+
+Также можно использовать шаблон переменных: `.env.oss.example`.
 
 ## Структура проекта
 
@@ -323,7 +373,7 @@ NikaNewCrm/
 │   └── utils/               # Утилиты
 ├── templates/               # HTML шаблоны
 ├── static/                  # Статические файлы (CSS, JS)
-├── database/                # База данных (service_center.db, миграции)
+├── database/                # Локальные артефакты БД (файлы БД в git не хранятся)
 ├── save/                    # Вспомогательные файлы (скрипты, отчёты, документация)
 │   ├── scripts/             # Скрипты проверки, анализа, миграций
 │   ├── docs/                # Документация
@@ -356,7 +406,7 @@ NikaNewCrm/
     └───┬────┘
         │
 ┌───────▼────────┐
-│   Database      │  ← SQLite
+│   Database      │  ← PostgreSQL
 └────────────────┘
 ```
 
@@ -366,7 +416,7 @@ NikaNewCrm/
 2. **Services (app/services/)** - содержат бизнес-логику, валидацию, кэширование
 3. **Models (app/models/)** - представляют бизнес-сущности, работа с БД
 4. **Queries (app/database/queries/)** - оптимизированные SQL запросы, избежание N+1 проблем
-5. **Database** - SQLite база данных
+5. **Database** - PostgreSQL база данных
 
 Подробнее об архитектуре: [save/docs/ARCHITECTURE.md](save/docs/ARCHITECTURE.md)
 
@@ -1029,7 +1079,9 @@ customer = CustomerService.create_customer({
 Настройки приложения находятся в `app/config.py`:
 
 - `SECRET_KEY` - секретный ключ для сессий (обязательно в продакшене!)
-- `DATABASE_PATH` - путь к базе данных
+- `DB_DRIVER` - драйвер БД (`postgres` по умолчанию)
+- `DATABASE_URL` - строка подключения PostgreSQL
+- `APP_PORT` - порт локального запуска (`5000` по умолчанию)
 - `DEBUG` - режим отладки
 - `LOG_LEVEL` - уровень логирования
 
@@ -1045,14 +1097,8 @@ export FLASK_DEBUG=False
 Система использует миграции для управления схемой БД:
 
 ```bash
-# Применить все миграции
-python save/scripts/run_migrations.py migrate
-
-# Откатить последнюю миграцию
-python save/scripts/run_migrations.py rollback
-
-# Показать статус миграций
-python save/scripts/run_migrations.py status
+# Применить все непримененные миграции
+python scripts/run_migrations.py
 ```
 
 ## Тестирование

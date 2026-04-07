@@ -4,7 +4,7 @@
 import os
 from datetime import timedelta
 
-# Корень проекта (каталог, в котором лежит папка app/) — для абсолютного пути к БД
+# Корень проекта (каталог, в котором лежит папка app/) — для абсолютного пути к fallback SQLite
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEFAULT_DATABASE_PATH = os.path.join(_PROJECT_ROOT, 'database', 'service_center.db')
 
@@ -15,8 +15,8 @@ class Config:
     # Секретный ключ
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     
-    # Драйвер БД: sqlite или postgres
-    DB_DRIVER = os.environ.get('DB_DRIVER', 'sqlite').lower()
+    # Драйвер БД: postgres (по умолчанию) или sqlite (только локальный fallback)
+    DB_DRIVER = os.environ.get('DB_DRIVER', 'postgres').lower()
     DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
     # База данных SQLite: по умолчанию — абсолютный путь из корня проекта
