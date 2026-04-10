@@ -1788,6 +1788,41 @@ ALTER SEQUENCE public.staff_chat_reactions_id_seq OWNED BY public.staff_chat_rea
 
 
 --
+-- Name: staff_chat_read_cursors; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.staff_chat_read_cursors (
+    id bigint NOT NULL,
+    room_key text DEFAULT 'global'::text NOT NULL,
+    user_id bigint NOT NULL,
+    username text DEFAULT ''::text NOT NULL,
+    actor_display_name text DEFAULT ''::text NOT NULL,
+    client_instance_id text DEFAULT ''::text NOT NULL,
+    last_read_message_id bigint DEFAULT 0 NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: staff_chat_read_cursors_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.staff_chat_read_cursors_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: staff_chat_read_cursors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.staff_chat_read_cursors_id_seq OWNED BY public.staff_chat_read_cursors.id;
+
+
+--
 -- Name: stock_movements; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2466,6 +2501,13 @@ ALTER TABLE ONLY public.staff_chat_messages ALTER COLUMN id SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.staff_chat_reactions ALTER COLUMN id SET DEFAULT nextval('public.staff_chat_reactions_id_seq'::regclass);
+
+
+--
+-- Name: staff_chat_read_cursors id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_chat_read_cursors ALTER COLUMN id SET DEFAULT nextval('public.staff_chat_read_cursors_id_seq'::regclass);
 
 
 --
@@ -5721,6 +5763,7 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 004	perf_indexes	2026-03-30 19:09:15.128414
 005	staff_chat	2026-04-05 18:58:53.6558
 006	staff_chat_reactions	2026-04-06 18:51:03.560068
+007	staff_chat_read_cursors	2026-04-10 00:00:00
 \.
 
 
@@ -5833,6 +5876,14 @@ COPY public.staff_chat_messages (id, room_key, user_id, username, actor_display_
 --
 
 COPY public.staff_chat_reactions (id, message_id, user_id, username, actor_display_name, client_instance_id, emoji, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: staff_chat_read_cursors; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.staff_chat_read_cursors (id, room_key, user_id, username, actor_display_name, client_instance_id, last_read_message_id, updated_at) FROM stdin;
 \.
 
 
@@ -7748,6 +7799,13 @@ SELECT pg_catalog.setval('public.staff_chat_reactions_id_seq', 1, false);
 
 
 --
+-- Name: staff_chat_read_cursors_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.staff_chat_read_cursors_id_seq', 1, false);
+
+
+--
 -- Name: stock_movements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
@@ -8199,6 +8257,14 @@ ALTER TABLE ONLY public.staff_chat_messages
 
 ALTER TABLE ONLY public.staff_chat_reactions
     ADD CONSTRAINT staff_chat_reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_chat_read_cursors staff_chat_read_cursors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_chat_read_cursors
+    ADD CONSTRAINT staff_chat_read_cursors_pkey PRIMARY KEY (id);
 
 
 --
@@ -9843,6 +9909,20 @@ CREATE UNIQUE INDEX uq_staff_chat_reactions_actor ON public.staff_chat_reactions
 
 
 --
+-- Name: idx_staff_chat_read_cursors_room; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_staff_chat_read_cursors_room ON public.staff_chat_read_cursors USING btree (room_key);
+
+
+--
+-- Name: uq_staff_chat_read_cursors_actor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_staff_chat_read_cursors_actor ON public.staff_chat_read_cursors USING btree (room_key, user_id, actor_display_name, client_instance_id);
+
+
+--
 -- Name: user_role_history_idx_user_role_history_changed_by_pg; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9963,6 +10043,14 @@ ALTER TABLE ONLY public.staff_chat_reactions
 
 ALTER TABLE ONLY public.staff_chat_reactions
     ADD CONSTRAINT staff_chat_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: staff_chat_read_cursors staff_chat_read_cursors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_chat_read_cursors
+    ADD CONSTRAINT staff_chat_read_cursors_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
