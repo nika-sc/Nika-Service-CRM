@@ -1,0 +1,101 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Журнал заявок — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+                <div class="mb-3 d-flex justify-content-end">
+                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#ordersLogCalculationMethod" aria-expanded="false" aria-controls="ordersLogCalculationMethod">
+                        <i class="fas fa-question-circle me-1"></i>Методика расчета
+                    </button>
+                </div>
+                <div class="collapse mb-3" id="ordersLogCalculationMethod">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <ul class="mb-0 small">
+                                <li><strong>Журнал:</strong> показывает заявки, созданные в выбранном периоде.</li>
+                                <li><strong>Порядок:</strong> записи отсортированы по дате и времени создания.</li>
+                                <li><strong>Событие:</strong> фиксируется факт создания заявки и ее текущие атрибуты.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history me-2"></i>Журнал заявок (по дате создания)</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Дата и время</th>
+                                        <th>Событие</th>
+                                        <th>Клиент</th>
+                                        <th>Устройство</th>
+                                        <th>Статус</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('orders.order_detail', order_id=order.order_id) }}" class="text-primary text-decoration-none">{{ order.created_at|format_date(true) }}</a>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('orders.order_detail', order_id=order.order_id) }}" class="text-primary text-decoration-none">Создана заявка #{{ order.order_id|default(order.id) }}</a>
+                                        </td>
+                                        <td>
+                                            {% if order.customer_id %}
+                                            <a href="{{ url_for('customers.client_detail', client_id=order.customer_id) }}" class="text-primary text-decoration-none">{{ order.client_name }}</a>
+                                            {% else %}
+                                            {{ order.client_name }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.device_id and order.device_type and order.device_type != '—' %}
+                                            <a href="{{ url_for('orders.device_history', device_id=order.device_id) }}" class="text-primary text-decoration-none">
+                                                {{ order.device_type }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
+                                            </a>
+                                            {% else %}
+                                            {{ order.device_type or '—' }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.status_color and order.status_name %}
+                                            <span class="badge" style="background-color: {{ order.status_color }}; color: #fff;" data-status-color="{{ order.status_color }}">
+                                                {{ order.status_name }}
+                                            </span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">{{ order.status or 'Не указан' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="{{ url_for('orders.order_detail', order_id=order.order_id) }}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <div class="alert alert-info mb-0">
+                                                <h5><i class="icon fas fa-info-circle"></i> Записей не найдено</h5>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+{% endblock %}
+
+

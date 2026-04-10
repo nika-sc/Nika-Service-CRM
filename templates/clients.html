@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Клиенты — Nika CRM{% endblock %}
+
+{% block datatables_css %}
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/1.13.7/css/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/buttons/2.4.2/css/buttons.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/css/responsive.bootstrap5.min.css') }}">
+{% endblock %}
+
+{% block styles %}
+    <style>
+
+        /* DataTables стили */
+        #clientsTable_wrapper .dataTables_filter {
+            display: none; /* Скрываем встроенное поле поиска DataTables, используем кастомное */
+        }
+
+        #clientsTable_wrapper .dataTables_length {
+            float: left;
+        }
+
+        #clientsTable_wrapper .dataTables_info {
+            padding-top: 0.85em;
+        }
+
+        #clientsTable_wrapper .dataTables_paginate {
+            padding-top: 0.25em;
+        }
+
+        #clientsTable tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        #clientsTable tbody tr td:first-child a:hover {
+            text-decoration: underline;
+        }
+
+        /* Стили для интерактивных контактов в таблице */
+        .contact-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+        }
+
+        .contact-value {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .contact-value:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .contact-btn {
+            padding: 2px 4px;
+            font-size: 0.75rem;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .client-row:hover .contact-btn {
+            opacity: 1;
+        }
+
+        .contact-btn:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+
+        .contact-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .contact-dropdown.show {
+            display: block;
+        }
+
+        .contact-dropdown-item {
+            display: block;
+            padding: 8px 12px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #f4f4f4;
+            transition: background 0.2s;
+        }
+
+        .contact-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .contact-dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .contact-dropdown-item i {
+            width: 20px;
+            margin-right: 8px;
+        }
+    </style>
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+                    <!-- Панель действий -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1">
+                                            <input type="text" 
+                                                   id="searchInput"
+                                                   class="form-control form-control-lg" 
+                                                   value="{{ search_query }}" 
+                                                   placeholder="Поиск по имени, телефону или email...">
+                                        </div>
+                                        {% if search_query %}
+                                        <a href="/clients" class="btn btn-secondary btn-lg">
+                                            <i class="fas fa-times me-1"></i>Сбросить
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                                        <i class="fas fa-plus me-1"></i>Добавить клиента
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Список клиентов -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-users me-2"></i>Список клиентов
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table id="clientsTable" class="table table-bordered table-striped table-hover" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="fas fa-user me-1"></i>Клиент</th>
+                                            <th><i class="fas fa-phone me-1"></i>Телефон</th>
+                                            <th><i class="fas fa-envelope me-1"></i>Email</th>
+                                            <th><i class="fas fa-laptop me-1"></i>Устройств</th>
+                                            <th><i class="fas fa-file-alt me-1"></i>Заявок</th>
+                                            <th><i class="fas fa-calendar me-1"></i>Последняя заявка</th>
+                                            <th><i class="fas fa-bolt me-1"></i>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления клиента -->
+    <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCustomerModalLabel">
+                        <i class="fas fa-user-plus me-2"></i>Добавить нового клиента
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addCustomerForm" onsubmit="addCustomer(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="customerName" class="form-label">ФИО / Название компании <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="customerName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerPhone" class="form-label">Телефон <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="customerPhone" name="phone" 
+                                   placeholder="+7 (999) 123-45-67" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="customerEmail" name="email" 
+                                   placeholder="email@example.com">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования клиента -->
+    <div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCustomerModalLabel">
+                        <i class="fas fa-edit me-2"></i>Редактировать клиента
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editCustomerForm" onsubmit="updateCustomer(event)">
+                    <input type="hidden" id="editCustomerId" name="customer_id">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editCustomerName" class="form-label">ФИО / Название компании <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editCustomerName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerPhone" class="form-label">Телефон <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="editCustomerPhone" name="phone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editCustomerEmail" name="email">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block datatables_js %}
+    <!-- DataTables JS -->
+    <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/buttons/2.4.2/js/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/buttons/2.4.2/js/buttons.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/responsive.bootstrap5.min.js') }}"></script>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        $(document).ready(function() {
+            // Получаем поисковый запрос из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchQuery = urlParams.get('q') || '';
+
+            // Регистрируем кастомный тип сортировки для использования data-order атрибутов из строки (tr)
+            $.fn.dataTable.ext.type.order['data-order-row-pre'] = function(data, node) {
+                // Получаем data-order из строки (tr)
+                var $row = $(node).closest('tr');
+                var orderValue = $row.attr('data-order');
+                if (orderValue !== undefined && orderValue !== null) {
+                    return parseInt(orderValue) || 0;
+                }
+                return 0;
+            };
+            
+            // Для числовых колонок (Устройств, Заявок) - используем data-order из span
+            $.fn.dataTable.ext.type.order['data-order-num-pre'] = function(data) {
+                // data - это HTML содержимое ячейки
+                var $temp = $('<div>').html(data);
+                var $span = $temp.find('span[data-order]');
+                if ($span.length > 0) {
+                    var orderValue = $span.attr('data-order');
+                    if (orderValue !== undefined && orderValue !== null) {
+                        return parseInt(orderValue) || 0;
+                    }
+                }
+                // Fallback: извлекаем число из текста
+                var text = $temp.text() || data;
+                var num = parseFloat(text.replace(/[^\d.-]/g, '')) || 0;
+                return num;
+            };
+
+            // Для колонки с датой - используем data-order из span
+            $.fn.dataTable.ext.type.order['data-order-date-pre'] = function(data) {
+                // data - это HTML содержимое ячейки
+                var $temp = $('<div>').html(data);
+                var $span = $temp.find('span[data-order]');
+                if ($span.length > 0) {
+                    var orderValue = $span.attr('data-order');
+                    if (orderValue && orderValue !== '0' && orderValue !== null) {
+                        var date = new Date(orderValue);
+                        if (!isNaN(date.getTime())) {
+                            return date.getTime();
+                        }
+                    }
+                }
+                return 0;
+            };
+
+            // Инициализация DataTables
+            var table = $('#clientsTable').DataTable({
+                "language": {
+                    "url": "{{ url_for('static', filename='cdn/datatables/plug-ins/1.13.7/i18n/ru.json') }}",
+                    "search": "Поиск:",
+                    "lengthMenu": "Показать _MENU_ записей",
+                    "info": "Показано _START_ - _END_ из _TOTAL_ записей",
+                    "infoEmpty": "Нет записей для отображения",
+                    "infoFiltered": "(отфильтровано из _MAX_ записей)",
+                    "zeroRecords": "Ничего не найдено",
+                    "paginate": {
+                        "first": "Первая",
+                        "last": "Последняя",
+                        "next": "Следующая",
+                        "previous": "Предыдущая"
+                    }
+                },
+                "responsive": true,
+                "processing": true,
+                "serverSide": true,
+                "deferRender": true,
+                "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "order": [], // сортировку отключаем (или делаем на сервере при необходимости)
+                "ajax": {
+                    "url": "/api/datatables/clients",
+                    "type": "GET"
+                },
+                "columns": [
+                    { "data": "client" },
+                    { "data": "phone" },
+                    { "data": "email" },
+                    { "data": "devices" },
+                    { "data": "orders" },
+                    { "data": "last_order" },
+                    { "data": "actions" }
+                ],
+                "columnDefs": [
+                    {
+                        "targets": [0],
+                        "orderable": false,
+                        "type": "data-order-row" // Используем кастомный тип для сортировки по data-order из строки (ID клиента)
+                    },
+                    {
+                        "targets": [1, 2],
+                        "orderable": true,
+                        "type": "string"
+                    },
+                    {
+                        "targets": [3, 4],
+                        "orderable": true,
+                        "type": "data-order-num"
+                    },
+                    {
+                        "targets": [5],
+                        "orderable": true,
+                        "type": "data-order-date"
+                    },
+                    {
+                        "targets": [6],
+                        "orderable": false,
+                        "searchable": false
+                    }
+                ],
+                "dom": '<"row"<"col-sm-12 col-md-6"l>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                "initComplete": function() {
+                    if (searchQuery) {
+                        this.api().search(searchQuery).draw();
+                    }
+                },
+                "drawCallback": function(settings) {
+                    // Применяем тему к таблице после перерисовки
+                    applyTableTheme();
+                    // После перерисовки таблицы обновляем обработчики событий
+                    initContactHandlers();
+                }
+            });
+
+            // Инициализация обработчиков для контактов
+            function initContactHandlers() {
+                // Функции уже определены ниже, они будут работать глобально
+            }
+
+            // Автоматический поиск с задержкой
+            let searchTimeout;
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimeout);
+                const searchValue = $(this).val().trim();
+                
+                searchTimeout = setTimeout(function() {
+                    table.search(searchValue).draw();
+                }, 300);
+            });
+
+            // Функция нормализации поискового запроса для телефонов
+            function normalizeSearchQuery(query) {
+                if (!query) return '';
+                
+                // Убираем все пробелы, дефисы, скобки и другие символы
+                const cleaned = query.replace(/[\s\-\(\)\+]/g, '');
+                
+                // Если это похоже на номер телефона (начинается с 8 или 7, или только цифры длиной 10-11)
+                if (/^[78]?\d{10,11}$/.test(cleaned) || /^\d{10,11}$/.test(cleaned)) {
+                    let digits = cleaned;
+                    
+                    // Если начинается с 8 и длина 11, заменяем на 7
+                    if (digits.startsWith('8') && digits.length === 11) {
+                        digits = '7' + digits.substring(1);
+                    }
+                    // Если начинается с 8 и длина 10, добавляем 7 в начало
+                    else if (digits.startsWith('8') && digits.length === 10) {
+                        digits = '7' + digits;
+                    }
+                    // Если не начинается с 7 и длина 10, добавляем 7
+                    else if (!digits.startsWith('7') && digits.length === 10) {
+                        digits = '7' + digits;
+                    }
+                    // Если не начинается с 7 и длина 11, заменяем первую цифру на 7
+                    else if (!digits.startsWith('7') && digits.length === 11) {
+                        digits = '7' + digits.substring(1);
+                    }
+                    
+                    // Возвращаем нормализованный номер с 7 и вариант с 8 для поиска
+                    // DataTables будет искать по обоим вариантам через data-search атрибут
+                    const with8 = digits.startsWith('7') ? '8' + digits.substring(1) : digits;
+                    return digits + ' ' + with8;
+                }
+                
+                return query;
+            }
+        });
+
+        // Функции для работы с контактами
+        function showPhoneMenu(event, phone) {
+            event.stopPropagation();
+            const menuId = 'phoneMenu-' + phone;
+            const menu = document.getElementById(menuId);
+            
+            // Закрываем все другие меню
+            document.querySelectorAll('.contact-dropdown').forEach(m => {
+                if (m.id !== menuId) {
+                    m.classList.remove('show');
+                }
+            });
+            
+            // Переключаем текущее меню
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.contact-item')) {
+                document.querySelectorAll('.contact-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+
+        // Функции для работы с клиентами
+        async function addCustomer(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/customers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                    modal.hide();
+                    
+                    // Очищаем форму
+                    form.reset();
+                    
+                    // Показываем уведомление
+                    showNotification('Клиент успешно добавлен', 'success');
+                    
+                    // Перезагружаем страницу через небольшую задержку
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification(result.error || 'Ошибка при добавлении клиента', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNotification('Ошибка при добавлении клиента', 'error');
+            }
+        }
+
+        async function editCustomer(customerId) {
+            try {
+                const response = await fetch(`/api/customers/${customerId}`);
+                const result = await response.json();
+                
+                if (result.success && result.customer) {
+                    const customer = result.customer;
+                    document.getElementById('editCustomerId').value = customer.id;
+                    document.getElementById('editCustomerName').value = customer.name || '';
+                    document.getElementById('editCustomerPhone').value = customer.phone || '';
+                    document.getElementById('editCustomerEmail').value = customer.email || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
+                    modal.show();
+                } else {
+                    showNotification(result.error || 'Не удалось загрузить данные клиента', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNotification('Ошибка при загрузке данных клиента', 'error');
+            }
+        }
+
+        async function updateCustomer(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const customerId = formData.get('customer_id');
+            const data = {
+                name: formData.get('name'),
+                phone: formData.get('phone'),
+                email: formData.get('email')
+            };
+
+            try {
+                const response = await fetch(`/api/customers/${customerId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+                    modal.hide();
+                    showNotification('Клиент успешно обновлен', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification(result.error || 'Ошибка при обновлении клиента', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNotification('Ошибка при обновлении клиента', 'error');
+            }
+        }
+
+        function deleteCustomer(customerId, customerName) {
+            if (!confirm(`Вы уверены, что хотите удалить клиента "${customerName}"?\n\nЭто действие нельзя отменить.`)) {
+                return;
+            }
+
+            fetch(`/api/customers/${customerId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showNotification('Клиент успешно удален', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification(result.error || 'Ошибка при удалении клиента', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                showNotification('Ошибка при удалении клиента', 'error');
+            });
+        }
+
+        function viewCustomerHistory(customerId) {
+            window.location.href = `/clients/${customerId}`;
+        }
+
+
+        function showNotification(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            
+            const notification = $(`
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                    <i class="fas ${icon} me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+            
+            $('body').append(notification);
+            
+            setTimeout(() => {
+                notification.fadeOut(() => notification.remove());
+            }, 3000);
+        }
+
+        // Копирование в буфер обмена
+        async function copyToClipboard(text, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // Показываем уведомление
+                const btn = event ? event.target.closest('button, a') : null;
+                if (btn) {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                    btn.style.color = '#28a745';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.style.color = '';
+                    }, 1000);
+                } else {
+                    alert('Скопировано: ' + text);
+                }
+            } catch (err) {
+                // Fallback для старых браузеров
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('Скопировано: ' + text);
+                } catch (e) {
+                    alert('Не удалось скопировать. Скопируйте вручную: ' + text);
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+    </script>
+{% endblock %}
+

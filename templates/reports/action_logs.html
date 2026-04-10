@@ -1,0 +1,508 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Логи действий — Nika CRM{% endblock %}
+
+{% block report_content %}
+        <div class="mb-3 d-flex justify-content-end">
+            <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#actionLogsCalculationMethod" aria-expanded="false" aria-controls="actionLogsCalculationMethod">
+                <i class="fas fa-question-circle me-1"></i>Методика расчета
+            </button>
+        </div>
+        <div class="collapse mb-3" id="actionLogsCalculationMethod">
+            <div class="card border-info">
+                <div class="card-body">
+                    <ul class="mb-0 small">
+                        <li><strong>Источник данных:</strong> журнал `action_logs` по действиям пользователей и системы.</li>
+                        <li><strong>Фильтры:</strong> период, пользователь, тип действия, тип и ID объекта, поиск по тексту.</li>
+                        <li><strong>Сортировка:</strong> записи выводятся от новых к старым.</li>
+                        <li><strong>Назначение:</strong> аудит изменений, поиск ошибок и контроль операций.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter me-2"></i>Фильтры</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="mb-0">
+                    <!-- Period filter -->
+                    {% include 'partials/period_filter.html' %}
+                    
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-2">
+                            <label class="form-label">Пользователь</label>
+                            <select name="user_id" class="form-select">
+                                <option value="">Все пользователи</option>
+                                <!-- Здесь можно добавить список пользователей -->
+                                <option value="current" {% if user_id == 'current' %}selected{% endif %}>Текущий пользователь</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Тип действия</label>
+                            <select name="action_type" class="form-select">
+                                <option value="">Все действия</option>
+                                <option value="create" {% if action_type == 'create' %}selected{% endif %}>Создание</option>
+                                <option value="update" {% if action_type == 'update' %}selected{% endif %}>Обновление</option>
+                                <option value="delete" {% if action_type == 'delete' %}selected{% endif %}>Удаление</option>
+
+                                <!-- Заявки -->
+                                <option value="add_comment" {% if action_type == 'add_comment' %}selected{% endif %}>Комментарий</option>
+                                <option value="add_payment" {% if action_type == 'add_payment' %}selected{% endif %}>Оплата</option>
+                                <option value="delete_payment" {% if action_type == 'delete_payment' %}selected{% endif %}>Удаление оплаты</option>
+                                <option value="add_service" {% if action_type == 'add_service' %}selected{% endif %}>Услуга</option>
+                                <option value="remove_service" {% if action_type == 'remove_service' %}selected{% endif %}>Удаление услуги</option>
+                                <option value="add_part" {% if action_type == 'add_part' %}selected{% endif %}>Товар</option>
+                                <option value="remove_part" {% if action_type == 'remove_part' %}selected{% endif %}>Удаление товара</option>
+                                <option value="sell" {% if action_type == 'sell' %}selected{% endif %}>Продажа в заявке</option>
+
+                                <!-- Финансы -->
+                                <option value="create_transaction" {% if action_type == 'create_transaction' %}selected{% endif %}>Кассовая операция</option>
+                                <option value="delete_transaction" {% if action_type == 'delete_transaction' %}selected{% endif %}>Удаление операции</option>
+                                <option value="create_shop_sale" {% if action_type == 'create_shop_sale' %}selected{% endif %}>Продажа в магазине</option>
+                                <option value="refund_shop_sale" {% if action_type == 'refund_shop_sale' %}selected{% endif %}>Возврат продажи</option>
+                                <option value="cancel_transaction" {% if action_type == 'cancel_transaction' %}selected{% endif %}>Отмена операции</option>
+
+                                <!-- Склад -->
+                                <option value="create_purchase" {% if action_type == 'create_purchase' %}selected{% endif %}>Создание закупки</option>
+                                <option value="update_purchase" {% if action_type == 'update_purchase' %}selected{% endif %}>Обновление закупки</option>
+                                <option value="delete_purchase" {% if action_type == 'delete_purchase' %}selected{% endif %}>Удаление закупки</option>
+
+                                <!-- Справочники -->
+                                <option value="update_sort_order" {% if action_type == 'update_sort_order' %}selected{% endif %}>Изменение порядка</option>
+
+                                <!-- Зарплата -->
+                                <option value="accrue_salary" {% if action_type == 'accrue_salary' %}selected{% endif %}>Начисление зарплаты</option>
+                                <option value="add_bonus" {% if action_type == 'add_bonus' %}selected{% endif %}>Добавление премии</option>
+                                <option value="add_fine" {% if action_type == 'add_fine' %}selected{% endif %}>Добавление штрафа</option>
+                                <option value="register_payment" {% if action_type == 'register_payment' %}selected{% endif %}>Регистрация выплаты</option>
+
+                                <!-- Настройки -->
+                                <option value="save_settings" {% if action_type == 'save_settings' %}selected{% endif %}>Сохранение настроек</option>
+                                <option value="save_template" {% if action_type == 'save_template' %}selected{% endif %}>Сохранение шаблона</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Тип объекта</label>
+                            <select name="entity_type" class="form-select">
+                                <option value="">Все объекты</option>
+
+                                <!-- Основные объекты -->
+                                <option value="order" {% if entity_type == 'order' %}selected{% endif %}>Заявка</option>
+                                <option value="customer" {% if entity_type == 'customer' %}selected{% endif %}>Клиент</option>
+                                <option value="device" {% if entity_type == 'device' %}selected{% endif %}>Устройство</option>
+                                <option value="user" {% if entity_type == 'user' %}selected{% endif %}>Пользователь</option>
+
+                                <!-- Финансы -->
+                                <option value="cash_transaction" {% if entity_type == 'cash_transaction' %}selected{% endif %}>Касса</option>
+                                <option value="shop_sale" {% if entity_type == 'shop_sale' %}selected{% endif %}>Продажа в магазине</option>
+                                <option value="transaction_category" {% if entity_type == 'transaction_category' %}selected{% endif %}>Категория операции</option>
+                                <option value="payment" {% if entity_type == 'payment' %}selected{% endif %}>Оплата</option>
+
+                                <!-- Склад -->
+                                <option value="part" {% if entity_type == 'part' %}selected{% endif %}>Товар</option>
+                                <option value="purchase" {% if entity_type == 'purchase' %}selected{% endif %}>Закупка</option>
+                                <option value="stock_movement" {% if entity_type == 'stock_movement' %}selected{% endif %}>Движение товара</option>
+
+                                <!-- Справочники -->
+                                <option value="service" {% if entity_type == 'service' %}selected{% endif %}>Услуга</option>
+                                <option value="device_type" {% if entity_type == 'device_type' %}selected{% endif %}>Тип устройства</option>
+                                <option value="device_brand" {% if entity_type == 'device_brand' %}selected{% endif %}>Бренд устройства</option>
+                                <option value="symptom" {% if entity_type == 'symptom' %}selected{% endif %}>Симптом</option>
+                                <option value="appearance_tag" {% if entity_type == 'appearance_tag' %}selected{% endif %}>Тег внешнего вида</option>
+                                <option value="order_status" {% if entity_type == 'order_status' %}selected{% endif %}>Статус заявки</option>
+                                <option value="order_model" {% if entity_type == 'order_model' %}selected{% endif %}>Модель устройства</option>
+                                <option value="manager" {% if entity_type == 'manager' %}selected{% endif %}>Менеджер</option>
+                                <option value="master" {% if entity_type == 'master' %}selected{% endif %}>Мастер</option>
+
+                                <!-- Зарплата -->
+                                <option value="salary_accrual" {% if entity_type == 'salary_accrual' %}selected{% endif %}>Начисление зарплаты</option>
+                                <option value="salary_bonus" {% if entity_type == 'salary_bonus' %}selected{% endif %}>Премия</option>
+                                <option value="salary_fine" {% if entity_type == 'salary_fine' %}selected{% endif %}>Штраф</option>
+                                <option value="salary_payment" {% if entity_type == 'salary_payment' %}selected{% endif %}>Выплата зарплаты</option>
+
+                                <!-- Системные -->
+                                <option value="general_settings" {% if entity_type == 'general_settings' %}selected{% endif %}>Общие настройки</option>
+                                <option value="vat_settings" {% if entity_type == 'vat_settings' %}selected{% endif %}>Настройки НДС</option>
+                                <option value="print_template" {% if entity_type == 'print_template' %}selected{% endif %}>Шаблон печати</option>
+
+                                <!-- Системные операции -->
+                                <option value="cache" {% if entity_type == 'cache' %}selected{% endif %}>Кэш</option>
+                                <option value="backup" {% if entity_type == 'backup' %}selected{% endif %}>Резервные копии</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">ID объекта</label>
+                            <input type="number" name="entity_id" class="form-control"
+                                   placeholder="ID объекта"
+                                   value="{{ entity_id or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Поиск</label>
+                            <input type="text" name="search_query" class="form-control"
+                                   placeholder="Текст для поиска"
+                                   value="{{ search_query or '' }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="include_system"
+                                       value="1" id="includeSystemCheck" {% if include_system %}checked{% endif %}>
+                                <label class="form-check-label" for="includeSystemCheck">
+                                    Системные операции
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>Применить
+                            </button>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <a href="{{ url_for('reports.action_logs_report') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Сбросить все
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Список логов -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list me-2"></i>История действий ({{ total }})
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Дата и время</th>
+                                <th>Пользователь</th>
+                                <th>Действие</th>
+                                <th>Объект</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.created_at|format_date(true) }}</td>
+                                <td>
+                                    {% if log.user_id %}
+                                    <strong>{{ get_user_display_name(user_id=log.user_id) }}</strong>
+                                    {% elif log.username %}
+                                    <strong>{{ get_user_display_name(username=log.username) }}</strong>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {# Человекочитаемые названия действий #}
+                                    {% set action_labels = {
+                                        'create': ('Создание', 'bg-success'),
+                                        'update': ('Обновление', 'bg-primary'),
+                                        'delete': ('Удаление', 'bg-danger'),
+                                        'add_comment': ('Комментарий', 'bg-info'),
+                                        'add_payment': ('Оплата', 'bg-success'),
+                                        'add_service': ('Услуга', 'bg-warning text-dark'),
+                                        'delete_comment': ('Удаление комментария', 'bg-danger'),
+                                        'delete_payment': ('Удаление оплаты', 'bg-danger'),
+                                        'remove_service': ('Удаление услуги', 'bg-danger'),
+                                        'create_shop_sale': ('Продажа в магазине', 'bg-success'),
+                                        'delete_shop_sale': ('Удаление продажи', 'bg-danger'),
+                                        'refund_shop_sale': ('Возврат продажи', 'bg-warning text-dark'),
+                                        'create_transaction': ('Кассовая операция', 'bg-success'),
+                                        'delete_transaction': ('Удаление операции', 'bg-danger'),
+                                        'create_category': ('Создание категории', 'bg-success'),
+                                        'update_category': ('Обновление категории', 'bg-primary'),
+                                        'delete_category': ('Удаление категории', 'bg-danger'),
+                                        'create_transaction_category': ('Создание статьи', 'bg-success'),
+                                        'update_transaction_category': ('Обновление статьи', 'bg-primary'),
+                                        'delete_transaction_category': ('Удаление статьи', 'bg-danger'),
+                                        'status_change': ('Смена статуса', 'bg-info'),
+                                        'add_part': ('Добавление товара', 'bg-success'),
+                                        'update_part': ('Обновление товара', 'bg-primary'),
+                                        'delete_part': ('Удаление товара', 'bg-danger'),
+                                        'stock_movement': ('Движение склада', 'bg-info'),
+                                        'create_purchase': ('Создание закупки', 'bg-success'),
+                                        'update_purchase': ('Обновление закупки', 'bg-primary'),
+                                        'delete_purchase': ('Удаление закупки', 'bg-danger'),
+                                        'purchase': ('Закупка', 'bg-primary'),
+                                        'sale': ('Продажа', 'bg-success'),
+                                        'sell': ('Продажа в заявке', 'bg-success'),
+                                        'expense': ('Списание', 'bg-warning text-dark'),
+                                        'return': ('Возврат', 'bg-secondary'),
+                                        'calculate': ('Расчет', 'bg-info'),
+                                        'accrue_salary': ('Начисление зарплаты', 'bg-success'),
+                                        'add_bonus': ('Премия', 'bg-success'),
+                                        'add_fine': ('Штраф', 'bg-danger'),
+                                        'register_payment': ('Выплата', 'bg-primary'),
+                                        'save_settings': ('Сохранение настроек', 'bg-primary'),
+                                        'save_template': ('Сохранение шаблона', 'bg-primary'),
+                                        'backup': ('Резервная копия', 'bg-info'),
+                                        'restore': ('Восстановление', 'bg-warning text-dark'),
+                                        'clear': ('Очистка', 'bg-danger'),
+                                        'view': ('Просмотр', 'bg-secondary')
+                                    } %}
+                                    {% set action_info = action_labels.get(log.action_type, (log.action_type, 'bg-secondary')) %}
+                                    <span class="badge {{ action_info[1] }}">{{ action_info[0] }}</span>
+                                </td>
+                                <td>
+                                    {# Человекочитаемые названия сущностей через цепочку replace #}
+                                    {% set entity_display = (log.entity_name or '')
+                                        |replace('shop_sale', 'Продажа')
+                                        |replace('cash_transaction', 'Касса')
+                                        |replace('transaction_category', 'Категория')
+                                        |replace('stock_movement', 'Движение склада')
+                                        |replace('order', 'Заявка')
+                                        |replace('customer', 'Клиент')
+                                        |replace('device', 'Устройство')
+                                        |replace('part', 'Товар')
+                                        |replace('service', 'Услуга')
+                                        |replace('payment', 'Оплата')
+                                        |replace('comment', 'Комментарий')
+                                        |replace('purchase', 'Закупка')
+                                        |replace('user', 'Пользователь')
+                                        |replace('status', 'Статус')
+                                        |replace('#', '№')
+                                        |replace('_', ' ')
+                                    %}
+                                    {% if log.entity_url %}
+                                    <a href="{{ log.entity_url }}" class="text-decoration-none">
+                                        <i class="fas fa-link me-1"></i>{{ entity_display }}
+                                    </a>
+                                    {% elif entity_display %}
+                                    <span>{{ entity_display }}</span>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.description %}
+                                        <div class="mb-1">{{ log.description }}</div>
+                                    {% endif %}
+                                    {# Ссылка на чек для оплат и продаж из магазина #}
+                                    {% if log.action_type == 'add_payment' %}
+                                        {% set payment_id = log.details.payment_id if log.details and log.details.payment_id is defined else log.entity_id %}
+                                        {% set order_id = log.details.order_id if log.details and log.details.order_id is defined else (log.details.get('ID заявки') if log.details else None) %}
+                                        {% set order_uuid = log.details.order_uuid if log.details and log.details.order_uuid is defined else None %}
+                                        {% if order_id and order_uuid %}
+                                            <div class="mb-1">
+                                                <a href="{{ url_for('orders.order_detail', order_id=order_uuid) }}" class="badge bg-primary text-decoration-none">
+                                                    <i class="fas fa-file-alt me-1"></i>Заявка #{{ order_id }}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                        {% if payment_id %}
+                                            <div class="mb-1">
+                                                <a href="{{ url_for('finance.payment_detail', payment_id=payment_id) }}" class="badge bg-success text-decoration-none">
+                                                    <i class="fas fa-receipt me-1"></i>Чек #{{ payment_id }}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    {% elif log.action_type == 'create_shop_sale' and log.entity_id %}
+                                        <div class="mb-1">
+                                            <a href="{{ url_for('shop.sale_detail', sale_id=log.entity_id) }}" class="badge bg-success text-decoration-none">
+                                                <i class="fas fa-receipt me-1"></i>Чек #{{ log.entity_id }}
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if log.action_type == 'add_comment' and log.details and log.details.comment %}
+                                        <span class="text-muted">«{{ log.details.comment[:80] }}{% if log.details.comment|length > 80 %}...{% endif %}»</span>
+                                    {% elif log.details %}
+                                        {% if log.details is mapping %}
+                                        <div class="small">
+                                            {# Словарь переводов полей #}
+                                            {% set field_labels = {
+                                                'status': 'Статус',
+                                                'manager': 'Менеджер',
+                                                'master': 'Мастер',
+                                                'amount': 'Сумма',
+                                                'transaction_type': 'Тип',
+                                                'category_name': 'Категория',
+                                                'category_id': 'ID категории',
+                                                'description': 'Описание',
+                                                'final_amount': 'Итого',
+                                                'total_amount': 'Сумма',
+                                                'items_count': 'Позиций',
+                                                'customer_name': 'Клиент',
+                                                'customer': 'Клиент',
+                                                'payment_method': 'Способ оплаты',
+                                                'name': 'Имя',
+                                                'phone': 'Телефон',
+                                                'email': 'Email',
+                                                'prepayment': 'Предоплата',
+                                                'price': 'Цена',
+                                                'quantity': 'Количество',
+                                                'device': 'Устройство',
+                                                'device_type': 'Тип устройства',
+                                                'device_brand': 'Бренд',
+                                                'serial_number': 'Серийный номер'
+                                            } %}
+                                            {% if log.details.changes %}
+                                                {% for field, change in log.details.changes.items() %}
+                                                <div class="mb-1">
+                                                    <strong>{{ field_labels.get(field, field) }}:</strong>
+                                                    {% if change is mapping and change.old is defined %}
+                                                        <span class="text-muted">{{ change.old or '—' }}</span>
+                                                        <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                                        <span>{{ change.new or '—' }}</span>
+                                                    {% else %}
+                                                        {{ change }}
+                                                    {% endif %}
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                {# Специальная обработка для создания заявки #}
+                                                {% if log.action_type == 'create' and log.entity_type == 'order' %}
+                                                    {% if log.details.customer %}
+                                                    <div class="mb-1"><strong>Клиент:</strong> {{ log.details.customer }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.device %}
+                                                    <div class="mb-1"><strong>Устройство:</strong> {{ log.details.device }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.serial_number %}
+                                                    <div class="mb-1"><strong>Серийный номер:</strong> {{ log.details.serial_number }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.status %}
+                                                    <div class="mb-1"><strong>Статус:</strong> <span class="badge bg-primary">{{ log.details.status }}</span></div>
+                                                    {% endif %}
+                                                    {% if log.details.manager %}
+                                                    <div class="mb-1"><strong>Менеджер:</strong> {{ log.details.manager }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.master %}
+                                                    <div class="mb-1"><strong>Мастер:</strong> {{ log.details.master }}</div>
+                                                    {% endif %}
+                                                {# Специальная обработка для создания клиента #}
+                                                {% elif log.action_type == 'create' and log.entity_type == 'customer' %}
+                                                    {% if log.details.name %}
+                                                    <div class="mb-1"><strong>Имя:</strong> {{ log.details.name }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.phone %}
+                                                    <div class="mb-1"><strong>Телефон:</strong> {{ log.details.phone }}</div>
+                                                    {% endif %}
+                                                    {% if log.details.email %}
+                                                    <div class="mb-1"><strong>Email:</strong> {{ log.details.email }}</div>
+                                                    {% endif %}
+                                                {# Специальная обработка для продажи в заявке #}
+                                                {% elif log.action_type == 'sell' and log.entity_type == 'order' %}
+                                                    <div class="mb-1">
+                                                        {% if log.description %}
+                                                        <strong>{{ log.description }}</strong>
+                                                        {% elif log.details.description %}
+                                                        <strong>{{ log.details.description }}</strong>
+                                                        {% elif log.details.get('Услуг') is defined or log.details.get('Товаров') is defined or log.details.get('services_count') is defined or log.details.get('parts_count') is defined %}
+                                                        <strong>Продажа в заявке:</strong>
+                                                        {% set items = [] %}
+                                                        {% set services_count = log.details.get('Услуг') or log.details.get('services_count') or 0 %}
+                                                        {% set parts_count = log.details.get('Товаров') or log.details.get('parts_count') or 0 %}
+                                                        {% if services_count and services_count > 0 %}
+                                                            {% set service_word = 'услуга' if services_count == 1 else ('услуги' if services_count < 5 else 'услуг') %}
+                                                            {% set _ = items.append(services_count ~ ' ' ~ service_word) %}
+                                                        {% endif %}
+                                                        {% if parts_count and parts_count > 0 %}
+                                                            {% set part_word = 'запчасть' if parts_count == 1 else ('запчасти' if parts_count < 5 else 'запчастей') %}
+                                                            {% set _ = items.append(parts_count ~ ' ' ~ part_word) %}
+                                                        {% endif %}
+                                                        {{ items|join(', ') }}
+                                                        {% if log.details.get('ID оплаты') or log.details.get('payment_id') %}
+                                                        <span class="badge bg-success ms-2">С оплатой</span>
+                                                        {% endif %}
+                                                        {% else %}
+                                                        <strong>Продажа в заявке</strong>
+                                                        {% endif %}
+                                                    </div>
+                                                {# Обычная обработка для остальных случаев #}
+                                                {% else %}
+                                                    {% for key, value in log.details.items() %}
+                                                        {% if key not in ['order_uuid', 'UUID заявки', 'field', 'created_via', 'comment_id', 'ID комментария', 'old_id', 'new_id', 'customer', 'Клиент', 'device', 'Устройство', 'device_type', 'Тип устройства', 'device_brand', 'Бренд', 'services_count', 'parts_count', 'Услуг', 'Товаров', 'payment_id', 'ID оплаты'] %}
+                                                        <div class="mb-1">
+                                                            {# Специальная обработка статуса #}
+                                                            {% if key == 'status' and value is mapping and value.old_name is defined %}
+                                                                <strong>Статус:</strong>
+                                                                <span class="badge bg-secondary">{{ value.old_name or '—' }}</span>
+                                                                <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                                                <span class="badge bg-primary">{{ value.new_name or '—' }}</span>
+                                                            {% elif key == 'manager' and value is mapping and value.old_name is defined %}
+                                                                <strong>Менеджер:</strong>
+                                                                <span class="text-muted">{{ value.old_name or '—' }}</span>
+                                                                <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                                                <span>{{ value.new_name or '—' }}</span>
+                                                            {% elif key == 'master' and value is mapping and value.old_name is defined %}
+                                                                <strong>Мастер:</strong>
+                                                                <span class="text-muted">{{ value.old_name or '—' }}</span>
+                                                                <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                                                <span>{{ value.new_name or '—' }}</span>
+                                                            {% elif key == 'transaction_type' or key == 'Тип операции' %}
+                                                                <strong>Тип операции:</strong> {{ 'Приход' if value == 'income' or value == 'приход' else 'Расход' if value == 'expense' or value == 'расход' else value }}
+                                                            {% elif key == 'payment_method' or key == 'Способ оплаты' %}
+                                                                <strong>Способ оплаты:</strong> {{ 'Наличные' if value == 'cash' else 'Карта' if value == 'card' else 'Перевод' if value == 'transfer' else value }}
+                                                            {% elif key == 'amount' or key == 'final_amount' or key == 'total_amount' or key == 'Сумма' or key == 'Итого' or key == 'Оплачено' %}
+                                                                <strong>{{ key if key in ['Сумма', 'Итого', 'Оплачено'] else field_labels.get(key, key) }}:</strong> {{ value }}{% if '₽' not in value|string %} ₽{% endif %}
+                                                            {% else %}
+                                                                {# Если ключ уже на русском (начинается с заглавной или содержит русские буквы), используем его как есть #}
+                                                                {% set is_russian = key[0]|upper == key[0] or 'ID' in key or '₽' in key|string or 'шт.' in key|string or 'Тип' in key or 'Сумма' in key or 'Клиент' in key or 'Товар' in key or 'Артикул' in key or 'Количество' in key or 'Цена' in key or 'Автор' in key or 'Текст' in key or 'Причина' in key or 'Примечание' in key or 'Поставщик' in key or 'Позиций' in key or 'Статус' in key or 'Менеджер' in key or 'Мастер' in key or 'Устройство' in key or 'Серийный номер' in key or 'Бренд' in key or 'Имя' in key or 'Телефон' in key or 'Email' in key or 'Изменение' in key or 'Было' in key or 'Стало' in key %}
+                                                                <strong>{{ key if is_russian else field_labels.get(key, key) }}:</strong> {{ value }}
+                                                            {% endif %}
+                                                        </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                        <div class="small">{{ log.details }}</div>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Логи не найдены</h5>
+                                        <p>Попробуйте изменить параметры фильтрации.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if pages > 1 %}
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}{% if action_type %}&action_type={{ action_type }}{% endif %}{% if entity_type %}&entity_type={{ entity_type }}{% endif %}{% if entity_id %}&entity_id={{ entity_id }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                Предыдущая
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page }} / {{ pages }}</span>
+                        </li>
+                        {% if page < pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}{% if action_type %}&action_type={{ action_type }}{% endif %}{% if entity_type %}&entity_type={{ entity_type }}{% endif %}{% if entity_id %}&entity_id={{ entity_id }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                Следующая
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+{% endblock %}
+

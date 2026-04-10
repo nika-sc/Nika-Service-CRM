@@ -1,0 +1,654 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по зарплате{% endblock %}
+
+{% block report_content %}
+<style>
+/* Новый дизайн карточек Итогов: светлый фон, цветная полоска, иконки */
+#summaryCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-left: 0;
+    margin-right: 0;
+}
+#summaryCards .salary-kpi-card {
+    display: flex;
+    align-items: stretch;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+#summaryCards .salary-kpi-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+#summaryCards .salary-kpi-card__accent {
+    width: 4px;
+    flex-shrink: 0;
+}
+#summaryCards .salary-kpi-card--revenue .salary-kpi-card__accent { background: linear-gradient(180deg, #2563eb, #1d4ed8); }
+#summaryCards .salary-kpi-card--owner .salary-kpi-card__accent { background: linear-gradient(180deg, #059669, #047857); }
+#summaryCards .salary-kpi-card--count .salary-kpi-card__accent { background: linear-gradient(180deg, #7c3aed, #6d28d9); }
+#summaryCards .salary-kpi-card--amount .salary-kpi-card__accent { background: linear-gradient(180deg, #0d9488, #0f766e); }
+#summaryCards .salary-kpi-card--profit .salary-kpi-card__accent { background: linear-gradient(180deg, #0891b2, #0e7490); }
+#summaryCards .salary-kpi-card--users .salary-kpi-card__accent { background: linear-gradient(180deg, #ea580c, #c2410c); }
+#summaryCards .salary-kpi-card__body {
+    flex: 1;
+    padding: 1rem 1rem 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+#summaryCards .salary-kpi-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    color: #fff;
+}
+#summaryCards .salary-kpi-card--revenue .salary-kpi-card__icon { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+#summaryCards .salary-kpi-card--owner .salary-kpi-card__icon { background: linear-gradient(135deg, #059669, #047857); }
+#summaryCards .salary-kpi-card--count .salary-kpi-card__icon { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+#summaryCards .salary-kpi-card--amount .salary-kpi-card__icon { background: linear-gradient(135deg, #0d9488, #0f766e); }
+#summaryCards .salary-kpi-card--profit .salary-kpi-card__icon { background: linear-gradient(135deg, #0891b2, #0e7490); }
+#summaryCards .salary-kpi-card--users .salary-kpi-card__icon { background: linear-gradient(135deg, #ea580c, #c2410c); }
+#summaryCards .salary-kpi-card__content { min-width: 0; }
+#summaryCards .salary-kpi-card__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #6b7280;
+    margin: 0 0 0.25rem 0;
+    line-height: 1.2;
+}
+#summaryCards .salary-kpi-card__value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+#summaryCards .salary-kpi-card__value small {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #6b7280;
+}
+@media (max-width: 768px) {
+    #summaryCards { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+    #summaryCards { grid-template-columns: 1fr; }
+}
+</style>
+            <h2 class="mb-4">Отчет по зарплате</h2>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form id="filterForm" onsubmit="updateUrlAndLoad(); return false;">
+                        <!-- Срезы по дням (как в сводном отчёте) -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Период</label>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="btn-group flex-wrap" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn active" data-period="today">Сегодня</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="yesterday">Вчера</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="day_before_yesterday">Позавчера</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="7days">7 дней</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="30days">30 дней</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="week">Неделя</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="month">Месяц</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="quarter">Квартал</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="half_year">Полгода</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="last_month">Прошлый месяц</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="year">Год</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="ytd">С начала года</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm period-btn" data-period="custom">Произвольный</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label">Дата от</label>
+                                <input type="date" class="form-control form-control-sm" id="dateFrom" name="date_from">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Дата до</label>
+                                <input type="date" class="form-control form-control-sm" id="dateTo" name="date_to">
+                            </div>
+                            {% if current_user_role != 'master' %}
+                            <div class="col-md-2">
+                                <label class="form-label">Роль</label>
+                                <select class="form-select form-select-sm" id="roleFilter" name="role">
+                                    <option value="">Все</option>
+                                    <option value="master">Мастер</option>
+                                    {% if current_user_role == 'admin' %}
+                                    <option value="manager">Менеджер</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            {% if current_user_role == 'admin' or current_user_role == 'manager' %}
+                            <div class="col-md-2">
+                                <label class="form-label">Мастер</label>
+                                <select class="form-select form-select-sm" id="masterFilter" name="master_id">
+                                    <option value="">Все мастера</option>
+                                    {% for master in masters %}
+                                    <option value="{{ master.id }}">{{ master.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            {% if current_user_role == 'admin' %}
+                            <div class="col-md-2">
+                                <label class="form-label">Менеджер</label>
+                                <select class="form-select form-select-sm" id="managerFilter" name="manager_id">
+                                    <option value="">Все менеджеры</option>
+                                    {% for manager in managers %}
+                                    <option value="{{ manager.id }}">{{ manager.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                            <div class="col-md-2 d-flex align-items-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-filter me-1"></i> Применить
+                                </button>
+                                <a href="{{ url_for('reports.salary_report') }}" class="btn btn-outline-secondary btn-sm" title="Сбросить фильтр">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0">Итоги</h5>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#salaryCardsHelp" aria-expanded="false" aria-controls="salaryCardsHelp">
+                        <i class="fas fa-info-circle me-1"></i> Как считаются показатели
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="collapse mb-3" id="salaryCardsHelp">
+                        <div class="alert alert-light border small">
+                            <p class="mb-2"><strong>Выручка</strong> — сумма оплат по заявкам (дата оплаты в выбранном периоде) + выручка продаж магазина (дата продажи в периоде). Совпадает с приходом кассы по заявкам и магазину.</p>
+                            <p class="mb-2"><strong>Прибыль</strong> — выручка минус себестоимость (расход на товары и услуги по тем же заявкам/продажам). Зарплата в расчёт не входит.</p>
+                            <p class="mb-2"><strong>Сумма начислений</strong> — сумма начисленной зарплаты сотрудникам (мастера + менеджеры) по заявкам и продажам магазина за период.</p>
+                            <p class="mb-2"><strong>Итого руководителю</strong> — выручка минус сумма начислений. Остаток после выплаты зарплаты: Выручка − Сумма начислений.</p>
+                            <p class="mb-0"><strong>Всего начислений</strong> — количество записей начислений. <strong>Сотрудников</strong> — число уникальных сотрудников с начислениями за период.</p>
+                        </div>
+                    </div>
+                    <div id="summaryCards" class="salary-summary-grid">
+                        <!-- Заполняется через JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>Начисления</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Дата</th>
+                                    <th>Заявка</th>
+                                    <th>Сотрудник</th>
+                                    <th>Роль</th>
+                                    <th title="Услуга или товар, за которые начислена зарплата">За что</th>
+                                    <th>Начислено зарплаты</th>
+                                    <th title="По заявке (в первой строке по каждой заявке)">Выручка</th>
+                                    <th title="По заявке: выручка − себестоимость (товары + услуги)">Прибыль</th>
+                                    <th title="По заявке: прибыль − начисленная зарплата">Руководителю</th>
+                                    <th>Правило</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accrualsTableBody">
+                                <!-- Заполняется через JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Модальное окно с детализацией начислений по заявке -->
+            <div class="modal fade" id="accrualDetailModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-list-alt me-2"></i>Детализация начислений</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="accrualDetailModalBody"></div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/period_filter.css') }}">
+
+<script>
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDateYmd(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+}
+
+function calculatePeriod(period) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let from = new Date(today);
+    let to = new Date(today);
+    if (period === 'custom') {
+        return null;
+    }
+    switch (period) {
+        case 'today': break;
+        case 'yesterday':
+            from.setDate(from.getDate() - 1);
+            to.setDate(to.getDate() - 1);
+            break;
+        case 'day_before_yesterday':
+            from.setDate(from.getDate() - 2);
+            to.setDate(to.getDate() - 2);
+            break;
+        case '7days':
+        case 'week':
+            from.setDate(from.getDate() - 6);
+            break;
+        case '30days':
+        case 'month':
+            from.setDate(from.getDate() - 29);
+            break;
+        case 'quarter':
+            from.setDate(from.getDate() - 89);
+            break;
+        case 'half_year':
+            from.setDate(from.getDate() - 182);
+            break;
+        case 'last_month':
+            from.setMonth(from.getMonth() - 1);
+            from.setDate(1);
+            to = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+        case 'year':
+            from.setDate(from.getDate() - 365);
+            break;
+        case 'ytd':
+            from.setMonth(0);
+            from.setDate(1);
+            break;
+    }
+    return { from: formatDateYmd(from), to: formatDateYmd(to) };
+}
+
+function setPeriodAndLoad(period) {
+    const dates = calculatePeriod(period);
+    if (dates) {
+        document.getElementById('dateFrom').value = dates.from;
+        document.getElementById('dateTo').value = dates.to;
+    }
+    document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+    const btn = document.querySelector('.period-btn[data-period="' + period + '"]');
+    if (btn) btn.classList.add('active');
+    updateUrlAndLoad();
+}
+
+function updateUrlAndLoad() {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const params = new URLSearchParams(window.location.search);
+    if (dateFrom) params.set('date_from', dateFrom); else params.delete('date_from');
+    if (dateTo) params.set('date_to', dateTo); else params.delete('date_to');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    if (window.history.replaceState) window.history.replaceState({}, '', newUrl);
+    loadReport();
+}
+
+async function loadReport() {
+    const params = new URLSearchParams();
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const role = document.getElementById('roleFilter').value;
+    const masterId = document.getElementById('masterFilter').value;
+    const managerId = document.getElementById('managerFilter').value;
+    
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    if (role) params.append('role', role);
+    if (masterId) params.append('master_id', masterId);
+    if (managerId) params.append('manager_id', managerId);
+    
+    try {
+        const response = await fetch(`/api/salary/report?${params.toString()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const report = data.report || {};
+            const summary = report.summary || {};
+            const accruals = report.accruals || [];
+            renderSummary(summary);
+            renderAccruals(accruals);
+        } else {
+            alert('Ошибка при загрузке отчета');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка при загрузке отчета');
+    }
+}
+
+function renderSummary(summary) {
+    summary = summary || {};
+    const revenueCents = Number(summary.total_revenue_cents) || 0;
+    const ownerNetCents = Number(summary.total_owner_net_cents) || 0;
+    const totalAccruals = Number(summary.total_accruals) || 0;
+    const totalAmountCents = Number(summary.total_amount_cents) || 0;
+    const totalProfitCents = Number(summary.total_profit_cents) || 0;
+    const uniqueUsers = Number(summary.unique_users) || 0;
+    const cards = document.getElementById('summaryCards');
+    if (!cards) return;
+    const fmt = (n) => (n / 100).toFixed(2);
+    cards.innerHTML = `
+        <div class="salary-kpi-card salary-kpi-card--revenue" title="Сумма оплат по заявкам (дата оплаты в периоде) + выручка продаж магазина (дата продажи в периоде). Совпадает с приходом кассы по заявкам и магазину.">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-ruble-sign"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Выручка</p>
+                    <p class="salary-kpi-card__value">${fmt(revenueCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Заявки + магазин за период</p>
+                </div>
+            </div>
+        </div>
+        <div class="salary-kpi-card salary-kpi-card--owner" title="Выручка минус сумма начислений (остаток после выплаты зарплаты сотрудникам).">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-user-tie"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Итого руководителю</p>
+                    <p class="salary-kpi-card__value">${fmt(ownerNetCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Выручка − Сумма начислений</p>
+                </div>
+            </div>
+        </div>
+        <div class="salary-kpi-card salary-kpi-card--count" title="Количество записей начислений зарплаты за период (по заявкам и продажам магазина).">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-list-ol"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Всего начислений</p>
+                    <p class="salary-kpi-card__value">${totalAccruals}</p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Число строк начислений</p>
+                </div>
+            </div>
+        </div>
+        <div class="salary-kpi-card salary-kpi-card--amount" title="Сумма начисленной зарплаты сотрудникам (мастера + менеджеры) по заявкам и продажам магазина за период.">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-wallet"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Сумма начислений</p>
+                    <p class="salary-kpi-card__value">${fmt(totalAmountCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Зарплата сотрудникам за период</p>
+                </div>
+            </div>
+        </div>
+        <div class="salary-kpi-card salary-kpi-card--profit" title="Выручка минус себестоимость (товары + услуги). Без вычета зарплаты.">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-chart-line"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Прибыль</p>
+                    <p class="salary-kpi-card__value">${fmt(totalProfitCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Выручка − расходы (себестоимость)</p>
+                </div>
+            </div>
+        </div>
+        <div class="salary-kpi-card salary-kpi-card--users" title="Количество уникальных сотрудников (мастеров и менеджеров), которым есть начисления за период.">
+            <div class="salary-kpi-card__accent"></div>
+            <div class="salary-kpi-card__body">
+                <div class="salary-kpi-card__icon"><i class="fas fa-users"></i></div>
+                <div class="salary-kpi-card__content">
+                    <p class="salary-kpi-card__label">Сотрудников</p>
+                    <p class="salary-kpi-card__value">${uniqueUsers}</p>
+                    <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Уникальных получателей начислений</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Храним начисления для модального окна
+let _salaryReportAccruals = [];
+
+function showAccrualDetailModal(orderId) {
+    const orderAccruals = _salaryReportAccruals.filter(a => a.order_id === orderId);
+    if (orderAccruals.length === 0) return;
+    const first = orderAccruals[0];
+    const orderHref = first.order_uuid ? '/order/' + first.order_uuid : (first.order_id ? '/order/' + first.order_id : '#');
+    const orderDisplay = first.order_id != null ? '#' + first.order_id : (first.order_uuid || '—');
+    const revenueCents = first.revenue_cents != null ? first.revenue_cents : 0;
+    const profitCents = first.order_profit_cents != null ? first.order_profit_cents : 0;
+    const ownerNetCents = first.owner_net_cents != null ? first.owner_net_cents : 0;
+    const fmt = (c) => ((c || 0) / 100).toFixed(2);
+
+    const byRole = { master: [], manager: [] };
+    orderAccruals.forEach(a => {
+        const role = (a.role || 'master').toLowerCase();
+        if (role === 'manager') byRole.manager.push(a);
+        else byRole.master.push(a);
+    });
+
+    function roleBlock(roleKey, label, badgeClass) {
+        const list = byRole[roleKey];
+        if (!list || list.length === 0) return '';
+        const totalCents = list.reduce((s, a) => s + (a.amount_cents || 0), 0);
+        let rows = '';
+        list.forEach(a => {
+            const ruleText = a.rule_type === 'percent' ? (a.rule_value || 0) + '%' : ((a.rule_value || 0) / 100).toFixed(2) + ' ₽';
+            const name = a.master_name || a.manager_name || '—';
+            let detail = '';
+            if (a.source_service_name) {
+                detail = 'Услуга «' + escapeHtml(a.source_service_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+            } else if (a.source_part_name) {
+                detail = 'Товар «' + escapeHtml(a.source_part_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+            } else {
+                const services = a.order_services_items || [];
+                const parts = a.order_parts_items || [];
+                const items = [];
+                if (services.length) items.push('Услуги: ' + services.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
+                if (parts.length) items.push('Товары: ' + parts.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
+                detail = items.join('. ') || ('За заявку: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽');
+            }
+            rows += '<tr><td class="text-muted small">' + escapeHtml(name) + '</td><td>' + detail + '</td><td class="fw-bold">' + fmt(a.amount_cents) + ' ₽</td></tr>';
+        });
+        return `
+            <div class="mb-4">
+                <h6 class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge ${badgeClass}">${label}</span>
+                    <span class="fw-bold">Итого: ${fmt(totalCents)} ₽</span>
+                </h6>
+                <table class="table table-sm table-bordered"><thead><tr><th>Сотрудник</th><th>За что</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table>
+            </div>`;
+    }
+
+    const body = document.getElementById('accrualDetailModalBody');
+    body.innerHTML = `
+        <div class="mb-3">
+            <a href="${orderHref}" class="fw-bold">Заявка ${orderDisplay}</a>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-4"><strong>Выручка:</strong> ${fmt(revenueCents)} ₽</div>
+            <div class="col-md-4"><strong>Прибыль:</strong> ${fmt(profitCents)} ₽</div>
+            <div class="col-md-4"><strong>Руководителю:</strong> ${fmt(ownerNetCents)} ₽</div>
+        </div>
+        <hr>
+        ${roleBlock('master', 'Мастер', 'bg-primary')}
+        ${roleBlock('manager', 'Менеджер', 'bg-info')}
+    `;
+    const modal = new bootstrap.Modal(document.getElementById('accrualDetailModal'));
+    modal.show();
+}
+
+function renderAccruals(accruals) {
+    _salaryReportAccruals = accruals || [];
+    const tbody = document.getElementById('accrualsTableBody');
+    tbody.innerHTML = '';
+    
+    if (accruals.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center">Нет данных</td></tr>';
+        return;
+    }
+    
+    function getSourceHtml(a) {
+        function formatItem(item) {
+            const name = escapeHtml(item.name || '');
+            const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
+            const sal = (item.salary_cents || 0) / 100;
+            const tail = (pct && sal > 0) ? ' (' + pct + ' = ' + sal.toFixed(0) + '₽)' : (sal > 0 ? ' (' + sal.toFixed(0) + '₽)' : '');
+            return name + tail;
+        }
+        if (a.source_service_name) {
+            const amt = (a.amount_cents || 0) / 100;
+            const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : ' (' + amt.toFixed(0) + '₽)';
+            return escapeHtml('За услугу «' + (a.source_service_name || '') + '»') + tail;
+        }
+        if (a.source_part_name) {
+            const amt = (a.amount_cents || 0) / 100;
+            const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : ' (' + amt.toFixed(0) + '₽)';
+            return escapeHtml('За товар «' + (a.source_part_name || '') + '»') + tail;
+        }
+        const services = a.order_services_items || [];
+        const parts = a.order_parts_items || [];
+        const items = [];
+        if (services.length) items.push('Услуги: ' + services.map(function(item){ return formatItem(item); }).join('. '));
+        if (parts.length) items.push('Товары: ' + parts.map(function(item){ return formatItem(item); }).join('. '));
+        const itemsList = items.length ? '<div class="small text-muted mt-1">' + items.join(' ') + '</div>' : '';
+        if (a.role === 'manager') {
+            const amt = (a.amount_cents || 0) / 100;
+            const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : '';
+            return 'За заявку (прибыль целиком)' + tail + itemsList;
+        }
+        const amt = (a.amount_cents || 0) / 100;
+        const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
+        const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : '';
+        return 'За услуги и товары заявки' + tail + itemsList;
+    }
+
+    accruals.forEach(accrual => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        const date = new Date(accrual.created_at);
+        const ruleText = accrual.rule_type === 'percent' 
+            ? `${accrual.rule_value}%` 
+            : `${(accrual.rule_value / 100).toFixed(2)} ₽`;
+        
+        const orderHref = accrual.order_uuid ? `/order/${accrual.order_uuid}` : (accrual.order_id != null ? `/order/${accrual.order_id}` : '#');
+        const orderDisplay = accrual.order_id != null ? `#${accrual.order_id}` : (accrual.order_uuid || '—');
+        const orderLink = accrual.order_id != null ? `<a href="${orderHref}" onclick="event.stopPropagation()">${orderDisplay}</a>` : orderDisplay;
+        
+        const revenueCents = accrual.revenue_cents != null ? accrual.revenue_cents : 0;
+        const ownerNetCents = accrual.owner_net_cents != null ? accrual.owner_net_cents : 0;
+        const orderProfitCents = accrual.order_profit_cents != null ? accrual.order_profit_cents : 0;
+        const sourceHtml = getSourceHtml(accrual);
+        
+        const detailBtn = accrual.order_id ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showAccrualDetailModal(${accrual.order_id})" title="Подробнее"><i class="fas fa-info-circle"></i></button>` : '';
+        
+        tr.innerHTML = `
+            <td class="text-center">${detailBtn}</td>
+            <td>${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</td>
+            <td>${orderLink}</td>
+            <td>${escapeHtml(accrual.master_name || accrual.manager_name || '—')}</td>
+            <td><span class="badge bg-${accrual.role === 'master' ? 'primary' : 'info'}">${accrual.role === 'master' ? 'Мастер' : 'Менеджер'}</span></td>
+            <td>${sourceHtml}</td>
+            <td><strong>${(accrual.amount_cents / 100).toFixed(2)} ₽</strong></td>
+            <td>${(revenueCents / 100).toFixed(2)} ₽</td>
+            <td>${(orderProfitCents / 100).toFixed(2)} ₽</td>
+            <td>${(ownerNetCents / 100).toFixed(2)} ₽</td>
+            <td>${ruleText}</td>
+        `;
+        if (accrual.order_id) {
+            tr.addEventListener('click', function(e) {
+                if (!e.target.closest('a') && !e.target.closest('button')) showAccrualDetailModal(accrual.order_id);
+            });
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+// Подсветка активного периода по текущим датам
+function highlightActivePeriod() {
+    const fromVal = document.getElementById('dateFrom').value;
+    const toVal = document.getElementById('dateTo').value;
+    if (!fromVal || !toVal) return;
+    const periods = ['today', 'yesterday', 'day_before_yesterday', '7days', '30days', 'week', 'month', 'quarter', 'half_year', 'last_month', 'year', 'ytd'];
+    document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+    for (var i = 0; i < periods.length; i++) {
+        var d = calculatePeriod(periods[i]);
+        if (d.from === fromVal && d.to === toVal) {
+            var btn = document.querySelector('.period-btn[data-period="' + periods[i] + '"]');
+            if (btn) btn.classList.add('active');
+            break;
+        }
+    }
+}
+
+// Загрузка при открытии страницы
+document.addEventListener('DOMContentLoaded', function() {
+    var dateFromEl = document.getElementById('dateFrom');
+    var dateToEl = document.getElementById('dateTo');
+    // Предзаполнение из URL (передано с сервера)
+    var serverFrom = {{ (date_from or '')|tojson }};
+    var serverTo = {{ (date_to or '')|tojson }};
+    if (serverFrom && serverTo) {
+        dateFromEl.value = serverFrom;
+        dateToEl.value = serverTo;
+    } else {
+        // По умолчанию — текущий месяц (как в сводном)
+        var today = new Date();
+        var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        dateFromEl.value = formatDateYmd(firstDay);
+        dateToEl.value = formatDateYmd(today);
+    }
+    highlightActivePeriod();
+
+    // Обработчики кнопок периода
+    document.querySelectorAll('.period-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            setPeriodAndLoad(this.getAttribute('data-period'));
+        });
+    });
+
+    loadReport();
+});
+</script>
+{% endblock %}
+
+

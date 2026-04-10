@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#007bff">
+    <meta name="color-scheme" content="light dark">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Nika CRM">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.svg') }}">
+    <title>{% block title %}Nika CRM{% endblock %}</title>
+
+    <!-- Bootstrap 5 (локально) -->
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+
+    <!-- Font Awesome 7 (локально) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+
+    <!-- AdminLTE CSS (локально) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/admin-lte/3.2/css/adminlte.min.css') }}">
+
+    <!-- DataTables CSS (опционально, подключается через block) -->
+    {% block datatables_css %}{% endblock %}
+
+    <!-- Themes CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/staff_chat.css') }}">
+
+    <!-- CSRF token for JS (fetch) -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <!-- Дополнительные стили страницы -->
+    {% block styles %}{% endblock %}
+
+    <style>
+        html {
+            overflow-x: hidden;
+        }
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* ============================================
+           ГЛОБАЛЬНЫЕ СТИЛИ ДИЗАЙНА ДЛЯ ВСЕЙ СИСТЕМЫ
+           ============================================ */
+
+        /* Современный дизайн карточек */
+        .card, .info-card {
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #f5f5f5;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .card .card-header, .info-card .card-header {
+            background: linear-gradient(135deg, #fcfcfc 0%, #f8f8f8 100%);
+            border-bottom: 1px solid #f0f0f0;
+            font-weight: 600;
+            padding: 1.25rem 1.5rem;
+            color: #424242;
+        }
+
+        .card .card-header h3, .card .card-header h4, .card .card-header h5,
+        .info-card .card-header h3 {
+            color: #424242;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .card .card-header .nav-tabs, .info-card .card-header .nav-tabs {
+            border-bottom: none;
+        }
+
+        .card .card-header .nav-tabs .nav-link, .info-card .card-header .nav-tabs .nav-link {
+            color: #757575;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            padding: 0.75rem 1.25rem;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .card .card-header .nav-tabs .nav-link.active, .info-card .card-header .nav-tabs .nav-link.active {
+            color: #616161;
+            background: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .card .card-body, .info-card .card-body {
+            padding: 1.25rem;
+            background: #ffffff;
+        }
+
+        /* Современные таблицы */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+        }
+
+        .table thead {
+            background: linear-gradient(135deg, #fcfcfc 0%, #f8f8f8 100%);
+            color: #424242;
+        }
+
+        .table thead th {
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.02em;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .table thead th:hover {
+            background: linear-gradient(135deg, #f8f8f8 0%, #f3f3f3 100%);
+            color: #212529;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #f8f8f8;
+            background: #ffffff;
+        }
+
+        .table tbody tr:hover {
+            background: linear-gradient(90deg, rgba(250, 250, 250, 0.9) 0%, rgba(252, 252, 252, 0.9) 100%);
+            transform: scale(1.005);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            border-left: 2px solid #e0e0e0;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover td {
+            color: #212529;
+        }
+
+        .table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        /* Hover эффекты для всех кнопок */
+        .btn {
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268 !important;
+            border-color: #5a6268 !important;
+        }
+
+        .btn-success:hover {
+            background-color: #218838 !important;
+            border-color: #218838 !important;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333 !important;
+            border-color: #c82333 !important;
+        }
+
+        .btn-info:hover {
+            background-color: #138496 !important;
+            border-color: #138496 !important;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800 !important;
+            border-color: #e0a800 !important;
+        }
+
+        .btn-light:hover {
+            background-color: #e9ecef !important;
+            border-color: #dae0e5 !important;
+        }
+
+        .card-header .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            background: #f5f5f5 !important;
+        }
+
+        /* Заголовок страницы */
+        .page-header {
+            background: linear-gradient(135deg, #fcfcfc 0%, #f8f8f8 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: #424242;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f0f0f0;
+        }
+
+        .page-header h2 {
+            color: #424242;
+            font-weight: 700;
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        /* Современные бейджи */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* Улучшенные алерты */
+        .alert {
+            border-radius: 12px;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+            color: #856404;
+        }
+
+        /* Улучшенные разделители */
+        hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, #e9ecef 50%, transparent 100%);
+            margin: 2rem 0;
+        }
+
+        /* Элементы информации */
+        .info-item {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 160px;
+            display: inline-block;
+            font-size: 0.95rem;
+            letter-spacing: 0.01em;
+        }
+
+        .info-label i {
+            color: #9e9e9e;
+            margin-right: 0.5rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* Темная тема для новых элементов */
+        .theme-dark .card, .theme-dark .info-card {
+            background: #1e1e2d;
+            border-color: #2d2d3a;
+        }
+
+        .theme-dark .card .card-header, .theme-dark .info-card .card-header {
+            background: linear-gradient(135deg, #252536 0%, #2d2d3a 100%);
+            color: #e1e1e1;
+        }
+
+        .theme-dark .card .card-body, .theme-dark .info-card .card-body {
+            background: #1e1e2d;
+            color: #e1e1e1;
+        }
+
+        .theme-dark .table thead {
+            background: linear-gradient(135deg, #252536 0%, #2d2d3a 100%);
+            color: #e1e1e1;
+        }
+
+        .theme-dark .table tbody tr {
+            background: #252536;
+            border-bottom-color: #2d2d3a;
+        }
+
+        .theme-dark .table tbody tr:hover {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-dark .table tbody td {
+            color: #e1e1e1;
+        }
+
+        .theme-dark .table thead th:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+        }
+
+        .theme-dark .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .theme-dark .page-header {
+            background: linear-gradient(135deg, #252536 0%, #2d2d3a 100%);
+            color: #e1e1e1;
+        }
+
+        .theme-dark .info-label {
+            color: #c1c1c1;
+        }
+
+        /* Меню в стиле Mac */
+        .mac-menu-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            height: 44px;
+            pointer-events: auto;
+            overflow: visible;
+        }
+
+        .mac-menu-container {
+            max-width: 100%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+            padding: 0 0.75rem 0 1rem;
+            position: relative;
+            z-index: 1031;
+            overflow: visible;
+            gap: 0.5rem;
+        }
+
+        .mac-menu-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e67e22;
+            margin-right: 2rem;
+        }
+
+        .mac-menu-brand i {
+            font-size: 1.1rem;
+            color: #e67e22;
+        }
+
+        .theme-dark .mac-menu-brand,
+        .theme-dark .mac-menu-brand i,
+        .theme-dark .mac-menu-brand span {
+            color: #e67e22 !important;
+        }
+
+        .mac-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            flex: 1;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .mac-menu-item {
+            position: relative;
+        }
+
+        .mac-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            color: #1d1d1f;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .mac-menu-link i:first-child {
+            font-size: 0.9rem;
+        }
+
+        .mac-dropdown-icon {
+            font-size: 0.7rem !important;
+            margin-left: 0.25rem;
+            transition: transform 0.2s ease;
+        }
+
+        .mac-menu-item.dropdown:hover .mac-dropdown-icon,
+        .mac-menu-item.dropdown.show .mac-dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        .mac-menu-link:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #616161;
+        }
+
+        .mac-menu-link.active {
+            background: rgba(158, 158, 158, 0.1);
+            color: #616161;
+        }
+
+        .mac-menu-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #9e9e9e;
+            border-radius: 50%;
+        }
+
+        .mac-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            padding: 0.5rem;
+            min-width: 180px;
+            list-style: none;
+            margin: 0;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1050;
+        }
+
+        .mac-menu-item.dropdown:hover .mac-dropdown-menu,
+        .mac-menu-item.dropdown.show .mac-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .mac-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0.875rem;
+            color: #1d1d1f;
+            text-decoration: none;
+            font-size: 0.875rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .mac-dropdown-item i {
+            font-size: 0.85rem;
+            width: 16px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .mac-dropdown-item:hover {
+            background: rgba(158, 158, 158, 0.1);
+            color: #616161;
+        }
+
+        .mac-dropdown-item:hover i {
+            color: #616161;
+        }
+
+        .mac-dropdown-item.active {
+            background: rgba(158, 158, 158, 0.15);
+            color: #616161;
+            font-weight: 500;
+        }
+
+        .mac-dropdown-item.active i {
+            color: #616161;
+        }
+
+        .mac-menu-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: 1rem;
+            overflow: visible;
+            flex-shrink: 0;
+        }
+
+        .mac-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+            border-radius: 6px;
+            color: #1d1d1f;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            pointer-events: auto;
+            flex-shrink: 0;
+        }
+
+        .mac-action-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #616161;
+        }
+        
+        /* Стили для уведомлений */
+        .mac-notifications-dropdown {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #dc3545;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .mac-notifications-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 320px;
+            max-width: 90vw;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1050;
+            /* Ограничиваем высоту по viewport, чтобы при 100% масштабе меню не обрезалось */
+            max-height: min(400px, calc(100vh - 70px));
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mac-notifications-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .mac-notifications-body {
+            /* Высота под контент: viewport минус шапка/футер меню (~120px) */
+            max-height: min(400px, calc(100vh - 200px));
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        
+        .notification-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: background 0.2s;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+        }
+        
+        .notification-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .notification-item.unread {
+            background: #e7f3ff;
+            font-weight: 500;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+        
+        .notification-message {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .notification-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        
+        .notification-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .notification-link:hover {
+            text-decoration: underline;
+        }
+        
+        .mark-read-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .mac-notifications-footer {
+            padding: 0.75rem;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 1rem;
+            min-width: 300px;
+            max-width: 400px;
+            z-index: 1060;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+        
+        .notification-toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification-toast-content strong {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Поле поиска в навбаре (mac-search, mac-search-box) */
+        .mac-search-box {
+            position: relative;
+            flex: 0 1 auto;
+            min-width: 160px;
+            max-width: 280px;
+            margin: 0 0.5rem;
+        }
+        .mac-search-form {
+            width: 100%;
+        }
+        .mac-search-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            padding: 0 0.5rem 0 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .mac-search-input-wrap:focus-within {
+            background: #fff;
+            border-color: #e67e22;
+            box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.15);
+        }
+        .mac-search-icon {
+            color: #9e9e9e;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            margin-right: 0.5rem;
+        }
+        .mac-search-input-wrap:focus-within .mac-search-icon {
+            color: #e67e22;
+        }
+        .mac-search-input {
+            border: none !important;
+            background: transparent !important;
+            padding: 0.4rem 0 !important;
+            font-size: 0.875rem !important;
+            min-width: 0;
+            flex: 1;
+        }
+        .mac-search-input::placeholder {
+            color: #9e9e9e;
+        }
+        .mac-search-input:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        .mac-search-submit {
+            border: none !important;
+            background: transparent !important;
+            color: #e67e22 !important;
+            padding: 0.35rem 0.5rem !important;
+            border-radius: 6px !important;
+            flex-shrink: 0;
+            transition: background 0.2s, color 0.2s;
+        }
+        .mac-search-submit:hover {
+            background: rgba(230, 126, 34, 0.12) !important;
+            color: #c96a1c !important;
+        }
+        .mac-search-submit i {
+            font-size: 0.8rem;
+        }
+
+        /* Выпадающий список результатов поиска */
+        .search-autocomplete {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+            max-height: 380px;
+            overflow-y: auto;
+            z-index: 10600;
+        }
+        .search-autocomplete[style*="display: block"] {
+            display: block !important;
+        }
+        .autocomplete-section {
+            padding: 0.5rem 0 0.25rem;
+        }
+        .autocomplete-section:first-child {
+            padding-top: 0.5rem;
+        }
+        .autocomplete-section-header {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6c757d;
+            padding: 0 1rem 0.5rem;
+        }
+        .autocomplete-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            border: none;
+            text-decoration: none;
+            color: inherit;
+            width: 100%;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+        .autocomplete-item:hover {
+            background: rgba(230, 126, 34, 0.08);
+        }
+        .autocomplete-item-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.9rem;
+        }
+        .autocomplete-item-icon.order { background: rgba(77, 138, 240, 0.15); color: #4d8af0; }
+        .autocomplete-item-icon.customer { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+        .autocomplete-item-icon.part { background: rgba(255, 152, 0, 0.15); color: #f57c00; }
+        .autocomplete-item-icon.history { background: rgba(158, 158, 158, 0.15); color: #757575; }
+        .autocomplete-item-body {
+            flex: 1;
+            min-width: 0;
+        }
+        .autocomplete-item-title {
+            font-weight: 500;
+            color: #1d1d1f;
+        }
+        .autocomplete-item-meta {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.15rem;
+        }
+        .autocomplete-item-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.2rem 0.45rem;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+        .autocomplete-item-badge.order { background: rgba(77, 138, 240, 0.15); color: #4d8af0; }
+        .autocomplete-item-badge.customer { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+        .autocomplete-item-badge.part { background: rgba(255, 152, 0, 0.15); color: #f57c00; }
+        .autocomplete-history .autocomplete-item-title {
+            color: #6c757d;
+        }
+        .autocomplete-empty {
+            padding: 1rem;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        /* Адаптивность для Mac меню — при 100% масштабе всё помещается */
+        @media (max-width: 1400px) {
+            .mac-menu-link span {
+                display: none;
+            }
+            .mac-menu-link {
+                padding: 0.4rem 0.6rem;
+            }
+            .mac-menu-brand span {
+                display: none;
+            }
+            .mac-search-box {
+                max-width: 200px !important;
+            }
+        }
+        
+        /* Кнопка гамбургера для мобильных */
+        .mac-mobile-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            color: inherit;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mac-mobile-toggle:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .mac-mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: 44px;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1025;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .mac-mobile-overlay.show {
+            display: block;
+            opacity: 1;
+        }
+        
+        body.mobile-menu-open {
+            overflow: hidden;
+        }
+        
+        @media (max-width: 768px) {
+            .mac-mobile-toggle {
+                display: flex;
+            }
+            
+            .mac-menu-container {
+                flex-wrap: wrap;
+            }
+            
+            .mac-menu {
+                display: none;
+                position: fixed;
+                top: 44px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: white;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                padding: 1rem;
+                max-height: calc(100vh - 44px);
+                overflow-y: auto;
+                z-index: 1030;
+                flex-wrap: nowrap;
+            }
+            
+            .mac-menu.mobile-open {
+                display: flex;
+            }
+            
+            /* В мобильном меню всегда показывать текст (1400px правило скрывает span) */
+            .mac-menu.mobile-open .mac-menu-link span,
+            .mac-menu.mobile-open .mac-dropdown-item span {
+                display: inline !important;
+            }
+            
+            .theme-dark .mac-menu.mobile-open {
+                background: #2d2d2d;
+            }
+            
+            .mac-menu-item {
+                flex: none;
+                min-width: 100%;
+                width: 100%;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            }
+            
+            .mac-menu-item:last-child {
+                border-bottom: none;
+            }
+            
+            .theme-dark .mac-menu-item {
+                border-bottom-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            .mac-menu-link {
+                padding: 0.75rem 1rem;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            /* На мобильных убираем второй уровень меню полностью */
+            .mac-menu-item.dropdown .mac-dropdown-menu {
+                display: none !important;
+            }
+            .mac-dropdown-icon {
+                display: none !important;
+            }
+            
+            .mac-search-box {
+                order: 3;
+                width: 100%;
+                max-width: 100% !important;
+                margin: 0.5rem 0 !important;
+            }
+            
+            .mac-search-box .form-control {
+                font-size: 16px; /* Предотвращает zoom на iOS при фокусе */
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+            .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            .comments-sidebar,
+            .order-items-sidebar {
+                width: 100% !important;
+                right: -100% !important;
+            }
+            .comments-sidebar.active,
+            .order-items-sidebar.active {
+                right: 0 !important;
+            }
+            
+            .content .container-fluid,
+            .content .container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            
+            .page-header {
+                padding: 1rem;
+            }
+            
+            .page-header h2 {
+                font-size: 1.25rem;
+            }
+            
+            .info-label {
+                min-width: 120px;
+            }
+        }
+        
+        /* Touch-friendly элементы */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .form-control, .form-select {
+                min-height: 44px;
+            }
+            .mac-menu-link {
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+            }
+            .dropdown-menu {
+                min-width: 200px;
+            }
+            .dropdown-item {
+                padding: 0.75rem 1rem;
+            }
+        }
+        
+        /* Мобильная адаптивность */
+        @media (max-width: 768px) {
+            .mac-search {
+                max-width: 100% !important;
+                margin: 0.5rem 0 !important;
+            }
+            
+            .mac-menu {
+                flex-wrap: wrap;
+            }
+            
+            .card-body {
+                padding: 0.75rem;
+            }
+            
+            .table {
+                font-size: 0.85rem;
+            }
+            
+            .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.8rem;
+            }
+            
+            .comments-sidebar,
+            .order-items-sidebar {
+                width: 100% !important;
+                right: -100% !important;
+            }
+            
+            .comments-sidebar.active,
+            .order-items-sidebar.active {
+                right: 0 !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mac-menu-container {
+                padding: 0 1rem;
+            }
+            .mac-menu {
+                gap: 0.25rem;
+            }
+            .mac-menu-link {
+                padding: 0.75rem 1rem;
+                min-height: 44px;
+            }
+            .main-footer {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 1rem 0.75rem;
+            }
+        }
+
+        /* Скрываем старый навбар AdminLTE */
+        .main-header {
+            display: none !important;
+        }
+
+        /* Footer по ширине контента */
+        .main-footer {
+            margin-left: 5.5rem !important;
+            width: calc(100% - 5.5rem) !important;
+            padding: 1rem 15px;
+            background-color: #fff;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-footer strong {
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .main-footer a {
+            color: #616161;
+            text-decoration: none;
+        }
+        
+        .main-footer a:hover {
+            color: #424242;
+            text-decoration: underline;
+        }
+
+        .content-header {
+            padding: 15px 15px 0 15px;
+        }
+        
+        /* Размеры боковой панели (main-sidebar) */
+        /* По умолчанию в AdminLTE 3.2 ширина сайдбара = 250px */
+        /* Можно переопределить здесь: */
+        .main-sidebar {
+            display: none !important;  /* Скрыт боковой сайдбар */
+        }
+        
+        /* Контент на всю ширину страницы */
+        .content-wrapper {
+            margin-left: 5.5rem !important;  /* Отступ для Bootstrap sidebar (5.5rem) */
+            margin-top: 44px !important;  /* Отступ для фиксированного Mac меню (44px) */
+            width: calc(100% - 5.5rem) !important;
+            min-height: calc(100vh - 44px);
+            box-sizing: border-box;
+        }
+        
+        /* Bootstrap 5 Sidebar стили */
+        .bg-light {
+            background-color: #f8f9fa !important;
+        }
+        
+        .nav-pills .nav-link.active {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        
+        .nav-pills .nav-link {
+            color: #495057;
+            border-radius: 0;
+        }
+        
+        .nav-pills .nav-link:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #616161;
+        }
+        
+        .nav-pills .nav-link.active:hover {
+            background-color: #5a6268;
+            color: #fff;
+        }
+        
+        .link-dark {
+            color: #212529 !important;
+        }
+        
+        .link-dark:hover {
+            color: #616161 !important;
+        }
+        
+        .dropdown-toggle::after {
+            display: none;
+        }
+        
+        /* Dropdown меню в sidebar */
+        #dropdownUser3 + .dropdown-menu {
+            position: fixed !important;
+            left: 5.5rem !important;
+            bottom: 0 !important;
+            margin-bottom: 0 !important;
+            transform: none !important;
+        }
+        
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 768px) {
+            .bootstrap-sidebar,
+            .d-flex.flex-column.flex-shrink-0.bg-light[style*="width: 4.5rem"],
+            .d-flex.flex-column.flex-shrink-0.bg-light[style*="width: 5.5rem"] {
+                display: none !important;
+            }
+            
+            .content-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+            
+            .main-footer {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }
+        
+        
+        /* Современное боковое меню (общие стили для settings, reports, warehouse) */
+        .page-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .page-sidebar {
+            flex: 0 0 0px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 1.5rem 0;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .page-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .page-menu-item {
+            margin: 0.25rem 0;
+        }
+        
+        .page-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.5rem;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .page-menu-link:hover {
+            background: linear-gradient(90deg, rgba(158,158,158,0.08) 0%, rgba(158,158,158,0.02) 100%);
+            color: #616161;
+            border-left-color: #9e9e9e;
+            transform: translateX(4px);
+        }
+        
+        .page-menu-link.active {
+            background: linear-gradient(90deg, rgba(158,158,158,0.12) 0%, rgba(158,158,158,0.04) 100%);
+            color: #616161;
+            border-left-color: #9e9e9e;
+            font-weight: 600;
+        }
+        
+        .page-menu-link.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            background: #9e9e9e;
+            border-radius: 3px 0 0 3px;
+        }
+        
+        .page-menu-link i {
+            width: 22px;
+            text-align: center;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .page-menu-link:hover i,
+        .page-menu-link.active i {
+            transform: scale(1.15);
+        }
+        
+        .page-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .page-section-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .page-section-header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #212529;
+            margin: 0;
+        }
+        
+        .page-section-header p {
+            color: #6c757d;
+            margin: 0.5rem 0 0 0;
+            font-size: 0.95rem;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 992px) {
+            .page-container {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .page-sidebar {
+                flex: 1;
+                position: relative;
+                top: 0;
+            }
+            
+            .page-menu {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0 1rem;
+            }
+            
+            .page-menu-item {
+                flex: 1;
+                min-width: 150px;
+            }
+            
+            .page-menu-link {
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                text-align: center;
+                justify-content: center;
+            }
+            
+            .page-menu-link:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            
+            .page-menu-link.active::before {
+                display: none;
+            }
+            
+            .page-menu-link.active {
+                border-bottom-color: #9e9e9e;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .page-menu {
+                flex-direction: column;
+            }
+            
+            .page-menu-item {
+                width: 100%;
+            }
+        }
+
+        /* При печати скрывать навбар, боковое меню и футер (элементы с классом no-print) */
+        @media print {
+            .no-print,
+            .mac-menu-bar,
+            .main-footer {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            /* Боковая панель: первый фиксированный блок слева */
+            .wrapper > .d-flex.flex-shrink-0.bg-light {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            body, .content-wrapper {
+                background: #fff !important;
+            }
+        }
+    </style>
+    <style>
+        /* Pre-hint: базовые цвета до загрузки всех CSS */
+        html.theme-dark, html.theme-dark body { background: #1a1a1a; color: #e0e0e0; }
+        html.theme-light, html.theme-light body { background: #ecf0f5; color: #333; }
+    </style>
+    <script>
+        // Применяем тему максимально рано (в <head>), чтобы убрать вспышку светлой темы при навигации.
+        (function() {
+            try {
+                var stored = localStorage.getItem('theme') || 'light';
+                if (['light', 'dark', 'retro'].indexOf(stored) === -1) {
+                    stored = 'light';
+                }
+                var root = document.documentElement;
+                root.classList.remove('theme-light', 'theme-dark', 'theme-retro');
+                root.classList.add('theme-' + stored);
+                var themeMeta = document.querySelector('meta[name="theme-color"]');
+                if (themeMeta) {
+                    var themeColorMap = {
+                        dark: '#1a1a1a',
+                        light: '#ecf0f5',
+                        retro: '#ff1493'
+                    };
+                    themeMeta.setAttribute('content', themeColorMap[stored] || '#007bff');
+                }
+            } catch (e) {
+                // localStorage может быть недоступен — в этом случае остаёмся в теме по умолчанию
+            }
+        })();
+    </script>
+</head>
+
+<body class="hold-transition sidebar-mini">
+    <script>
+        // Дублируем класс темы на <body> до рендера основного контента.
+        (function() {
+            try {
+                var t = localStorage.getItem('theme') || 'light';
+                if (['light', 'dark', 'retro'].indexOf(t) === -1) {
+                    t = 'light';
+                }
+                document.body.classList.remove('theme-light', 'theme-dark', 'theme-retro');
+                document.body.classList.add('theme-' + t);
+            } catch (e) {}
+        })();
+    </script>
+    <div class="wrapper">
+        <!-- Навбар -->
+        <header>
+            {% include 'partials/navbar.html' %}
+        </header>
+
+        <!-- Боковая панель Bootstrap 5 -->
+        {% include 'partials/bootstrap_sidebar.html' %}
+
+        <!-- Основной контент -->
+        <div class="content-wrapper">
+            <!-- Заголовок контента -->
+            {% block content_header %}{% endblock %}
+
+            <!-- Основной контент страницы -->
+            <main class="content" role="main">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
+        <!-- Футер -->
+        {% include 'partials/footer.html' %}
+    </div>
+
+    {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders', 'view_finance', 'manage_finance', 'view_warehouse', 'manage_warehouse', 'manage_shop', 'salary.view') %}
+    <button type="button" class="staff-chat-fab" id="staffChatFab" title="Чат сотрудников">
+        <i class="fas fa-comments"></i>
+        <span class="staff-chat-fab-badge" id="staffChatFabBadge">0</span>
+    </button>
+    <div class="staff-chat-panel is-hidden" id="staffChatPanel" aria-live="polite">
+        <div class="staff-chat-header">
+            <div class="staff-chat-title-row">
+                <h6 class="staff-chat-title mb-0">Чат сотрудников</h6>
+                <button type="button" class="staff-chat-close" id="staffChatClose" aria-label="Закрыть">&times;</button>
+            </div>
+            <div class="staff-chat-identity">
+                <input type="text" class="form-control" id="staffChatActorName" maxlength="120" placeholder="Кто вы (на этом ПК)">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="staffChatSaveIdentity">Сохранить</button>
+            </div>
+        </div>
+        <div class="staff-chat-messages" id="staffChatMessages"></div>
+        <div class="staff-chat-typing" id="staffChatTyping"></div>
+        <div class="staff-chat-compose">
+            <textarea class="form-control" id="staffChatInput" placeholder="Напишите сообщение..."></textarea>
+            <div class="staff-chat-emoji-picker is-hidden" id="staffChatEmojiPicker" aria-label="Выбор эмодзи">
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="😀">😀</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="😂">😂</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="😉">😉</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="😍">😍</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="🤝">🤝</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="🙏">🙏</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="👍">👍</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="🔥">🔥</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="✅">✅</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="❗">❗</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="🚚">🚚</button>
+                <button type="button" class="staff-chat-emoji-btn" data-emoji="💸">💸</button>
+            </div>
+            <div class="staff-chat-file-list" id="staffChatFileList"></div>
+            <div class="staff-chat-upload-progress d-none" id="staffChatUploadProgressWrap">
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" id="staffChatUploadProgressBar"></div>
+                </div>
+            </div>
+            <div class="staff-chat-limits" id="staffChatLimitsHint">Лимиты: до 8 файлов, до 20 MB на файл.</div>
+            <div class="staff-chat-actions">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="staffChatEmojiToggleBtn" title="Эмодзи">
+                        <i class="fas fa-smile me-1"></i>Эмодзи
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="staffChatAttachBtn">
+                        <i class="fas fa-paperclip me-1"></i>Файл
+                    </button>
+                    <input type="file" id="staffChatFileInput" class="d-none" multiple>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="staffChatSend">
+                    <i class="fas fa-paper-plane me-1"></i>Отправить
+                </button>
+            </div>
+        </div>
+        <div class="staff-chat-status" id="staffChatStatus"></div>
+    </div>
+    {% endif %}
+
+    <!-- jQuery (локально) -->
+    <script src="{{ url_for('static', filename='cdn/jquery/3.6.0/jquery.min.js') }}"></script>
+    <!-- Bootstrap 5 (локально) -->
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- AdminLTE (локально) -->
+    <script src="{{ url_for('static', filename='cdn/admin-lte/3.2/js/adminlte.min.js') }}"></script>
+    <!-- Themes JS -->
+    <script src="{{ url_for('static', filename='themes.js') }}"></script>
+    <!-- Notifications JS -->
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <!-- Search JS -->
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/staff_chat.js') }}"></script>
+    <script>
+        // Передаем ID текущего пользователя в JavaScript
+        {% if current_user.is_authenticated %}
+        window.currentUserId = {{ current_user.id }};
+        window.currentUsername = {{ (current_user.username or '')|tojson }};
+        window.currentUserRole = {{ (current_user.role or '')|tojson }};
+        window.staffChatEnabled = {{ 'true' if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'view_finance', 'manage_finance', 'view_warehouse', 'manage_warehouse', 'manage_shop', 'salary.view') else 'false' }};
+        {% else %}
+        window.currentUserId = null;
+        window.currentUsername = '';
+        window.currentUserRole = '';
+        window.staffChatEnabled = false;
+        {% endif %}
+        
+        // Регистрация Service Worker для PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/js/service-worker.js')
+                    .then(function(registration) {
+                        console.log('Service Worker зарегистрирован:', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('Ошибка регистрации Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- Global fetch() wrapper to include CSRF token on unsafe requests -->
+    <script>
+        (function() {
+            function getCsrfToken() {
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                return meta ? meta.getAttribute('content') : null;
+            }
+
+            const originalFetch = window.fetch;
+            if (!originalFetch) return;
+
+            window.fetch = function(input, init) {
+                init = init || {};
+                const method = (init.method || 'GET').toUpperCase();
+                const unsafe = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+                if (unsafe) {
+                    const token = getCsrfToken();
+                    if (token) {
+                        const headers = new Headers(init.headers || {});
+                        // Flask-WTF / CSRFProtect recognize these header names
+                        if (!headers.has('X-CSRFToken')) headers.set('X-CSRFToken', token);
+                        if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+                        init.headers = headers;
+                    }
+                    // ensure cookies are sent for same-origin
+                    if (!init.credentials) init.credentials = 'same-origin';
+                }
+
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
+
+    <!-- Скрипт для управления состоянием меню -->
+    <script>
+        $(document).ready(function() {
+            // Автоматически открываем родительские пункты меню, если активен дочерний
+            $('.nav-treeview .nav-link.active').each(function() {
+                const parentItem = $(this).closest('.nav-treeview').closest('.nav-item');
+                if (parentItem.length) {
+                    parentItem.addClass('menu-open');
+                    const icon = parentItem.find('.right');
+                    if (icon.length) {
+                        icon.removeClass('fa-angle-left').addClass('fa-angle-down');
+                    }
+                }
+            });
+            
+            // Сохраняем состояние меню при клике на дочерний пункт
+            $('.nav-treeview .nav-link').on('click', function() {
+                const parentItem = $(this).closest('.nav-treeview').closest('.nav-item');
+                if (parentItem.length) {
+                    // Открываем родительский пункт
+                    parentItem.addClass('menu-open');
+                    const icon = parentItem.find('.right');
+                    if (icon.length) {
+                        icon.removeClass('fa-angle-left').addClass('fa-angle-down');
+                    }
+                }
+            });
+            
+            // Управление dropdown меню для Mac меню (desktop: hover)
+            $('.mac-menu-item.dropdown').on('mouseenter', function() {
+                if (window.innerWidth > 768) {
+                    $(this).addClass('show');
+                    $(this).find('.mac-dropdown-menu').addClass('show');
+                }
+            });
+            
+            $('.mac-menu-item.dropdown').on('mouseleave', function() {
+                if (window.innerWidth > 768) {
+                    $(this).removeClass('show');
+                    $(this).find('.mac-dropdown-menu').removeClass('show');
+                }
+            });
+            
+            function closeMobileMenu() {
+                $('.mac-menu').removeClass('mobile-open');
+                $('#macMobileOverlay').removeClass('show');
+                $('body').removeClass('mobile-menu-open');
+                $('.mac-menu-item.dropdown').removeClass('show');
+            }
+
+            // Гамбургер: открыть/закрыть мобильное меню
+            $('#macMobileToggle').on('click', function() {
+                $('.mac-menu').toggleClass('mobile-open');
+                $('#macMobileOverlay').toggleClass('show');
+                $('body').toggleClass('mobile-menu-open', $('.mac-menu').hasClass('mobile-open'));
+            });
+            
+            $('#macMobileOverlay').on('click', function() {
+                closeMobileMenu();
+            });
+
+            // На мобильном: при выборе пункта закрываем меню сразу.
+            $(document).on('click', '.mac-menu .mac-menu-link, .mac-menu .mac-dropdown-item', function() {
+                if (window.innerWidth <= 768) {
+                    closeMobileMenu();
+                }
+            });
+
+            // Если экран увеличили до desktop, сбрасываем mobile-состояние меню
+            $(window).on('resize', function() {
+                if (window.innerWidth > 768) {
+                    closeMobileMenu();
+                }
+            });
+            
+            // Инициализация tooltips для Bootstrap sidebar
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    <!-- DataTables JS (опционально, подключается через block) -->
+    {% block datatables_js %}{% endblock %}
+
+    <!-- Дополнительные скрипты страницы -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

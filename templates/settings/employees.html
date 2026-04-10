@@ -1,0 +1,825 @@
+{% extends "base.html" %}
+
+{% block title %}Управление сотрудниками{% endblock %}
+
+{% block styles %}
+    <style>
+        /* Современное меню настроек */
+        .settings-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .settings-sidebar {
+            width: 250px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 1.5rem 0;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .settings-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .settings-menu-item {
+            margin: 0.25rem 0;
+        }
+        
+        .settings-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.5rem;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .settings-menu-link:hover {
+            background: linear-gradient(90deg, rgba(0,123,255,0.08) 0%, rgba(0,123,255,0.02) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            transform: translateX(4px);
+        }
+        
+        .settings-menu-link.active {
+            background: linear-gradient(90deg, rgba(0,123,255,0.12) 0%, rgba(0,123,255,0.04) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            font-weight: 600;
+        }
+        
+        .settings-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .role-tabs {
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .role-tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .role-tab:hover {
+            color: #007bff;
+        }
+        
+        .role-tab.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        
+        .role-section {
+            display: none;
+        }
+        
+        .role-section.active {
+            display: block;
+        }
+        
+        .employee-table {
+            font-size: 0.95rem;
+        }
+        
+        .employee-table th {
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .badge-inactive {
+            background-color: #6c757d;
+        }
+        
+        @media (max-width: 992px) {
+            .settings-container {
+                flex-direction: column;
+            }
+            
+            .settings-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="settings-container">
+        {% include 'partials/settings_sidebar.html' %}
+        
+        <div class="settings-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Управление сотрудниками</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal" id="addEmployeeBtn">
+                    <i class="fas fa-plus-circle"></i> Добавить сотрудника
+                </button>
+            </div>
+
+            <!-- Вкладки ролей -->
+            <div class="role-tabs">
+                <button class="role-tab active" data-role="admin" id="tab-admin">
+                    <i class="fas fa-user-shield"></i> Администраторы (<span id="adminCount">0</span>)
+                </button>
+                <button class="role-tab" data-role="manager" id="tab-manager">
+                    <i class="fas fa-user-tie"></i> Менеджеры (<span id="managerCount">0</span>)
+                </button>
+                <button class="role-tab" data-role="master" id="tab-master">
+                    <i class="fas fa-user-cog"></i> Мастера (<span id="masterCount">0</span>)
+                </button>
+            </div>
+
+            <!-- Секция администраторов -->
+            <div id="adminSection" class="role-section active">
+                <div class="table-responsive">
+                    <table class="table table-hover employee-table">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Логин (Email)</th>
+                                <th>Статус</th>
+                                <th>Последний вход</th>
+                                <th style="width: 150px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminsTableBody">
+                            <!-- Заполняется через JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Секция менеджеров -->
+            <div id="managerSection" class="role-section">
+                <div class="table-responsive">
+                    <table class="table table-hover employee-table">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Логин (Email)</th>
+                                <th>Правило зарплаты</th>
+                                <th>Статус</th>
+                                <th style="width: 150px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="managersTableBody">
+                            <!-- Заполняется через JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Секция мастеров -->
+            <div id="masterSection" class="role-section">
+                <div class="table-responsive">
+                    <table class="table table-hover employee-table">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Логин (Email)</th>
+                                <th>Правило зарплаты</th>
+                                <th>Статус</th>
+                                <th style="width: 150px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mastersTableBody">
+                            <!-- Заполняется через JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка создания/редактирования сотрудника -->
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="employeeModalTitle">Добавить сотрудника</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="employeeForm">
+                    <input type="hidden" id="employeeId">
+                    <input type="hidden" id="employeeType">
+                    
+                    <div class="mb-3">
+                        <label for="employeeFullName" class="form-label">ФИО *</label>
+                        <input type="text" class="form-control" id="employeeFullName" required
+                               placeholder="Иванов Иван Иванович">
+                        <small class="text-muted">Видимое имя, не относящееся к логину</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="employeeLogin" class="form-label">Логин (Email) *</label>
+                        <input type="email" class="form-control" id="employeeLogin" required
+                               placeholder="user@example.com">
+                        <small class="text-muted">Используется для входа в систему и уведомлений</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="employeePassword" class="form-label">Пароль <span id="passwordRequired">*</span></label>
+                        <input type="password" class="form-control" id="employeePassword" 
+                               placeholder="Оставьте пустым, чтобы не менять">
+                        <small class="text-muted" id="passwordHint">Минимум 4 символа</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="employeeRole" class="form-label">Роль *</label>
+                        <select class="form-select" id="employeeRole" required>
+                            <option value="">Выберите роль...</option>
+                            <option value="admin" id="roleAdmin">Администратор</option>
+                            <option value="manager" id="roleManager">Менеджер</option>
+                            <option value="master" id="roleMaster">Мастер</option>
+                        </select>
+                        <small class="text-muted">Права будут назначены автоматически по умолчанию</small>
+                    </div>
+
+                    <!-- Дополнительные поля для manager/master -->
+                    <div id="salaryFields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Проценты зарплаты по типам</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Услуги</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="employeeSalaryPercentServices" step="0.1" min="0" max="100" placeholder="%">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Товары в заявках</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="employeeSalaryPercentParts" step="0.1" min="0" max="100" placeholder="%">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Товары из магазина</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="employeeSalaryPercentShopParts" step="0.1" min="0" max="100" placeholder="%">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">Укажите процент от прибыли для каждого типа. Если пусто — используется общее правило (ниже).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeSalaryRuleType" class="form-label">Общее правило (если не заданы проценты по типам)</label>
+                            <select class="form-select form-select-sm" id="employeeSalaryRuleType">
+                                <option value="">Не задано</option>
+                                <option value="percent">Процент от прибыли</option>
+                                <option value="fixed">Фиксированная сумма</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="salaryRuleValueGroup" style="display: none;">
+                            <label for="employeeSalaryRuleValue" class="form-label" id="salaryRuleValueLabel">Значение</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="employeeSalaryRuleValue" step="0.01" min="0">
+                                <span class="input-group-text" id="salaryRuleValueUnit">%</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeComment" class="form-label">Комментарий</label>
+                            <textarea class="form-control" id="employeeComment" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="employeeActive" checked>
+                            <label class="form-check-label" for="employeeActive">
+                                Активен
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveEmployeeBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let employeesData = {
+    admins: [],
+    managers: [],
+    masters: []
+};
+let currentEditId = null;
+let currentEditType = null;
+let currentUserRole = '{{ current_user.role if current_user.is_authenticated else "" }}';
+
+// Определяем, какие роли может создавать текущий пользователь
+function getAvailableRoles() {
+    if (currentUserRole === 'admin') {
+        return ['admin', 'manager', 'master'];
+    } else if (currentUserRole === 'manager' || currentUserRole.startsWith('manager_')) {
+        return ['master'];
+    }
+    return [];
+}
+
+// Загрузка сотрудников
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/employees?role=all&active_only=0');
+        const data = await response.json();
+        if (data.success) {
+            employeesData = data.employees;
+            updateCounts();
+            renderEmployees();
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке сотрудников:', error);
+        showAlert('Ошибка при загрузке данных', 'danger');
+    }
+}
+
+function updateCounts() {
+    document.getElementById('adminCount').textContent = employeesData.admins.length;
+    document.getElementById('managerCount').textContent = employeesData.managers.length;
+    document.getElementById('masterCount').textContent = employeesData.masters.length;
+}
+
+function switchRole(role, event) {
+    // Обновляем активные вкладки
+    document.querySelectorAll('.role-tab').forEach(tab => tab.classList.remove('active'));
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        // Fallback: находим кнопку по роли
+        document.querySelectorAll('.role-tab').forEach(tab => {
+            if (tab.textContent.includes(role === 'admin' ? 'Администраторы' : role === 'manager' ? 'Менеджеры' : 'Мастера')) {
+                tab.classList.add('active');
+            }
+        });
+    }
+    
+    // Обновляем активные секции
+    document.querySelectorAll('.role-section').forEach(section => section.classList.remove('active'));
+    const targetSection = document.getElementById(role + 'Section');
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+}
+
+function renderEmployees() {
+    renderAdmins();
+    renderManagers();
+    renderMasters();
+}
+
+function renderAdmins() {
+    const tbody = document.getElementById('adminsTableBody');
+    tbody.innerHTML = '';
+    
+    employeesData.admins.forEach(admin => {
+        const tr = document.createElement('tr');
+        if (!admin.is_active) {
+            tr.classList.add('table-secondary');
+        }
+        tr.innerHTML = `
+            <td>${escapeHtml(admin.name)}</td>
+            <td>${escapeHtml(admin.login)}</td>
+            <td><span class="badge ${admin.is_active ? 'bg-success' : 'badge-inactive'}">${admin.is_active ? 'Активен' : 'Неактивен'}</span></td>
+            <td>${admin.last_login ? formatDate(admin.last_login) : '—'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary btn-edit-employee" data-employee-id="${admin.id}" data-employee-type="admin" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger btn-deactivate-employee" data-employee-id="${admin.id}" data-employee-type="admin" title="Деактивировать">
+                    <i class="fas fa-ban"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderManagers() {
+    const tbody = document.getElementById('managersTableBody');
+    tbody.innerHTML = '';
+    
+    employeesData.managers.forEach(manager => {
+        const tr = document.createElement('tr');
+        if (!manager.is_active) {
+            tr.classList.add('table-secondary');
+        }
+        let ruleText = 'Не задано';
+        const pSvc = manager.salary_percent_services, pPt = manager.salary_percent_parts, pShop = manager.salary_percent_shop_parts;
+        if (pSvc != null || pPt != null || pShop != null) {
+            const parts = [];
+            if (pSvc != null) parts.push(`услуги ${pSvc}%`);
+            if (pPt != null) parts.push(`товары ${pPt}%`);
+            if (pShop != null) parts.push(`магазин ${pShop}%`);
+            ruleText = parts.join(', ');
+        } else if (manager.salary_rule_type === 'percent' && manager.salary_rule_value != null) {
+            ruleText = `${manager.salary_rule_value}% от прибыли`;
+        } else if (manager.salary_rule_type === 'fixed' && manager.salary_rule_value != null) {
+            ruleText = `${(manager.salary_rule_value / 100).toFixed(2)} ₽ (фикс)`;
+        }
+        
+        tr.innerHTML = `
+            <td>${escapeHtml(manager.name)}</td>
+            <td>${escapeHtml(manager.login || '—')}</td>
+            <td>${ruleText}</td>
+            <td><span class="badge ${manager.is_active ? 'bg-success' : 'badge-inactive'}">${manager.is_active ? 'Активен' : 'Неактивен'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary btn-edit-employee" data-employee-id="${manager.id}" data-employee-type="manager" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger btn-deactivate-employee" data-employee-id="${manager.id}" data-employee-type="manager" title="Деактивировать">
+                    <i class="fas fa-ban"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderMasters() {
+    const tbody = document.getElementById('mastersTableBody');
+    tbody.innerHTML = '';
+    
+    employeesData.masters.forEach(master => {
+        const tr = document.createElement('tr');
+        if (!master.is_active) {
+            tr.classList.add('table-secondary');
+        }
+        let ruleText = 'Не задано';
+        const pSvc = master.salary_percent_services, pPt = master.salary_percent_parts, pShop = master.salary_percent_shop_parts;
+        if (pSvc != null || pPt != null || pShop != null) {
+            const parts = [];
+            if (pSvc != null) parts.push(`услуги ${pSvc}%`);
+            if (pPt != null) parts.push(`товары ${pPt}%`);
+            if (pShop != null) parts.push(`магазин ${pShop}%`);
+            ruleText = parts.join(', ');
+        } else if (master.salary_rule_type === 'percent' && master.salary_rule_value != null) {
+            ruleText = `${master.salary_rule_value}% от прибыли`;
+        } else if (master.salary_rule_type === 'fixed' && master.salary_rule_value != null) {
+            ruleText = `${(master.salary_rule_value / 100).toFixed(2)} ₽ (фикс)`;
+        }
+        
+        tr.innerHTML = `
+            <td>${escapeHtml(master.name)}</td>
+            <td>${escapeHtml(master.login || '—')}</td>
+            <td>${ruleText}</td>
+            <td><span class="badge ${master.is_active ? 'bg-success' : 'badge-inactive'}">${master.is_active ? 'Активен' : 'Неактивен'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary btn-edit-employee" data-employee-id="${master.id}" data-employee-type="master" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger btn-deactivate-employee" data-employee-id="${master.id}" data-employee-type="master" title="Деактивировать">
+                    <i class="fas fa-ban"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openEmployeeModal() {
+    currentEditId = null;
+    currentEditType = null;
+    document.getElementById('employeeModalTitle').textContent = 'Добавить сотрудника';
+    document.getElementById('employeeForm').reset();
+    document.getElementById('employeeId').value = '';
+    document.getElementById('employeeType').value = '';
+    document.getElementById('employeeActive').checked = true;
+    document.getElementById('passwordRequired').style.display = 'inline';
+    document.getElementById('passwordHint').textContent = 'Минимум 4 символа';
+    
+    // Обновляем доступные роли
+    const roleSelect = document.getElementById('employeeRole');
+    const availableRoles = getAvailableRoles();
+    roleSelect.querySelectorAll('option').forEach(opt => {
+        if (opt.value && !availableRoles.includes(opt.value)) {
+            opt.style.display = 'none';
+        } else {
+            opt.style.display = 'block';
+        }
+    });
+    
+    // Роль по умолчанию — по активной вкладке (чтобы при создании менеджера не уходила пустая роль)
+    const activeSection = document.querySelector('.role-section.active');
+    const defaultRole = activeSection && activeSection.id === 'adminSection' ? 'admin'
+        : activeSection && activeSection.id === 'managerSection' ? 'manager'
+        : activeSection && activeSection.id === 'masterSection' ? 'master' : '';
+    if (defaultRole && availableRoles.includes(defaultRole)) {
+        roleSelect.value = defaultRole;
+    }
+    
+    updateRoleFields();
+}
+
+function updateRoleFields() {
+    const role = document.getElementById('employeeRole').value;
+    const salaryFields = document.getElementById('salaryFields');
+    
+    if (role === 'manager' || role === 'master') {
+        salaryFields.style.display = 'block';
+    } else {
+        salaryFields.style.display = 'none';
+    }
+}
+
+function updateSalaryRuleInput() {
+    const type = document.getElementById('employeeSalaryRuleType').value;
+    const group = document.getElementById('salaryRuleValueGroup');
+    const label = document.getElementById('salaryRuleValueLabel');
+    const unit = document.getElementById('salaryRuleValueUnit');
+    
+    if (type === 'percent') {
+        group.style.display = 'block';
+        label.textContent = 'Процент (0-100)';
+        unit.textContent = '%';
+    } else if (type === 'fixed') {
+        group.style.display = 'block';
+        label.textContent = 'Сумма в рублях';
+        unit.textContent = '₽';
+    } else {
+        group.style.display = 'none';
+    }
+}
+
+async function editEmployee(id, type) {
+    currentEditId = id;
+    currentEditType = type;
+    
+    let employee = null;
+    if (type === 'admin') {
+        employee = employeesData.admins.find(a => a.id === id);
+    } else if (type === 'manager') {
+        employee = employeesData.managers.find(m => m.id === id);
+    } else if (type === 'master') {
+        employee = employeesData.masters.find(m => m.id === id);
+    }
+    
+    if (!employee) {
+        showAlert('Сотрудник не найден', 'danger');
+        return;
+    }
+    
+    document.getElementById('employeeModalTitle').textContent = 'Редактировать сотрудника';
+    document.getElementById('employeeId').value = id;
+    document.getElementById('employeeType').value = type;
+    document.getElementById('employeeFullName').value = employee.name || '';
+    document.getElementById('employeeLogin').value = employee.login || '';
+    document.getElementById('employeePassword').value = '';
+    document.getElementById('employeePassword').required = false;
+    document.getElementById('passwordRequired').style.display = 'none';
+    document.getElementById('passwordHint').textContent = 'Оставьте пустым, чтобы не менять';
+    document.getElementById('employeeRole').value = type;
+    document.getElementById('employeeRole').disabled = true; // Роль нельзя менять при редактировании
+    document.getElementById('employeeActive').checked = employee.is_active !== false;
+    
+    if (type === 'manager' || type === 'master') {
+        document.getElementById('employeeSalaryPercentServices').value = employee.salary_percent_services ?? '';
+        document.getElementById('employeeSalaryPercentParts').value = employee.salary_percent_parts ?? '';
+        document.getElementById('employeeSalaryPercentShopParts').value = employee.salary_percent_shop_parts ?? '';
+        document.getElementById('employeeSalaryRuleType').value = employee.salary_rule_type || '';
+        const ruleVal = employee.salary_rule_value;
+        document.getElementById('employeeSalaryRuleValue').value = (employee.salary_rule_type === 'fixed' && ruleVal != null) ? (ruleVal / 100).toFixed(2) : (ruleVal ?? '');
+        document.getElementById('employeeComment').value = employee.comment || '';
+        updateSalaryRuleInput();
+    }
+    
+    updateRoleFields();
+    
+    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+    modal.show();
+}
+
+async function saveEmployee() {
+    const form = document.getElementById('employeeForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const data = {
+        full_name: document.getElementById('employeeFullName').value.trim(),
+        login: document.getElementById('employeeLogin').value.trim(),
+        role: document.getElementById('employeeRole').value,
+        active: document.getElementById('employeeActive').checked ? 1 : 0
+    };
+    
+    if (document.getElementById('employeePassword').value) {
+        data.password = document.getElementById('employeePassword').value;
+    }
+    
+    if (data.role === 'manager' || data.role === 'master') {
+        data.salary_rule_type = document.getElementById('employeeSalaryRuleType').value || null;
+        const ruleValRaw = document.getElementById('employeeSalaryRuleValue').value;
+        if (ruleValRaw && data.salary_rule_type === 'fixed') {
+            data.salary_rule_value = Math.round(parseFloat(ruleValRaw) * 100);
+        } else {
+            data.salary_rule_value = ruleValRaw ? parseFloat(ruleValRaw) : null;
+        }
+        const pSvc = document.getElementById('employeeSalaryPercentServices').value;
+        const pPt = document.getElementById('employeeSalaryPercentParts').value;
+        const pShop = document.getElementById('employeeSalaryPercentShopParts').value;
+        data.salary_percent_services = pSvc ? parseFloat(pSvc) : null;
+        data.salary_percent_parts = pPt ? parseFloat(pPt) : null;
+        data.salary_percent_shop_parts = pShop ? parseFloat(pShop) : null;
+        data.comment = document.getElementById('employeeComment').value.trim() || null;
+
+        const hasPerType = data.salary_percent_services != null || data.salary_percent_parts != null || data.salary_percent_shop_parts != null;
+        const hasGeneral = data.salary_rule_type && data.salary_rule_value != null;
+
+        if (hasPerType) {
+            const bad = [data.salary_percent_services, data.salary_percent_parts, data.salary_percent_shop_parts].filter(v => v != null && (v < 0 || v > 100));
+            if (bad.length) {
+                showAlert('Проценты по типам должны быть от 0 до 100.', 'danger');
+                return;
+            }
+        }
+        if (hasGeneral && !hasPerType) {
+            if (data.salary_rule_type === 'percent' && (data.salary_rule_value < 0 || data.salary_rule_value > 100)) {
+                showAlert('Процент должен быть от 0 до 100.', 'danger');
+                return;
+            }
+            if (data.salary_rule_type === 'fixed' && data.salary_rule_value <= 0) {
+                showAlert('Фиксированная сумма должна быть больше 0.', 'danger');
+                return;
+            }
+        }
+        if (!hasPerType && !hasGeneral) {
+            showAlert('Укажите проценты по типам (Услуги/Товары/Магазин) или общее правило зарплаты.', 'danger');
+            return;
+        }
+    }
+    
+    try {
+        let response;
+        if (currentEditId) {
+            // Обновление
+            data.type = currentEditType;
+            response = await fetch(`/api/employees/${currentEditId}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        } else {
+            // Создание
+            response = await fetch('/api/employees', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+            showAlert(currentEditId ? 'Сотрудник обновлен' : 'Сотрудник создан', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('employeeModal')).hide();
+            loadEmployees();
+        } else {
+            showAlert(result.error || 'Ошибка при сохранении', 'danger');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showAlert('Ошибка при сохранении', 'danger');
+    }
+}
+
+async function deactivateEmployee(id, type) {
+    if (!confirm('Вы уверены, что хотите деактивировать этого сотрудника?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/employees/${id}?type=${type}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showAlert('Сотрудник деактивирован', 'success');
+            loadEmployees();
+        } else {
+            showAlert(result.error || 'Ошибка при деактивации', 'danger');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showAlert('Ошибка при деактивации', 'danger');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU');
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    // Безопасное создание alert - экранируем сообщение
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'alert');
+    closeBtn.setAttribute('aria-label', 'Close');
+    alertDiv.appendChild(messageSpan);
+    alertDiv.appendChild(closeBtn);
+    document.querySelector('.settings-content').insertBefore(alertDiv, document.querySelector('.settings-content').firstChild);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadEmployees();
+    
+    // Добавляем обработчики для вкладок ролей
+    document.querySelectorAll('.role-tab').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            const role = this.dataset.role;
+            if (role) {
+                switchRole(role, e);
+            }
+        });
+    });
+    
+    // Обработчик для кнопки добавления сотрудника
+    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+    if (addEmployeeBtn) {
+        addEmployeeBtn.addEventListener('click', openEmployeeModal);
+    }
+    
+    // Обработчик для кнопки сохранения
+    const saveEmployeeBtn = document.getElementById('saveEmployeeBtn');
+    if (saveEmployeeBtn) {
+        saveEmployeeBtn.addEventListener('click', saveEmployee);
+    }
+    
+    // Обработчик для изменения роли
+    const employeeRoleSelect = document.getElementById('employeeRole');
+    if (employeeRoleSelect) {
+        employeeRoleSelect.addEventListener('change', updateRoleFields);
+    }
+    
+    // Обработчик для изменения типа правила зарплаты
+    const salaryRuleTypeSelect = document.getElementById('employeeSalaryRuleType');
+    if (salaryRuleTypeSelect) {
+        salaryRuleTypeSelect.addEventListener('change', updateSalaryRuleInput);
+    }
+    
+    // Добавляем обработчики для кнопок действий (вместо onclick)
+    // Используем делегирование событий
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-edit-employee')) {
+            const btn = e.target.closest('.btn-edit-employee');
+            const id = parseInt(btn.dataset.employeeId);
+            const type = btn.dataset.employeeType;
+            if (id && type) {
+                editEmployee(id, type);
+            }
+        } else if (e.target.closest('.btn-deactivate-employee')) {
+            const btn = e.target.closest('.btn-deactivate-employee');
+            const id = parseInt(btn.dataset.employeeId);
+            const type = btn.dataset.employeeType;
+            if (id && type) {
+                deactivateEmployee(id, type);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Движения товаров — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter me-2"></i>Фильтры</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="mb-3">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <input type="number" name="part_id" class="form-control" placeholder="ID товара" value="{{ part_id or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="operation_type" class="form-select">
+                                <option value="">Все операции</option>
+                                <option value="manual" {% if operation_type == 'manual' %}selected{% endif %}>Ручные операции</option>
+                                <option value="auto" {% if operation_type == 'auto' %}selected{% endif %}>Автоматические операции</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="movement_type" class="form-select">
+                                <option value="">Все типы</option>
+                                <optgroup label="Ручные операции">
+                                    <option value="income" {% if movement_type == 'income' %}selected{% endif %}>Приход</option>
+                                    <option value="expense" {% if movement_type == 'expense' %}selected{% endif %}>Расход</option>
+                                    <option value="adjustment" {% if movement_type == 'adjustment' %}selected{% endif %}>Корректировка</option>
+                                </optgroup>
+                                <optgroup label="Автоматические операции">
+                                    <option value="sale_order" {% if movement_type == 'sale_order' %}selected{% endif %}>Продажа (заявка)</option>
+                                    <option value="sale_shop" {% if movement_type == 'sale_shop' %}selected{% endif %}>Продажа (магазин)</option>
+                                    <option value="return" {% if movement_type == 'return' %}selected{% endif %}>Возврат</option>
+                                    <option value="purchase" {% if movement_type == 'purchase' %}selected{% endif %}>Закупка</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}" placeholder="Дата от">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}" placeholder="Дата до">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Фильтр</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>История движений</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Товар</th>
+                                <th>Тип операции</th>
+                                <th>Тип движения</th>
+                                <th>Количество</th>
+                                <th>Ссылка</th>
+                                <th>Пользователь</th>
+                                <th>Примечания</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in movements %}
+                            <tr>
+                                <td>{{ movement.created_at|format_date(true) }}</td>
+                                <td>{{ movement.part_name }} ({{ movement.part_number }})</td>
+                                <td>
+                                    {% if movement.operation_category == 'manual' %}
+                                    <span class="badge bg-secondary">Ручная</span>
+                                    {% elif movement.operation_category == 'auto' %}
+                                    <span class="badge bg-primary">Автоматическая</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if movement.movement_type == 'income' %}
+                                    <span class="badge bg-success">Приход</span>
+                                    {% elif movement.movement_type == 'expense' %}
+                                    <span class="badge bg-danger">Расход</span>
+                                    {% elif movement.movement_type == 'sale' %}
+                                        {% if movement.reference_type == 'shop_sale' %}
+                                        <span class="badge bg-warning">Продажа (магазин)</span>
+                                        {% elif movement.reference_type == 'order' %}
+                                        <span class="badge bg-warning">Продажа (заявка)</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Продажа</span>
+                                        {% endif %}
+                                    {% elif movement.movement_type == 'return' %}
+                                    <span class="badge bg-info">Возврат</span>
+                                    {% elif movement.movement_type == 'purchase' %}
+                                    <span class="badge bg-success">Закупка</span>
+                                    {% elif movement.movement_type == 'adjustment_increase' %}
+                                    <span class="badge bg-warning text-dark">Корректировка (+)</span>
+                                    {% elif movement.movement_type == 'adjustment_decrease' %}
+                                    <span class="badge bg-warning text-dark">Корректировка (-)</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ movement.movement_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if movement.movement_type == 'adjustment_decrease' or movement.movement_type == 'expense' or (movement.movement_type == 'sale' and movement.quantity < 0) %}
+                                    <span class="text-danger">{{ movement.quantity }}</span>
+                                    {% else %}
+                                    <span class="text-success">+{{ movement.quantity }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if movement.reference_type == 'order' %}
+                                    <a href="/order/{{ movement.reference_id }}" class="text-decoration-none">Заявка #{{ movement.reference_id }}</a>
+                                    {% elif movement.reference_type == 'shop_sale' %}
+                                    <a href="/shop/sale/{{ movement.reference_id }}" class="text-decoration-none">Продажа #{{ movement.reference_id }}</a>
+                                    {% elif movement.reference_type == 'purchase' %}
+                                    <a href="/warehouse/purchases/{{ movement.reference_id }}" class="text-decoration-none">Закупка #{{ movement.reference_id }}</a>
+                                    {% elif movement.reference_type == 'manual' %}
+                                    <span class="text-muted">Ручная операция</span>
+                                    {% elif movement.reference_type == 'adjustment' %}
+                                    <span class="text-muted">Корректировка остатка</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ movement.created_by_username or '-' }}</td>
+                                <td>{{ movement.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not movements %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Движений не найдено</h5>
+                                        <p>Движения товаров появятся здесь после:</p>
+                                        <ul class="text-start" style="display: inline-block;">
+                                            <li>Прихода товаров на склад (ручная операция)</li>
+                                            <li>Расхода товаров со склада (ручная операция)</li>
+                                            <li>Продажи запчастей в заявках (автоматическая)</li>
+                                            <li>Продажи товаров в магазине (автоматическая)</li>
+                                            <li>Закупки товаров (автоматическая)</li>
+                                            <li>Корректировки остатков товаров (ручная операция)</li>
+                                        </ul>
+                                        {% if part_id or movement_type or date_from or date_to %}
+                                        <p class="mt-2">Попробуйте изменить параметры фильтра.</p>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

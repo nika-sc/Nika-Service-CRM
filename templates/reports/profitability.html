@@ -1,0 +1,123 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по маржинальности — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button
+            class="btn btn-sm btn-outline-info"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#profitabilityCalculationMethod"
+            aria-expanded="false"
+            aria-controls="profitabilityCalculationMethod"
+        >
+            <i class="fas fa-question-circle me-1"></i>Методика расчета
+        </button>
+    </div>
+    <div class="collapse mb-3" id="profitabilityCalculationMethod">
+        <div class="card border-info">
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Товары:</strong> Маржа = Выручка - Себестоимость. Учитываются продажи из заявок и магазина.</li>
+                    <li><strong>Услуги:</strong> Учитываются как выручка без себестоимости (100% маржа).</li>
+                    <li><strong>Маржинальность:</strong> (Маржа / Выручка) × 100%. Показывает долю прибыли в выручке.</li>
+                    <li><strong>Цветовая индикация:</strong> 
+                        <span class="badge bg-success">≥30%</span> - отлично, 
+                        <span class="badge bg-warning">15-30%</span> - нормально, 
+                        <span class="badge bg-danger">&lt;15%</span> - низкая маржа.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+            <div class="card-header bg-warning">
+                <h3 class="card-title text-white"><i class="fas fa-info-circle me-2"></i>Сводная информация</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая маржа:</strong> <span class="h5 text-primary">{{ report.total_margin }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Маржинальность:</strong> <span class="h5 text-success">{{ report.total_margin_percent|round(2) }}%</span></p>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3">
+                        <p><strong>Выручка услуг:</strong> <span class="h5 text-info">{{ report.services_revenue }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Выручка всего:</strong> <span class="h5 text-success">{{ report.total_revenue_all }} ₽</span></p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Детализация по товарам</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Артикул</th>
+                                <th>Категория</th>
+                                <th>Продано</th>
+                                <th>Выручка</th>
+                                <th>Себестоимость</th>
+                                <th>Маржа</th>
+                                <th>Средняя себестоимость</th>
+                                <th>Средняя цена</th>
+                                <th>Маржинальность</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report['items'] %}
+                            <tr>
+                                <td>{{ item.part_name }}</td>
+                                <td>{{ item.part_number or '-' }}</td>
+                                <td>{{ item.category or '-' }}</td>
+                                <td>{{ item.total_sold }}</td>
+                                <td>{{ item.total_revenue }} ₽</td>
+                                <td>{{ item.total_cost }} ₽</td>
+                                <td>{{ item.margin }} ₽</td>
+                                <td>{{ item.avg_purchase_price|round(2) }} ₽</td>
+                                <td>{{ item.avg_retail_price|round(2) }} ₽</td>
+                                <td>
+                                    <span class="badge {% if item.margin_percent >= 30 %}bg-success{% elif item.margin_percent >= 15 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ item.margin_percent|round(2) }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Товаров не найдено</h5>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+{% endblock %}

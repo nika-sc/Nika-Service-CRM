@@ -1,0 +1,1348 @@
+{% extends "base.html" %}
+
+{% block title %}Клиент: {{ customer.name }} — Nika CRM{% endblock %}
+
+{% block styles %}
+    <!-- TomSelect CSS -->
+    <link href="{{ url_for('static', filename='cdn/tom-select/2.2.2/css/tom-select.bootstrap5.css') }}" rel="stylesheet">
+    
+    <style>
+        .device-card {
+            border-left: 3px solid #17a2b8;
+            transition: all 0.2s ease;
+        }
+
+        .device-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .symptom-tags, .appearance-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        /* Компактные поля формы в модальных окнах */
+        .modal-body .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+        
+        .modal-body .form-control,
+        .modal-body .form-select {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+        }
+        
+        .modal-body small.text-muted {
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 0.25rem;
+        }
+
+        .order-row {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .order-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Стили для интерактивных контактов */
+        .contact-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .contact-value {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .contact-value:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .contact-actions {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 8px;
+        }
+
+        .contact-btn {
+            padding: 2px 6px;
+            font-size: 0.875rem;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .contact-btn:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+
+        .contact-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .contact-dropdown.show {
+            display: block;
+        }
+
+        .contact-dropdown-item {
+            display: block;
+            padding: 8px 12px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #f4f4f4;
+            transition: background 0.2s;
+        }
+
+        .contact-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .contact-dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .contact-dropdown-item i {
+            width: 20px;
+            margin-right: 8px;
+        }
+    </style>
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+                    <!-- Кнопки действий -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <a href="/clients" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-arrow-left me-1"></i> Назад к списку
+                            </a>
+                            <a href="/add_order?customer_id={{ customer.id }}" class="btn btn-success btn-sm">
+                                <i class="fas fa-plus me-1"></i> Создать заявку
+                            </a>
+                            <button class="btn btn-info btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editCustomerModal">
+                                <i class="fas fa-pen-to-square me-1"></i> Редактировать
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Информация о клиенте -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-user me-2"></i>Информация о клиенте</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-user me-1"></i>Имя:</strong><br>
+                                        <span>{{ customer.name }}</span>
+                                    </div>
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-phone me-1"></i>Телефон:</strong><br>
+                                        <div class="contact-item">
+                                            {% if customer.phone %}
+                                                {% set phone_digits = customer.phone|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('+', '') %}
+                                                {% set phone_formatted = phone_digits %}
+                                                {% if phone_digits|length == 11 and phone_digits.startswith('7') %}
+                                                    {% set phone_formatted = '+' + phone_digits[0] + '(' + phone_digits[1:4] + ')' + phone_digits[4:7] + '-' + phone_digits[7:9] + '-' + phone_digits[9:] %}
+                                                {% endif %}
+                                                <span class="contact-value" data-phone="{{ phone_digits }}" onclick="showPhoneMenu(event, '{{ phone_digits }}')">
+                                                    {{ phone_formatted }}
+                                                </span>
+                                                <div class="contact-dropdown" id="phoneMenu-{{ phone_digits }}">
+                                                    <a href="tel:{{ phone_digits }}" class="contact-dropdown-item">
+                                                        <i class="fas fa-phone"></i> Позвонить
+                                                    </a>
+                                                    <a href="https://wa.me/{{ phone_digits }}"  class="contact-dropdown-item">
+                                                        <i class="fab fa-whatsapp"></i> WhatsApp
+                                                    </a>
+                                                    <a href="viber://chat?number={{ phone_digits }}" class="contact-dropdown-item">
+                                                        <i class="fab fa-viber"></i> Viber
+                                                    </a>
+                                                    <a href="https://t.me/+{{ (phone_digits if phone_digits[0:1] == '7' else ('7' + phone_digits[1:] if phone_digits[0:1] == '8' and phone_digits|length == 11 else phone_digits)) }}" class="contact-dropdown-item">
+                                                        <i class="fab fa-telegram"></i> Написать в Телеграмм
+                                                    </a>
+                                                    <a href="#" class="contact-dropdown-item" onclick="copyToClipboard('{{ phone_digits }}', event)">
+                                                        <i class="fas fa-copy"></i> Копировать
+                                                    </a>
+                                                </div>
+                                                <button class="contact-btn" onclick="copyToClipboard('{{ phone_digits }}', event)" title="Копировать">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            {% else %}
+                                                <span>—</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-envelope me-1"></i>Email:</strong><br>
+                                        <div class="contact-item">
+                                            {% if customer.email %}
+                                                <a href="mailto:{{ customer.email }}" class="contact-value">
+                                                    {{ customer.email }}
+                                                </a>
+                                                <button class="contact-btn" onclick="copyToClipboard('{{ customer.email }}', event)" title="Копировать">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            {% else %}
+                                                <span>—</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-calendar me-1"></i>Дата регистрации:</strong><br>
+                                        <span>{{ customer.created_at|format_date(true) if customer.created_at else '—' }}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <strong><i class="fas fa-file-alt me-1"></i>Заявок:</strong>
+                                        <span class="badge bg-primary">{{ customer.orders_count or 0 }}</span>
+                                    </div>
+                                    <div class="info-item mt-2">
+                                        <strong><i class="fas fa-laptop me-1"></i>Устройств:</strong>
+                                        <span class="badge bg-info">{{ customer.devices_count or 0 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Статистика клиента -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-chart-line me-2"></i>Статистика</h3>
+                                </div>
+                                <div class="card-body">
+                                    {% if stats %}
+                                    <!-- Уровень лояльности -->
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-star me-1"></i>Уровень лояльности:</strong><br>
+                                        {% if stats.loyalty_level == 'VIP' %}
+                                            <span class="badge bg-danger" style="font-size: 0.9rem; padding: 6px 12px;">
+                                                <i class="fas fa-crown me-1"></i>{{ stats.loyalty_level }}
+                                            </span>
+                                        {% elif stats.loyalty_level == 'Постоянный' %}
+                                            <span class="badge bg-warning" style="font-size: 0.9rem; padding: 6px 12px;">
+                                                <i class="fas fa-star me-1"></i>{{ stats.loyalty_level }}
+                                            </span>
+                                        {% elif stats.loyalty_level == 'Активный' %}
+                                            <span class="badge bg-success" style="font-size: 0.9rem; padding: 6px 12px;">
+                                                <i class="fas fa-check-circle me-1"></i>{{ stats.loyalty_level }}
+                                            </span>
+                                        {% elif stats.loyalty_level == 'Обычный' %}
+                                            <span class="badge bg-info" style="font-size: 0.9rem; padding: 6px 12px;">
+                                                <i class="fas fa-user me-1"></i>{{ stats.loyalty_level }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary" style="font-size: 0.9rem; padding: 6px 12px;">
+                                                <i class="fas fa-user-plus me-1"></i>{{ stats.loyalty_level }}
+                                            </span>
+                                        {% endif %}
+                                        <div class="progress mt-2" style="height: 8px;">
+                                            <div class="progress-bar 
+                                                {% if stats.loyalty_score >= 80 %}bg-danger
+                                                {% elif stats.loyalty_score >= 60 %}bg-warning
+                                                {% elif stats.loyalty_score >= 40 %}bg-success
+                                                {% elif stats.loyalty_score >= 20 %}bg-info
+                                                {% else %}bg-secondary{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {{ stats.loyalty_score }}%"
+                                                aria-valuenow="{{ stats.loyalty_score }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Балл: {{ stats.loyalty_score }}/100</small>
+                                    </div>
+
+                                    <!-- Средний чек -->
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-ruble-sign me-1"></i>Средний чек:</strong><br>
+                                        <span class="h5 text-primary">{{ "{:,.0f}".format(stats.average_check|default(0)|float) }} ₽</span>
+                                    </div>
+
+                                    <!-- Общая сумма -->
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-money-bill-wave me-1"></i>Общая сумма:</strong><br>
+                                        <span class="h5 text-success">{{ "{:,.0f}".format(stats.total_amount|default(0)|float) }} ₽</span>
+                                    </div>
+
+                                    <!-- Оплачено -->
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-check-circle me-1"></i>Оплачено:</strong><br>
+                                        <span class="text-success">{{ "{:,.0f}".format(stats.total_paid|default(0)|float) }} ₽</span>
+                                    </div>
+
+                                    <!-- Задолженность -->
+                                    {% if stats.debt and stats.debt > 0 %}
+                                    <div class="info-item mb-3">
+                                        <strong><i class="fas fa-exclamation-triangle me-1"></i>Задолженность:</strong><br>
+                                        <span class="text-danger">{{ "{:,.0f}".format(stats.debt|default(0)|float) }} ₽</span>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Даты -->
+                                    {% if stats.first_order_date %}
+                                    <div class="info-item mb-2">
+                                        <strong><i class="fas fa-calendar-check me-1"></i>Первая заявка:</strong><br>
+                                        <small>{{ stats.first_order_date|format_date(true) }}</small>
+                                        {% if stats.days_since_first > 0 %}
+                                            <small class="text-muted">({{ stats.days_since_first }} дн. назад)</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if stats.last_order_date %}
+                                    <div class="info-item">
+                                        <strong><i class="fas fa-calendar-alt me-1"></i>Последняя заявка:</strong><br>
+                                        <small>{{ stats.last_order_date|format_date(true) }}</small>
+                                        {% if stats.days_since_last > 0 %}
+                                            <small class="text-muted">({{ stats.days_since_last }} дн. назад)</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% else %}
+                                    <div class="alert alert-info mb-0">
+                                        <small>Статистика недоступна</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Устройства -->
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h3 class="card-title"><i class="fas fa-laptop me-2"></i>Устройства</h3>
+                                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+                                        <i class="fas fa-plus me-1"></i>Добавить устройство
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    {% if devices %}
+                                    <div class="row">
+                                        {% for device in devices %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card device-card">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h5 class="card-title mb-0">
+                                                            <i class="fas fa-laptop me-1"></i>
+                                                            {{ device.device_type or 'Не указан' }}
+                                                        </h5>
+                                                        <button class="btn btn-warning btn-sm edit-device-btn" 
+                                                                data-device-id="{{ device.id }}"
+                                                                data-device-type-id="{{ device.device_type_id }}"
+                                                                data-device-brand-id="{{ device.device_brand_id }}"
+                                                                data-serial-number="{{ device.serial_number or '' }}"
+                                                                data-password="{{ device.password or '' }}"
+                                                                data-symptom-tags="{{ device.symptom_tags or '' }}"
+                                                                data-appearance-tags="{{ device.appearance_tags or '' }}"
+                                                                data-comment="{{ device.comment or '' }}"
+                                                                title="Редактировать">
+                                                            <i class="fas fa-edit me-1"></i>Редактировать
+                                                        </button>
+                                                    </div>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Бренд:</strong> {{ device.device_brand or '—' }}
+                                                    </p>
+                                                    {% if device.serial_number %}
+                                                    <p class="card-text mb-1">
+                                                        <strong>Серийный номер:</strong> {{ device.serial_number }}
+                                                    </p>
+                                                    {% endif %}
+                                                    {% if device.comment %}
+                                                    <div class="alert alert-info mb-2 py-2 px-2" style="font-size: 0.85rem;">
+                                                        <i class="fas fa-comment me-1"></i>
+                                                        <strong>Комментарий:</strong> {{ device.comment }}
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Информация о заявках -->
+                                                    <div class="mb-2 p-2" style="background-color: #f8f9fa; border-radius: 4px;">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span class="text-muted small">
+                                                                <i class="fas fa-file-alt me-1"></i>Заявок:
+                                                            </span>
+                                                            <strong>{{ device.orders_count or 0 }}</strong>
+                                                        </div>
+                                                        {% if device.last_order_date %}
+                                                        <div class="text-muted small mb-1">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Последняя: {{ device.last_order_date|format_date(true) if device.last_order_date else '—' }}
+                                                            {% if device.last_order_status %}
+                                                                <span class="badge badge-secondary ms-1" style="font-size: 0.7rem;">{{ device.last_order_status }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <!-- Повреждения и поломки из последней заявки -->
+                                                    {% if device.last_order_symptom_tags or device.last_order_appearance %}
+                                                    <div class="mb-2">
+                                                        {% if device.last_order_symptom_tags %}
+                                                        <div class="mb-1">
+                                                            <strong class="small text-muted d-block mb-1">
+                                                                <i class="fas fa-wrench me-1"></i>Неисправности:
+                                                            </strong>
+                                                            <div class="symptom-tags">
+                                                                {% for tag in device.last_order_symptom_tags.split(',') %}
+                                                                    {% if tag.strip() %}
+                                                                        <span class="badge badge-info mr-1 mb-1" style="font-size: 0.7rem;">{{ tag.strip() }}</span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if device.last_order_appearance %}
+                                                        <div>
+                                                            <strong class="small text-muted d-block mb-1">
+                                                                <i class="fas fa-paint-brush me-1"></i>Внешний вид:
+                                                            </strong>
+                                                            <div class="appearance-tags">
+                                                                {% for tag in device.last_order_appearance.split(',') %}
+                                                                    {% if tag.strip() %}
+                                                                        <span class="badge badge-secondary mr-1 mb-1" style="font-size: 0.7rem;">{{ tag.strip() }}</span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <p class="card-text text-muted small mb-2">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        Добавлено: {{ device.created_at|format_date(true) if device.created_at else '—' }}
+                                                    </p>
+                                                    <a href="/device/{{ device.id }}" class="btn btn-sm btn-info btn-block">
+                                                        <i class="fas fa-history me-1"></i> История заявок
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-1"></i>У клиента пока нет устройств. Добавьте первое устройство.
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Заявки клиента -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-file-alt me-2"></i>Заявки клиента</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if orders %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                                                    <th><i class="fas fa-calendar me-1"></i>Дата</th>
+                                                    <th><i class="fas fa-laptop me-1"></i>Устройство</th>
+                                                    <th><i class="fas fa-tag me-1"></i>Статус</th>
+                                                    <th><i class="fas fa-money-bill-wave me-1"></i>Предоплата</th>
+                                                    <th><i class="fas fa-bolt me-1"></i>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for order in orders %}
+                                                <tr class="order-row" onclick="window.location.href='/order/{{ order.order_id }}'" style="cursor: pointer;">
+                                                    <td>#{{ order.id }}</td>
+                                                    <td>{{ order.created_at|format_date(true) if order.created_at else '—' }}</td>
+                                                    <td>
+                                                        {{ order.device_type or '—' }} 
+                                                        {% if order.device_brand %}{{ order.device_brand }}{% endif %}
+                                                        {% if order.serial_number %}<br><small class="text-muted">SN: {{ order.serial_number }}</small>{% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if order.status_name %}
+                                                        <span class="badge" style="background-color: {{ order.status_color or '#6c757d' }}; color: #fff;">
+                                                            {{ order.status_name }}
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge badge-secondary">{{ order.status or 'Не указан' }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ order.prepayment or '0' }} ₽</td>
+                                                    <td onclick="event.stopPropagation();">
+                                                        <a href="/order/{{ order.order_id }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-info m-3">
+                                        <i class="fas fa-info-circle me-1"></i>У клиента пока нет заявок.
+                                        <a href="/add_order?customer_id={{ customer.id }}" class="alert-link">Создайте первую заявку</a>.
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Все продажи (из заявок и магазина) -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-shopping-bag me-2"></i>Все продажи</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if all_sales %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th><i class="fas fa-tag me-1"></i>Источник</th>
+                                                    <th><i class="fas fa-calendar me-1"></i>Дата</th>
+                                                    <th><i class="fas fa-user-tie me-1"></i>Мастер</th>
+                                                    <th><i class="fas fa-tools me-1"></i>Услуги</th>
+                                                    <th><i class="fas fa-box me-1"></i>Товары</th>
+                                                    <th><i class="fas fa-money-bill-wave me-1"></i>Итого</th>
+                                                    <th><i class="fas fa-credit-card me-1"></i>Оплачено</th>
+                                                    <th><i class="fas fa-bolt me-1"></i>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for sale in all_sales %}
+                                                <tr class="order-row" 
+                                                    {% if sale.sale_type == 'order' %}
+                                                    onclick="window.location.href='/order/{{ sale.reference_id }}'" 
+                                                    {% else %}
+                                                    onclick="window.location.href='{{ url_for('shop.sale_detail', sale_id=sale.id) }}'" 
+                                                    {% endif %}
+                                                    style="cursor: pointer;">
+                                                    <td>
+                                                        {% if sale.sale_type == 'order' %}
+                                                        <span class="badge bg-primary">
+                                                            <i class="fas fa-file-alt me-1"></i>{{ sale.source_label }}
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-shopping-cart me-1"></i>{{ sale.source_label }}
+                                                        </span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ sale.date|format_date(true) if sale.date else '—' }}</td>
+                                                    <td>{{ sale.master_name or '—' }}</td>
+                                                    <td>{{ (sale.services_total or 0)|round(2) }} ₽</td>
+                                                    <td>{{ (sale.parts_total or 0)|round(2) }} ₽</td>
+                                                    <td class="fw-bold">{{ (sale.total_amount or 0)|round(2) }} ₽</td>
+                                                    <td>{{ (sale.paid_amount or 0)|round(2) }} ₽</td>
+                                                    <td onclick="event.stopPropagation();">
+                                                        {% if sale.sale_type == 'order' %}
+                                                        <a href="/order/{{ sale.reference_id }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        {% else %}
+                                                        <a href="{{ url_for('shop.sale_detail', sale_id=sale.id) }}" class="btn btn-sm btn-warning">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-info m-3">
+                                        <i class="fas fa-info-circle me-1"></i>У клиента пока нет продаж.
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Модальное окно добавления устройства -->
+    <div class="modal fade" id="addDeviceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Добавить устройство</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addDeviceForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="deviceType" class="form-label">Тип устройства <span class="text-danger">*</span></label>
+                                <select class="form-select" id="deviceType" required>
+                                    <option value="">Выберите тип</option>
+                                    {% for dt in device_types %}
+                                    <option value="{{ dt['id'] }}">{{ dt['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="deviceBrand" class="form-label">Бренд <span class="text-danger">*</span></label>
+                                <select class="form-select" id="deviceBrand" required>
+                                    <option value="">Выберите бренд</option>
+                                    {% for db in device_brands %}
+                                    <option value="{{ db['id'] }}">{{ db['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="serialNumber" class="form-label">Серийный номер</label>
+                                <input type="text" class="form-control" id="serialNumber" placeholder="SN123456789">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="devicePassword" class="form-label">Пароль от устройства</label>
+                                <input type="password" class="form-control" id="devicePassword" placeholder="Необязательно">
+                                <small class="text-muted">Будет использоваться при создании заявок</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="deviceSymptomTags" class="form-label">Типичные неисправности</label>
+                                <select class="form-control" id="deviceSymptomTags" multiple>
+                                    {% for s in symptoms %}
+                                    <option value="{{ s['name'] }}">{{ s['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="symptom_tags" id="deviceSymptomTagsInput">
+                                <small class="text-muted">Выберите теги или впишите свой вариант</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="deviceAppearanceTags" class="form-label">Внешний вид и комплектация</label>
+                                <select class="form-control" id="deviceAppearanceTags" multiple>
+                                    {% for at in appearance_tags %}
+                                    <option value="{{ at['name'] }}">{{ at['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="appearance_tags" id="deviceAppearanceTagsInput">
+                                <small class="text-muted">Теги для быстрой приёмки</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="deviceComment" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>Комментарий
+                                    <small class="text-muted">(виден только сервисному центру)</small>
+                                </label>
+                                <textarea class="form-control" id="deviceComment" rows="3" 
+                                          placeholder="Внутренний комментарий к устройству..."></textarea>
+                                <small class="text-muted">Этот комментарий виден только сотрудникам сервисного центра</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveDeviceBtn">
+                        <i class="fas fa-save me-1"></i>Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования устройства -->
+    <div class="modal fade" id="editDeviceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Редактировать устройство</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editDeviceForm">
+                        <input type="hidden" id="editDeviceId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editDeviceType" class="form-label">Тип устройства <span class="text-danger">*</span></label>
+                                <select class="form-select" id="editDeviceType" required>
+                                    <option value="">Выберите тип</option>
+                                    {% for dt in device_types %}
+                                    <option value="{{ dt['id'] }}">{{ dt['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDeviceBrand" class="form-label">Бренд <span class="text-danger">*</span></label>
+                                <select class="form-select" id="editDeviceBrand" required>
+                                    <option value="">Выберите бренд</option>
+                                    {% for db in device_brands %}
+                                    <option value="{{ db['id'] }}">{{ db['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editSerialNumber" class="form-label">Серийный номер</label>
+                                <input type="text" class="form-control" id="editSerialNumber" placeholder="SN123456789">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDevicePassword" class="form-label">Пароль от устройства</label>
+                                <input type="password" class="form-control" id="editDevicePassword" placeholder="Необязательно">
+                                <small class="text-muted">Будет использоваться при создании заявок</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="editDeviceSymptomTags" class="form-label">Типичные неисправности</label>
+                                <select class="form-control" id="editDeviceSymptomTags" multiple>
+                                    {% for s in symptoms %}
+                                    <option value="{{ s['name'] }}">{{ s['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="symptom_tags" id="editDeviceSymptomTagsInput">
+                                <small class="text-muted">Выберите теги или впишите свой вариант</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="editDeviceAppearanceTags" class="form-label">Внешний вид и комплектация</label>
+                                <select class="form-control" id="editDeviceAppearanceTags" multiple>
+                                    {% for at in appearance_tags %}
+                                    <option value="{{ at['name'] }}">{{ at['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="appearance_tags" id="editDeviceAppearanceTagsInput">
+                                <small class="text-muted">Теги для быстрой приёмки</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="editDeviceComment" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>Комментарий
+                                    <small class="text-muted">(виден только сервисному центру)</small>
+                                </label>
+                                <textarea class="form-control" id="editDeviceComment" rows="3" 
+                                          placeholder="Внутренний комментарий к устройству..."></textarea>
+                                <small class="text-muted">Этот комментарий виден только сотрудникам сервисного центра</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="updateDeviceBtn">
+                        <i class="fas fa-save me-1"></i>Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования клиента -->
+    <div class="modal fade" id="editCustomerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-pen-to-square me-2"></i>Редактировать клиента</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCustomerForm">
+                        <div class="mb-3">
+                            <label for="editCustomerName" class="form-label">Имя <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editCustomerName" value="{{ customer.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerPhone" class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="editCustomerPhone" value="{{ customer.phone or '' }}" placeholder="+7 (XXX) XXX-XX-XX">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editCustomerEmail" value="{{ customer.email or '' }}">
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label for="editCustomerPortalPassword" class="form-label">
+                                <i class="fas fa-key me-1"></i>Пароль для портала
+                            </label>
+                            <input type="password" class="form-control" id="editCustomerPortalPassword" placeholder="Оставьте пустым, чтобы не менять" autocomplete="new-password">
+                            <small class="form-text text-muted">
+                                Пароль для входа клиента в личный кабинет на /portal/login
+                            </small>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearPortalPasswordBtn">
+                                    <i class="fas fa-times me-1"></i>Удалить пароль
+                                </button>
+                                {% if customer.portal_password_hash and not customer.portal_password_changed %}
+                                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="showPortalPasswordBtn">
+                                    <i class="fas fa-eye me-1"></i>Показать пароль
+                                </button>
+                                {% endif %}
+                                <span class="ms-2 text-muted" id="portalPasswordStatus">
+                                    {% if customer.portal_enabled or customer.portal_password_hash %}
+                                        <i class="fas fa-check-circle text-success"></i> Доступ к порталу включен
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-muted"></i> Доступ к порталу не настроен
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div id="portalPasswordDisplay" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <strong>Пароль портала:</strong> <code id="portalPasswordValue"></code>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="copyPasswordToClipboard()">
+                                        <i class="fas fa-copy me-1"></i>Копировать
+                                    </button>
+                                    <small class="d-block mt-1 text-muted" id="portalPasswordNote"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveCustomerBtn">
+                        <i class="fas fa-save me-1"></i>Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="{{ url_for('static', filename='cdn/jquery/3.6.0/jquery.min.js') }}"></script>
+    <!-- Bootstrap 5 -->
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- TomSelect JS -->
+    <script src="{{ url_for('static', filename='cdn/tom-select/2.2.2/js/tom-select.complete.min.js') }}"></script>
+    <!-- AdminLTE -->
+    <script src="{{ url_for('static', filename='cdn/admin-lte/3.2/js/adminlte.min.js') }}"></script>
+    <!-- Themes JS -->
+    <script src="{{ url_for('static', filename='themes.js') }}"></script>
+
+    <script>
+        const customerId = {{ customer.id }};
+
+        // Вспомогательные функции для работы с тегами
+        function normalizeTagLabel(value) {
+            const trimmed = value.trim();
+            if (!trimmed) return '';
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        }
+
+        function persistCustomOption(key, value) {
+            if (!value) return;
+            try {
+                const options = JSON.parse(localStorage.getItem(key) || '[]');
+                const optionsSet = new Set(options);
+                optionsSet.add(value);
+                localStorage.setItem(key, JSON.stringify(Array.from(optionsSet)));
+            } catch (e) {
+                console.error('Ошибка сохранения в localStorage:', e);
+            }
+        }
+
+        function loadCustomOptions(key) {
+            try {
+                const raw = JSON.parse(localStorage.getItem(key) || '[]');
+                return Array.isArray(raw) ? raw : [];
+            } catch (err) {
+                return [];
+            }
+        }
+
+        function hydrateCustomOptions(selector, storageKey) {
+            const selectEl = document.querySelector(selector);
+            if (!selectEl) return;
+            const customOptions = loadCustomOptions(storageKey);
+            customOptions.forEach(option => {
+                if (!option) return;
+                const exists = Array.from(selectEl.options).some(opt => opt.value === option);
+                if (!exists) {
+                    selectEl.add(new Option(option, option));
+                }
+            });
+        }
+
+        // Инициализация TomSelect для полей тегов в модальном окне добавления устройства
+        const CUSTOM_SYMPTOM_KEY = 'device_custom_symptoms_v1';
+        const CUSTOM_APPEARANCE_KEY = 'device_custom_appearance_v1';
+
+        hydrateCustomOptions('#deviceSymptomTags', CUSTOM_SYMPTOM_KEY);
+        hydrateCustomOptions('#deviceAppearanceTags', CUSTOM_APPEARANCE_KEY);
+
+        let tomDeviceSymptomTags = null;
+        let tomDeviceAppearanceTags = null;
+        let tomEditDeviceSymptomTags = null;
+        let tomEditDeviceAppearanceTags = null;
+
+        // Инициализация TomSelect при открытии модального окна добавления устройства
+        document.getElementById('addDeviceModal').addEventListener('show.bs.modal', function() {
+            if (!tomDeviceSymptomTags) {
+                tomDeviceSymptomTags = new TomSelect('#deviceSymptomTags', {
+                    plugins: ['remove_button'],
+                    persist: false,
+                    maxItems: 10,
+                    placeholder: 'Выберите или впишите симптом',
+                    create: (input, callback) => {
+                        const normalized = normalizeTagLabel(input);
+                        if (!normalized) return;
+                        callback({ value: normalized, text: normalized });
+                        persistCustomOption(CUSTOM_SYMPTOM_KEY, normalized);
+                    },
+                });
+            } else {
+                // Очищаем значения при повторном открытии
+                tomDeviceSymptomTags.clear();
+            }
+
+            if (!tomDeviceAppearanceTags) {
+                tomDeviceAppearanceTags = new TomSelect('#deviceAppearanceTags', {
+                    plugins: ['remove_button'],
+                    persist: false,
+                    maxItems: 10,
+                    placeholder: 'Выберите внешний вид/комплект',
+                    create: (input, callback) => {
+                        const normalized = normalizeTagLabel(input);
+                        if (!normalized) return;
+                        callback({ value: normalized, text: normalized });
+                        persistCustomOption(CUSTOM_APPEARANCE_KEY, normalized);
+                    },
+                });
+            } else {
+                // Очищаем значения при повторном открытии
+                tomDeviceAppearanceTags.clear();
+            }
+        });
+
+        // Инициализация TomSelect при открытии модального окна редактирования устройства
+        document.getElementById('editDeviceModal').addEventListener('show.bs.modal', function() {
+            hydrateCustomOptions('#editDeviceSymptomTags', CUSTOM_SYMPTOM_KEY);
+            hydrateCustomOptions('#editDeviceAppearanceTags', CUSTOM_APPEARANCE_KEY);
+
+            if (!tomEditDeviceSymptomTags) {
+                tomEditDeviceSymptomTags = new TomSelect('#editDeviceSymptomTags', {
+                    plugins: ['remove_button'],
+                    persist: false,
+                    maxItems: 10,
+                    placeholder: 'Выберите или впишите симптом',
+                    create: (input, callback) => {
+                        const normalized = normalizeTagLabel(input);
+                        if (!normalized) return;
+                        callback({ value: normalized, text: normalized });
+                        persistCustomOption(CUSTOM_SYMPTOM_KEY, normalized);
+                    },
+                });
+            }
+
+            if (!tomEditDeviceAppearanceTags) {
+                tomEditDeviceAppearanceTags = new TomSelect('#editDeviceAppearanceTags', {
+                    plugins: ['remove_button'],
+                    persist: false,
+                    maxItems: 10,
+                    placeholder: 'Выберите внешний вид/комплект',
+                    create: (input, callback) => {
+                        const normalized = normalizeTagLabel(input);
+                        if (!normalized) return;
+                        callback({ value: normalized, text: normalized });
+                        persistCustomOption(CUSTOM_APPEARANCE_KEY, normalized);
+                    },
+                });
+            }
+        });
+
+        // Добавление устройства
+        document.getElementById('saveDeviceBtn').addEventListener('click', function() {
+            const deviceTypeId = document.getElementById('deviceType').value;
+            const deviceBrandId = document.getElementById('deviceBrand').value;
+            const serialNumber = document.getElementById('serialNumber').value.trim();
+            const password = document.getElementById('devicePassword').value.trim();
+            const comment = document.getElementById('deviceComment').value.trim();
+            
+            // Получаем значения из TomSelect
+            let symptomTags = [];
+            let appearanceTags = [];
+            
+            if (tomDeviceSymptomTags) {
+                const symptomValue = tomDeviceSymptomTags.getValue();
+                symptomTags = Array.isArray(symptomValue) ? symptomValue : (symptomValue ? [symptomValue] : []);
+            }
+            
+            if (tomDeviceAppearanceTags) {
+                const appearanceValue = tomDeviceAppearanceTags.getValue();
+                appearanceTags = Array.isArray(appearanceValue) ? appearanceValue : (appearanceValue ? [appearanceValue] : []);
+            }
+
+            if (!deviceTypeId || !deviceBrandId) {
+                alert('Заполните тип и бренд устройства');
+                return;
+            }
+
+            fetch(`/api/clients/${customerId}/devices`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_type_id: parseInt(deviceTypeId),
+                    device_brand_id: parseInt(deviceBrandId),
+                    serial_number: serialNumber || null,
+                    password: password || null,
+                    symptom_tags: symptomTags.length > 0 ? symptomTags.join(', ') : null,
+                    appearance_tags: appearanceTags.length > 0 ? appearanceTags.join(', ') : null,
+                    comment: comment || null
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось добавить устройство'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при добавлении устройства');
+            });
+        });
+
+        // Редактирование клиента
+        document.getElementById('saveCustomerBtn').addEventListener('click', function() {
+            const name = document.getElementById('editCustomerName').value.trim();
+            const phone = document.getElementById('editCustomerPhone').value.trim();
+            const email = document.getElementById('editCustomerEmail').value.trim();
+            const portalPassword = document.getElementById('editCustomerPortalPassword').value.trim();
+
+            if (!name) {
+                alert('Имя обязательно для заполнения');
+                return;
+            }
+
+            // Сначала обновляем основные данные клиента
+            fetch(`/api/customers/${customerId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    phone: phone || null,
+                    email: email || null
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Не удалось обновить данные');
+                }
+                
+                // Если указан пароль портала, устанавливаем его
+                if (portalPassword) {
+                    return fetch(`/api/customers/${customerId}/portal-password`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            password: portalPassword
+                        })
+                    }).then(res => res.json());
+                } else {
+                    return Promise.resolve({ success: true });
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    // Если был установлен пароль портала, обновляем статус
+                    if (portalPassword) {
+                        document.getElementById('portalPasswordStatus').innerHTML = 
+                            '<i class="fas fa-check-circle text-success"></i> Доступ к порталу включен';
+                        document.getElementById('editCustomerPortalPassword').value = '';
+                    }
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось обновить данные'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при обновлении данных: ' + error.message);
+            });
+        });
+
+        // Кнопка показа пароля портала
+        const showPortalPasswordBtn = document.getElementById('showPortalPasswordBtn');
+        if (showPortalPasswordBtn) {
+            showPortalPasswordBtn.addEventListener('click', function() {
+                fetch(`/api/customers/${customerId}/portal-password/show`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('portalPasswordValue').textContent = data.password;
+                            document.getElementById('portalPasswordNote').textContent = data.note || '';
+                            document.getElementById('portalPasswordDisplay').style.display = 'block';
+                        } else {
+                            alert('Ошибка: ' + (data.error || 'Не удалось получить пароль'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Произошла ошибка при получении пароля');
+                    });
+            });
+        }
+
+        // Функция копирования пароля
+        function copyPasswordToClipboard() {
+            const password = document.getElementById('portalPasswordValue').textContent;
+            navigator.clipboard.writeText(password).then(() => {
+                alert('Пароль скопирован в буфер обмена');
+            }).catch(() => {
+                // Fallback для старых браузеров
+                const textarea = document.createElement('textarea');
+                textarea.value = password;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Пароль скопирован в буфер обмена');
+            });
+        }
+
+        // Кнопка удаления пароля портала
+        document.getElementById('clearPortalPasswordBtn').addEventListener('click', function() {
+            if (!confirm('Удалить пароль портала для этого клиента? Доступ к порталу будет отключен.')) {
+                return;
+            }
+
+            fetch(`/api/customers/${customerId}/portal-password`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('editCustomerPortalPassword').value = '';
+                    document.getElementById('portalPasswordStatus').innerHTML = 
+                        '<i class="fas fa-times-circle text-muted"></i> Доступ к порталу не настроен';
+                    alert('Пароль портала удален');
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось удалить пароль'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при удалении пароля');
+            });
+        });
+
+        // Редактирование устройства
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-device-btn')) {
+                const btn = e.target.closest('.edit-device-btn');
+                const deviceId = btn.dataset.deviceId;
+                const deviceTypeId = btn.dataset.deviceTypeId;
+                const deviceBrandId = btn.dataset.deviceBrandId;
+                const serialNumber = btn.dataset.serialNumber || '';
+                const password = btn.dataset.password || '';
+                const symptomTags = btn.dataset.symptomTags || '';
+                const appearanceTags = btn.dataset.appearanceTags || '';
+                const comment = btn.dataset.comment || '';
+
+                document.getElementById('editDeviceId').value = deviceId;
+                document.getElementById('editDeviceType').value = deviceTypeId || '';
+                document.getElementById('editDeviceBrand').value = deviceBrandId || '';
+                document.getElementById('editSerialNumber').value = serialNumber;
+                document.getElementById('editDevicePassword').value = password;
+                document.getElementById('editDeviceComment').value = comment || '';
+                
+                // Загружаем значения в TomSelect после инициализации
+                setTimeout(() => {
+                    if (tomEditDeviceSymptomTags && symptomTags) {
+                        const tags = symptomTags.split(',').map(t => t.trim()).filter(Boolean);
+                        tags.forEach(tag => {
+                            if (!tomEditDeviceSymptomTags.options[tag]) {
+                                tomEditDeviceSymptomTags.addOption({ value: tag, text: tag });
+                            }
+                        });
+                        tomEditDeviceSymptomTags.setValue(tags);
+                    } else if (tomEditDeviceSymptomTags) {
+                        tomEditDeviceSymptomTags.clear();
+                    }
+                    
+                    if (tomEditDeviceAppearanceTags && appearanceTags) {
+                        const tags = appearanceTags.split(',').map(t => t.trim()).filter(Boolean);
+                        tags.forEach(tag => {
+                            if (!tomEditDeviceAppearanceTags.options[tag]) {
+                                tomEditDeviceAppearanceTags.addOption({ value: tag, text: tag });
+                            }
+                        });
+                        tomEditDeviceAppearanceTags.setValue(tags);
+                    } else if (tomEditDeviceAppearanceTags) {
+                        tomEditDeviceAppearanceTags.clear();
+                    }
+                }, 200);
+
+                const modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
+                modal.show();
+            }
+        });
+
+        // Сохранение изменений устройства
+        document.getElementById('updateDeviceBtn').addEventListener('click', function() {
+            const deviceId = document.getElementById('editDeviceId').value;
+            const deviceTypeId = document.getElementById('editDeviceType').value;
+            const deviceBrandId = document.getElementById('editDeviceBrand').value;
+            const serialNumber = document.getElementById('editSerialNumber').value.trim();
+            const password = document.getElementById('editDevicePassword').value.trim();
+            const comment = document.getElementById('editDeviceComment').value.trim();
+            
+            // Получаем значения из TomSelect
+            let symptomTags = [];
+            let appearanceTags = [];
+            
+            if (tomEditDeviceSymptomTags) {
+                const symptomValue = tomEditDeviceSymptomTags.getValue();
+                symptomTags = Array.isArray(symptomValue) ? symptomValue : (symptomValue ? [symptomValue] : []);
+            }
+            
+            if (tomEditDeviceAppearanceTags) {
+                const appearanceValue = tomEditDeviceAppearanceTags.getValue();
+                appearanceTags = Array.isArray(appearanceValue) ? appearanceValue : (appearanceValue ? [appearanceValue] : []);
+            }
+
+            if (!deviceTypeId || !deviceBrandId) {
+                alert('Заполните тип и бренд устройства');
+                return;
+            }
+
+            fetch(`/api/clients/${customerId}/devices/${deviceId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_type_id: parseInt(deviceTypeId),
+                    device_brand_id: parseInt(deviceBrandId),
+                    serial_number: serialNumber || null,
+                    password: password || null,
+                    symptom_tags: symptomTags.length > 0 ? symptomTags.join(', ') : null,
+                    appearance_tags: appearanceTags.length > 0 ? appearanceTags.join(', ') : null,
+                    comment: comment || null
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editDeviceModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось обновить устройство'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при обновлении устройства');
+            });
+        });
+
+        // Функция удаления устройства удалена
+        // Устройства не удаляются, так как они связаны с заявками и важны для истории
+        // Для изменения данных устройства используйте функцию редактирования
+        // Функции для работы с контактами
+        function showPhoneMenu(event, phone) {
+            event.stopPropagation();
+            const menuId = 'phoneMenu-' + phone;
+            const menu = document.getElementById(menuId);
+            
+            // Закрываем все другие меню
+            document.querySelectorAll('.contact-dropdown').forEach(m => {
+                if (m.id !== menuId) {
+                    m.classList.remove('show');
+                }
+            });
+            
+            // Переключаем текущее меню
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.contact-item')) {
+                document.querySelectorAll('.contact-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+
+        // Копирование в буфер обмена
+        async function copyToClipboard(text, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // Показываем уведомление
+                const btn = event ? event.target.closest('button, a') : null;
+                if (btn) {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                    btn.style.color = '#28a745';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.style.color = '';
+                    }, 1000);
+                } else {
+                    alert('Скопировано: ' + text);
+                }
+            } catch (err) {
+                // Fallback для старых браузеров
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('Скопировано: ' + text);
+                } catch (e) {
+                    alert('Не удалось скопировать. Скопируйте вручную: ' + text);
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+    </script>
+{% endblock %}
+
+

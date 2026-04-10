@@ -1,0 +1,90 @@
+{# Shared sidebar for Reports pages #}
+<aside class="page-sidebar">
+    <ul class="page-menu">
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.dashboard') }}" class="page-menu-link{% if '/reports/dashboard' in request.path %} active{% endif %}">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Сводный</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.profit_report') }}" class="page-menu-link{% if '/reports/profit' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>Прибыль</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.analytics_report') }}" class="page-menu-link{% if '/reports/analytics' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Товары и Услуги</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.cash_report') }}" class="page-menu-link{% if '/reports/cash' in request.path %} active{% endif %}">
+                <i class="fas fa-cash-register"></i>
+                <span>Касса</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.sales_report') }}" class="page-menu-link{% if '/reports/sales' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>Продажи</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.purchases_report') }}" class="page-menu-link{% if '/reports/purchases' in request.path %} active{% endif %}">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Закупки</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.profitability_report') }}" class="page-menu-link{% if '/reports/profitability' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-pie"></i>
+                <span>Маржинальность</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.categories_report') }}" class="page-menu-link{% if '/reports/categories' in request.path %} active{% endif %}">
+                <i class="fas fa-tags"></i>
+                <span>Статьи</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.customers_report') }}" class="page-menu-link{% if '/reports/customers' in request.path %} active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Клиенты</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.stock_report') }}" class="page-menu-link{% if '/reports/stock' in request.path %} active{% endif %}">
+                <i class="fas fa-boxes"></i>
+                <span>Остатки</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.orders_log_report') }}" class="page-menu-link{% if '/reports/orders-log' in request.path %} active{% endif %}">
+                <i class="fas fa-history"></i>
+                <span>Журнал заявок</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.action_logs_report') }}" class="page-menu-link{% if '/reports/action-logs' in request.path %} active{% endif %}">
+                <i class="fas fa-list-alt"></i>
+                <span>Логи действий</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.salary_report') }}" class="page-menu-link{% if '/reports/salary' in request.path %} active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Зарплата</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.salary_debts_report') }}" class="page-menu-link{% if '/reports/salary-debts' in request.path %} active{% endif %}">
+                <i class="fas fa-balance-scale"></i>
+                <span>Долги по зарплате</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+

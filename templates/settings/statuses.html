@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Управление статусами{% endblock %}
+
+{% block styles %}
+    <style>
+        /* Современное меню настроек */
+        .settings-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .settings-sidebar {
+            width: 250px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 1.5rem 0;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .settings-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .settings-menu-item {
+            margin: 0.25rem 0;
+        }
+        
+        .settings-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.5rem;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .settings-menu-link:hover {
+            background: linear-gradient(90deg, rgba(0,123,255,0.08) 0%, rgba(0,123,255,0.02) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            transform: translateX(4px);
+        }
+        
+        .settings-menu-link.active {
+            background: linear-gradient(90deg, rgba(0,123,255,0.12) 0%, rgba(0,123,255,0.04) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            font-weight: 600;
+        }
+        
+        .settings-menu-link.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            background: #007bff;
+            border-radius: 3px 0 0 3px;
+        }
+        
+        .settings-menu-link i {
+            width: 22px;
+            text-align: center;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-menu-link:hover i,
+        .settings-menu-link.active i {
+            transform: scale(1.15);
+        }
+        
+        .settings-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 992px) {
+            .settings-container {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .settings-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+            
+            .settings-menu {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0 1rem;
+            }
+            
+            .settings-menu-item {
+                flex: 1;
+                min-width: 150px;
+            }
+            
+            .settings-menu-link {
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                text-align: center;
+                justify-content: center;
+            }
+            
+            .settings-menu-link:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            
+            .settings-menu-link.active::before {
+                display: none;
+            }
+            
+            .settings-menu-link.active {
+                border-bottom-color: #007bff;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="settings-container">
+        {% include 'partials/settings_sidebar.html' %}
+        
+        <div class="settings-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Управление статусами</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#statusModal" onclick="openStatusModal()">
+                    <i class="bi bi-plus-circle"></i> Добавить статус
+                </button>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-check-label">
+                    <input type="checkbox" id="showArchived" class="form-check-input" onchange="loadStatuses()">
+                    Показать архивные
+                </label>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="statusesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;"></th>
+                            <th style="width: 50px;">Цвет</th>
+                            <th>Название</th>
+                            <th>Группа</th>
+                            <th>Флаги</th>
+                            <th style="width: 100px;">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusesTableBody">
+                        <!-- Заполняется через JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка создания/редактирования статуса -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalTitle">Добавить статус</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <input type="hidden" id="statusId">
+                    
+                    <div class="mb-3">
+                        <label for="statusName" class="form-label">Название *</label>
+                        <input type="text" class="form-control" id="statusName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="statusGroup" class="form-label">Группа *</label>
+                        <select class="form-select" id="statusGroup" required>
+                            <option value="">Выберите группу</option>
+                            <option value="Новые">Новые</option>
+                            <option value="В работе">В работе</option>
+                            <option value="Отложенные">Отложенные</option>
+                            <option value="Готовые">Готовые</option>
+                            <option value="Закрытые успешно">Закрытые успешно</option>
+                            <option value="Закрытые неуспешно">Закрытые неуспешно</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="statusColor" class="form-label">Цвет</label>
+                        <input type="color" class="form-control form-control-color" id="statusColor" value="#007bff">
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Флаги статуса</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isDefault">
+                            <label class="form-check-label" for="isDefault">
+                                <strong>Статус по умолчанию при создании заявки</strong>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="triggersPaymentModal">
+                            <label class="form-check-label" for="triggersPaymentModal">
+                                Вызывает окно оплаты
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="accruesSalary">
+                            <label class="form-check-label" for="accruesSalary">
+                                Начисляет зарплату
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isFinal">
+                            <label class="form-check-label" for="isFinal">
+                                Финальный статус (закрывает заявку)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="blocksEdit">
+                            <label class="form-check-label" for="blocksEdit">
+                                Запрещает редактирование
+                            </label>
+                        </div>
+                        <!-- Флаг requires_warranty удален - гарантия берется из карточки товара/услуги -->
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="requiresComment">
+                            <label class="form-check-label" for="requiresComment">
+                                Требует комментарий
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isArchived">
+                            <label class="form-check-label" for="isArchived">
+                                Архивировать
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="clientName" class="form-label">Название для клиента</label>
+                        <input type="text" class="form-control" id="clientName">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="clientDescription" class="form-label">Описание для клиента</label>
+                        <textarea class="form-control" id="clientDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="saveStatus()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    <!-- SortableJS for drag-n-drop reorder -->
+    <script src="{{ url_for('static', filename='cdn/sortablejs/1.15.2/Sortable.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/statuses.js') }}"></script>
+{% endblock %}
+
+

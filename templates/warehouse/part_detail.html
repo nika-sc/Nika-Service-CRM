@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Товар #{{ part.id }} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <!-- Информация о товаре -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle me-2"></i>Информация о товаре</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Название:</strong> {{ part.name }}</p>
+                        <p><strong>Артикул:</strong> {{ part.part_number or '-' }}</p>
+                        <p><strong>Категория:</strong> {{ part.category or '-' }}</p>
+                        <p><strong>Единица измерения:</strong> {{ part.unit or 'шт' }}</p>
+                        <p><strong>Остаток:</strong> 
+                            <span class="badge {% if part.stock_quantity <= part.min_quantity %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ part.stock_quantity }} {{ part.unit or 'шт' }}
+                            </span>
+                        </p>
+                        <p><strong>Мин. остаток:</strong> {{ part.min_quantity }} {{ part.unit or 'шт' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Розничная цена:</strong> <span class="h4 text-primary">{{ part.retail_price or part.price or 0 }} ₽</span></p>
+                        <p><strong>Закупочная цена:</strong> {{ part.purchase_price or 0 }} ₽</p>
+                        <p><strong>Маржа:</strong> {{ (part.retail_price or part.price or 0) - (part.purchase_price or 0) }} ₽</p>
+                        {% if part.warranty_days %}
+                        <p><strong>Гарантия:</strong> {{ part.warranty_days }} дн.</p>
+                        {% endif %}
+                        {% if part.description %}
+                        <p><strong>Описание:</strong> {{ part.description }}</p>
+                        {% endif %}
+                        {% if part.comment %}
+                        <p><strong>Комментарий:</strong> {{ part.comment }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#incomeModal">
+                    <i class="fas fa-plus me-1"></i> Приход товара
+                </button>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <i class="fas fa-minus me-1"></i> Расход товара
+                </button>
+                <a href="{{ url_for('warehouse.edit_part', part_id=part.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i> Редактировать
+                </a>
+                <button type="button" class="btn btn-danger" onclick="deletePart({{ part.id }}, '{{ part.name }}')">
+                    <i class="fas fa-trash me-1"></i> Удалить
+                </button>
+                <a href="{{ url_for('warehouse.parts_list') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Назад
+                </a>
+            </div>
+        </div>
+
+        <!-- История движений -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history me-2"></i>История движений</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Тип</th>
+                                <th>Количество</th>
+                                <th>Примечание</th>
+                                <th>Пользователь</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in movements %}
+                            <tr>
+                                <td>{{ movement.created_at|format_date(true) if movement.created_at else '-' }}</td>
+                                <td>
+                                    {% if movement.movement_type == 'income' %}
+                                    <span class="badge bg-success">Приход</span>
+                                    {% elif movement.movement_type == 'expense' %}
+                                    <span class="badge bg-danger">Расход</span>
+                                    {% elif movement.movement_type == 'purchase' %}
+                                    <span class="badge bg-info">Закупка</span>
+                                    {% elif movement.movement_type == 'sale' %}
+                                    <span class="badge bg-warning">Продажа</span>
+                                    {% elif movement.movement_type == 'return' %}
+                                    <span class="badge bg-secondary">Возврат</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ movement.movement_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if movement.movement_type == 'income' or movement.movement_type == 'purchase' or movement.movement_type == 'return' %}
+                                    <span class="text-success">+{{ movement.quantity }}</span>
+                                    {% else %}
+                                    <span class="text-danger">-{{ movement.quantity }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ movement.notes or '-' }}</td>
+                                <td>{{ movement.created_by_username or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <p>Движений по товару пока нет</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно прихода товара -->
+    <div class="modal fade" id="incomeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Приход товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="incomeForm">
+                        <div class="mb-3">
+                            <label class="form-label">Количество <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity" class="form-control" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Себестоимость, ₽</label>
+                            <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" value="{{ part.purchase_price or 0 }}">
+                            <small class="form-text text-muted">Если изменить, себестоимость обновится глобально для товара</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Примечание</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Примечание к приходу"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="submitIncome({{ part.id }})">Принять</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно расхода товара -->
+    <div class="modal fade" id="expenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-minus me-2"></i>Расход товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="expenseForm">
+                        <div class="mb-3">
+                            <label class="form-label">Количество <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity" class="form-control" min="1" max="{{ part.stock_quantity }}" required>
+                            <small class="form-text text-muted">Доступно: {{ part.stock_quantity }} {{ part.unit or 'шт' }}</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Причина расхода <span class="text-danger">*</span></label>
+                            <input type="text" name="reason" class="form-control" placeholder="Например: Брак, Порча, Списание" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Примечание</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Дополнительная информация"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="submitExpense({{ part.id }})">Списать</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function deletePart(partId, partName) {
+            if (confirm(`Вы уверены, что хотите удалить товар "${partName}"?\n\nЭто действие можно отменить позже.`)) {
+                fetch(`/warehouse/parts/${partId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async response => {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert('Товар успешно удален');
+                        window.location.href = '{{ url_for("warehouse.parts_list") }}';
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Ошибка при удалении товара');
+                });
+            }
+        }
+        
+        function submitIncome(partId) {
+            const form = document.getElementById('incomeForm');
+            const formData = new FormData(form);
+            
+            const data = {
+                quantity: parseInt(formData.get('quantity')),
+                purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price')) : null,
+                notes: formData.get('notes') || null
+            };
+            
+            if (!data.quantity || data.quantity <= 0) {
+                alert('Введите количество');
+                return;
+            }
+            
+            fetch(`/warehouse/parts/${partId}/income`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(async response => {
+                const result = await response.json();
+                if (result.success) {
+                    alert('Приход товара успешно зарегистрирован');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при регистрации прихода');
+            });
+        }
+        
+        function submitExpense(partId) {
+            const form = document.getElementById('expenseForm');
+            const formData = new FormData(form);
+            
+            const data = {
+                quantity: parseInt(formData.get('quantity')),
+                reason: formData.get('reason').trim(),
+                notes: formData.get('notes') || null
+            };
+            
+            if (!data.quantity || data.quantity <= 0) {
+                alert('Введите количество');
+                return;
+            }
+            
+            if (!data.reason) {
+                alert('Укажите причину расхода');
+                return;
+            }
+            
+            fetch(`/warehouse/parts/${partId}/expense`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(async response => {
+                const result = await response.json();
+                if (result.success) {
+                    alert('Расход товара успешно зарегистрирован');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при регистрации расхода');
+            });
+        }
+    </script>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+

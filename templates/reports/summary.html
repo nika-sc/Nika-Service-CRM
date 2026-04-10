@@ -1,0 +1,255 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Сводный отчёт — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+                <div class="mb-3 d-flex justify-content-end">
+                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#summaryCalculationMethod" aria-expanded="false" aria-controls="summaryCalculationMethod">
+                        <i class="fas fa-question-circle me-1"></i>Методика расчета
+                    </button>
+                </div>
+                <div class="collapse mb-3" id="summaryCalculationMethod">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <ul class="mb-0 small">
+                                <li><strong>Сводный отчет:</strong> объединяет ключевые показатели по заявкам, оплатам и складу за период.</li>
+                                <li><strong>Приход:</strong> сумма платежей по кассовому потоку в выбранном диапазоне дат.</li>
+                                <li><strong>Складские метрики:</strong> показывают поступления и продажи товаров в количественном выражении.</li>
+                                <li><strong>Детальные блоки:</strong> списки статусов, последних заявок и платежей зависят от текущего фильтра периода.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Основные метрики -->
+                <div class="row mb-4">
+                    <!-- Заявки -->
+                    <div class="col-md-3">
+                        <div class="card h-100" style="background-color: #0d6efd; border: none; overflow: hidden;">
+                            <div class="card-body text-white" style="background-color: #0d6efd; padding: 1rem;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-1 text-white-50">Заявки</h6>
+                                    <div>
+                                        
+                                        <h2 class="mb-0 text-white">{{ summary.orders.total }}</h2>
+                                    </div>
+                                    <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
+                                </div>
+                                <small class="text-white-50">Сегодня: {{ summary.orders.today }}</small>
+                            </div>
+                            <div class="card-footer" style="background-color: #0d6efd; border: none; padding: 0.75rem 1rem;">
+                                <a href="{{ url_for('reports.orders_log_report', date_from=date_from, date_to=date_to) }}" class="text-white text-decoration-none">
+                                    Подробнее <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Приход денег -->
+                    <div class="col-md-3">
+                        <div class="card h-100" style="background-color: #198754; border: none; overflow: hidden;">
+                            <div class="card-body text-white" style="background-color: #198754; padding: 1rem;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-1 text-white-50">Приход</h6>
+                                    <div>
+                                   
+                                        <h2 class="mb-0 text-white">{{ "%.2f"|format(summary.income.total) }} ₽</h2>
+                                    </div>
+                                    <i class="fas fa-coins fa-2x opacity-50"></i>
+                                </div>
+                                <small class="text-white-50">Платежей: {{ summary.income.count }}</small>
+                            </div>
+                            <div class="card-footer" style="background-color: #198754; border: none; padding: 0.75rem 1rem;">
+                                <a href="{{ url_for('reports.cash_report', date_from=date_from, date_to=date_to) }}" class="text-white text-decoration-none">
+                                    Подробнее <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Склад: поступления -->
+                    <div class="col-md-3">
+                        <div class="card h-100" style="background-color: #0dcaf0; border: none; overflow: hidden;">
+                            <div class="card-body text-white" style="background-color: #0dcaf0; padding: 1rem;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-1 text-white-50">Поступления</h6>
+                                    <div>
+                                 
+                                        <h2 class="mb-0 text-white">{{ summary.warehouse.in }}</h2>
+                                    </div>
+                                    <i class="fas fa-arrow-down fa-2x opacity-50"></i>
+                                </div>
+                                <small class="text-white-50">Единиц товара</small>
+                            </div>
+                            <div class="card-footer" style="background-color: #0dcaf0; border: none; padding: 0.75rem 1rem;">
+                                <a href="{{ url_for('reports.stock_report') }}" class="text-white text-decoration-none">
+                                    Подробнее <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Склад: продажи -->
+                    <div class="col-md-3">
+                        <div class="card h-100" style="background-color: #ffc107; border: none; overflow: hidden;">
+                            <div class="card-body text-dark" style="background-color: #ffc107; padding: 1rem;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-1 text-dark">Продажи (склад)</h6>
+                                    <div>
+                                       
+                                        <h2 class="mb-0 text-dark">{{ summary.warehouse.sale }}</h2>
+                                    </div>
+                                    <i class="fas fa-shopping-bag fa-2x opacity-50"></i>
+                                </div>
+                                <small class="text-dark">Единиц товара</small>
+                            </div>
+                            <div class="card-footer" style="background-color: #ffc107; border: none; padding: 0.75rem 1rem;">
+                                <a href="{{ url_for('reports.sales_report', date_from=date_from, date_to=date_to) }}" class="text-dark text-decoration-none">
+                                    Подробнее <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Заявки по статусам -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Заявки по статусам</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ul class="list-group list-group-flush">
+                                    {% for status in summary.orders_by_status %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <span class="badge me-2" style="background-color: {{ status.status_color or '#6c757d' }};">&nbsp;</span>
+                                            {{ status.status_name or 'Не указан' }}
+                                        </span>
+                                        <span class="badge bg-primary rounded-pill">{{ status.count }}</span>
+                                    </li>
+                                    {% else %}
+                                    <li class="list-group-item text-center text-muted">Нет данных</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Последние заявки -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-clipboard-list me-2"></i>Последние заявки</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Клиент</th>
+                                                <th>Статус</th>
+                                                <th>Дата</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for order in summary.recent_orders %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('orders.order_detail', order_id=order.order_id) }}">
+                                                        #{{ order.id }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ order.client_name or '—' }}</td>
+                                                <td>
+                                                    <span class="badge" style="background-color: {{ order.status_color or '#6c757d' }};">
+                                                        {{ order.status_name or 'Не указан' }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ order.created_at|format_date(true) }}</td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted">Нет заявок</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Последние платежи -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-money-bill-wave me-2"></i>Последние платежи</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Заявка</th>
+                                                <th>Клиент</th>
+                                                <th>Сумма</th>
+                                                <th>Тип</th>
+                                                <th>Дата</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for payment in summary.recent_payments %}
+                                            <tr>
+                                                <td>
+                                                    {% if payment.payment_source == 'shop' %}
+                                                        <a href="{{ url_for('shop.sale_detail', sale_id=payment.id) }}" class="text-decoration-none">
+                                                            Магазин #{{ payment.id }}
+                                                        </a>
+                                                    {% elif payment.order_id %}
+                                                        <a href="{{ url_for('orders.order_detail', order_id=payment.order_id) }}" class="text-decoration-none">
+                                                            Заявка
+                                                        </a>
+                                                    {% else %}
+                                                        —
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ payment.client_name or '—' }}</td>
+                                                <td class="text-success fw-bold">{{ "%.2f"|format(payment.amount) }} ₽</td>
+                                                <td>
+                                                    {% if payment.payment_type == 'cash' %}
+                                                        <span class="badge bg-success">Наличные</span>
+                                                    {% elif payment.payment_type == 'card' %}
+                                                        <span class="badge bg-primary">Карта</span>
+                                                    {% elif payment.payment_type == 'transfer' %}
+                                                        <span class="badge bg-info">Перевод</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ payment.payment_type or '—' }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ payment.payment_date|format_date(with_time=True) if payment.payment_date else '—' }}</td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-4">Нет платежей за выбранный период</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+{% endblock %}
+
+
