@@ -297,6 +297,7 @@
 - Python 3.8 или выше
 - pip
 - PostgreSQL 14+ (локально или в Docker)
+- **Linux (Ubuntu/Debian, в том числе WSL):** пакеты `pkg-config` и `libcairo2-dev` — без них `pip install -r requirements.txt` может завершиться ошибкой при сборке **pycairo** (цепочка зависимостей для PDF/SVG: `xhtml2pdf` → `svglib` → `rlpycairo`).
 
 ### Шаги установки
 
@@ -320,7 +321,16 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-4. Установите зависимости:
+4. Установите зависимости.
+
+   На **Ubuntu / Debian / WSL** сначала (один раз на машину):
+
+```bash
+sudo apt update && sudo apt install -y pkg-config libcairo2-dev
+```
+
+   Затем в активированном виртуальном окружении:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -343,8 +353,11 @@ DB_DRIVER=postgres
 DATABASE_URL=postgresql://postgres:111111@localhost:5432/nikacrm
 APP_HOST=127.0.0.1
 APP_PORT=5000
+FLASK_ENV=development
 FLASK_DEBUG=True
 ```
+
+Для локального запуска через `python run.py` с Socket.IO задайте **`FLASK_ENV=development`** (или не указывайте переменную — по умолчанию так и есть). Иначе при **`FLASK_ENV=production`** встроенный сервер Werkzeug откажется стартовать вместе с Flask-SocketIO.
 
 Где настраивать:
 - Переменные задаются в файле `.env` в корне проекта (`Nika-Service-CRM/.env`).

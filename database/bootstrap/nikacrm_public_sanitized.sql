@@ -2,15 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict fu8knYRL9v6aPacQBbbab0hWLa8NZOpiAKN6umqhg0cv9IlgBfqAvF2FJjO9gea
-
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -2873,7 +2870,7 @@ COPY public.appearance_tags (id, name, sort_order, created_at) FROM stdin;
 317	Аппарат	317	2026-03-03 17:48:40
 318	Объектив DX 18-55	318	2026-03-03 17:48:40
 319	Ремешок.	319	2026-03-03 17:48:40
-320	Телефон (пример, без ПДн)	320	2026-03-03 17:48:41
+320	Телефон внешнего вида (пример 2)	320	2026-03-03 17:48:41
 321	2 мфу + картридж 718	321	2026-03-03 17:48:41
 322	Геймпад	322	2026-03-03 17:48:41
 323	Кабель HDMI	323	2026-03-03 17:48:41
@@ -9971,6 +9968,4 @@ ALTER TABLE ONLY public.staff_chat_reactions
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict fu8knYRL9v6aPacQBbbab0hWLa8NZOpiAKN6umqhg0cv9IlgBfqAvF2FJjO9gea
 

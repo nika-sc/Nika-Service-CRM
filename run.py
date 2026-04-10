@@ -30,9 +30,12 @@ if __name__ == '__main__':
     sys.stderr.write("=" * 80 + "\n")
     sys.stderr.write("DEBUG режим: False\n")
     sys.stderr.flush()
-    
+
     host = os.environ.get('APP_HOST', '127.0.0.1')
     port = int(os.environ.get('APP_PORT', '5000'))
+    # Werkzeug 3: встроенный сервер запрещён при «production»; run.py с SocketIO
+    # остаётся точкой входа для локальной разработки (не для gunicorn).
+    allow_unsafe = env == 'development'
 
     if socketio is not None:
         socketio.run(
@@ -40,7 +43,8 @@ if __name__ == '__main__':
             host=host,
             port=port,
             debug=False,
-            use_reloader=False
+            use_reloader=False,
+            allow_unsafe_werkzeug=allow_unsafe,
         )
     else:
         app.run(
@@ -49,4 +53,3 @@ if __name__ == '__main__':
             debug=False,
             use_reloader=False  # Отключаем reloader для более стабильного вывода
         )
-    
