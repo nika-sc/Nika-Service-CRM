@@ -383,13 +383,13 @@ python run.py
 Приложение будет доступно по адресу: http://127.0.0.1:5000
 
 **База данных:** В репозитории нет готовой рабочей файловой БД (`.db`).  
-Для локального старта используйте PostgreSQL и импорт `database/bootstrap/nikacrm_public_sanitized.sql`.
+Для локального старта используйте PostgreSQL и импорт **`database/bootstrap/nikacrm_public_sanitized.sql`**: в дампе уже схема и справочники с учётом миграций PostgreSQL **001–008** (включая чат сотрудников и Web Push), таблица **`schema_migrations_pg`** заполнена — после импорта при старте приложения неприменённых PG SQL-миграций не останется. Подробности и демо-логины: [database/bootstrap/README.md](database/bootstrap/README.md).
 
 ### Восстановление очищенной PostgreSQL базы из репозитория
 
 В репозитории есть безопасный SQL-дамп для локального старта:
 
-- `database/bootstrap/nikacrm_public_sanitized.sql`
+- `database/bootstrap/nikacrm_public_sanitized.sql` — см. [database/bootstrap/README.md](database/bootstrap/README.md)
 
 Порядок восстановления:
 
