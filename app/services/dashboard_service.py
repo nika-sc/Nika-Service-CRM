@@ -124,19 +124,37 @@ class DashboardService:
 
     @staticmethod
     def calculate_change(current: float, previous: float) -> Dict[str, Any]:
-        """Рассчитать изменение в % и направление."""
-        if previous == 0:
-            if current > 0:
-                return {'percent': 100, 'direction': 'up', 'value': current}
-            return {'percent': 0, 'direction': 'same', 'value': 0}
+        """Рассчитать изменение: абсолютная дельта (value), % со знаком (signed_percent), направление."""
+        cur = float(current)
+        prev = float(previous)
+        delta = round(cur - prev, 2)
+        if prev == 0:
+            if cur > 0:
+                return {
+                    'percent': 100.0,
+                    'signed_percent': None,
+                    'from_zero': True,
+                    'direction': 'up',
+                    'value': delta,
+                }
+            return {
+                'percent': 0.0,
+                'signed_percent': 0.0,
+                'from_zero': False,
+                'direction': 'same',
+                'value': 0.0,
+            }
 
-        change = ((current - previous) / previous) * 100
-        direction = 'up' if change > 0 else ('down' if change < 0 else 'same')
+        change_pct = ((cur - prev) / prev) * 100
+        direction = 'up' if change_pct > 0 else ('down' if change_pct < 0 else 'same')
+        sp = round(change_pct, 1)
 
         return {
-            'percent': abs(round(change, 1)),
+            'percent': abs(sp),
+            'signed_percent': sp,
+            'from_zero': False,
             'direction': direction,
-            'value': round(current - previous, 2)
+            'value': delta,
         }
 
     @staticmethod
@@ -546,7 +564,12 @@ class DashboardService:
 
     @staticmethod
     @handle_service_error
-    def get_accepted_orders_in_period(date_from: str, date_to: str) -> Dict[str, Any]:
+    def get_accepted_orders_in_period(
+        date_from: str,
+        date_to: str,
+        prev_date_from: str = None,
+        prev_date_to: str = None,
+    ) -> Dict[str, Any]:
         """Заявки, принятые в работу за период (переход в статус «принят»/«в работе» по order_status_history)."""
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -568,6 +591,19 @@ class DashboardService:
                 (date_from, date_to),
             )
             total_count = int((cursor.fetchone() or (0,))[0] or 0)
+            prev_count = 0
+            if prev_date_from and prev_date_to:
+                cursor.execute(
+                    """
+                    SELECT COUNT(DISTINCT o.id) FROM order_status_history osh
+                    JOIN orders o ON o.id = osh.order_id
+                    JOIN order_statuses os ON os.id = osh.new_status_id
+                    WHERE (o.hidden = 0 OR o.hidden IS NULL)
+                      AND DATE(osh.created_at) >= DATE(?) AND DATE(osh.created_at) <= DATE(?)
+                      AND """ + accepted_cond,
+                    (prev_date_from, prev_date_to),
+                )
+                prev_count = int((cursor.fetchone() or (0,))[0] or 0)
             cursor.execute(
                 """
                 SELECT o.id, o.order_id, c.name AS customer_name, MAX(osh.created_at) AS accepted_at
@@ -595,11 +631,19 @@ class DashboardService:
                 }
                 for r in rows
             ]
-            return {'count': total_count, 'orders': orders}
+            out = {'count': total_count, 'orders': orders}
+            if prev_date_from and prev_date_to:
+                out['count_change'] = DashboardService.calculate_change(total_count, prev_count)
+            return out
 
     @staticmethod
     @handle_service_error
-    def get_closed_orders_in_period(date_from: str, date_to: str) -> Dict[str, Any]:
+    def get_closed_orders_in_period(
+        date_from: str,
+        date_to: str,
+        prev_date_from: str = None,
+        prev_date_to: str = None,
+    ) -> Dict[str, Any]:
         """Заявки, закрытые за период (переход в закрытый статус по order_status_history)."""
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -617,6 +661,19 @@ class DashboardService:
                 (date_from, date_to),
             )
             total_count = int((cursor.fetchone() or (0,))[0] or 0)
+            prev_count = 0
+            if prev_date_from and prev_date_to:
+                cursor.execute(
+                    """
+                    SELECT COUNT(DISTINCT o.id) FROM order_status_history osh
+                    JOIN orders o ON o.id = osh.order_id
+                    WHERE (o.hidden = 0 OR o.hidden IS NULL)
+                      AND osh.new_status_id IN (""" + closed_subquery + """)
+                      AND DATE(osh.created_at) >= DATE(?) AND DATE(osh.created_at) <= DATE(?)
+                    """,
+                    (prev_date_from, prev_date_to),
+                )
+                prev_count = int((cursor.fetchone() or (0,))[0] or 0)
             cursor.execute(
                 """
                 SELECT o.id, o.order_id, c.name AS customer_name, MAX(osh.created_at) AS closed_at,
@@ -649,7 +706,10 @@ class DashboardService:
                 }
                 for r in rows
             ]
-            return {'count': total_count, 'orders': orders}
+            out = {'count': total_count, 'orders': orders}
+            if prev_date_from and prev_date_to:
+                out['count_change'] = DashboardService.calculate_change(total_count, prev_count)
+            return out
 
     @staticmethod
     @handle_service_error
@@ -1077,8 +1137,12 @@ class DashboardService:
         )
         summary = DashboardService.get_company_summary(current_from, current_to, prev_from, prev_to)
         created_orders = DashboardService.get_created_orders(current_from, current_to, prev_from, prev_to)
-        accepted_orders = DashboardService.get_accepted_orders_in_period(current_from, current_to)
-        closed_orders = DashboardService.get_closed_orders_in_period(current_from, current_to)
+        accepted_orders = DashboardService.get_accepted_orders_in_period(
+            current_from, current_to, prev_from, prev_to
+        )
+        closed_orders = DashboardService.get_closed_orders_in_period(
+            current_from, current_to, prev_from, prev_to
+        )
         revenue_chart = DashboardService.get_revenue_chart_data(current_from, current_to, prev_from, prev_to)
         orders_chart = DashboardService.get_orders_chart_data(current_from, current_to, prev_from, prev_to)
         orders_by_status = DashboardService.get_orders_by_status()

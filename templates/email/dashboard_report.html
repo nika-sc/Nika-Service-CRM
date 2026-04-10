@@ -23,18 +23,18 @@
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">Показатель</th>
             <th style="text-align: right;">Значение</th>
-            <th style="text-align: center;">Изменение</th>
+            <th style="text-align: center;">Изменение к сравн. периоду</th>
         </tr>
         <tr><td>Выручка по компании</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.revenue.total|default(0)) }} ₽</td>
-            <td style="text-align: center;">{% if data.summary.revenue.change is defined %}{{ data.summary.revenue.change.percent|default(0) }}%{% else %}—{% endif %}</td></tr>
+            <td style="text-align: center;">{{ data.summary.revenue.change | dashboard_money_delta }}</td></tr>
         <tr><td>Выручка по услугам</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)) }} ₽</td>
-            <td style="text-align: center;">{% if data.summary.services_revenue.change is defined %}{{ data.summary.services_revenue.change.percent|default(0) }}%{% else %}—{% endif %}</td></tr>
+            <td style="text-align: center;">{{ data.summary.services_revenue.change | dashboard_money_delta }}</td></tr>
         <tr><td>Выручка по товарам</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)) }} ₽</td>
-            <td style="text-align: center;">{% if data.summary.parts_revenue.change is defined %}{{ data.summary.parts_revenue.change.percent|default(0) }}%{% else %}—{% endif %}</td></tr>
+            <td style="text-align: center;">{{ data.summary.parts_revenue.change | dashboard_money_delta }}</td></tr>
         <tr><td>Приход (касса) — оплаты</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.profit.total|default(0)) }} ₽</td>
-            <td style="text-align: center;">{% if data.summary.profit.change is defined %}{{ data.summary.profit.change.percent|default(0) }}%{% else %}—{% endif %}</td></tr>
+            <td style="text-align: center;">{{ data.summary.profit.change | dashboard_money_delta }}</td></tr>
         <tr><td>Расход (касса) — выплаты</td><td style="text-align: right;">{{ "%.0f"|format((data.summary.cash_expense|default({})).total|default(0)) }} ₽</td>
-            <td style="text-align: center;">{% if (data.summary.cash_expense|default({})).change is defined %}{{ (data.summary.cash_expense|default({})).change.percent|default(0) }}%{% else %}—{% endif %}</td></tr>
+            <td style="text-align: center;">{{ (data.summary.cash_expense|default({})).change | dashboard_money_delta }}</td></tr>
     </table>
 
     <h3 style="margin: 16px 0 8px 0; font-size: 14px;">Зарплата за период</h3>
@@ -42,9 +42,12 @@
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">Показатель</th>
             <th style="text-align: right;">Значение</th>
+            <th style="text-align: center;">Изменение к сравн. периоду</th>
         </tr>
-        <tr><td>Начислено за период</td><td style="text-align: right;">{{ "%.0f"|format(((data.salary|default({})).accrued_cents|default(0)) / 100) }} ₽</td></tr>
-        <tr><td>Выплачено за период</td><td style="text-align: right;">{{ "%.0f"|format(((data.salary|default({})).paid_cents|default(0)) / 100) }} ₽</td></tr>
+        <tr><td>Начислено за период</td><td style="text-align: right;">{{ "%.0f"|format(((data.salary|default({})).accrued_cents|default(0)) / 100) }} ₽</td>
+            <td style="text-align: center;">{{ (data.salary|default({})).accrued_change | dashboard_money_delta }}</td></tr>
+        <tr><td>Выплачено за период</td><td style="text-align: right;">{{ "%.0f"|format(((data.salary|default({})).paid_cents|default(0)) / 100) }} ₽</td>
+            <td style="text-align: center;">{{ (data.salary|default({})).paid_change | dashboard_money_delta }}</td></tr>
     </table>
 
     <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">Данные по заказам</h2>
@@ -52,15 +55,20 @@
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">Показатель</th>
             <th style="text-align: right;">Значение</th>
+            <th style="text-align: center;">Изменение к сравн. периоду</th>
         </tr>
-        <tr><td>Выручка по заказам</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.revenue|default(0)) }} ₽</td></tr>
-        <tr><td>Закрытых заказов</td><td style="text-align: right;">{{ data.summary.orders.count|default(0) }}</td></tr>
-        <tr><td>Средний чек заказа</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)) }} ₽</td></tr>
-        <tr><td>Создано заказов за период</td><td style="text-align: right;">{{ data.created_orders.count|default(0) }}</td></tr>
+        <tr><td>Выручка по заказам</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.revenue|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ data.summary.orders.revenue_change | dashboard_money_delta }}</td></tr>
+        <tr><td>Закрытых заказов</td><td style="text-align: right;">{{ data.summary.orders.count|default(0) }}</td>
+            <td style="text-align: center;">{{ data.summary.orders.count_change | dashboard_count_delta }}</td></tr>
+        <tr><td>Средний чек заказа</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ data.summary.orders.avg_change | dashboard_avg_money_delta }}</td></tr>
+        <tr><td>Создано заказов за период</td><td style="text-align: right;">{{ data.created_orders.count|default(0) }}</td>
+            <td style="text-align: center;">{{ data.created_orders.change | dashboard_count_delta }}</td></tr>
     </table>
 
     <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">Принятые заявки за период</h2>
-    <p style="margin: 0 0 8px 0;">Количество: <strong>{{ (data.accepted_orders|default({})).count|default(0) }}</strong></p>
+    <p style="margin: 0 0 8px 0;">Количество: <strong>{{ (data.accepted_orders|default({})).count|default(0) }}</strong>{% if (data.accepted_orders|default({})).count_change is defined %} <span style="color:#555;">({{ (data.accepted_orders|default({})).count_change | dashboard_count_delta }})</span>{% endif %}</p>
     {% if (data.accepted_orders|default({})).get('orders') %}
     <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
         <tr style="background: #f5f5f5;"><th>№</th><th>Клиент</th><th>Принято (дата/время)</th></tr>
@@ -77,7 +85,7 @@
     {% endif %}
 
     <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">Закрытые заявки за период</h2>
-    <p style="margin: 0 0 8px 0;">Количество: <strong>{{ (data.closed_orders|default({})).count|default(0) }}</strong></p>
+    <p style="margin: 0 0 8px 0;">Количество: <strong>{{ (data.closed_orders|default({})).count|default(0) }}</strong>{% if (data.closed_orders|default({})).count_change is defined %} <span style="color:#555;">({{ (data.closed_orders|default({})).count_change | dashboard_count_delta }})</span>{% endif %}</p>
     {% if (data.closed_orders|default({})).get('orders') %}
     <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
         <tr style="background: #f5f5f5;"><th>№</th><th>Клиент</th><th>Закрыто (дата/время)</th><th style="text-align: right;">Сумма</th></tr>
@@ -99,10 +107,14 @@
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">Показатель</th>
             <th style="text-align: right;">Значение</th>
+            <th style="text-align: center;">Изменение к сравн. периоду</th>
         </tr>
-        <tr><td>Выручка по магазину</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.revenue|default(0)) }} ₽</td></tr>
-        <tr><td>Количество продаж</td><td style="text-align: right;">{{ data.summary.shop.count|default(0) }}</td></tr>
-        <tr><td>Средний чек магазина</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)) }} ₽</td></tr>
+        <tr><td>Выручка по магазину</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.revenue|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ data.summary.shop.revenue_change | dashboard_money_delta }}</td></tr>
+        <tr><td>Количество продаж</td><td style="text-align: right;">{{ data.summary.shop.count|default(0) }}</td>
+            <td style="text-align: center;">{{ data.summary.shop.count_change | dashboard_count_delta }}</td></tr>
+        <tr><td>Средний чек магазина</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ data.summary.shop.avg_change | dashboard_avg_money_delta }}</td></tr>
     </table>
     {% endif %}
 
@@ -112,10 +124,14 @@
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">Статья</th>
             <th style="text-align: right;">Сумма</th>
+            <th style="text-align: center;">Изменение к сравн. периоду</th>
         </tr>
-        <tr><td>Приход</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.income|default({})).total|default(0)) }} ₽</td></tr>
-        <tr><td>Расход</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.expense|default({})).total|default(0)) }} ₽</td></tr>
-        <tr><td>Итого (приход − расход)</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.net|default({})).total|default(0)) }} ₽</td></tr>
+        <tr><td>Приход</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.income|default({})).total|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ (data.cashflow.income|default({})).change | dashboard_money_delta }}</td></tr>
+        <tr><td>Расход</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.expense|default({})).total|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ (data.cashflow.expense|default({})).change | dashboard_money_delta }}</td></tr>
+        <tr><td>Итого (приход − расход)</td><td style="text-align: right;">{{ "%.0f"|format((data.cashflow.net|default({})).total|default(0)) }} ₽</td>
+            <td style="text-align: center;">{{ (data.cashflow.net|default({})).change | dashboard_money_delta }}</td></tr>
     </table>
     {% endif %}
 

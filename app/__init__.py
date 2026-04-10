@@ -304,6 +304,16 @@ def create_app(config_class=Config):
     app.jinja_env.filters['format_payment_type'] = format_payment_type_filter
     app.jinja_env.filters['format_payment_row_type'] = format_payment_row_type_filter
     app.jinja_env.filters['format_payment_amount'] = format_payment_amount_filter
+
+    from app.utils.dashboard_jinja_filters import (
+        format_dashboard_avg_money_change,
+        format_dashboard_count_change,
+        format_dashboard_money_change,
+    )
+
+    app.jinja_env.filters['dashboard_money_delta'] = format_dashboard_money_change
+    app.jinja_env.filters['dashboard_count_delta'] = format_dashboard_count_change
+    app.jinja_env.filters['dashboard_avg_money_delta'] = format_dashboard_avg_money_change
     
     # Инициализация БД
     init_db()

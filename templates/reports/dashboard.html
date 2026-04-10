@@ -305,7 +305,7 @@
                     <div class="card-body">
                         <ul class="mb-0 small">
                             <li><strong>Период:</strong> все метрики рассчитываются в выбранном диапазоне дат.</li>
-                            <li><strong>Сравнение:</strong> изменение (%) считается относительно предыдущего сопоставимого периода.</li>
+                            <li><strong>Сравнение:</strong> к предыдущему сопоставимому периоду показываются абсолютная разница и процент со знаком (+/−).</li>
                             <li><strong>Выручка:</strong> агрегируется по услугам, запчастям и связанным продажам.</li>
                             <li><strong>Детализация:</strong> карточки и таблицы ниже используют тот же фильтр периода.</li>
                         </ul>
@@ -339,14 +339,7 @@
                             <div class="metric-value">{{ "%.0f"|format(data.summary.revenue.total|default(0)) }} ₽</div>
                             {% if data.summary.revenue.change is defined %}
                             <span class="metric-change {{ data.summary.revenue.change.direction }}">
-                                {% if data.summary.revenue.change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.revenue.change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.revenue.change.percent }}%
+                                {{ data.summary.revenue.change | dashboard_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -360,14 +353,7 @@
                             <div class="metric-value">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)) }} ₽</div>
                             {% if data.summary.services_revenue.change is defined %}
                             <span class="metric-change {{ data.summary.services_revenue.change.direction }}">
-                                {% if data.summary.services_revenue.change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.services_revenue.change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.services_revenue.change.percent }}%
+                                {{ data.summary.services_revenue.change | dashboard_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -381,14 +367,7 @@
                             <div class="metric-value">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)) }} ₽</div>
                             {% if data.summary.parts_revenue.change is defined %}
                             <span class="metric-change {{ data.summary.parts_revenue.change.direction }}">
-                                {% if data.summary.parts_revenue.change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.parts_revenue.change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.parts_revenue.change.percent }}%
+                                {{ data.summary.parts_revenue.change | dashboard_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -402,14 +381,7 @@
                                 <div class="metric-value">{{ "%.0f"|format(data.summary.profit.total|default(0)) }} ₽</div>
                                 {% if data.summary.profit is defined and data.summary.profit.change is defined %}
                                 <span class="metric-change {{ data.summary.profit.change.direction }}">
-                                    {% if data.summary.profit.change.direction == 'up' %}
-                                    <i class="fas fa-arrow-up"></i>
-                                    {% elif data.summary.profit.change.direction == 'down' %}
-                                    <i class="fas fa-arrow-down"></i>
-                                    {% else %}
-                                    <i class="fas fa-minus"></i>
-                                    {% endif %}
-                                    {{ data.summary.profit.change.percent }}%
+                                    {{ data.summary.profit.change | dashboard_money_delta }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -426,14 +398,7 @@
                                 <div class="metric-value text-danger">{{ "%.0f"|format((data.summary.cash_expense|default({})).total|default(0)) }} ₽</div>
                                 {% if (data.summary.cash_expense|default({})).change is defined %}
                                 <span class="metric-change {{ (data.summary.cash_expense|default({})).change.direction|default('same') }}">
-                                    {% if (data.summary.cash_expense|default({})).change.direction == 'up' %}
-                                    <i class="fas fa-arrow-up"></i>
-                                    {% elif (data.summary.cash_expense|default({})).change.direction == 'down' %}
-                                    <i class="fas fa-arrow-down"></i>
-                                    {% else %}
-                                    <i class="fas fa-minus"></i>
-                                    {% endif %}
-                                    {{ (data.summary.cash_expense|default({})).change.percent|default(0) }}%
+                                    {{ (data.summary.cash_expense|default({})).change | dashboard_money_delta }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -447,14 +412,7 @@
                                 <div class="metric-value text-info">{{ "%.0f"|format(((data.salary|default({})).accrued_cents|default(0)) / 100) }} ₽</div>
                                 {% if (data.salary|default({})).accrued_change is defined %}
                                 <span class="metric-change {{ (data.salary|default({})).accrued_change.direction|default('same') }}">
-                                    {% if data.salary.accrued_change.direction == 'up' %}
-                                    <i class="fas fa-arrow-up"></i>
-                                    {% elif data.salary.accrued_change.direction == 'down' %}
-                                    <i class="fas fa-arrow-down"></i>
-                                    {% else %}
-                                    <i class="fas fa-minus"></i>
-                                    {% endif %}
-                                    {{ (data.salary|default({})).accrued_change.percent|default(0) }}%
+                                    {{ (data.salary|default({})).accrued_change | dashboard_money_delta }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -468,14 +426,7 @@
                                 <div class="metric-value text-success">{{ "%.0f"|format(((data.salary|default({})).paid_cents|default(0)) / 100) }} ₽</div>
                                 {% if (data.salary|default({})).paid_change is defined %}
                                 <span class="metric-change {{ (data.salary|default({})).paid_change.direction|default('same') }}">
-                                    {% if (data.salary|default({})).paid_change.direction == 'up' %}
-                                    <i class="fas fa-arrow-up"></i>
-                                    {% elif (data.salary|default({})).paid_change.direction == 'down' %}
-                                    <i class="fas fa-arrow-down"></i>
-                                    {% else %}
-                                    <i class="fas fa-minus"></i>
-                                    {% endif %}
-                                    {{ (data.salary|default({})).paid_change.percent|default(0) }}%
+                                    {{ (data.salary|default({})).paid_change | dashboard_money_delta }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -571,14 +522,7 @@
                             <div class="metric-value">{{ "%.0f"|format(data.summary.orders.revenue|default(0)) }} ₽</div>
                             {% if data.summary.orders.revenue_change is defined %}
                             <span class="metric-change {{ data.summary.orders.revenue_change.direction }}">
-                                {% if data.summary.orders.revenue_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.orders.revenue_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.orders.revenue_change.percent }}%
+                                {{ data.summary.orders.revenue_change | dashboard_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -592,14 +536,7 @@
                             <div class="metric-value text-dark">{{ data.summary.orders.count|default(0) }}</div>
                             {% if data.summary.orders.count_change is defined %}
                             <span class="metric-change {{ data.summary.orders.count_change.direction }}">
-                                {% if data.summary.orders.count_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.orders.count_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.orders.count_change.percent }}%
+                                {{ data.summary.orders.count_change | dashboard_count_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -613,14 +550,7 @@
                             <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)) }} ₽</div>
                             {% if data.summary.orders.avg_change is defined %}
                             <span class="metric-change {{ data.summary.orders.avg_change.direction }}">
-                                {% if data.summary.orders.avg_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.orders.avg_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.orders.avg_change.percent }}%
+                                {{ data.summary.orders.avg_change | dashboard_avg_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -634,14 +564,7 @@
                             <div class="metric-value">{{ data.created_orders.count|default(0) }}</div>
                             {% if data.created_orders.change %}
                             <span class="metric-change {{ data.created_orders.change.direction }}">
-                                {% if data.created_orders.change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.created_orders.change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.created_orders.change.percent }}%
+                                {{ data.created_orders.change | dashboard_count_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -678,14 +601,7 @@
                             <div class="metric-value">{{ "%.0f"|format(data.summary.shop.revenue|default(0)) }} ₽</div>
                             {% if data.summary.shop.revenue_change is defined %}
                             <span class="metric-change {{ data.summary.shop.revenue_change.direction }}">
-                                {% if data.summary.shop.revenue_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.shop.revenue_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.shop.revenue_change.percent }}%
+                                {{ data.summary.shop.revenue_change | dashboard_money_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -699,14 +615,7 @@
                             <div class="metric-value text-dark">{{ data.summary.shop.count|default(0) }}</div>
                             {% if data.summary.shop.count_change is defined %}
                             <span class="metric-change {{ data.summary.shop.count_change.direction }}">
-                                {% if data.summary.shop.count_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.shop.count_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.shop.count_change.percent }}%
+                                {{ data.summary.shop.count_change | dashboard_count_delta }}
                             </span>
                             {% endif %}
                         </div>
@@ -720,14 +629,7 @@
                             <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)) }} ₽</div>
                             {% if data.summary.shop.avg_change is defined %}
                             <span class="metric-change {{ data.summary.shop.avg_change.direction }}">
-                                {% if data.summary.shop.avg_change.direction == 'up' %}
-                                <i class="fas fa-arrow-up"></i>
-                                {% elif data.summary.shop.avg_change.direction == 'down' %}
-                                <i class="fas fa-arrow-down"></i>
-                                {% else %}
-                                <i class="fas fa-minus"></i>
-                                {% endif %}
-                                {{ data.summary.shop.avg_change.percent }}%
+                                {{ data.summary.shop.avg_change | dashboard_avg_money_delta }}
                             </span>
                             {% endif %}
                         </div>
