@@ -19,6 +19,9 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME:-}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-}
+      - STAFF_CHAT_VAPID_PUBLIC_KEY=${STAFF_CHAT_VAPID_PUBLIC_KEY:-}
+      - STAFF_CHAT_VAPID_PRIVATE_KEY=${STAFF_CHAT_VAPID_PRIVATE_KEY:-}
+      - STAFF_CHAT_VAPID_CLAIM_EMAIL=${STAFF_CHAT_VAPID_CLAIM_EMAIL:-mailto:noreply@localhost}
     volumes:
       - ./data/database:/app/database
       - ./data/logs:/app/logs

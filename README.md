@@ -363,6 +363,7 @@ FLASK_DEBUG=True
 - Переменные задаются в файле `.env` в корне проекта (`Nika-Service-CRM/.env`).
 - Не используйте `.env.example` для реального запуска — это только шаблон.
 - Файл `.env` не должен попадать в git.
+- **Web Push** (чат сотрудников, опционально): переменные `STAFF_CHAT_VAPID_*` и проброс в `docker-compose.yml`; сгенерировать ключи: `python scripts/generate_staff_chat_vapid_keys.py` (см. комментарии в `.env.example`).
 
 7. Создайте пустую PostgreSQL базу (один раз):
 ```bash
