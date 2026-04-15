@@ -342,7 +342,8 @@ class OrderQueries:
                     LEFT JOIN order_models AS om ON om.id = o.model_id
                     {where_sql}
                 '''
-                cursor.execute(count_query, params[:-2])  # Убираем LIMIT и OFFSET
+                # В count_query LIMIT/OFFSET не добавляются, поэтому передаем исходные params целиком.
+                cursor.execute(count_query, params)
                 total = cursor.fetchone()[0]
                 
                 return {
