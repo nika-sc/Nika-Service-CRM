@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+.venv-win/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+# Любые SQLite в database/ (в репозитории только bootstrap/*.sql)
+database/*.db
+# Рабочая SQLite (не коммитить; путь по умолчанию в app/config.py)
+database/service_center.db
+database/service_center.db.backup_*
+# Локальные дампы БД (крупные)
+database/backups/*.dump
+database/backups/vps_restore_plain*.sql
+app/database/*.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Cursor / локальные правила IDE (не публиковать в OSS)
+.cursor/
+
+# Пользовательские загрузки (могут содержать ПДн)
+uploads/
+
+# Файлы workspace редактора
+*.code-workspace
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+app.log
+
+# Backup files
+*.backup
+*.bak
+
+# Archived / saved (удалить или исключить из проекта)
+save/

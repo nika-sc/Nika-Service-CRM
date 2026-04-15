@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - Nika CRM{% endblock %}
+
+{% block styles %}
+<style>
+    .analytics-card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .metric-box {
+        padding: 1rem;
+        border-radius: 12px;
+        background: var(--bs-light);
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .rank-badge {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .rank-1 { background: #ffd700; color: #000; }
+    .rank-2 { background: #c0c0c0; color: #000; }
+    .rank-3 { background: #cd7f32; color: #fff; }
+    .rank-other { background: #e9ecef; color: #495057; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        <!-- Боковое меню кассы -->
+        {% include 'finance/_sidebar_menu.html' %}
+        
+        <!-- Основной контент -->
+        <div class="page-content">
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-chart-bar text-primary me-2"></i>Аналитика продаж</h4>
+            <p class="text-muted mb-0">Рентабельность, оборачиваемость, топ продаж</p>
+        </div>
+        <div>
+            <a href="{{ url_for('finance.profit_report') }}" class="btn btn-outline-success">
+                <i class="fas fa-chart-line me-1"></i> Прибыль
+            </a>
+            <a href="{{ url_for('finance.cash') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-cash-register me-1"></i> Касса
+            </a>
+        </div>
+    </div>
+    
+    <!-- Фильтр периода -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-3 align-items-end">
+                {% include 'partials/period_filter.html' %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- Ключевые метрики -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="metric-box">
+                <div class="metric-value text-primary">{{ "%.0f"|format(analytics.avg_stock_qty) }}</div>
+                <small class="text-muted">Средний остаток (шт)</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box">
+                <div class="metric-value text-success">{{ "%.0f"|format(analytics.avg_stock_value) }} ₽</div>
+                <small class="text-muted">Стоимость остатков</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box">
+                <div class="metric-value text-info">{{ "%.1f"|format(analytics.daily_sales) }}</div>
+                <small class="text-muted">Продаж в день (шт)</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box">
+                <div class="metric-value text-warning">{{ analytics.turnover_days }} дн.</div>
+                <small class="text-muted">Оборачиваемость</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Топ товаров -->
+        <div class="col-lg-6">
+            <div class="card analytics-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-trophy text-warning me-2"></i>Топ товаров</h5>
+                    <span class="badge bg-warning text-dark">{{ analytics.top_products|length }} позиций</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th></th>
+                                    <th>Товар</th>
+                                    <th class="text-center">Продано</th>
+                                    <th class="text-end">Выручка</th>
+                                    <th class="text-end">Прибыль</th>
+                                    <th class="text-end">Маржа</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in analytics.top_products %}
+                                <tr>
+                                    <td>
+                                        <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-other{% endif %}">
+                                            {{ loop.index }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ p.part_name }}</strong>
+                                    </td>
+                                    <td class="text-center">{{ p.total_qty }}</td>
+                                    <td class="text-end">{{ "%.0f"|format(p.total_revenue) }} ₽</td>
+                                    <td class="text-end {% if p.profit > 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ "%.0f"|format(p.profit) }} ₽
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge {% if p.margin_percent > 30 %}bg-success{% elif p.margin_percent > 15 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ "%.0f"|format(p.margin_percent) }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        Нет данных о продажах товаров
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Топ услуг -->
+        <div class="col-lg-6">
+            <div class="card analytics-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-star text-info me-2"></i>Топ услуг</h5>
+                    <span class="badge bg-info">{{ analytics.top_services|length }} позиций</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th></th>
+                                    <th>Услуга</th>
+                                    <th class="text-center">Оказано</th>
+                                    <th class="text-end">Выручка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in analytics.top_services %}
+                                <tr>
+                                    <td>
+                                        <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-other{% endif %}">
+                                            {{ loop.index }}
+                                        </span>
+                                    </td>
+                                    <td><strong>{{ s.service_name }}</strong></td>
+                                    <td class="text-center">{{ s.total_qty }}</td>
+                                    <td class="text-end text-success fw-bold">{{ "%.0f"|format(s.total_revenue) }} ₽</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        Нет данных о продажах услуг
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

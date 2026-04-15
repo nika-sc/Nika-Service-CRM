@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Редактирование закупки #{{ purchase.id }}{% else %}Новая закупка{% endif %} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-shopping-cart me-2"></i>{% if is_edit %}Редактирование закупки{% else %}Создание закупки{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <form id="purchaseForm">
+                    <div class="mb-3">
+                        <label class="form-label">Поставщик <span class="text-danger">*</span></label>
+                        <select name="supplier_id" id="supplierSelect" class="form-select" required>
+                            <option value="">Выберите поставщика</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" {% if is_edit and purchase.supplier_id == supplier.id %}selected{% endif %}>
+                                {{ supplier.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('/warehouse/suppliers/new', '_blank')">
+                                <i class="fas fa-plus"></i> Добавить поставщика
+                            </button>
+                        </div>
+                        <input type="hidden" name="supplier_name" id="supplierName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дата закупки <span class="text-danger">*</span></label>
+                        <input type="date" name="purchase_date" class="form-control" value="{% if is_edit %}{{ purchase.purchase_date }}{% endif %}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примечания</label>
+                        <textarea name="notes" class="form-control" rows="3">{% if is_edit %}{{ purchase.notes or '' }}{% endif %}</textarea>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3"><i class="fas fa-list me-2"></i>Позиции</h4>
+                    <div id="itemsContainer">
+                        {% if is_edit and purchase['items'] %}
+                            {% for item in purchase['items'] %}
+                            <div class="item-row mb-2">
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <select name="part_id" class="form-select" required>
+                                            <option value="">Выберите товар</option>
+                                            {% for part in parts %}
+                                            <option value="{{ part.id }}" {% if item.part_id == part.id %}selected{% endif %}>{{ part.name }} ({{ part.part_number }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" name="quantity" class="form-control" placeholder="Кол-во" min="1" value="{{ item.quantity }}" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="number" name="purchase_price" class="form-control" placeholder="Цена" step="0.01" min="0" value="{{ item.purchase_price }}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger w-100" onclick="removeItem(this)">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="item-row mb-2">
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <select name="part_id" class="form-select" required>
+                                            <option value="">Выберите товар</option>
+                                            {% for part in parts %}
+                                            <option value="{{ part.id }}">{{ part.name }} ({{ part.part_number }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" name="quantity" class="form-control" placeholder="Кол-во" min="1" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="number" name="purchase_price" class="form-control" placeholder="Цена" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger w-100" onclick="removeItem(this)">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addItem()">
+                        <i class="fas fa-plus me-1"></i> Добавить позицию
+                    </button>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> {% if is_edit %}Сохранить изменения{% else %}Создать закупку{% endif %}
+                        </button>
+                        {% if is_edit %}
+                        <a href="{{ url_for('warehouse.purchase_detail', purchase_id=purchase.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('warehouse.purchases') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function addItem() {
+            const container = document.getElementById('itemsContainer');
+            const newRow = container.firstElementChild.cloneNode(true);
+            newRow.querySelectorAll('input, select').forEach(el => el.value = '');
+            container.appendChild(newRow);
+        }
+        
+        function removeItem(btn) {
+            if (document.getElementById('itemsContainer').children.length > 1) {
+                btn.closest('.item-row').remove();
+            }
+        }
+        
+        document.getElementById('purchaseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const items = [];
+            const rows = document.querySelectorAll('.item-row');
+            
+            rows.forEach(row => {
+                const partId = row.querySelector('[name="part_id"]').value;
+                const quantity = row.querySelector('[name="quantity"]').value;
+                const purchasePrice = row.querySelector('[name="purchase_price"]').value;
+                
+                if (partId && quantity && purchasePrice) {
+                    items.push({
+                        part_id: parseInt(partId),
+                        quantity: parseInt(quantity),
+                        purchase_price: parseFloat(purchasePrice)
+                    });
+                }
+            });
+            
+            const supplierSelect = document.getElementById('supplierSelect');
+            const supplierId = supplierSelect.value ? parseInt(supplierSelect.value) : null;
+            const supplierName = supplierSelect.options[supplierSelect.selectedIndex]?.text || '';
+            
+            const data = {
+                supplier_id: supplierId,
+                supplier_name: supplierName,
+                purchase_date: formData.get('purchase_date'),
+                notes: formData.get('notes'),
+                items: items
+            };
+            
+            console.log('Отправляемые данные:', data);
+            console.log('Количество позиций:', items.length);
+            
+            if (!supplierId || !data.purchase_date || items.length === 0) {
+                alert('Заполните все обязательные поля и добавьте хотя бы одну позицию');
+                return;
+            }
+            
+            const url = {% if is_edit %}'{{ url_for("warehouse.edit_purchase", purchase_id=purchase.id) }}'{% else %}'{{ url_for("warehouse.new_purchase") }}'{% endif %};
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Error response:', text);
+                        try {
+                            const json = JSON.parse(text);
+                            throw new Error(json.error || 'Ошибка при {% if is_edit %}обновлении{% else %}создании{% endif %} закупки');
+                        } catch (e) {
+                            if (e instanceof Error && e.message) {
+                                throw e;
+                            }
+                            throw new Error(text || 'Ошибка при {% if is_edit %}обновлении{% else %}создании{% endif %} закупки');
+                        }
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Success response:', data);
+                if (data.success) {
+                    window.location.href = '/warehouse/purchases/' + data.purchase_id;
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                alert('Ошибка при {% if is_edit %}обновлении{% else %}создании{% endif %} закупки: ' + error.message);
+            });
+        });
+    </script>
+{% endblock %}

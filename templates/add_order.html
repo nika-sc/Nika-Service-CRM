@@ -1,0 +1,2077 @@
+{% extends "base.html" %}
+
+{% block title %}Новая заявка — Nika CRM{% endblock %}
+
+{% block styles %}
+    <!-- TomSelect CSS -->
+    <link href="{{ url_for('static', filename='cdn/tom-select/2.2.2/css/tom-select.bootstrap5.css') }}" rel="stylesheet">
+
+    <style>
+        .form-section { 
+            border-left: 3px solid #0d6efd; 
+            padding-left: 12px; 
+            margin-bottom: 15px; 
+        }
+        .form-section h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px !important;
+        }
+        .required label::after { content: " *"; color: red; }
+        
+        /* Компактные поля формы */
+        .form-control, .form-select {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+        }
+        
+        /* Компактные подсказки */
+        .form-section small.text-muted {
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 0.25rem;
+            line-height: 1.3;
+        }
+        
+        /* Компактные метки */
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+        
+        /* Компактные кнопки предоплаты */
+        .prepayment-buttons {
+            margin-top: 0.5rem !important;
+        }
+        .prepayment-buttons .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        /* Компактные alert */
+        .alert {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        /* Компактная card */
+        .card-body {
+            padding: 1rem 1.25rem;
+        }
+        
+        /* Компактные textarea */
+        textarea.form-control {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+        }
+        
+        /* Уменьшенные отступы в строках */
+        .row.g-3 {
+            --bs-gutter-y: 0.75rem;
+            --bs-gutter-x: 0.75rem;
+        }
+
+        .client-name-search-wrap {
+            position: relative;
+        }
+        .client-name-suggest {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            right: 0;
+            z-index: 1200;
+            display: none;
+            max-height: 340px;
+            overflow-y: auto;
+            border: 1px solid #ced4da;
+            border-radius: 0.5rem;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .client-name-suggest .suggest-item {
+            width: 100%;
+            text-align: left;
+            border: 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            background: transparent;
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.2rem;
+            color: #212529;
+            cursor: pointer;
+            font-size: 0.9rem;
+            line-height: 1.35;
+        }
+        .client-name-suggest .suggest-item:last-child {
+            border-bottom: 0;
+        }
+        .client-name-suggest .suggest-name {
+            font-weight: 600;
+            color: #1a1d21;
+        }
+        .client-name-suggest .suggest-meta {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #5c636a;
+        }
+        .client-name-suggest .suggest-context {
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: #6c757d;
+            line-height: 1.35;
+            margin-top: 0.15rem;
+        }
+        .client-name-suggest .suggest-context strong {
+            font-weight: 600;
+            color: #495057;
+        }
+        .client-name-suggest .suggest-item:hover,
+        .client-name-suggest .suggest-item:focus {
+            background: rgba(13, 110, 253, 0.1);
+            outline: none;
+        }
+        .client-name-suggest .suggest-item.active {
+            background: rgba(13, 110, 253, 0.16);
+        }
+        .client-name-suggest .suggest-item.active .suggest-name {
+            color: #0a58ca;
+        }
+
+        /* Тёмная тема CRM (theme-dark на html/body — не путать с body.dark) */
+        body.theme-dark .client-name-suggest,
+        html.theme-dark .client-name-suggest {
+            background: #2d2d2d;
+            border-color: #555;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+        }
+        body.theme-dark .client-name-suggest .suggest-item,
+        html.theme-dark .client-name-suggest .suggest-item {
+            color: #e0e0e0;
+            border-bottom-color: rgba(255, 255, 255, 0.08);
+        }
+        body.theme-dark .client-name-suggest .suggest-name,
+        html.theme-dark .client-name-suggest .suggest-name {
+            color: #f0f0f0;
+        }
+        body.theme-dark .client-name-suggest .suggest-meta,
+        html.theme-dark .client-name-suggest .suggest-meta {
+            color: #b0b0b0;
+        }
+        body.theme-dark .client-name-suggest .suggest-context,
+        html.theme-dark .client-name-suggest .suggest-context {
+            color: #a8a8a8;
+        }
+        body.theme-dark .client-name-suggest .suggest-context strong,
+        html.theme-dark .client-name-suggest .suggest-context strong {
+            color: #e8e8e8;
+        }
+        body.theme-dark .client-name-suggest .suggest-item:hover,
+        body.theme-dark .client-name-suggest .suggest-item:focus,
+        html.theme-dark .client-name-suggest .suggest-item:hover,
+        html.theme-dark .client-name-suggest .suggest-item:focus {
+            background: rgba(13, 110, 253, 0.28);
+        }
+        body.theme-dark .client-name-suggest .suggest-item.active,
+        html.theme-dark .client-name-suggest .suggest-item.active {
+            background: rgba(13, 110, 253, 0.38);
+        }
+        body.theme-dark .client-name-suggest .suggest-item.active .suggest-name,
+        html.theme-dark .client-name-suggest .suggest-item.active .suggest-name {
+            color: #9ec5fe;
+        }
+
+        /* Retro: карточка с белым текстом + белая панель подсказок → явный тёмно-розовый блок */
+        body.theme-retro .client-name-suggest,
+        html.theme-retro .client-name-suggest {
+            background: linear-gradient(145deg, #4a0d3a 0%, #2d0a24 100%);
+            border: 2px solid #ff00ff;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.45);
+        }
+        body.theme-retro .client-name-suggest .suggest-item,
+        html.theme-retro .client-name-suggest .suggest-item {
+            color: #fff;
+            border-bottom-color: rgba(255, 105, 180, 0.45);
+        }
+        body.theme-retro .client-name-suggest .suggest-name,
+        html.theme-retro .client-name-suggest .suggest-name {
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        body.theme-retro .client-name-suggest .suggest-meta,
+        html.theme-retro .client-name-suggest .suggest-meta {
+            color: #ffc8ec;
+        }
+        body.theme-retro .client-name-suggest .suggest-context,
+        html.theme-retro .client-name-suggest .suggest-context {
+            color: #ffd6ef;
+        }
+        body.theme-retro .client-name-suggest .suggest-context strong,
+        html.theme-retro .client-name-suggest .suggest-context strong {
+            color: #fff;
+        }
+        body.theme-retro .client-name-suggest .suggest-item:hover,
+        body.theme-retro .client-name-suggest .suggest-item:focus,
+        html.theme-retro .client-name-suggest .suggest-item:hover,
+        html.theme-retro .client-name-suggest .suggest-item:focus {
+            background: rgba(255, 0, 255, 0.35);
+        }
+        body.theme-retro .client-name-suggest .suggest-item.active,
+        html.theme-retro .client-name-suggest .suggest-item.active {
+            background: rgba(255, 20, 147, 0.55);
+        }
+
+        /* Тёмная тема только для содержимого формы */
+        body.dark {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark .card {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        body.dark .form-control,
+        body.dark .form-select,
+        body.dark textarea {
+            background-color: #2a2a2a;
+            color: #fff;
+            border-color: #555;
+        }
+        body.dark .form-control::placeholder,
+        body.dark textarea::placeholder {
+            color: #aaa;
+        }
+        body.dark .card-header {
+            background-color: #0d6efd !important;
+        }
+        body.dark .btn-outline-secondary {
+            color: #fff;
+            border-color: #aaa;
+        }
+        body.dark .btn-outline-secondary:hover {
+            background-color: #333;
+        }
+        body.dark .client-name-suggest,
+        html[data-bs-theme="dark"] .client-name-suggest {
+            background: #2a2a2a;
+            border-color: #555;
+        }
+        body.dark .client-name-suggest .suggest-item,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-item {
+            color: #fff;
+        }
+        body.dark .client-name-suggest .suggest-item:hover,
+        body.dark .client-name-suggest .suggest-item:focus,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-item:hover,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-item:focus {
+            background: rgba(59, 130, 246, 0.24);
+        }
+        body.dark .client-name-suggest .suggest-item.active,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-item.active {
+            background: rgba(59, 130, 246, 0.34);
+        }
+        body.dark .client-name-suggest .suggest-name,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-name {
+            color: #fff;
+        }
+        body.dark .client-name-suggest .suggest-meta,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-meta {
+            color: #adb5bd;
+        }
+        body.dark .client-name-suggest .suggest-context,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-context {
+            color: #adb5bd;
+        }
+        body.dark .client-name-suggest .suggest-context strong,
+        html[data-bs-theme="dark"] .client-name-suggest .suggest-context strong {
+            color: #e9ecef;
+        }
+
+        /* Tom Select: как у .form-control в тёмной теме — #fff текст, #aaa placeholder */
+        body.dark .ts-wrapper .ts-control,
+        body.dark .ts-wrapper.form-control .ts-control,
+        body.dark .ts-wrapper.form-select .ts-control,
+        body.dark .ts-wrapper.full .ts-control,
+        body.dark .ts-wrapper.single.input-active .ts-control {
+            background-color: #2a2a2a !important;
+            color: #fff !important;
+            border-color: #555 !important;
+        }
+        body.dark .ts-wrapper .ts-control > input,
+        body.dark .ts-wrapper .ts-control input {
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+            background-color: transparent !important;
+            caret-color: #fff;
+        }
+        body.dark .ts-wrapper .ts-control > input::placeholder,
+        body.dark .ts-wrapper .ts-control input::placeholder {
+            color: #aaa !important;
+            opacity: 1;
+        }
+        body.dark .ts-wrapper .ts-control .item {
+            color: #fff !important;
+            background-color: #3d3d3d !important;
+            border-color: #555 !important;
+        }
+        /* Single-select (Тип/Бренд/Модель): отдельное усиление цвета выбранного значения */
+        body.dark .ts-wrapper.single .ts-control,
+        body.dark .ts-wrapper.single.has-items .ts-control,
+        body.dark .ts-wrapper.single .ts-control .item,
+        body.dark .ts-wrapper.single.has-items .ts-control .item {
+            color: #fff !important;
+        }
+        body.dark .ts-wrapper.single.has-items .ts-control > input,
+        body.dark .ts-wrapper.single.has-items.focus .ts-control > input {
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+            opacity: 1 !important;
+        }
+        /* Светлая стрелка раскрытия вместо стандартной тёмной */
+        body.dark .ts-wrapper:not(.form-control):not(.form-select).single .ts-control {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+        }
+        body.dark .ts-wrapper.multi .ts-control > div {
+            color: #fff !important;
+        }
+        body.dark .ts-dropdown {
+            background-color: #2a2a2a !important;
+            color: #fff !important;
+            border-color: #555 !important;
+        }
+        body.dark .ts-dropdown .option {
+            background-color: #2a2a2a;
+            color: #fff;
+        }
+        body.dark .ts-dropdown .active {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
+        /* Fallback для темной темы Bootstrap 5.3 (если нет body.dark, но есть data-bs-theme="dark") */
+        html[data-bs-theme="dark"] #deviceType-ts-control,
+        html[data-bs-theme="dark"] #deviceBrand-ts-control,
+        html[data-bs-theme="dark"] #model-ts-control,
+        html[data-bs-theme="dark"] #deviceType-ts-control .item,
+        html[data-bs-theme="dark"] #deviceBrand-ts-control .item,
+        html[data-bs-theme="dark"] #model-ts-control .item,
+        html[data-bs-theme="dark"] .ts-wrapper.single .ts-control,
+        html[data-bs-theme="dark"] .ts-wrapper.single .ts-control .item {
+            color: #fff !important;
+        }
+        html[data-bs-theme="dark"] #deviceType-ts-control > input,
+        html[data-bs-theme="dark"] #deviceBrand-ts-control > input,
+        html[data-bs-theme="dark"] #model-ts-control > input,
+        html[data-bs-theme="dark"] .ts-wrapper.single .ts-control > input,
+        html[data-bs-theme="dark"] .ts-wrapper.single.has-items .ts-control > input {
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+            opacity: 1 !important;
+            caret-color: #fff !important;
+        }
+        html[data-bs-theme="dark"] #deviceType-ts-dropdown,
+        html[data-bs-theme="dark"] #deviceBrand-ts-dropdown,
+        html[data-bs-theme="dark"] #model-ts-dropdown,
+        html[data-bs-theme="dark"] .ts-dropdown {
+            background-color: #2a2a2a !important;
+            color: #fff !important;
+            border-color: #555 !important;
+        }
+        html[data-bs-theme="dark"] #deviceType-ts-dropdown .option,
+        html[data-bs-theme="dark"] #deviceBrand-ts-dropdown .option,
+        html[data-bs-theme="dark"] #model-ts-dropdown .option,
+        html[data-bs-theme="dark"] .ts-dropdown .option {
+            color: #fff !important;
+        }
+
+        /* Вид "одного тега" для single TomSelect (Тип/Бренд/Модель) */
+        .ts-chip-single {
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+            padding: 0.12rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.86rem;
+            line-height: 1.25;
+            border: 1px solid #bcd0f7;
+            background: #e8f0ff;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        body.dark .ts-chip-single,
+        html[data-bs-theme="dark"] .ts-chip-single {
+            background: rgba(59, 130, 246, 0.22) !important;
+            border-color: rgba(96, 165, 250, 0.55) !important;
+            color: #ffffff !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+
+                                <form method="POST" action="/add_order" id="crmForm" class="card-body pt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="order_number" id="orderNumber">
+
+                                    <div class="d-flex justify-content-end flex-wrap gap-2 mb-2 align-items-center">
+                                        <button type="button" id="copyLastOrderBtn" class="btn btn-outline-primary btn-sm d-none">
+                                            <i class="fas fa-copy me-1"></i> Заполнить из последней заявки
+                                        </button>
+                                    </div>
+
+                                    {% if error %}
+                                    <div class="alert alert-danger" role="alert">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    </div>
+                                    {% endif %}
+                                    {% with messages = get_flashed_messages(with_categories=true) %}
+                                        {% if messages %}
+                                            {% for category, message in messages %}
+                                            <div class="alert alert-{{ category }}" role="alert">
+                                                <i class="fas fa-{% if category == 'error' %}exclamation-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %} me-1"></i>{{ message }}
+                                            </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endwith %}
+                                    <div id="customerInfoAlert" class="alert alert-info d-none" role="alert"></div>
+                                    <div id="duplicateAlert" class="alert alert-warning d-none" role="alert"></div>
+                                    <div id="deviceHistoryCard" class="card border border-info d-none mb-2">
+                                        <div class="card-header bg-info text-white py-1 px-2">
+                                            <strong class="small"><i class="fas fa-history me-1"></i> Устройства клиента</strong>
+                                        </div>
+                                        <div class="card-body py-1 px-2" id="deviceHistoryBody"></div>
+                                    </div>
+
+            <!-- 1. Данные клиента -->
+            <div class="form-section">
+                <h5><i class="fas fa-user me-1"></i>1. Данные клиента</h5>
+                <div class="row g-3">
+                    <div class="col-md-4 required">
+                        <label for="clientName" class="form-label">ФИО или название</label>
+                        <div class="client-name-search-wrap">
+                            <input type="text" class="form-control" id="clientName" name="client_name" required autofocus
+                                   placeholder="Иванов Иван Иванович" autocomplete="off">
+                            <div id="clientNameSuggest" class="client-name-suggest" aria-live="polite"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 required">
+                        <label for="phone" class="form-label">Телефон</label>
+                        <input type="tel" class="form-control" id="phone" name="phone"
+                               inputmode="tel" maxlength="18"
+                               placeholder="+7 (999) 123-45-67" value="+7" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                               placeholder="email@example.com" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Данные об устройстве -->
+            <div class="form-section">
+                <h5><i class="fas fa-laptop me-1"></i>2. Данные об устройстве</h5>
+                <div class="row g-3">
+                    <div class="col-md-3 required">
+                        <label for="deviceType" class="form-label">Тип устройства</label>
+                        <select class="form-control" name="device_type" id="deviceType" required>
+                            <option value="">Выберите...</option>
+                            {% for dt in device_types %}
+                            <option value="{{ dt[0] }}">{{ dt[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 required">
+                        <label for="deviceBrand" class="form-label">Бренд</label>
+                        <select class="form-control" name="device_brand" id="deviceBrand" required>
+                            <option value="">Выберите...</option>
+                            {% for db in device_brands %}
+                            <option value="{{ db[0] }}">{{ db[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="serialNumber" class="form-label">Серийный номер</label>
+                        <input type="text" class="form-control" id="serialNumber" name="serial_number"
+                               placeholder="SN123456789">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="Необязательно">
+                    </div>
+                    <div class="col-md-3 required">
+                        <label for="model" class="form-label">Модель</label>
+                        <select class="form-control" id="model" name="model">
+                            <option value="">Выберите или введите...</option>
+                            {% for m in order_models or [] %}
+                            <option value="{{ m }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Модель устройства</small>
+                    </div>
+                    <div class="col-md-6 required">
+                        <label for="symptomTags" class="form-label">Описание неисправности</label>
+                        <select class="form-control" id="symptomTags" multiple>
+                            {% for id, name, sort_order in symptoms %}
+                            <option value="{{ name }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="symptom_tags" id="symptomTagsInput">
+                        <small class="text-muted">Выберите теги или впишите свой вариант</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="appearanceTags" class="form-label">Внешний вид и комплектация</label>
+                        <select class="form-control" id="appearanceTags" multiple>
+                            {% for id, name, sort_order in appearance_tags %}
+                            <option value="{{ name }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="intake_checklist" id="intakeChecklistInput">
+                        <small class="text-muted">Теги для быстрой приёмки</small>
+                    </div>
+                    <input type="hidden" id="appearance" name="appearance" value="">
+                    <div class="col-md-4">
+                        <label for="prepayment" class="form-label">Предоплата</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="prepayment" name="prepayment"
+                                   value="0" min="0" step="1">
+                            <span class="input-group-text">₽</span>
+                        </div>
+                        <div class="btn-group btn-group-sm prepayment-buttons" role="group">
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="0">0 ₽</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="1000">1 000 ₽</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="5000">5 000 ₽</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="10000">10 000 ₽</button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="prepayment_method" class="form-label">Способ оплаты</label>
+                        <select class="form-select" id="prepayment_method" name="prepayment_method">
+                            <option value="cash">💵 Наличные</option>
+                            <option value="transfer" selected>📲 Перевод</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Сотрудники -->
+            <div class="form-section">
+                <h5><i class="fas fa-users me-1"></i>3. Ответственные сотрудники</h5>
+                <div class="row g-3">
+                    <div class="col-md-3 required">
+                        <label for="manager" class="form-label">Менеджер</label>
+                        <select class="form-select" id="manager" name="manager" required>
+                            <option value="">Не назначен</option>
+                            {% for id, name in managers %}
+                            <option value="{{ id }}"{% if loop.first %} selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 required">
+                        <label for="master" class="form-label">Мастер</label>
+                        <select class="form-select" id="master" name="master" required>
+                            <option value="">Не назначен</option>
+                            {% for id, name in masters %}
+                            <option value="{{ id }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="comment" class="form-label">
+                            <i class="fas fa-info-circle text-warning me-1"></i>
+                            Комментарий (только для CRM)
+                        </label>
+                        <textarea class="form-control" id="comment" name="comment" rows="2"
+                                  placeholder="Внутренние заметки (не видно клиенту)"></textarea>
+                        <small class="text-muted">
+                            <i class="fas fa-lock me-1"></i>
+                            Виден только в CRM
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                <button type="reset" class="btn btn-outline-secondary btn-sm me-md-2">Очистить</button>
+                <button type="submit" class="btn btn-primary btn-sm">Сохранить заявку</button>
+            </div>
+            <small class="text-muted d-block mt-2">
+                Быстрый ввод: <kbd>~</kbd>/<kbd>ё</kbd> и <kbd>Tab</kbd> — перейти к следующему полю (без выбора),
+                <kbd>Enter</kbd> — выбрать/ввести значение,
+                <kbd>Ctrl+Enter</kbd> — сохранить заявку.
+            </small>
+        </form>
+    </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- TomSelect JS -->
+    <script src="{{ url_for('static', filename='cdn/tom-select/2.2.2/js/tom-select.complete.min.js') }}"></script>
+    
+    <script>
+        const form = document.getElementById('crmForm');
+        const phoneInput = document.getElementById('phone');
+        const emailInput = document.getElementById('email');
+        const serialInput = document.getElementById('serialNumber');
+        const customerInfoAlert = document.getElementById('customerInfoAlert');
+        const duplicateAlert = document.getElementById('duplicateAlert');
+        const deviceHistoryCard = document.getElementById('deviceHistoryCard');
+        const deviceHistoryBody = document.getElementById('deviceHistoryBody');
+        const copyLastOrderBtn = document.getElementById('copyLastOrderBtn');
+        const clientNameInput = document.getElementById('clientName');
+        const clientNameSuggest = document.getElementById('clientNameSuggest');
+        
+        // Проверяем, что элементы найдены
+        if (!phoneInput) {
+            console.error('Элемент phone не найден!');
+        }
+
+        // По умолчанию курсор в поле ФИО/название при открытии страницы.
+        // Делаем отложенно, чтобы не перебивалось инициализацией других контролов.
+        setTimeout(() => {
+            if (!clientNameInput) return;
+            const activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+            if (activeTag === 'body' || activeTag === 'html' || activeTag === '') {
+                clientNameInput.focus();
+                try { clientNameInput.select(); } catch (e) {}
+            }
+        }, 0);
+
+        // Телефон по умолчанию: +7 (и курсор в конец)
+        if (phoneInput && !phoneInput.value) {
+            phoneInput.value = '+7';
+            phoneInput.dataset.normalized = '7';
+            try {
+                phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length);
+            } catch (e) {}
+        }
+        
+        // Предзаполнение формы, если передан customer_id
+        {% if prefill_customer %}
+        (function() {
+            const customer = {{ prefill_customer | tojson }};
+            if (customer) {
+                document.getElementById('clientName').value = customer.name || '';
+                phoneInput.value = customer.phone || '';
+                phoneInput.dataset.normalized = customer.phone ? customer.phone.replace(/\D/g, '') : '';
+                emailInput.value = customer.email || '';
+                
+                // Запускаем поиск клиента для получения устройств и последней заявки
+                if (phoneInput.dataset.normalized && phoneInput.dataset.normalized.length >= 10) {
+                    setTimeout(() => {
+                        lookupCustomer(phoneInput.dataset.normalized);
+                    }, 500);
+                }
+            }
+        })();
+        {% endif %}
+        const symptomTagsInput = document.getElementById('symptomTagsInput');
+        const intakeChecklistInput = document.getElementById('intakeChecklistInput');
+        // Версия v2 - сброс мусорных данных из localStorage
+        const CUSTOM_SYMPTOM_KEY = 'add_order_custom_symptoms_v2';
+        const CUSTOM_APPEARANCE_KEY = 'add_order_custom_appearance_v2';
+        // Очищаем старые ключи с мусором
+        localStorage.removeItem('add_order_custom_symptoms_v1');
+        localStorage.removeItem('add_order_custom_appearance_v1');
+
+        const state = {
+            debounceTimer: null,
+            nameSearchTimer: null,
+            nameSuggestIndex: -1,
+            nameSuggestCustomers: [],
+            customer: null,
+            lastOrder: null,
+            duplicates: null,
+        };
+
+        function tomSingleTagRender() {
+            return {
+                item: function(data, escape) {
+                    return `<div class="ts-chip-single">${escape(data.text || '')}</div>`;
+                }
+            };
+        }
+
+        function hideClientNameSuggest() {
+            if (!clientNameSuggest) return;
+            clientNameSuggest.innerHTML = '';
+            clientNameSuggest.style.display = 'none';
+            state.nameSuggestIndex = -1;
+            state.nameSuggestCustomers = [];
+        }
+
+        function applyCustomerFromSuggest(c) {
+            if (!c) return;
+            if (clientNameInput) clientNameInput.value = c.name || '';
+            if (phoneInput) {
+                phoneInput.value = formatPhoneDisplay(c.phone || '');
+                phoneInput.dataset.normalized = normalizePhoneClient(c.phone || '');
+            }
+            if (emailInput) emailInput.value = c.email || '';
+            hideClientNameSuggest();
+
+            const normalized = (phoneInput && phoneInput.dataset.normalized) ? phoneInput.dataset.normalized : '';
+            if (normalized && normalized.length >= 11) {
+                lookupCustomer(normalized);
+            } else {
+                clearCustomerInfo();
+                clearDuplicateAlert();
+            }
+        }
+
+        function highlightClientSuggestItem() {
+            if (!clientNameSuggest) return;
+            const buttons = Array.from(clientNameSuggest.querySelectorAll('.suggest-item'));
+            buttons.forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === state.nameSuggestIndex);
+            });
+        }
+
+        function isClientSuggestOpen() {
+            return !!clientNameSuggest && clientNameSuggest.style.display !== 'none' && state.nameSuggestCustomers.length > 0;
+        }
+
+        function renderClientNameSuggest(customers) {
+            if (!clientNameSuggest) return;
+            clientNameSuggest.innerHTML = '';
+
+            const list = Array.isArray(customers) ? customers : [];
+            state.nameSuggestCustomers = list;
+            if (!list.length) {
+                clientNameSuggest.style.display = 'none';
+                return;
+            }
+
+            state.nameSuggestIndex = 0;
+
+            list.forEach((c, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'suggest-item';
+                btn.dataset.idx = String(idx);
+                const phoneTxt = c.phone_display || c.phone || '';
+                const emailTxt = c.email || '';
+                const nameEl = document.createElement('span');
+                nameEl.className = 'suggest-name';
+                nameEl.textContent = c.name || '—';
+                btn.appendChild(nameEl);
+                const metaParts = [];
+                if (phoneTxt) metaParts.push(phoneTxt);
+                if (emailTxt) metaParts.push(emailTxt);
+                if (metaParts.length) {
+                    const metaEl = document.createElement('span');
+                    metaEl.className = 'suggest-meta';
+                    metaEl.textContent = metaParts.join(' · ');
+                    btn.appendChild(metaEl);
+                }
+                const lastLbl = (c.last_order_label || '').trim();
+                const devs = Array.isArray(c.recent_devices)
+                    ? c.recent_devices.filter((x) => x && String(x).trim())
+                    : [];
+                if (lastLbl) {
+                    const loEl = document.createElement('div');
+                    loEl.className = 'suggest-context suggest-last-order';
+                    loEl.appendChild(document.createTextNode('Последняя заявка: '));
+                    const strong = document.createElement('strong');
+                    strong.textContent = lastLbl;
+                    loEl.appendChild(strong);
+                    btn.appendChild(loEl);
+                }
+                if (devs.length) {
+                    const dvEl = document.createElement('div');
+                    dvEl.className = 'suggest-context suggest-devices';
+                    dvEl.appendChild(document.createTextNode('Устройства: '));
+                    const devSpan = document.createElement('span');
+                    devSpan.textContent = devs.join(' · ');
+                    dvEl.appendChild(devSpan);
+                    btn.appendChild(dvEl);
+                }
+                btn.addEventListener('click', () => {
+                    applyCustomerFromSuggest(c);
+                });
+                clientNameSuggest.appendChild(btn);
+            });
+
+            clientNameSuggest.style.display = 'block';
+            highlightClientSuggestItem();
+        }
+
+        function searchCustomersByName(query) {
+            if (!query || query.trim().length < 2) {
+                hideClientNameSuggest();
+                return;
+            }
+            fetch(`/add_order/customers/search?q=${encodeURIComponent(query.trim())}`)
+                .then((res) => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
+                .then((data) => {
+                    if (!data || !data.success) {
+                        hideClientNameSuggest();
+                        return;
+                    }
+                    renderClientNameSuggest(data.customers || []);
+                })
+                .catch((err) => {
+                    console.error('Ошибка поиска клиента по имени:', err);
+                    hideClientNameSuggest();
+                });
+        }
+
+    const resetBtn = document.querySelector('button[type="reset"]');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', (e) => {
+    if (!confirm('Вы уверены, что хотите очистить все поля формы?')) {
+        e.preventDefault();
+                return;
+    }
+            clearCustomerInfo();
+            clearDuplicateAlert();
+});
+    }
+
+        // Инициализация TomSelect для типа устройства с автодополнением
+        const tomDeviceType = new TomSelect('#deviceType', {
+            render: tomSingleTagRender(),
+            create: function(input, callback) {
+                const normalized = normalizeTagLabel(input);
+                if (!normalized) return;
+                
+                // Создаем новый тип через API
+                fetch('/api/device-types', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: normalized })
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(data => Promise.reject(data));
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success && data.id) {
+                        // Добавляем новую опцию в select и в TomSelect
+                        const selectElement = document.getElementById('deviceType');
+                        // Проверяем, нет ли уже такой опции
+                        const exists = Array.from(selectElement.options).some(opt => opt.value == data.id);
+                        if (!exists) {
+                            const option = new Option(normalized, data.id, true, true);
+                            selectElement.add(option);
+                            tomDeviceType.addOption({ value: String(data.id), text: normalized });
+                        }
+                        tomDeviceType.addItem(String(data.id), true);
+                        callback({ value: String(data.id), text: normalized });
+                    } else {
+                        // Если ошибка, пытаемся найти существующий элемент по имени
+                        console.warn('Не удалось создать тип устройства, ищем существующий:', data.error || 'Unknown error');
+                        fetch('/api/device-types')
+                            .then(res => res.json())
+                            .then(types => {
+                                if (Array.isArray(types)) {
+                                    const existing = types.find(t => t.name.toLowerCase() === normalized.toLowerCase());
+                                    if (existing) {
+                                        const selectElement = document.getElementById('deviceType');
+                                        const exists = Array.from(selectElement.options).some(opt => opt.value == existing.id);
+                                        if (!exists) {
+                                            const option = new Option(existing.name, existing.id, true, true);
+                                            selectElement.add(option);
+                                            tomDeviceType.addOption({ value: String(existing.id), text: existing.name });
+                                        }
+                                        tomDeviceType.addItem(String(existing.id), true);
+                                        callback({ value: String(existing.id), text: existing.name });
+                                    } else {
+                                        throw new Error('Type not found');
+                                    }
+                                } else {
+                                    throw new Error('Invalid response');
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Не удалось найти существующий тип устройства:', err);
+                                // Показываем ошибку пользователю, но не создаем опцию
+                                alert('Не удалось создать тип устройства. Пожалуйста, выберите из списка.');
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при создании типа устройства:', error);
+                    // Пытаемся найти существующий элемент по имени
+                    fetch('/api/device-types')
+                        .then(res => res.json())
+                        .then(types => {
+                            if (Array.isArray(types)) {
+                                const existing = types.find(t => t.name.toLowerCase() === normalized.toLowerCase());
+                                if (existing) {
+                                    const selectElement = document.getElementById('deviceType');
+                                    const exists = Array.from(selectElement.options).some(opt => opt.value == existing.id);
+                                    if (!exists) {
+                                        const option = new Option(existing.name, existing.id, true, true);
+                                        selectElement.add(option);
+                                        tomDeviceType.addOption({ value: String(existing.id), text: existing.name });
+                                    }
+                                    tomDeviceType.addItem(String(existing.id), true);
+                                    callback({ value: String(existing.id), text: existing.name });
+                                } else {
+                                    alert('Не удалось создать тип устройства. Пожалуйста, выберите из списка.');
+                                }
+                            } else {
+                                alert('Не удалось создать тип устройства. Пожалуйста, выберите из списка.');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Не удалось найти существующий тип устройства:', err);
+                            alert('Не удалось создать тип устройства. Пожалуйста, выберите из списка.');
+                        });
+                });
+            },
+            sortField: {
+                field: 'text',
+                direction: 'asc'
+            },
+            placeholder: 'Выберите или впишите тип устройства...',
+            maxOptions: null,
+            hideSelected: false,
+            allowEmptyOption: true,
+            plugins: ['input_autogrow']
+        });
+        
+        // Загружаем все существующие типы устройств из API (на случай, если были добавлены новые)
+        fetch('/api/device-types')
+            .then(res => res.json())
+            .then(types => {
+                if (Array.isArray(types)) {
+                    types.forEach(type => {
+                        const selectElement = document.getElementById('deviceType');
+                        // Проверяем, нет ли уже такой опции
+                        const exists = Array.from(selectElement.options).some(opt => opt.value == type.id);
+                        if (!exists) {
+                            const option = new Option(type.name, type.id);
+                            selectElement.add(option);
+                            tomDeviceType.addOption({ value: String(type.id), text: type.name });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке типов устройств:', error);
+            });
+        
+        // Убеждаемся, что по умолчанию ничего не выбрано
+        tomDeviceType.clear();
+
+        // Инициализация TomSelect для бренда устройства с автодополнением
+        const tomDeviceBrand = new TomSelect('#deviceBrand', {
+            render: tomSingleTagRender(),
+            create: function(input, callback) {
+                const normalized = normalizeTagLabel(input);
+                if (!normalized) return;
+                
+                // Создаем новый бренд через API
+                fetch('/api/device-brands', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: normalized })
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(data => Promise.reject(data));
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success && data.id) {
+                        // Добавляем новую опцию в select и в TomSelect
+                        const selectElement = document.getElementById('deviceBrand');
+                        // Проверяем, нет ли уже такой опции
+                        const exists = Array.from(selectElement.options).some(opt => opt.value == data.id);
+                        if (!exists) {
+                            const option = new Option(normalized, data.id, true, true);
+                            selectElement.add(option);
+                            tomDeviceBrand.addOption({ value: String(data.id), text: normalized });
+                        }
+                        tomDeviceBrand.addItem(String(data.id), true);
+                        callback({ value: String(data.id), text: normalized });
+                    } else {
+                        // Если ошибка, пытаемся найти существующий элемент по имени
+                        console.warn('Не удалось создать бренд устройства, ищем существующий:', data.error || 'Unknown error');
+                        fetch('/api/device-brands')
+                            .then(res => res.json())
+                            .then(brands => {
+                                if (Array.isArray(brands)) {
+                                    const existing = brands.find(b => b.name.toLowerCase() === normalized.toLowerCase());
+                                    if (existing) {
+                                        const selectElement = document.getElementById('deviceBrand');
+                                        const exists = Array.from(selectElement.options).some(opt => opt.value == existing.id);
+                                        if (!exists) {
+                                            const option = new Option(existing.name, existing.id, true, true);
+                                            selectElement.add(option);
+                                            tomDeviceBrand.addOption({ value: String(existing.id), text: existing.name });
+                                        }
+                                        tomDeviceBrand.addItem(String(existing.id), true);
+                                        callback({ value: String(existing.id), text: existing.name });
+                                    } else {
+                                        throw new Error('Brand not found');
+                                    }
+                                } else {
+                                    throw new Error('Invalid response');
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Не удалось найти существующий бренд устройства:', err);
+                                // Показываем ошибку пользователю, но не создаем опцию
+                                alert('Не удалось создать бренд устройства. Пожалуйста, выберите из списка.');
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при создании бренда устройства:', error);
+                    // Пытаемся найти существующий элемент по имени
+                    fetch('/api/device-brands')
+                        .then(res => res.json())
+                        .then(brands => {
+                            if (Array.isArray(brands)) {
+                                const existing = brands.find(b => b.name.toLowerCase() === normalized.toLowerCase());
+                                if (existing) {
+                                    const selectElement = document.getElementById('deviceBrand');
+                                    const exists = Array.from(selectElement.options).some(opt => opt.value == existing.id);
+                                    if (!exists) {
+                                        const option = new Option(existing.name, existing.id, true, true);
+                                        selectElement.add(option);
+                                        tomDeviceBrand.addOption({ value: String(existing.id), text: existing.name });
+                                    }
+                                    tomDeviceBrand.addItem(String(existing.id), true);
+                                    callback({ value: String(existing.id), text: existing.name });
+                                } else {
+                                    alert('Не удалось создать бренд устройства. Пожалуйста, выберите из списка.');
+                                }
+                            } else {
+                                alert('Не удалось создать бренд устройства. Пожалуйста, выберите из списка.');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Не удалось найти существующий бренд устройства:', err);
+                            alert('Не удалось создать бренд устройства. Пожалуйста, выберите из списка.');
+                        });
+                });
+            },
+            sortField: {
+                field: 'text',
+                direction: 'asc'
+            },
+            placeholder: 'Выберите или впишите бренд...',
+            maxOptions: null,
+            hideSelected: false,
+            allowEmptyOption: true,
+            plugins: ['input_autogrow']
+        });
+        
+        // Загружаем все существующие бренды устройств из API (на случай, если были добавлены новые)
+        fetch('/api/device-brands')
+            .then(res => res.json())
+            .then(brands => {
+                if (Array.isArray(brands)) {
+                    brands.forEach(brand => {
+                        const selectElement = document.getElementById('deviceBrand');
+                        // Проверяем, нет ли уже такой опции
+                        const exists = Array.from(selectElement.options).some(opt => opt.value == brand.id);
+                        if (!exists) {
+                            const option = new Option(brand.name, brand.id);
+                            selectElement.add(option);
+                            tomDeviceBrand.addOption({ value: String(brand.id), text: brand.name });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке брендов устройств:', error);
+            });
+        
+        // Убеждаемся, что по умолчанию ничего не выбрано
+        tomDeviceBrand.clear();
+
+        // Инициализация TomSelect для модели устройства с автодополнением
+        const tomModel = new TomSelect('#model', {
+            render: tomSingleTagRender(),
+            create: function(input, callback) {
+                const normalized = normalizeTagLabel(input);
+                if (!normalized) return;
+                
+                // Создаем новую модель через API
+                fetch('/api/order-models', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: normalized })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Добавляем новую опцию в select и в TomSelect
+                        const selectElement = document.getElementById('model');
+                        const option = new Option(normalized, normalized, true, true);
+                        selectElement.add(option);
+                        tomModel.addOption({ value: normalized, text: normalized });
+                        tomModel.addItem(normalized, true);
+                        // Убеждаемся, что значение установлено в нативном select
+                        selectElement.value = normalized;
+                        callback({ value: normalized, text: normalized });
+                    } else {
+                        // Если уже существует, просто используем существующее значение
+                        callback({ value: normalized, text: normalized });
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при создании модели:', error);
+                    callback({ value: normalized, text: normalized });
+                });
+            },
+            sortField: {
+                field: 'text',
+                direction: 'asc'
+            },
+            placeholder: 'Выберите или введите модель...',
+            maxOptions: null,
+            hideSelected: false,
+            allowEmptyOption: true,
+            plugins: ['input_autogrow']
+        });
+        
+        // Загружаем существующие модели
+        fetch('/api/order-models')
+            .then(res => res.json())
+            .then(models => {
+                if (Array.isArray(models)) {
+                    models.forEach(model => {
+                        const selectElement = document.getElementById('model');
+                        // Проверяем, нет ли уже такой опции
+                        const exists = Array.from(selectElement.options).some(opt => opt.value === model.name);
+                        if (!exists) {
+                            const option = new Option(model.name, model.name);
+                            selectElement.add(option);
+                            tomModel.addOption({ value: model.name, text: model.name });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке моделей:', error);
+            });
+        
+        // Убеждаемся, что по умолчанию ничего не выбрано
+        tomModel.clear();
+
+        // На некоторых окружениях TomSelect всё равно наследует тёмный текст из bootstrap-скина.
+        // Делаем runtime-fix инлайн-стилями для полей Тип/Бренд/Модель в dark theme.
+        function isDarkThemeActive() {
+            return document.body.classList.contains('dark')
+                || document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        }
+
+        function applyTomSelectControlColors(instance) {
+            if (!instance) return;
+            const control = instance.control;
+            const input = instance.control_input;
+            const dropdown = instance.dropdown;
+            const dark = isDarkThemeActive();
+
+            if (control) {
+                control.style.color = dark ? '#fff' : '';
+                control.style.backgroundColor = dark ? '#2a2a2a' : '';
+                control.style.borderColor = dark ? '#555' : '';
+            }
+            if (input) {
+                input.style.color = dark ? '#fff' : '';
+                input.style.webkitTextFillColor = dark ? '#fff' : '';
+                input.style.caretColor = dark ? '#fff' : '';
+                input.style.opacity = dark ? '1' : '';
+            }
+            if (dropdown) {
+                dropdown.style.color = dark ? '#fff' : '';
+                dropdown.style.backgroundColor = dark ? '#2a2a2a' : '';
+                dropdown.style.borderColor = dark ? '#555' : '';
+            }
+
+            // Выбранный текст и опции в dropdown
+            const itemEls = control ? control.querySelectorAll('.item') : [];
+            itemEls.forEach((el) => { el.style.color = dark ? '#fff' : ''; });
+            const optionEls = dropdown ? dropdown.querySelectorAll('.option') : [];
+            optionEls.forEach((el) => { el.style.color = dark ? '#fff' : ''; });
+        }
+
+        function bindTomSelectDarkFix(instance) {
+            if (!instance) return;
+            applyTomSelectControlColors(instance);
+            if (typeof instance.on === 'function') {
+                instance.on('change', () => applyTomSelectControlColors(instance));
+                instance.on('dropdown_open', () => applyTomSelectControlColors(instance));
+                instance.on('focus', () => applyTomSelectControlColors(instance));
+                instance.on('blur', () => applyTomSelectControlColors(instance));
+            }
+        }
+
+        [tomDeviceType, tomDeviceBrand, tomModel].forEach(bindTomSelectDarkFix);
+        // Отложенный проход после полной инициализации/подгрузки опций.
+        setTimeout(() => [tomDeviceType, tomDeviceBrand, tomModel].forEach(applyTomSelectControlColors), 0);
+        setTimeout(() => [tomDeviceType, tomDeviceBrand, tomModel].forEach(applyTomSelectControlColors), 300);
+
+        // Если тема переключается динамически — переapply.
+        const themeObserver = new MutationObserver(() => {
+            [tomDeviceType, tomDeviceBrand, tomModel].forEach(applyTomSelectControlColors);
+        });
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+        function resolveFocusTarget(target) {
+            if (!target) return null;
+            if (typeof target === 'function') {
+                try {
+                    return target();
+                } catch (e) {
+                    return null;
+                }
+            }
+            return target;
+        }
+
+        function focusTarget(target) {
+            const resolved = resolveFocusTarget(target);
+            if (!resolved) return;
+            if (typeof resolved.focus === 'function') {
+                resolved.focus();
+                return;
+            }
+            const el = document.querySelector(resolved);
+            if (el && typeof el.focus === 'function') {
+                el.focus();
+            }
+        }
+
+        function bindTildeSelect(instance, nextTarget) {
+            if (!instance || !instance.control_input) return;
+            const triggerKeys = new Set(['~', '`', 'ё', 'Ё']);
+
+            instance.control_input.addEventListener('keydown', (e) => {
+                const isTab = e.key === 'Tab';
+                if (!triggerKeys.has(e.key) && !isTab) return;
+                e.preventDefault();
+                // По требованию: ~/ё и Tab только переходят дальше, без выбора значения.
+                instance.close();
+                focusTarget(nextTarget);
+            });
+        }
+
+        // Быстрый выбор из поисковых списков: "~" / "ё" = выбрать и перейти дальше.
+        bindTildeSelect(tomDeviceType, tomDeviceBrand);
+        bindTildeSelect(tomDeviceBrand, '#serialNumber');
+        bindTildeSelect(tomModel, () => tomSymptomTags);
+
+        const tomSymptomTags = createPersistentTagSelect(
+            '#symptomTags',
+            symptomTagsInput,
+            CUSTOM_SYMPTOM_KEY,
+            'Выберите или впишите симптом',
+            6
+        );
+
+        const tomAppearanceTags = createPersistentTagSelect(
+            '#appearanceTags',
+            intakeChecklistInput,
+            CUSTOM_APPEARANCE_KEY,
+            'Выберите внешний вид/комплект',
+            8
+        );
+        bindTildeSelect(tomSymptomTags, () => tomAppearanceTags);
+        bindTildeSelect(tomAppearanceTags, '#prepayment');
+        const appearanceHiddenInput = document.getElementById('appearance');
+        const syncAppearanceHidden = () => {
+            if (appearanceHiddenInput && intakeChecklistInput) {
+            appearanceHiddenInput.value = intakeChecklistInput.value;
+            }
+        };
+        if (tomAppearanceTags) {
+        tomAppearanceTags.on('change', syncAppearanceHidden);
+        syncAppearanceHidden();
+        }
+        
+        // УДАЛЕНО: loadTagsFromOrders() загружала теги из истории заявок,
+        // но это добавляло мусорные значения (типа "123", "zxc").
+        // Теперь симптомы и теги внешнего вида грузятся ТОЛЬКО из справочных таблиц
+        // (symptoms, appearance_tags), которые рендерятся сервером в <option>.
+
+        function loadCustomOptions(key) {
+            try {
+                const raw = JSON.parse(localStorage.getItem(key) || '[]');
+                return Array.isArray(raw) ? raw : [];
+            } catch (err) {
+                return [];
+            }
+        }
+
+        function persistCustomOption(key, value) {
+            if (!value) return;
+            const options = new Set(loadCustomOptions(key));
+            options.add(value);
+            localStorage.setItem(key, JSON.stringify(Array.from(options)));
+        }
+
+        function hydrateCustomOptions(selector, storageKey) {
+            const selectEl = document.querySelector(selector);
+            if (!selectEl) return;
+            const customOptions = loadCustomOptions(storageKey);
+            customOptions.forEach(option => {
+                if (!option) return;
+                const exists = Array.from(selectEl.options).some(opt => opt.value === option);
+                if (!exists) {
+                    selectEl.add(new Option(option, option));
+                }
+            });
+        }
+
+        function normalizeTagLabel(value) {
+            const trimmed = value.trim();
+            if (!trimmed) return '';
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        }
+
+        function createPersistentTagSelect(selector, hiddenInput, storageKey, placeholder, maxItems) {
+            hydrateCustomOptions(selector, storageKey);
+
+            const instance = new TomSelect(selector, {
+                plugins: ['remove_button'],
+                persist: false,
+                maxItems,
+                placeholder,
+                create: (input, callback) => {
+                    const normalized = normalizeTagLabel(input);
+                    if (!normalized) return;
+                    // Добавляем опцию в нативный select
+                    const selectEl = document.querySelector(selector);
+                    if (selectEl) {
+                        const exists = Array.from(selectEl.options).some(opt => opt.value === normalized);
+                        if (!exists) {
+                            selectEl.add(new Option(normalized, normalized));
+                        }
+                    }
+                    // Добавляем опцию в TomSelect
+                    instance.addOption({ value: normalized, text: normalized });
+                    callback({ value: normalized, text: normalized });
+                    persistCustomOption(storageKey, normalized);
+                },
+            });
+
+            const updateHidden = () => {
+                const values = instance.getValue();
+                hiddenInput.value = Array.isArray(values) ? values.join(', ') : values;
+            };
+
+            instance.on('change', () => {
+                updateHidden();
+            });
+
+            updateHidden();
+
+            instance.setFromString = (value) => {
+                const tags = value
+                    ? value.split(',').map(tag => tag.trim()).filter(Boolean)
+                    : [];
+                if (!tags.length) {
+                    instance.clear();
+                } else {
+                    tags.forEach(tag => {
+                        if (!instance.options[tag]) {
+                            instance.addOption({ value: tag, text: tag });
+                        }
+                    });
+                    instance.setValue(tags, true);
+                }
+                updateHidden();
+            };
+
+            return instance;
+        }
+
+        const prepaymentButtons = document.querySelectorAll('.prepayment-fill');
+        const prepaymentInput = document.getElementById('prepayment');
+        const prepaymentMethodSelect = document.getElementById('prepayment_method');
+        
+        // Функция для обновления состояния поля способа предоплаты
+        function updatePrepaymentMethodState() {
+            if (prepaymentMethodSelect && prepaymentInput) {
+                const value = parseFloat(prepaymentInput.value) || 0;
+                prepaymentMethodSelect.disabled = (value <= 0);
+                if (value <= 0) {
+                    prepaymentMethodSelect.style.opacity = '0.5';
+                } else {
+                    prepaymentMethodSelect.style.opacity = '1';
+                }
+            }
+        }
+        
+        // Обновляем при загрузке
+        updatePrepaymentMethodState();
+        
+        // Обновляем при изменении суммы
+        if (prepaymentInput) {
+            prepaymentInput.addEventListener('input', updatePrepaymentMethodState);
+            prepaymentInput.addEventListener('change', updatePrepaymentMethodState);
+        }
+        
+        if (prepaymentInput && prepaymentButtons.length > 0) {
+        prepaymentButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                prepaymentInput.value = btn.dataset.value;
+                    updatePrepaymentMethodState();
+            });
+        });
+        }
+
+        if (copyLastOrderBtn) {
+        copyLastOrderBtn.addEventListener('click', () => {
+            if (!state.lastOrder) return;
+            fillFromLastOrder(state.lastOrder);
+        });
+        }
+
+        function normalizePhoneClient(value) {
+            const digits = value.replace(/\D/g, '');
+            if (!digits) return '';
+            let normalized = digits;
+            // Если начинается с 8, заменяем на 7
+            if (normalized.startsWith('8')) {
+                normalized = '7' + normalized.slice(1);
+            }
+            // Если 10 цифр и не начинается с 7, добавляем 7 в начале
+            if (normalized.length === 10 && !normalized.startsWith('7')) {
+                normalized = '7' + normalized;
+            }
+            // Если меньше 10 цифр, возвращаем как есть (пользователь еще вводит)
+            return normalized;
+        }
+
+        function formatPhoneDisplay(value) {
+            // Форматирует телефон в формат: +7(988)146-32-31
+            const digits = normalizePhoneClient(value);
+            if (digits.length === 11 && digits.startsWith('7')) {
+                return `+${digits[0]}(${digits.slice(1,4)})${digits.slice(4,7)}-${digits.slice(7,9)}-${digits.slice(9)}`;
+            }
+            return value;
+        }
+
+        function maskPhoneInput(value) {
+            // Маска для ввода в формате: +7(988)146-32-31
+            const digits = normalizePhoneClient(value);
+            if (!digits) return '';
+            let masked = '+';
+            masked += digits[0] || '';
+            if (digits.length > 1) masked += `(${digits.slice(1,4)}`;
+            if (digits.length >= 4) masked += ')';
+            if (digits.length >= 5) masked += digits.slice(4,7);
+            if (digits.length >= 7) masked += '-' + digits.slice(7,9);
+            if (digits.length >= 9) masked += '-' + digits.slice(9,11);
+            return masked;
+        }
+
+        if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+            const oldValue = e.target.value;
+            const cursor = phoneInput.selectionStart;
+            
+            // Подсчитываем количество цифр в старом и новом значении
+            const oldDigits = oldValue.replace(/\D/g, '').length;
+            const newValue = e.target.value;
+            const masked = maskPhoneInput(newValue);
+            phoneInput.value = masked;
+            const newDigits = masked.replace(/\D/g, '').length;
+            
+            // Определяем новую позицию курсора
+            let newCursor;
+            
+            if (newDigits > oldDigits) {
+                // Пользователь ввел новую цифру - ставим курсор после последней цифры
+                let lastDigitPos = -1;
+                for (let i = 0; i < masked.length; i++) {
+                    if (/\d/.test(masked[i])) {
+                        lastDigitPos = i;
+                    }
+                }
+                newCursor = lastDigitPos >= 0 ? lastDigitPos + 1 : masked.length;
+            } else if (newDigits < oldDigits) {
+                // Пользователь удалил цифру - используем старую логику
+                const textBeforeCursor = oldValue.substring(0, cursor);
+                const digitsBeforeCursor = textBeforeCursor.replace(/\D/g, '').length;
+                
+                let digitCount = 0;
+                newCursor = masked.length;
+                
+                for (let i = 0; i < masked.length; i++) {
+                    if (masked[i] === '+') continue;
+                    if (/\d/.test(masked[i])) {
+                        digitCount++;
+                        if (digitCount === digitsBeforeCursor) {
+                            newCursor = i + 1;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Количество цифр не изменилось (например, замена символа) - сохраняем позицию
+                const textBeforeCursor = oldValue.substring(0, cursor);
+                const digitsBeforeCursor = textBeforeCursor.replace(/\D/g, '').length;
+                
+                let digitCount = 0;
+                newCursor = masked.length;
+                
+                for (let i = 0; i < masked.length; i++) {
+                    if (masked[i] === '+') continue;
+                    if (/\d/.test(masked[i])) {
+                        digitCount++;
+                        if (digitCount === digitsBeforeCursor) {
+                            newCursor = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Убеждаемся, что курсор не выходит за границы
+            newCursor = Math.min(Math.max(newCursor, 2), masked.length);
+            phoneInput.setSelectionRange(newCursor, newCursor);
+            
+            const normalized = normalizePhoneClient(masked);
+            phoneInput.dataset.normalized = normalized;
+
+            clearTimeout(state.debounceTimer);
+            // Для российских номеров нужно 11 цифр (7 + 10)
+            if (normalized.length >= 11) {
+                state.debounceTimer = setTimeout(() => lookupCustomer(normalized), 400);
+            } else if (normalized.length >= 10) {
+                // Если 10 цифр, пробуем добавить 7 в начале
+                const fullNumber = normalized.startsWith('7') ? normalized : '7' + normalized;
+                if (fullNumber.length === 11) {
+                    phoneInput.dataset.normalized = fullNumber;
+                    state.debounceTimer = setTimeout(() => lookupCustomer(fullNumber), 400);
+                } else {
+                    clearCustomerInfo();
+                    clearDuplicateAlert();
+                }
+            } else {
+                clearCustomerInfo();
+                clearDuplicateAlert();
+            }
+        });
+        }
+
+        if (clientNameInput) {
+            clientNameInput.addEventListener('keydown', (e) => {
+                if (!isClientSuggestOpen()) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    state.nameSuggestIndex = Math.min(state.nameSuggestCustomers.length - 1, state.nameSuggestIndex + 1);
+                    highlightClientSuggestItem();
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    state.nameSuggestIndex = Math.max(0, state.nameSuggestIndex - 1);
+                    highlightClientSuggestItem();
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation(); // чтобы bindEnterNext не уводил фокус, пока открыт список
+                    const chosen = state.nameSuggestCustomers[state.nameSuggestIndex] || state.nameSuggestCustomers[0];
+                    applyCustomerFromSuggest(chosen);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideClientNameSuggest();
+                }
+            });
+
+            clientNameInput.addEventListener('input', () => {
+                const query = (clientNameInput.value || '').trim();
+                clearTimeout(state.nameSearchTimer);
+                if (query.length < 2) {
+                    hideClientNameSuggest();
+                    return;
+                }
+                state.nameSearchTimer = setTimeout(() => searchCustomersByName(query), 250);
+            });
+
+            clientNameInput.addEventListener('focus', () => {
+                const query = (clientNameInput.value || '').trim();
+                if (query.length >= 2) {
+                    searchCustomersByName(query);
+                }
+            });
+
+            clientNameInput.addEventListener('blur', () => {
+                setTimeout(hideClientNameSuggest, 150);
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!clientNameSuggest || !clientNameInput) return;
+            if (!clientNameSuggest.contains(e.target) && e.target !== clientNameInput) {
+                hideClientNameSuggest();
+            }
+        });
+
+        if (serialInput) {
+        serialInput.addEventListener('blur', () => {
+            const normalized = phoneInput.dataset.normalized || '';
+            if (!normalized) return;
+            triggerDuplicateCheck(normalized, serialInput.value.trim());
+        });
+        }
+
+        function lookupCustomer(normalizedPhone) {
+            fetch(`/api/customers/lookup?phone=${encodeURIComponent(normalizedPhone)}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data.success || !data.found) {
+                        clearCustomerInfo();
+                        clearDuplicateAlert();
+                        return;
+                    }
+                    state.customer = data.customer;
+                    state.lastOrder = data.last_order;
+                    state.duplicates = data.duplicates || null;
+
+                    showCustomerInfo(data.customer);
+                    populateDeviceHistory(data.devices || []);
+                    toggleCopyLastOrderBtn(!!state.lastOrder);
+                    showDuplicateAlert(state.duplicates);
+
+                    // Автоматически заполняем все поля из последней заявки, если она есть
+                    if (state.lastOrder) {
+                        fillFromLastOrder(state.lastOrder);
+                    } else {
+                        // Если нет последней заявки, заполняем только данные клиента
+                        if (!document.getElementById('clientName').value.trim()) {
+                            document.getElementById('clientName').value = data.customer.name || '';
+                        }
+                        if (!emailInput.value.trim() && data.customer.email) {
+                            emailInput.value = data.customer.email;
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error('Ошибка при поиске клиента:', error);
+                    clearCustomerInfo();
+                    // Можно показать пользователю сообщение об ошибке
+                });
+        }
+
+        function triggerDuplicateCheck(phone, serial) {
+            fetch('/api/orders/check_duplicate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, serial_number: serial }),
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        state.duplicates = data.duplicates;
+                        showDuplicateAlert(data.duplicates);
+                    }
+                })
+                .catch((error) => {
+                    // Тихая ошибка - не критично для пользователя
+                    console.error('Ошибка при проверке дубликатов:', error);
+                });
+        }
+
+        function showCustomerInfo(customer) {
+            if (!customerInfoAlert) return;
+            customerInfoAlert.classList.remove('d-none', 'alert-info', 'alert-warning');
+            customerInfoAlert.classList.add('alert-info');
+            
+            // Безопасное создание элементов (защита от XSS)
+            customerInfoAlert.textContent = ''; // Очищаем
+            
+            const strong = document.createElement('strong');
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-user-check me-1';
+            strong.appendChild(icon);
+            strong.appendChild(document.createTextNode(' Найден клиент:'));
+            customerInfoAlert.appendChild(strong);
+            
+            const info = document.createTextNode(
+                ` ${customer.name || '—'} | ${customer.phone_display || formatPhoneDisplay(customer.phone || '')}${customer.email ? ` | ${customer.email}` : ''}`
+            );
+            customerInfoAlert.appendChild(info);
+        }
+
+        function clearCustomerInfo() {
+            state.customer = null;
+            state.lastOrder = null;
+            hideClientNameSuggest();
+            if (customerInfoAlert) customerInfoAlert.classList.add('d-none');
+            if (deviceHistoryCard) deviceHistoryCard.classList.add('d-none');
+            if (deviceHistoryBody) deviceHistoryBody.textContent = '';
+            toggleCopyLastOrderBtn(false);
+        }
+
+        function populateDeviceHistory(devices) {
+            if (!deviceHistoryCard || !deviceHistoryBody) return;
+            
+            if (!devices || !devices.length) {
+                deviceHistoryCard.classList.add('d-none');
+                deviceHistoryBody.textContent = '';
+                return;
+            }
+            deviceHistoryCard.classList.remove('d-none');
+            deviceHistoryBody.textContent = ''; // Очищаем безопасно
+            
+            devices.forEach(device => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-info btn-sm me-2 mb-2 device-history-btn';
+                btn.dataset.type = device.device_type_id || '';
+                btn.dataset.brand = device.device_brand_id || '';
+                btn.dataset.serial = device.serial_number || '';
+                
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-laptop me-1';
+                btn.appendChild(icon);
+                
+                const text = document.createTextNode(
+                    `${device.device_type || ''} ${device.device_brand || ''}${device.serial_number ? ` (#${device.serial_number})` : ''}`
+                );
+                btn.appendChild(text);
+                
+                deviceHistoryBody.appendChild(btn);
+            });
+        }
+
+        if (deviceHistoryBody) {
+        deviceHistoryBody.addEventListener('click', (e) => {
+            if (!e.target.closest('.device-history-btn')) return;
+            const btn = e.target.closest('.device-history-btn');
+            applyDeviceFromHistory({
+                device_type_id: btn.dataset.type,
+                device_brand_id: btn.dataset.brand,
+                serial_number: btn.dataset.serial || '',
+            });
+        });
+        }
+
+        function applyDeviceFromHistory(device) {
+            if (device.device_type_id && tomDeviceType) {
+                tomDeviceType.setValue(device.device_type_id, true);
+            }
+            if (device.device_brand_id && tomDeviceBrand) {
+                tomDeviceBrand.setValue(device.device_brand_id, true);
+            }
+            if (device.serial_number !== undefined && serialInput) {
+                serialInput.value = device.serial_number;
+            }
+        }
+
+        function toggleCopyLastOrderBtn(show) {
+            if (show) {
+                copyLastOrderBtn.classList.remove('d-none');
+            } else {
+                copyLastOrderBtn.classList.add('d-none');
+            }
+        }
+
+        function fillFromLastOrder(order) {
+            // Заполняем данные клиента
+            const clientNameInput = document.getElementById('clientName');
+            if (clientNameInput) clientNameInput.value = order.client_name || '';
+            if (phoneInput) {
+            phoneInput.value = formatPhoneDisplay(order.phone || '');
+            phoneInput.dataset.normalized = normalizePhoneClient(order.phone || '');
+            }
+            if (emailInput) emailInput.value = order.email || '';
+            
+            // Заполняем данные об устройстве
+            if (order.device_type_id && tomDeviceType) {
+                tomDeviceType.setValue(String(order.device_type_id), true);
+            }
+            if (order.device_brand_id && tomDeviceBrand) {
+                tomDeviceBrand.setValue(String(order.device_brand_id), true);
+            }
+            const serialNumberInput = document.getElementById('serialNumber');
+            if (serialNumberInput) serialNumberInput.value = order.serial_number || '';
+            
+            // Заполняем модель
+            if (order.model && tomModel) {
+                // Проверяем, есть ли такая опция, если нет - добавляем
+                const modelSelect = document.getElementById('model');
+                if (modelSelect) {
+                const optionExists = Array.from(modelSelect.options).some(opt => opt.value === order.model);
+                if (!optionExists && order.model) {
+                    modelSelect.add(new Option(order.model, order.model));
+                }
+                tomModel.setValue(order.model, true);
+                }
+            }
+            
+            // Заполняем симптомы и внешний вид
+            setSymptomTagsFromString(order.symptom_tags || '');
+            // appearance может содержать теги внешнего вида
+            setAppearanceTagsFromString(order.appearance || order.intake_checklist || '');
+            
+            // Заполняем остальные поля
+            const prepaymentInput = document.getElementById('prepayment');
+            if (prepaymentInput) prepaymentInput.value = order.prepayment || '0';
+            // Обновляем состояние поля способа предоплаты
+            updatePrepaymentMethodState();
+            const passwordInput = document.getElementById('password');
+            if (passwordInput) passwordInput.value = order.password || '';
+            const managerInput = document.getElementById('manager');
+            if (managerInput) managerInput.value = order.manager_id || '';
+            const masterInput = document.getElementById('master');
+            if (masterInput) masterInput.value = order.master_id || '';
+            const commentInput = document.getElementById('comment');
+            if (commentInput) commentInput.value = order.comment || '';
+        }
+
+        function setSymptomTagsFromString(value) {
+            if (tomSymptomTags && tomSymptomTags.setFromString) {
+            tomSymptomTags.setFromString(value);
+            }
+        }
+
+        function setAppearanceTagsFromString(value) {
+            if (tomAppearanceTags && tomAppearanceTags.setFromString) {
+            tomAppearanceTags.setFromString(value);
+            syncAppearanceHidden();
+            }
+        }
+
+        function showDuplicateAlert(duplicates) {
+            if (!duplicateAlert) return;
+            
+            if (!duplicates || (!duplicates.by_phone && !duplicates.by_serial)) {
+                clearDuplicateAlert();
+                return;
+            }
+
+            duplicateAlert.classList.remove('d-none');
+            duplicateAlert.textContent = ''; // Очищаем безопасно
+            
+            const strong = document.createElement('strong');
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-exclamation-triangle me-1';
+            strong.appendChild(icon);
+            strong.appendChild(document.createTextNode(' Возможный дубликат:'));
+            duplicateAlert.appendChild(strong);
+            
+            const br = document.createElement('br');
+            duplicateAlert.appendChild(br);
+            
+            const parts = [];
+            if (duplicates.by_phone) {
+                parts.push(`По телефону уже есть заявка #${duplicates.by_phone.order_id} (${duplicates.by_phone.status || '—'}).`);
+            }
+            if (duplicates.by_serial) {
+                parts.push(`По серийному номеру уже есть заявка #${duplicates.by_serial.order_id} (${duplicates.by_serial.status || '—'}).`);
+            }
+            
+            parts.forEach((part, index) => {
+                if (index > 0) {
+                    duplicateAlert.appendChild(document.createElement('br'));
+                }
+                duplicateAlert.appendChild(document.createTextNode(part));
+            });
+        }
+
+        function clearDuplicateAlert() {
+            if (duplicateAlert) {
+            duplicateAlert.classList.add('d-none');
+            duplicateAlert.textContent = '';
+            }
+        }
+
+        if (form) {
+        form.addEventListener('reset', () => {
+            setTimeout(() => {
+                    if (phoneInput) {
+                phoneInput.value = '+7';
+                phoneInput.dataset.normalized = '7';
+                    }
+                    if (tomSymptomTags) tomSymptomTags.clear();
+                    if (symptomTagsInput) symptomTagsInput.value = '';
+                    if (tomAppearanceTags) tomAppearanceTags.clear();
+                    if (intakeChecklistInput) intakeChecklistInput.value = '';
+                    if (appearanceHiddenInput) appearanceHiddenInput.value = '';
+            }, 0);
+        });
+        }
+
+        // Валидация email
+        function validateEmail(email) {
+            if (!email) return true; // Email не обязателен
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        if (emailInput) {
+        emailInput.addEventListener('blur', () => {
+            const email = emailInput.value.trim();
+            if (email && !validateEmail(email)) {
+                emailInput.setCustomValidity('Неверный формат email');
+                emailInput.classList.add('is-invalid');
+            } else {
+                emailInput.setCustomValidity('');
+                emailInput.classList.remove('is-invalid');
+            }
+        });
+        }
+        
+        if (form) {
+        form.addEventListener('submit', (e) => {
+            // Валидация email
+                if (emailInput) {
+            const email = emailInput.value.trim();
+            if (email && !validateEmail(email)) {
+                e.preventDefault();
+                alert('Неверный формат email адреса.');
+                emailInput.focus();
+                return;
+                    }
+            }
+            
+            // Проверяем и нормализуем device_type_id и device_brand_id
+            const deviceTypeSelect = document.getElementById('deviceType');
+            const deviceBrandSelect = document.getElementById('deviceBrand');
+                
+                if (!deviceTypeSelect || !deviceBrandSelect) {
+                    e.preventDefault();
+                    alert('Ошибка: не найдены необходимые элементы формы.');
+                    return;
+                }
+            
+            const deviceTypeValue = deviceTypeSelect.value;
+            const deviceBrandValue = deviceBrandSelect.value;
+            
+            // Проверяем, что выбраны валидные ID (числа)
+            if (!deviceTypeValue || isNaN(parseInt(deviceTypeValue))) {
+                e.preventDefault();
+                alert('Выберите тип устройства из списка.');
+                deviceTypeSelect.focus();
+                return;
+            }
+            
+            if (!deviceBrandValue || isNaN(parseInt(deviceBrandValue))) {
+                e.preventDefault();
+                alert('Выберите бренд устройства из списка.');
+                deviceBrandSelect.focus();
+                return;
+            }
+            
+            // Убеждаемся, что значение model правильно установлено в нативном select
+            const modelSelect = document.getElementById('model');
+                if (tomModel && tomModel.getValue() && modelSelect) {
+                const modelValue = tomModel.getValue();
+                if (Array.isArray(modelValue) && modelValue.length > 0) {
+                    modelSelect.value = modelValue[0];
+                } else if (typeof modelValue === 'string') {
+                    modelSelect.value = modelValue;
+                }
+            }
+            // Обязательная модель
+            const modelVal = (tomModel && (tomModel.getValue() || '')) || (modelSelect && modelSelect.value) || '';
+            const modelStr = Array.isArray(modelVal) ? (modelVal[0] || '') : (modelVal || '');
+            if (!modelStr.trim()) {
+                e.preventDefault();
+                alert('Укажите модель устройства.');
+                if (tomModel && tomModel.focus) tomModel.focus(); else if (modelSelect) modelSelect.focus();
+                return;
+            }
+            
+                if (symptomTagsInput && !symptomTagsInput.value.trim()) {
+                e.preventDefault();
+                alert('Заполните симптомы/описание неисправности в виде тегов.');
+                return;
+            }
+            
+            // Добавляем индикатор загрузки
+            const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Сохранение...';
+            
+            // Если форма не была отправлена (например, из-за валидации), восстанавливаем кнопку
+            setTimeout(() => {
+                if (submitBtn.disabled) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }, 5000);
+                }
+        });
+        }
+
+        // Enter-навигация между ключевыми полями без мыши.
+        function bindEnterNext(currentSelector, nextTarget) {
+            const current = document.querySelector(currentSelector);
+            if (!current) return;
+            current.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' || e.shiftKey) return;
+                e.preventDefault();
+                focusTarget(nextTarget);
+            });
+        }
+
+        bindEnterNext('#clientName', '#phone');
+        bindEnterNext('#phone', tomDeviceType);
+        bindEnterNext('#serialNumber', '#password');
+        bindEnterNext('#password', tomModel);
+        bindEnterNext('#prepayment', '#manager');
+        bindEnterNext('#manager', '#master');
+        bindEnterNext('#master', '#comment');
+
+        // Быстрое сохранение формы.
+        if (form) {
+            form.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    form.requestSubmit();
+                }
+            });
+        }
+    </script>
+{% endblock %}

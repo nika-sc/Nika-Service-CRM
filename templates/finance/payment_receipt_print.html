@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Чек #{{ receipt.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+  <div class="d-print-none mb-3">
+    <button class="btn btn-primary" onclick="window.print()">Печать</button>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h4 class="mb-1">Чек ({{ receipt.receipt_type }})</h4>
+      <div class="text-muted mb-3">Статус: {{ receipt.status }}</div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div><strong>Оплата ID:</strong> {{ payment.id }}</div>
+          <div><strong>Заявка:</strong> #{{ payment.order_number or payment.order_db_id }}</div>
+          <div><strong>Сумма:</strong> {{ "%.2f"|format(payment.amount or 0) }} ₽</div>
+          <div><strong>Тип оплаты:</strong> {{ payment.payment_type }}</div>
+          <div><strong>Комментарий:</strong> {{ payment.comment or "—" }}</div>
+        </div>
+        <div class="col-md-6">
+          <div><strong>Клиент:</strong> {{ payment.customer_name or "—" }}</div>
+          <div><strong>Телефон:</strong> {{ payment.customer_phone or "—" }}</div>
+          <div><strong>Создан:</strong> {{ receipt.created_at|format_date(true) if receipt.created_at else '—' }}</div>
+          <div><strong>Пробит:</strong> {{ receipt.printed_at or "manual" }}</div>
+        </div>
+      </div>
+
+      <hr>
+
+      <h5>Позиции заявки</h5>
+      <div class="mb-2"><strong>Услуги:</strong></div>
+      {% if order_services %}
+        <ul>
+          {% for s in order_services %}
+            <li>{{ s.service_name or s.name }} — {{ s.quantity }} × {{ "%.2f"|format(s.price or 0) }} ₽</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Нет</div>
+      {% endif %}
+
+      <div class="mb-2 mt-3"><strong>Товары:</strong></div>
+      {% if order_parts %}
+        <ul>
+          {% for p in order_parts %}
+            <li>{{ p.part_name or p.name }} — {{ p.quantity }} × {{ "%.2f"|format(p.price or 0) }} ₽</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Нет</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

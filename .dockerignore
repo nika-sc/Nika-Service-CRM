@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv
+.venv
+env
+.env
+.env.*
+*.egg-info
+.pytest_cache
+
+# Database (не копируем в образ, монтируем volume)
+*.db
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+database/*.db
+
+# Логи
+*.log
+app.log
+logs/
+
+# IDE и ОС
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Скрипты разработки (run_migrations — исключение)
+scripts/*
+!scripts/run_migrations.py
+tests/
+docs/
+
+# Прочее
+node_modules
+*.md
+!DEPLOY.md

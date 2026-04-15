@@ -1,0 +1,50 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Предоплата / Переплата{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-wallet me-2"></i>Предоплата и переплата</h4>
+
+<div class="card mb-4 {% if balance > 0 %}border-success{% elif balance < 0 %}border-danger{% else %}border-secondary{% endif %}">
+    <div class="card-body text-center">
+        {% if balance > 0 %}
+        <h2 class="text-success mb-2">{{ "%.2f"|format(balance) }} ₽</h2>
+        <p class="text-muted mb-0">Переплата по заявкам</p>
+        {% elif balance < 0 %}
+        <h2 class="text-danger mb-2">{{ "%.2f"|format(balance) }} ₽</h2>
+        <p class="text-muted mb-0">Долг по заявкам</p>
+        {% else %}
+        <h2 class="text-secondary mb-2">0.00 ₽</h2>
+        <p class="text-muted mb-0">Нет переплаты и долга</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if order_rows %}
+<h5 class="mb-3">По каким заявкам</h5>
+<div class="table-responsive">
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>Заявка</th>
+                <th class="text-end">Итого</th>
+                <th class="text-end">Оплачено</th>
+                <th class="text-end">Разница</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in order_rows %}
+            <tr>
+                <td>#{{ r.id }}</td>
+                <td class="text-end">{{ "%.2f"|format(r.total) }} ₽</td>
+                <td class="text-end">{{ "%.2f"|format(r.paid) }} ₽</td>
+                <td class="text-end {% if r.diff > 0 %}text-success{% elif r.diff < 0 %}text-danger{% endif %}">
+                    {{ "%.2f"|format(r.diff) }} ₽
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

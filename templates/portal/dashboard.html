@@ -1,0 +1,119 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                <h4>{{ orders|length }}</h4>
+                <p class="text-muted mb-0">Заявок</p>
+                <a href="{{ url_for('customer_portal.portal_orders') }}" class="btn btn-sm btn-outline-primary mt-2">
+                    Все заявки
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="fas fa-wallet fa-3x text-success mb-3"></i>
+                <h4>{{ "%.2f"|format(wallet_balance) }} ₽</h4>
+                <p class="text-muted mb-0">{% if wallet_balance > 0 %}Переплата{% elif wallet_balance < 0 %}Долг{% else %}Баланс{% endif %}</p>
+                <a href="{{ url_for('customer_portal.portal_wallet') }}" class="btn btn-sm btn-outline-success mt-2">
+                    Детали
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <i class="fas fa-credit-card fa-3x text-info mb-3"></i>
+                <h4>{{ payments|length }}</h4>
+                <p class="text-muted mb-0">Платежей</p>
+                <a href="{{ url_for('customer_portal.portal_payments') }}" class="btn btn-sm btn-outline-info mt-2">
+                    История
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h5 class="mb-3"><i class="fas fa-file-alt me-2"></i>Мои заявки</h5>
+    {% if orders %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Номер</th>
+                    <th>Дата</th>
+                    <th>Устройство</th>
+                    <th>Модель</th>
+                    <th>Статус</th>
+                    <th>Оплачено</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr class="order-row" data-order-id="{{ order.id }}" style="cursor: pointer;">
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.created_at|format_date(true) }}</td>
+                    <td>{{ order.device_type or '—' }} {{ order.device_brand or '' }}</td>
+                    <td>{{ order.model or '—' }}</td>
+                    <td>
+                        <span class="badge" style="background-color: {{ order.status_color or '#6c757d' }}; color: white;">
+                            {{ order.status_name or 'Без статуса' }}
+                        </span>
+                    </td>
+                    <td>{{ "%.2f"|format(order.total_paid|default(0)) }} ₽</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>У вас пока нет заявок
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-4">
+    <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>История платежей</h5>
+    {% if payments %}
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Заявка</th>
+                    <th>Сумма</th>
+                    <th>Тип оплаты</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td>{{ p.payment_date|format_date(true) if p.payment_date else (p.created_at|format_date(true) if p.created_at else '—') }}</td>
+                    <td><a href="#" class="order-link" data-order-id="{{ p.order_id }}">#{{ p.order_id }}</a></td>
+                    <td>{% if p.kind|default('')|lower == 'refund' %}<span class="text-danger">−{{ p.amount|default(0)|round(2) }} ₽</span>{% else %}{{ p.amount|default(0)|round(2) }} ₽{% endif %}</td>
+                    <td>{{ p|format_payment_row_type }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>История платежей пуста
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Новая инвентаризация — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-clipboard-check me-2"></i>Новая инвентаризация</h3>
+            </div>
+            <div class="card-body">
+                <form id="inventoryForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Название <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Дата инвентаризации <span class="text-danger">*</span></label>
+                                <input type="date" name="inventory_date" class="form-control" value="{{ date_today }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примечания</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3"><i class="fas fa-list me-2"></i>Товары</h4>
+                    <div id="itemsContainer">
+                        <div class="item-row mb-2">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <select name="part_id" class="form-select" required>
+                                        <option value="">Выберите товар</option>
+                                        {% for part in parts %}
+                                        <option value="{{ part.id }}" data-stock="{{ part.stock_quantity }}">{{ part.name }} ({{ part.part_number }}) - Остаток: {{ part.stock_quantity }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="stock_quantity" class="form-control" placeholder="По складу" readonly>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="actual_quantity" class="form-control" placeholder="Фактически" min="0" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="difference" class="form-control" placeholder="Разница" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addItem()">
+                        <i class="fas fa-plus me-1"></i> Добавить товар
+                    </button>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Создать инвентаризацию
+                        </button>
+                        <a href="{{ url_for('warehouse.inventory_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addItem() {
+    const container = document.getElementById('itemsContainer');
+    const newRow = container.firstElementChild.cloneNode(true);
+    newRow.querySelectorAll('input, select').forEach(el => {
+        el.value = '';
+        if (el.name === 'stock_quantity' || el.name === 'difference') {
+            el.readOnly = true;
+        }
+    });
+    container.appendChild(newRow);
+    attachItemHandlers(newRow);
+}
+
+function attachItemHandlers(row) {
+    const partSelect = row.querySelector('[name="part_id"]');
+    const stockInput = row.querySelector('[name="stock_quantity"]');
+    const actualInput = row.querySelector('[name="actual_quantity"]');
+    const differenceInput = row.querySelector('[name="difference"]');
+    
+    partSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const stock = selectedOption.getAttribute('data-stock') || 0;
+        stockInput.value = stock;
+        calculateDifference(row);
+    });
+    
+    actualInput.addEventListener('input', function() {
+        calculateDifference(row);
+    });
+    
+    function calculateDifference() {
+        const stock = parseInt(stockInput.value) || 0;
+        const actual = parseInt(actualInput.value) || 0;
+        const diff = actual - stock;
+        differenceInput.value = diff;
+        if (diff > 0) {
+            differenceInput.classList.remove('text-danger');
+            differenceInput.classList.add('text-success');
+        } else if (diff < 0) {
+            differenceInput.classList.remove('text-success');
+            differenceInput.classList.add('text-danger');
+        } else {
+            differenceInput.classList.remove('text-success', 'text-danger');
+        }
+    }
+}
+
+// Привязываем обработчики к первой строке
+document.querySelectorAll('.item-row').forEach(row => attachItemHandlers(row));
+
+document.getElementById('inventoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const items = [];
+    const rows = document.querySelectorAll('.item-row');
+    
+    rows.forEach(row => {
+        const partId = row.querySelector('[name="part_id"]').value;
+        const actualQuantity = row.querySelector('[name="actual_quantity"]').value;
+        
+        if (partId && actualQuantity) {
+            items.push({
+                part_id: parseInt(partId),
+                actual_quantity: parseInt(actualQuantity),
+                notes: row.querySelector('[name="notes"]')?.value || null
+            });
+        }
+    });
+    
+    const data = {
+        name: formData.get('name'),
+        inventory_date: formData.get('inventory_date'),
+        notes: formData.get('notes') || null,
+        items: items
+    };
+    
+    if (!data.name || !data.inventory_date || items.length === 0) {
+        alert('Заполните все обязательные поля и добавьте хотя бы один товар');
+        return;
+    }
+    
+    fetch('{{ url_for("warehouse.new_inventory") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '{{ url_for("warehouse.inventory_detail", inventory_id=0) }}'.replace('0', data.inventory_id);
+        } else {
+            alert(data.error || 'Ошибка при создании инвентаризации');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при создании инвентаризации: ' + error.message);
+    });
+});
+</script>
+{% endblock %}
+

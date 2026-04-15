@@ -1,0 +1,5 @@
+{# Компактная кнопка категории для горизонтальной панели #}
+<a href="{{ url_for('warehouse.parts_list', category=cat.name) }}"
+   class="btn btn-sm {% if category == cat.name %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fas fa-folder-open me-1"></i>{{ cat.name }}
+</a>

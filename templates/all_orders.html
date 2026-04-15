@@ -1,0 +1,2444 @@
+{% extends "base.html" %}
+
+{% block title %}Все заявки — Nika CRM{% endblock %}
+
+{% block datatables_css %}
+    <!-- DataTables CSS (локально) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/1.13.7/css/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/buttons/2.4.2/css/buttons.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/css/responsive.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/colreorder/1.7.0/css/colReorder.bootstrap5.min.css') }}">
+{% endblock %}
+
+{% block styles %}
+    <style>
+
+        .order-row {
+            cursor: pointer;
+            transition: none;
+        }
+        #ordersTable tbody tr,
+        #ordersTable tbody td,
+        #ordersTable.dataTable tbody tr,
+        #ordersTable.dataTable tbody td {
+            transition: none !important;
+            transform: none !important;
+        }
+        #ordersTable tbody tr:hover,
+        #ordersTable tbody tr:hover > td,
+        #ordersTable.table-hover > tbody > tr:hover > *,
+        #ordersTable.dataTable tbody tr:hover,
+        #ordersTable.dataTable tbody tr:hover > td,
+        #ordersTable.dataTable tbody tr:hover > * {
+            background-color: inherit !important;
+            box-shadow: none !important;
+            --bs-table-accent-bg: inherit !important;
+            --bs-table-hover-bg: inherit !important;
+            transform: none !important;
+        }
+
+
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+
+        .sort-icon {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+
+        .kanban-card {
+            border-left: 4px solid transparent;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            border-left-color: var(--bs-primary);
+        }
+
+        .theme-dark .kanban-card:hover {
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Канбан: узкие колонки и компактные карточки под ширину экрана */
+        .kanban-board {
+            --kanban-col-max-h: min(72vh, 640px);
+        }
+        .kanban-board > [class*="col-"] {
+            min-width: 0;
+        }
+        .kanban-board .kanban-column .card-header {
+            padding: 0.35rem 0.5rem;
+        }
+        .kanban-board .kanban-column .card-header .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+        .kanban-board .kanban-column-scroll {
+            min-height: 120px;
+            max-height: var(--kanban-col-max-h);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .kanban-board .kanban-card {
+            font-size: 0.78rem;
+            border-radius: 10px;
+        }
+        .kanban-board .kanban-card .card-body {
+            padding: 0.4rem 0.45rem !important;
+        }
+        .kanban-board .kanban-card .status-indicator {
+            width: 7px;
+            height: 7px;
+            min-width: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .kanban-board .kanban-card .badge {
+            font-size: 0.65rem;
+            font-weight: 500;
+            padding: 0.2em 0.4em;
+        }
+        .kanban-board .kanban-card .text-muted {
+            font-size: 0.75rem !important;
+        }
+        .kanban-board .symptom-tags {
+            gap: 2px;
+        }
+        .kanban-board .symptom-tag {
+            font-size: 0.62rem;
+            padding: 1px 4px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preview-label {
+            font-weight: 600;
+            color: #6c757d;
+            min-width: 120px;
+            display: inline-block;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 10px;
+        }
+
+        /* Стили для цветовой подсветки статусов в таблице */
+        .status-cell {
+            position: relative;
+        }
+
+        .status-cell::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 2px 0 0 2px;
+            background-color: var(--status-color, #6c757d);
+        }
+
+        .quick-status-btn {
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .order-pin-btn {
+            color: #9ca3af;
+            text-decoration: none;
+            padding: 0.125rem 0.25rem;
+            line-height: 1;
+        }
+        .order-pin-btn:hover {
+            color: #f59e0b;
+            text-decoration: none;
+        }
+        .order-pin-btn.is-pinned {
+            color: #f59e0b;
+        }
+
+
+        .status-dropdown-menu {
+            min-width: 200px;
+            z-index: 2000;
+            position: fixed !important;
+            max-height: min(360px, calc(100vh - 24px));
+            overflow-y: auto;
+        }
+        .status-dropdown-menu.show {
+            display: block !important;
+        }
+
+        .status-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+
+        .status-dropdown-item.active {
+            background-color: #e7f3ff;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Цвета для разных статусов */
+        .status-new {
+            --status-color: #28a745;
+            --status-color-rgb: 40, 167, 69;
+        }
+
+        .status-in_progress {
+            --status-color: #ffc107;
+            --status-color-rgb: 255, 193, 7;
+        }
+
+        .status-completed {
+            --status-color: #dc3545;
+            --status-color-rgb: 220, 53, 69;
+        }
+
+        .status-closed {
+            --status-color: #6c757d;
+            --status-color-rgb: 108, 117, 125;
+        }
+
+        .small-box {
+            border-radius: 3px;
+            position: relative;
+            display: block;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            color: #fff;
+        }
+
+        .small-box > .inner {
+            padding: 10px;
+        }
+
+        .small-box h3 {
+            font-size: 38px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            white-space: nowrap;
+            padding: 0;
+        }
+
+        .small-box p {
+            font-size: 15px;
+        }
+
+        .small-box .icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 0;
+            font-size: 70px;
+            color: rgba(0,0,0,0.15);
+        }
+
+        .small-box:hover {
+            text-decoration: none;
+            color: #f9f9f9;
+        }
+
+        .bg-gradient-info {
+            background: linear-gradient(120deg, #17a2b8, #6cbad5) !important;
+        }
+
+        .bg-gradient-success {
+            background: linear-gradient(120deg, #28a745, #5cd85c) !important;
+        }
+
+        .bg-gradient-warning {
+            background: linear-gradient(120deg, #ffc107, #ffd967) !important;
+        }
+
+        .bg-gradient-danger {
+            background: linear-gradient(120deg, #dc3545, #f1737f) !important;
+        }
+
+        .table-actions {
+            white-space: nowrap;
+        }
+
+        .sort-active {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        /* Стили для выпадающего меню Bootstrap 5 */
+        .dropdown-menu {
+            z-index: 1001;
+        }
+
+        /* Стили для управления колонками */
+        .column-toggle-menu {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .column-toggle-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .column-toggle-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .column-toggle-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        /* Стили для неисправности */
+        .symptom-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .symptom-tag {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        /* Улучшенная таблица в стиле Bootstrap 5 */
+        #ordersTable {
+            font-size: 0.9rem;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #ordersTable thead th {
+            background-color: #f3f4f6;
+            color: #374151;
+            font-weight: 700;
+            white-space: nowrap;
+            border-bottom: 1px solid #d1d5db;
+            border-right: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            cursor: move;
+        }
+        #ordersTable thead th:last-child {
+            border-right: none;
+        }
+        #ordersTable thead th.dtcr-reorderable {
+            cursor: move;
+        }
+
+        #ordersTable tbody td {
+            vertical-align: middle;
+            padding: 0.75rem;
+            border-right: 1px solid #eef2f7;
+            border-top: 1px solid #eef2f7;
+            color: #1f2937;
+        }
+        #ordersTable tbody td:last-child {
+            border-right: none;
+        }
+
+        #ordersTable tbody tr {
+            border-bottom: 1px solid #eef2f7;
+        }
+        #ordersTable tbody tr:nth-child(odd) > td {
+            background-color: #ffffff;
+        }
+        #ordersTable tbody tr:nth-child(even) > td {
+            background-color: #f8fafc;
+        }
+        #ordersTable tbody tr.order-row {
+            position: relative;
+        }
+        #ordersTable tbody tr.order-row.dropdown-open {
+            z-index: 2500;
+        }
+        #ordersTable tbody tr.order-row.dropdown-open td {
+            position: relative;
+            z-index: 2500;
+        }
+        #ordersTable tbody tr.order-row .dropdown {
+            position: relative;
+        }
+        #ordersTable tbody tr.order-row .dropdown.show {
+            z-index: 2600;
+        }
+
+        #ordersTable tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        /* Верхняя горизонтальная прокрутка для таблицы заявок */
+        .orders-table-scroll-wrapper {
+            position: relative;
+            overflow: visible;
+        }
+        .orders-table-scroll-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            margin-bottom: 2px;
+            max-height: 14px;
+        }
+        #ordersTableResponsive {
+            overflow-x: auto;
+            overflow-y: visible !important;
+        }
+        .orders-table-scroll-top::-webkit-scrollbar {
+            height: 8px;
+        }
+        .orders-table-scroll-top::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+        .orders-table-scroll-spacer {
+            min-height: 1px;
+        }
+
+        .table-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Небольшой визуальный полиш для контролов DataTables */
+        #ordersTable_wrapper .dataTables_length select,
+        #ordersTable_wrapper .dataTables_filter input {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+        }
+        #ordersTable_wrapper .dataTables_info {
+            color: #6b7280;
+        }
+        #ordersTable_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 8px !important;
+            margin: 0 2px;
+        }
+
+        /* Стили для интерактивных контактов в таблице */
+        .contact-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+        }
+
+        .contact-value {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+
+        .contact-btn {
+            padding: 2px 4px;
+            font-size: 0.75rem;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 1;
+        }
+
+        .contact-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .contact-dropdown.show {
+            display: block;
+        }
+
+        .contact-dropdown-item {
+            display: block;
+            padding: 8px 12px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #f4f4f4;
+            transition: background 0.2s;
+        }
+
+        .contact-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .contact-dropdown-item i {
+            width: 20px;
+            margin-right: 8px;
+        }
+
+        /* Тёмная тема: таблица заявок */
+        body.theme-dark #ordersTable,
+        body.theme-dark #ordersTable thead th,
+        body.theme-dark #ordersTable tbody td,
+        body.theme-dark #ordersTable tbody tr:nth-child(odd) > td,
+        body.theme-dark #ordersTable tbody tr:nth-child(even) > td {
+            background-color: #2d2d2d !important;
+            color: #e0e0e0 !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark #ordersTable thead th {
+            background-color: #333 !important;
+        }
+        body.theme-dark #ordersTable tbody tr:nth-child(even) > td {
+            background-color: #262626 !important;
+        }
+        body.theme-dark .orders-table-scroll-top::-webkit-scrollbar-thumb {
+            background: #555 !important;
+        }
+        body.theme-dark .column-toggle-item:hover {
+            background-color: #3a3a3a !important;
+        }
+        body.theme-dark .symptom-tag {
+            background-color: #1e3a5f !important;
+            color: #6eb3ff !important;
+        }
+        body.theme-dark .status-dropdown-item.active {
+            background-color: rgba(13, 110, 253, 0.25) !important;
+        }
+        body.theme-dark .contact-btn {
+            background: #2d2d2d !important;
+            border-color: #555 !important;
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .contact-dropdown {
+            background: #2d2d2d !important;
+            border-color: #555 !important;
+        }
+        body.theme-dark .contact-dropdown-item {
+            color: #e0e0e0 !important;
+            border-bottom-color: #444 !important;
+        }
+        body.theme-dark .contact-dropdown-item:hover {
+            background: #3a3a3a !important;
+        }
+        body.theme-dark #ordersTable_wrapper .dataTables_length select,
+        body.theme-dark #ordersTable_wrapper .dataTables_filter input {
+            background-color: #2d2d2d !important;
+            color: #e0e0e0 !important;
+            border-color: #555 !important;
+        }
+        body.theme-dark #ordersTable_wrapper .dataTables_info {
+            color: #bdbdbd !important;
+        }
+        body.theme-dark #ordersTable_wrapper,
+        body.theme-dark #ordersTableResponsive,
+        body.theme-dark .table-responsive {
+            background-color: transparent !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+                <div class="container-fluid">
+                    <!-- Переключатель режимов -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <ul class="nav nav-pills">
+                                <li class="nav-item">
+                                    <a href="{{ url_for('orders.all_orders', view='registry') }}" class="nav-link {% if view == 'registry' %}active{% endif %}">
+                                        <i class="fas fa-list"></i> Реестр
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ url_for('orders.all_orders', view='kanban') }}" class="nav-link {% if view == 'kanban' %}active{% endif %}">
+                                        <i class="fas fa-columns"></i> Канбан
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- РЕЕСТР -->
+                    {% if view == 'registry' %}
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- Форма фильтров и поиск -->
+                            <div class="card mb-3">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <!-- Кнопка слева -->
+                                        <div class="flex-shrink-0">
+                                            <a href="/add_order" class="btn btn-success btn-sm">
+                                                <i class="fas fa-plus me-1"></i> Новая заявка
+                                            </a>
+                                        </div>
+                                        <!-- Поиск (DataTables server-side) -->
+                                        <div class="flex-grow-1" style="min-width: 10rem; max-width: 20rem;">
+                                            <div class="d-flex gap-1 align-items-center">
+                                                <input type="text"
+                                                       id="searchInput"
+                                                       class="form-control form-control-sm"
+                                                       value="{{ search_query }}"
+                                                       placeholder="Поиск: клиент, телефон, №…"
+                                                       autocomplete="off">
+                                                {% if search_query %}
+                                                <a href="/all_orders?view=registry" class="btn btn-outline-secondary btn-sm flex-shrink-0 px-2" title="Сбросить поиск">
+                                                    <i class="fas fa-times"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <!-- Форма сортировки справа -->
+                                        <form method="get" action="/all_orders" id="registryFiltersForm" class="d-flex align-items-center gap-2 ms-lg-auto flex-wrap flex-lg-nowrap">
+                                            <input type="hidden" name="view" value="registry">
+                                            <select name="status" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все статусы</option>
+                                                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Все в работе ({{ in_progress_orders_count }})</option>
+                                                {% for status in order_statuses %}
+                                                <option value="{{ status.code if status.code else status.id }}" {% if status_filter == (status.code or status.id|string) %}selected{% endif %}>{{ status.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <select name="manager" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все менеджеры</option>
+                                                {% for id, name in managers %}
+                                                    <option value="{{ id }}" {% if manager_filter == id|string %}selected{% endif %}>{{ name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <select name="master" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все мастера</option>
+                                                {% for id, name in masters %}
+                                                    <option value="{{ id }}" {% if master_filter == id|string %}selected{% endif %}>{{ name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input type="date" name="date_from" class="form-control form-control-sm filter-field" value="{{ date_from or '' }}" style="min-width: 150px;">
+                                            <input type="date" name="date_to" class="form-control form-control-sm filter-field" value="{{ date_to or '' }}" style="min-width: 150px;">
+                                            <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                                                <i class="fas fa-filter"></i> Применить
+                                            </button>
+                                            <a href="/all_orders?view=registry" class="btn btn-default btn-sm" style="white-space: nowrap;">
+                                                <i class="fas fa-times"></i> Сбросить
+                                            </a>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Список заявок -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title mb-2">
+                                        <i class="fas fa-list me-2"></i>Список заявок
+                                        <a href="{{ url_for('orders.all_orders', view='registry', status='in_progress') }}" class="ms-2">
+                                            <span class="badge text-bg-secondary {% if status_filter == 'in_progress' and not master_filter %}text-bg-dark{% endif %}">
+                                                Все в работе: {{ in_progress_orders_count }}
+                                            </span>
+                                        </a>
+                                        <a href="{{ url_for('orders.all_orders', view='registry') }}" class="ms-2">
+                                            <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
+                                                Все: {{ total_orders }}
+                                            </span>
+                                        </a>
+                                        {% for status_counter in active_status_counters %}
+                                            <a href="{{ url_for('orders.all_orders', view='registry', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                                <span
+                                                    class="badge"
+                                                    style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
+                                                    {{ status_counter.name }}: {{ status_counter.cnt }}
+                                                </span>
+                                            </a>
+                                        {% endfor %}
+                                        {% if archived_status_counters %}
+                                        <span class="ms-2 small text-muted">|</span>
+                                        <span class="ms-1 small text-muted"><i class="fas fa-archive me-1"></i>Архивные:</span>
+                                        {% for status_counter in archived_status_counters %}
+                                            <a href="{{ url_for('orders.all_orders', view='registry', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                                <span
+                                                    class="badge"
+                                                    style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; opacity: 0.85; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
+                                                    {{ status_counter.name }}: {{ status_counter.cnt }}
+                                                </span>
+                                            </a>
+                                        {% endfor %}
+                                        {% endif %}
+                                    </h3>
+                                </div>
+
+                                <div class="card-body">
+                                    <!-- Кнопка управления колонками (будет перемещена JavaScript рядом с элементами DataTables) -->
+                                    <div id="columnToggleContainer" style="display: none;">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default btn-sm dropdown-toggle" type="button" id="columnToggleBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-columns"></i> Колонки
+                                            </button>
+                                            <ul class="dropdown-menu column-toggle-menu" aria-labelledby="columnToggleBtn" id="columnToggleMenu">
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="0" checked> ID
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="1" checked> Статус
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="2" checked> Клиент
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="3" checked> Устройство
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="4" checked> Бренд
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="5" checked> Неисправность
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="6" checked> Внешний вид
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="7" checked> Мастер
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="8" checked> Менеджер
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="9" checked> Дата создания
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="10" checked> Сумма
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="11" checked> Оплачено
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="12" checked> Долг
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="13"> Услуги
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="14"> Запчасти
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="15"> Предоплата
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="16"> Серийный №
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="17"> Email
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="18"> Комментарий
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="19"> Обновлено
+                                                    </label>
+                                                </li>
+                                                <li class="column-toggle-item">
+                                                    <label class="mb-0" style="cursor: pointer;">
+                                                        <input type="checkbox" class="column-toggle" data-column="20"> Коммент.
+                                                    </label>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="orders-table-scroll-wrapper">
+                                        <div class="orders-table-scroll-top" id="ordersTableScrollTop" aria-hidden="true">
+                                            <div class="orders-table-scroll-spacer" id="ordersTableScrollSpacer"></div>
+                                        </div>
+                                        <div class="table-responsive" id="ordersTableResponsive">
+                                        <table id="ordersTable" class="table table-bordered table-striped" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                                                    <th><i class="fas fa-info-circle me-1"></i>Статус</th>
+                                                    <th><i class="fas fa-user me-1"></i>Клиент</th>
+                                                    <th><i class="fas fa-laptop me-1"></i>Устройство</th>
+                                                    <th><i class="fas fa-tag me-1"></i>Бренд</th>
+                                                    <th><i class="fas fa-wrench me-1"></i>Неисправность</th>
+                                                    <th><i class="fas fa-paint-brush me-1"></i>Внешний вид</th>
+                                                    <th><i class="fas fa-user-tie me-1"></i>Мастер</th>
+                                                    <th><i class="fas fa-user-cog me-1"></i>Менеджер</th>
+                                                    <th><i class="fas fa-calendar me-1"></i>Дата создания</th>
+                                                    <th><i class="fas fa-ruble-sign me-1"></i>Сумма</th>
+                                                    <th><i class="fas fa-wallet me-1"></i>Оплачено</th>
+                                                    <th><i class="fas fa-credit-card me-1"></i>Долг</th>
+                                                    <th><i class="fas fa-tools me-1"></i>Услуги</th>
+                                                    <th><i class="fas fa-box me-1"></i>Запчасти</th>
+                                                    <th><i class="fas fa-hand-holding-usd me-1"></i>Предоплата</th>
+                                                    <th><i class="fas fa-barcode me-1"></i>Серийный №</th>
+                                                    <th><i class="fas fa-envelope me-1"></i>Email</th>
+                                                    <th><i class="fas fa-comment me-1"></i>Комментарий</th>
+                                                    <th><i class="fas fa-edit me-1"></i>Обновлено</th>
+                                                    <th><i class="fas fa-comments me-1"></i>Коммент.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    {% elif view == 'kanban' %}
+                    <!-- КАНБАН -->
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- Форма фильтров и поиск -->
+                            <div class="card mb-3">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <!-- Кнопка слева -->
+                                        <div class="flex-shrink-0">
+                                            <a href="/add_order" class="btn btn-success btn-sm">
+                                                <i class="fas fa-plus me-1"></i> Новая заявка
+                                            </a>
+                                        </div>
+                                        <!-- Поиск по канбану (клиентский фильтр карточек) -->
+                                        <div class="flex-grow-1" style="min-width: 10rem; max-width: 20rem;">
+                                            <div class="d-flex gap-1 align-items-center">
+                                                <input type="text"
+                                                       id="searchInputKanban"
+                                                       class="form-control form-control-sm"
+                                                       value="{{ search_query }}"
+                                                       placeholder="Поиск: клиент, телефон, №…"
+                                                       autocomplete="off">
+                                                {% if search_query %}
+                                                <a href="/all_orders?view=kanban" class="btn btn-outline-secondary btn-sm flex-shrink-0 px-2" title="Сбросить поиск">
+                                                    <i class="fas fa-times"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <!-- Форма сортировки справа -->
+                                        <form method="get" action="/all_orders" id="kanbanFiltersForm" class="d-flex align-items-center gap-2 ms-lg-auto flex-wrap flex-lg-nowrap">
+                                            <input type="hidden" name="view" value="kanban">
+                                            <select name="status" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все статусы</option>
+                                                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Все в работе ({{ in_progress_orders_count }})</option>
+                                                {% for status in order_statuses %}
+                                                <option value="{{ status.code if status.code else status.id }}" {% if status_filter == (status.code or status.id|string) %}selected{% endif %}>{{ status.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <select name="manager" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все менеджеры</option>
+                                                {% for id, name in managers %}
+                                                    <option value="{{ id }}" {% if manager_filter == id|string %}selected{% endif %}>{{ name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <select name="master" class="form-control form-control-sm filter-field" style="min-width: 150px;">
+                                                <option value="">Все мастера</option>
+                                                {% for id, name in masters %}
+                                                    <option value="{{ id }}" {% if master_filter == id|string %}selected{% endif %}>{{ name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input type="date" name="date_from" class="form-control form-control-sm filter-field" value="{{ date_from or '' }}" style="min-width: 150px;">
+                                            <input type="date" name="date_to" class="form-control form-control-sm filter-field" value="{{ date_to or '' }}" style="min-width: 150px;">
+                                            <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                                                <i class="fas fa-filter"></i> Применить
+                                            </button>
+                                            <a href="/all_orders?view=kanban" class="btn btn-default btn-sm" style="white-space: nowrap;">
+                                                <i class="fas fa-times"></i> Сбросить
+                                            </a>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Канбан доска с заголовком -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title mb-2">
+                                <i class="fas fa-columns me-2"></i>Канбан доска
+                                <a href="{{ url_for('orders.all_orders', view='kanban', status='in_progress') }}" class="ms-2">
+                                    <span class="badge text-bg-secondary {% if status_filter == 'in_progress' and not master_filter %}text-bg-dark{% endif %}">
+                                        Все в работе: {{ in_progress_orders_count }}
+                                    </span>
+                                </a>
+                                <a href="{{ url_for('orders.all_orders', view='kanban') }}" class="ms-2">
+                                    <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
+                                        Все: {{ total_orders }}
+                                    </span>
+                                </a>
+                                {% for status_counter in active_status_counters %}
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                        <span
+                                            class="badge"
+                                            style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
+                                            {{ status_counter.name }}: {{ status_counter.cnt }}
+                                        </span>
+                                    </a>
+                                {% endfor %}
+                                {% if archived_status_counters %}
+                                <span class="ms-2 small text-muted">|</span>
+                                <span class="ms-1 small text-muted"><i class="fas fa-archive me-1"></i>Архивные:</span>
+                                {% for status_counter in archived_status_counters %}
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                        <span
+                                            class="badge"
+                                            style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; opacity: 0.85; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
+                                            {{ status_counter.name }}: {{ status_counter.cnt }}
+                                        </span>
+                                    </a>
+                                {% endfor %}
+                                {% endif %}
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                    <div class="row kanban-board g-2">
+                        {% for status in order_statuses %}
+                        {% set status_orders = orders|selectattr('status_id', 'equalto', status.id)|list %}
+                        {% if status_orders|length > 0 %}
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                            <div class="card kanban-column h-100">
+                                <div class="card-header text-white py-1 px-2" style="background-color: {{ status.color }};">
+                                    <div class="card-title">{{ status.name }}</div>
+                                </div>
+                                <div class="card-body p-1 kanban-column-scroll">
+                                    {% for order in status_orders %}
+                                    {% set phone_clean = order.phone|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('+', '') if order.phone else '' %}
+                                    {% set phone_8 = '' %}
+                                    {% set phone_7 = '' %}
+                                    {% if phone_clean and phone_clean|length == 11 %}
+                                        {% if phone_clean[0] == '8' %}
+                                            {% set phone_7 = '7' + phone_clean[1:] %}
+                                            {% set phone_8 = phone_clean %}
+                                        {% elif phone_clean[0] == '7' %}
+                                            {% set phone_7 = phone_clean %}
+                                            {% set phone_8 = '8' + phone_clean[1:] %}
+                                        {% endif %}
+                                    {% endif %}
+                                        <div class="card mb-1 kanban-card" 
+                                             style="cursor: pointer; transition: all 0.2s ease;"
+                                             data-id="{{ order.id }}"
+                                             data-order-id="{{ order.id }}"
+                                             data-client-name="{{ order.client_name }}"
+                                             data-email="{{ order.email }}"
+                                             data-phone="{{ order.phone }}"
+                                             data-phone-display="{{ order.phone_display or order.phone }}"
+                                             data-device-type="{{ order.device_type }}"
+                                             data-device-brand="{{ order.device_brand }}"
+                                             data-model="{{ order.model or '' }}"
+                                             data-manager="{{ order.manager }}"
+                                             data-master="{{ order.master }}"
+                                             data-symptom-tags="{{ order.symptom_tags }}"
+                                             data-appearance="{{ order.appearance }}"
+                                             data-prepayment="{{ order.prepayment }}"
+                                             data-serial-number="{{ order.serial_number }}"
+                                             data-search="{{ ((order.client_name|lower if order.client_name else '') + ' ' + (order.client_name if order.client_name else '') + ' ' + phone_clean + ' ' + phone_7 + ' ' + phone_8 + ' ' + (order.email|lower if order.email else '') + ' ' + (order.email if order.email else '') + ' ' + (order.id|string if order.id is not none else '') + ' ' + (order.order_id|string if order.order_id is not none else '') + ' ' + (order.device_type|lower if order.device_type else '') + ' ' + (order.device_type if order.device_type else '') + ' ' + (order.device_brand|lower if order.device_brand else '') + ' ' + (order.device_brand if order.device_brand else '') + ' ' + (order.model|lower if order.model else '') + ' ' + (order.model if order.model else '') + ' ' + (order.symptom_tags|lower if order.symptom_tags else '') + ' ' + (order.symptom_tags if order.symptom_tags else '') + ' ' + (order.appearance|lower if order.appearance else '') + ' ' + (order.appearance if order.appearance else '') + ' ' + (order.manager|lower if order.manager else '') + ' ' + (order.manager if order.manager else '') + ' ' + (order.master|lower if order.master else '') + ' ' + (order.master if order.master else '') + ' ' + (order.status_name|lower if order.status_name else '') + ' ' + (order.status_name if order.status_name else '')).strip() }}"
+                                             onclick="window.location.href='/order/{{ order.id|urlencode }}'">
+                                            <div class="card-body p-1">
+                                                <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
+                                                    <div class="d-flex align-items-center gap-1 min-w-0 flex-grow-1">
+                                                        <span class="status-indicator" style="background-color: {{ status.color }};"></span>
+                                                        <strong class="text-primary text-truncate">#{{ order.id }}</strong>
+                                                    </div>
+                                                    <small class="text-muted text-nowrap flex-shrink-0" style="font-size: 0.68rem !important;">{{ order.created_at|format_date(true) if order.created_at else '' }}</small>
+                                                </div>
+                                                <div class="d-flex align-items-start justify-content-between gap-1 mb-1">
+                                                    <div class="fw-bold text-truncate min-w-0" title="{{ order.client_name }}" style="max-width: 100%;">
+                                                        {{ order.client_name }}
+                                                    </div>
+                                                    {% if order.comments_count and order.comments_count|int > 0 %}
+                                                        <span class="badge text-bg-secondary" title="Комментарии">
+                                                            <i class="fas fa-comment-dots me-1"></i>{{ order.comments_count }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="text-muted mb-1 text-truncate" title="{{ order.phone_display or order.phone or '' }} {{ order.email or '' }}">
+                                                    {% if order.phone_display or order.phone %}
+                                                        <i class="fas fa-phone-alt me-1 text-primary"></i>
+                                                        <span class="text-truncate">{{ order.phone_display or order.phone }}</span>
+                                                    {% endif %}
+                                                    {% if order.email %}
+                                                        <span class="d-block text-truncate mt-1">
+                                                            <i class="fas fa-envelope me-1"></i>{{ order.email }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="text-muted mb-1 text-truncate" title="{{ order.device_type or '' }} {{ order.device_brand or '' }} {{ order.model or '' }}">
+                                                    <i class="fas fa-mobile-alt me-1"></i>
+                                                    {% if order.device_id and order.device_type and order.device_type != '—' %}
+                                                    <a href="/device/{{ order.device_id }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">
+                                                        {{ order.device_type }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
+                                                    </a>
+                                                    {% else %}
+                                                    {{ order.device_type or '—' }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if order.serial_number %}
+                                                    <div class="text-muted mb-1" style="font-size: 0.8rem;">
+                                                        <i class="fas fa-barcode me-1"></i>S/N: {{ order.serial_number }}
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="d-flex flex-column gap-0 mb-1">
+                                                    <div class="text-muted text-truncate" title="{{ order.master or '—' }}">
+                                                        <i class="fas fa-user-tie me-1"></i>{{ order.master or '—' }}
+                                                    </div>
+                                                    <div class="text-muted text-truncate" title="{{ order.manager or order.manager_name or '—' }}">
+                                                        <i class="fas fa-user-friends me-1"></i>{{ order.manager or order.manager_name or '—' }}
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    {% if order.prepayment is not none and order.prepayment and order.prepayment not in ['0', '0.0', 'None', 'null', '—'] %}
+                                                        <span class="badge text-bg-success">
+                                                            <i class="fas fa-ruble-sign me-1"></i>{{ order.prepayment }} ₽
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if order.total_paid is not none and order.total_paid|int > 0 %}
+                                                        <span class="badge text-bg-primary">
+                                                            <i class="fas fa-coins me-1"></i>{{ order.total_paid }} ₽
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if order.symptom_tags %}
+                                                    <div class="symptom-tags mt-1">
+                                                        {% for t in order.symptom_tags.split(',') %}
+                                                            {% set tt = t|trim %}
+                                                            {% if tt and tt not in ['None', 'null'] %}
+                                                                <span class="symptom-tag">{{ tt }}</span>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+    </div>
+{% endblock %}
+
+{% block datatables_js %}
+    <!-- DataTables JS -->
+    <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/responsive.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='cdn/datatables/colreorder/1.7.0/js/dataTables.colReorder.min.js') }}"></script>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Функции для работы с контактами
+        function showPhoneMenu(event, phone) {
+            event.stopPropagation();
+            const menuId = 'phoneMenu-' + phone;
+            const menu = document.getElementById(menuId);
+            
+            // Закрываем все другие меню
+            document.querySelectorAll('.contact-dropdown').forEach(m => {
+                if (m.id !== menuId) {
+                    m.classList.remove('show');
+                }
+            });
+            
+            // Переключаем текущее меню
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.contact-item')) {
+                document.querySelectorAll('.contact-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+
+        // Копирование в буфер обмена
+        async function copyToClipboard(text, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // Показываем уведомление
+                const btn = event ? event.target.closest('button, a') : null;
+                if (btn) {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                    btn.style.color = '#28a745';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.style.color = '';
+                    }, 1000);
+                } else {
+                    alert('Скопировано: ' + text);
+                }
+            } catch (err) {
+                // Fallback для старых браузеров
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('Скопировано: ' + text);
+                } catch (e) {
+                    alert('Не удалось скопировать. Скопируйте вручную: ' + text);
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        let previewTimeout;
+
+        // Отключено всплывающее подробное превью заявки при наведении
+        function showPreview(row, event) {
+            clearTimeout(previewTimeout);
+
+            // Получаем данные из data-атрибутов
+            const dataId = row.getAttribute('data-id');
+            const orderId = row.getAttribute('data-order-id');
+            const clientName = row.getAttribute('data-client-name');
+            const email = row.getAttribute('data-email');
+            const phoneDisplay = row.getAttribute('data-phone-display') || row.getAttribute('data-phone');
+            const deviceType = row.getAttribute('data-device-type');
+            const deviceBrand = row.getAttribute('data-device-brand');
+            const model = row.getAttribute('data-model');
+            const manager = row.getAttribute('data-manager');
+            const master = row.getAttribute('data-master');
+            const symptomTags = row.getAttribute('data-symptom-tags');
+            const appearance = row.getAttribute('data-appearance');
+            const prepayment = row.getAttribute('data-prepayment');
+            const serialNumber = row.getAttribute('data-serial-number');
+
+            // Заполняем карточку превью
+            document.getElementById('previewTitle').textContent = `Заявка #${dataId}`;
+            document.getElementById('previewClient').textContent = clientName || 'Не указан';
+            document.getElementById('previewPhone').textContent = phoneDisplay || 'Не указан';
+            document.getElementById('previewEmail').textContent = email || 'Не указан';
+            let deviceText = `${deviceType || ''} ${deviceBrand || ''}`.trim() || 'Не указано';
+            if (model) {
+                deviceText += ` ${model}`;
+            }
+            if (serialNumber) {
+                deviceText += ` (S/N: ${serialNumber})`;
+            }
+            document.getElementById('previewDevice').textContent = deviceText;
+            document.getElementById('previewManager').textContent = manager || 'Не назначен';
+            document.getElementById('previewMaster').textContent = master || 'Не назначен';
+            document.getElementById('previewAppearance').textContent = appearance || 'Не указан';
+            document.getElementById('previewPrepayment').textContent = prepayment && prepayment !== '0' ? `${prepayment} ₽` : 'Нет';
+            // Отображаем symptom_tags вместо comment
+            let symptomTagsText = 'Не указано';
+            if (symptomTags && symptomTags.trim() && symptomTags !== 'None' && symptomTags !== 'null' && symptomTags !== '') {
+                const tags = symptomTags.split(',').map(tag => tag.trim()).filter(tag => tag && tag !== 'None' && tag !== 'null');
+                symptomTagsText = tags.length > 0 ? tags.join(', ') : 'Не указано';
+            }
+            const previewCommentEl = document.getElementById('previewComment');
+            if (previewCommentEl) {
+                previewCommentEl.textContent = symptomTagsText;
+                previewCommentEl.style.display = 'block';
+                previewCommentEl.style.visibility = 'visible';
+            }
+
+            // Показываем карточку
+            const previewCard = document.getElementById('previewCard');
+            previewCard.style.display = 'block';
+            movePreview(event);
+        }
+
+        function hidePreview() {
+            previewTimeout = setTimeout(() => {
+                document.getElementById('previewCard').style.display = 'none';
+            }, 300);
+        }
+
+        function movePreview(event) {
+            const previewCard = document.getElementById('previewCard');
+            if (previewCard.style.display === 'block') {
+                previewCard.style.left = (event.pageX + 15) + 'px';
+                previewCard.style.top = (event.pageY + 15) + 'px';
+            }
+        }
+
+        // Глобальные fallback-хелперы для меню статуса (работают даже если часть init-кода не выполнилась)
+        window.closeAllStatusMenusGlobal = function() {
+            $('.status-dropdown-menu.show').removeClass('show').css({ left: '', top: '' });
+            $('.quick-status-btn[aria-expanded="true"]').attr('aria-expanded', 'false');
+            $('tr.order-row.dropdown-open').removeClass('dropdown-open');
+        };
+
+        window.positionStatusMenuGlobal = function(buttonEl, menuEl) {
+            if (!buttonEl || !menuEl) return;
+            const rect = buttonEl.getBoundingClientRect();
+            const menuWidth = Math.max(menuEl.offsetWidth || 220, rect.width, 200);
+            menuEl.style.minWidth = `${Math.max(rect.width, 200)}px`;
+
+            let left = rect.left;
+            let top = rect.bottom + 4;
+            const vw = window.innerWidth || document.documentElement.clientWidth;
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+
+            if (left + menuWidth > vw - 8) left = Math.max(8, vw - menuWidth - 8);
+            menuEl.style.left = `${left}px`;
+            menuEl.style.top = `${top}px`;
+
+            const menuHeight = menuEl.offsetHeight || 260;
+            if (top + menuHeight > vh - 8) {
+                top = Math.max(8, rect.top - menuHeight - 4);
+                menuEl.style.top = `${top}px`;
+            }
+        };
+
+        window.selectQuickStatus = function(itemEl, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            if (!itemEl) return false;
+
+            const $item = $(itemEl);
+            const $dropdown = $item.closest('.dropdown');
+            const $button = $dropdown.find('.quick-status-btn');
+
+            const orderId = $button.data('order-id');
+            const orderDbId = $button.data('order-db-id');
+            const statusId = $item.data('status-id');
+            const statusName = $item.data('status-name');
+            const statusColor = $item.data('status-color');
+            const statusCode = $item.data('status-code') || '';
+
+            $button.text(statusName);
+            $button.css({ 'background-color': statusColor, 'border-color': statusColor });
+            $button.data('status-id', statusId);
+            $button.data('status-color', statusColor);
+
+            $dropdown.find('.status-dropdown-item').removeClass('active');
+            $item.addClass('active');
+
+            if (window.closeAllStatusMenusGlobal) window.closeAllStatusMenusGlobal();
+
+            if (window.updateOrderStatus) {
+                window.updateOrderStatus($button[0], orderId, orderDbId, statusId, statusName, statusColor, statusCode);
+            }
+            return false;
+        };
+
+        window.toggleQuickStatusMenu = function(buttonEl, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            if (!buttonEl) return false;
+
+            const row = $(buttonEl).closest('tr.order-row');
+            const menu = $(buttonEl).closest('.dropdown').find('.status-dropdown-menu').first();
+            if (!menu.length) return false;
+
+            const isOpen = menu.hasClass('show');
+            window.closeAllStatusMenusGlobal();
+            if (isOpen) return false;
+
+            row.addClass('dropdown-open');
+            menu.addClass('show');
+            window.positionStatusMenuGlobal(buttonEl, menu[0]);
+            $(buttonEl).attr('aria-expanded', 'true');
+            return false;
+        };
+
+
+        // Останавливаем скрытие при наведении на саму карточку
+        // Элемента previewCard больше нет в разметке, обработчики не требуются
+
+        // Инициализация DataTables и других компонентов
+        $(document).ready(function() {
+            // Фильтруем ошибки расширений Chrome из консоли
+            const originalError = console.error;
+            const originalWarn = console.warn;
+            
+            console.error = function(...args) {
+                // Игнорируем ошибки расширений Chrome
+                const errorText = args.map(arg => String(arg)).join(' ');
+                if (errorText.includes('chrome-extension://') || 
+                    errorText.includes('runtime.lastError') ||
+                    errorText.includes('message channel closed') ||
+                    errorText.includes('Cannot read properties of null') ||
+                    errorText.includes('popup.js')) {
+                    return; // Не показываем эти ошибки
+                }
+                originalError.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                // Игнорируем предупреждения расширений Chrome
+                const warnText = args.map(arg => String(arg)).join(' ');
+                if (warnText.includes('chrome-extension://') || 
+                    warnText.includes('runtime.lastError') ||
+                    warnText.includes('message channel closed')) {
+                    return; // Не показываем эти предупреждения
+                }
+                originalWarn.apply(console, args);
+            };
+            
+            // Также фильтруем unhandled promise rejections от расширений
+            window.addEventListener('unhandledrejection', function(event) {
+                const reason = String(event.reason || '');
+                if (reason.includes('chrome-extension://') || 
+                    reason.includes('message channel closed') ||
+                    reason.includes('asynchronous response')) {
+                    event.preventDefault(); // Предотвращаем вывод ошибки
+                }
+            });
+            
+            // Режим отладки (можно включить через консоль: window.DEBUG_MODE = true)
+            window.DEBUG_MODE = window.DEBUG_MODE || false;
+            
+            // Функция для отладочных сообщений
+            function debugLog(...args) {
+                if (window.DEBUG_MODE) {
+                    console.log('[DEBUG all_orders]', new Date().toISOString(), ...args);
+                }
+            }
+            
+            // Делаем debugLog доступной глобально
+            window.debugLog = debugLog;
+            
+            debugLog('Страница загружена, инициализация компонентов');
+            
+            /**
+             * Нормализует поисковый запрос для телефонов
+             * Создает варианты с 7 и 8 для поиска по российским номерам
+             * 
+             * @param {string} query - Поисковый запрос
+             * @returns {string} - Нормализованный запрос с вариантами телефона
+             */
+            function normalizeSearchQuery(query) {
+                if (!query) return '';
+                
+                // Убираем все пробелы, дефисы, скобки и другие символы
+                const cleaned = query.replace(/[\s\-\(\)\+]/g, '');
+                
+                // Если это похоже на номер телефона (начинается с 8 или 7, или только цифры длиной 10-11)
+                if (/^[78]?\d{10,11}$/.test(cleaned) || /^\d{10,11}$/.test(cleaned)) {
+                    let digits = cleaned;
+                    
+                    // Если начинается с 8 и длина 11, заменяем на 7
+                    if (digits.startsWith('8') && digits.length === 11) {
+                        digits = '7' + digits.substring(1);
+                    }
+                    // Если начинается с 8 и длина 10, добавляем 7 в начало
+                    else if (digits.startsWith('8') && digits.length === 10) {
+                        digits = '7' + digits;
+                    }
+                    // Если не начинается с 7 и длина 10, добавляем 7
+                    else if (!digits.startsWith('7') && digits.length === 10) {
+                        digits = '7' + digits;
+                    }
+                    // Если не начинается с 7 и длина 11, заменяем первую цифру на 7
+                    else if (!digits.startsWith('7') && digits.length === 11) {
+                        digits = '7' + digits.substring(1);
+                    }
+                    
+                    // Возвращаем нормализованный номер с 7 и вариант с 8 для поиска
+                    const with8 = digits.startsWith('7') ? '8' + digits.substring(1) : digits;
+                    return digits + ' ' + with8;
+                }
+                
+                return query;
+            }
+            
+            // Инициализация DataTables для таблицы заявок (только для registry view)
+            {% if view == 'registry' %}
+            // Проверяем, что таблица существует и имеет правильную структуру
+            const ordersTableElement = document.getElementById('ordersTable');
+            if (!ordersTableElement) {
+                console.error('Таблица ordersTable не найдена');
+                return;
+            }
+            
+            // Проверяем, не инициализирована ли таблица уже
+            if ($.fn.DataTable.isDataTable('#ordersTable')) {
+                console.log('DataTables уже инициализирована, уничтожаем старый экземпляр');
+                $('#ordersTable').DataTable().destroy();
+            }
+            
+            // Проверяем количество колонок в thead и tbody
+            const theadRows = ordersTableElement.querySelectorAll('thead tr');
+            const tbodyRows = ordersTableElement.querySelectorAll('tbody tr');
+            
+            if (theadRows.length === 0) {
+                console.error('Не найдены строки заголовков в таблице');
+                return;
+            }
+            
+            const headerCols = theadRows[0].querySelectorAll('th').length;
+            console.log('Количество колонок в заголовке:', headerCols);
+            
+            // Проверяем все строки tbody (не только первую)
+            if (tbodyRows.length > 0) {
+                let hasMismatch = false;
+                tbodyRows.forEach((row, index) => {
+                    const rowCols = row.querySelectorAll('td').length;
+                    if (headerCols !== rowCols) {
+                        console.error(`Несоответствие колонок в строке ${index + 1}: заголовок имеет ${headerCols} колонок, а строка имеет ${rowCols} колонок`);
+                        hasMismatch = true;
+                    }
+                });
+                
+                if (hasMismatch) {
+                    console.error('Обнаружено несоответствие количества колонок. DataTables не будет инициализирована.');
+                    return;
+                }
+            }
+            
+            // Порядок колонок: загрузка из localStorage
+            var ORDERS_TABLE_COLUMN_COUNT = 21;
+            function getOrdersTableColumnOrder() {
+                try {
+                    var raw = localStorage.getItem('ordersTableColumnOrder');
+                    if (!raw) return null;
+                    var order = JSON.parse(raw);
+                    if (!Array.isArray(order) || order.length !== ORDERS_TABLE_COLUMN_COUNT) return null;
+                    var needed = {};
+                    for (var i = 0; i < ORDERS_TABLE_COLUMN_COUNT; i++) needed[i] = true;
+                    for (var j = 0; j < order.length; j++) {
+                        var idx = parseInt(order[j], 10);
+                        if (idx < 0 || idx >= ORDERS_TABLE_COLUMN_COUNT || !needed[idx]) return null;
+                        delete needed[idx];
+                    }
+                    if (Object.keys(needed).length !== 0) return null;
+                    return order;
+                } catch (e) {
+                    return null;
+                }
+            }
+            function saveOrdersTableColumnOrder(order) {
+                try {
+                    if (Array.isArray(order) && order.length === ORDERS_TABLE_COLUMN_COUNT) {
+                        localStorage.setItem('ordersTableColumnOrder', JSON.stringify(order));
+                    }
+                } catch (e) {}
+            }
+
+            var ordersTable;
+            
+            try {
+                ordersTable = $('#ordersTable').DataTable({
+                "language": {
+                    "url": "{{ url_for('static', filename='cdn/datatables/plug-ins/1.13.7/i18n/ru.json') }}",
+                    "search": "Поиск:",
+                    "lengthMenu": "Показать _MENU_ записей",
+                    "info": "Показано _START_ - _END_ из _TOTAL_ записей",
+                    "infoEmpty": "Нет записей для отображения",
+                    "infoFiltered": "(отфильтровано из _MAX_ записей)",
+                    "zeroRecords": "Ничего не найдено",
+                    "paginate": {
+                        "first": "Первая",
+                        "last": "Последняя",
+                        "next": "Следующая",
+                        "previous": "Предыдущая"
+                    }
+                },
+                "responsive": false,
+                "processing": false,
+                "serverSide": true,
+                "deferRender": true,
+                "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "order": [[19, "desc"]],
+                "stateSave": true,
+                "stateDuration": 60 * 60 * 24 * 7,
+                "stateLoadParams": function(settings, data) {
+                    if (data && data.order) {
+                        data.order = data.order.filter(function(o) {
+                            var col = parseInt(o[0], 10);
+                            return col >= 0 && col <= 20;
+                        });
+                        if (!data.order.length) data.order = [[19, "desc"]];
+                    }
+                    // Поиск берём только из текущего поля/URL, а не из старого stateSave.
+                    if (data && data.search) delete data.search;
+                    // Управляем видимостью колонок только через ordersTableColumns,
+                    // чтобы не было конфликтов со старым состоянием DataTables.
+                    if (data && data.columns) delete data.columns;
+                    if (data && data.colReorder) delete data.colReorder;
+                },
+                "stateSaveParams": function(settings, data) {
+                    if (data && data.search) delete data.search;
+                    if (data && data.columns) delete data.columns;
+                    if (data && data.colReorder) delete data.colReorder;
+                },
+                "ajax": {
+                    "url": "/api/datatables/orders" + (window.location.search || ""),
+                    /* POST: длинные параметры serverSide не укладываются в лимит строки GET у gunicorn */
+                    "type": "POST",
+                    "data": function (d) {
+                        var meta = document.querySelector('meta[name="csrf-token"]');
+                        if (meta && meta.content) {
+                            d.csrf_token = meta.content;
+                        }
+                        return d;
+                    }
+                },
+                "columns": [
+                    { "data": "id_col" },
+                    { "data": "status_col" },
+                    { "data": "client_col" },
+                    { "data": "device_col" },
+                    { "data": "brand_col" },
+                    { "data": "symptoms_col" },
+                    { "data": "appearance_col" },
+                    { "data": "master_col" },
+                    { "data": "manager_col" },
+                    { "data": "created_at_col" },
+                    { "data": "total_col" },
+                    { "data": "paid_col" },
+                    { "data": "debt_col" },
+                    { "data": "services_total_col" },
+                    { "data": "parts_total_col" },
+                    { "data": "prepayment_col" },
+                    { "data": "serial_number_col" },
+                    { "data": "email_col" },
+                    { "data": "comment_col" },
+                    { "data": "updated_at_col" },
+                    { "data": "comments_count_col" }
+                ],
+                "createdRow": function(row, data) {
+                    row.classList.add('order-row');
+                    row.style.cursor = 'pointer';
+                    const orderId = (data && data.order_id) ? String(data.order_id) : '';
+                    row.onclick = function(e) {
+                        const targetEl = e && e.target && e.target.nodeType === 1
+                            ? e.target
+                            : (e && e.target && e.target.parentElement ? e.target.parentElement : null);
+                        // Не переходим в карточку, если клик был по интерактивным элементам в строке.
+                        const interactiveTarget = targetEl && targetEl.closest(
+                            '.dropdown, .quick-status-btn, .status-dropdown-menu, .status-dropdown-item, ' +
+                            '.contact-item, .contact-dropdown, .contact-btn, .order-pin-btn, a, button, input, select, textarea, label'
+                        );
+                        if (interactiveTarget) {
+                            return;
+                        }
+                        if (!orderId) return;
+                        window.location.href = '/order/' + encodeURIComponent(orderId);
+                    };
+                },
+                "columnDefs": [
+                    { "targets": [0, 9, 19], "orderable": true },
+                    { "targets": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20], "orderable": false },
+                    { "targets": [13, 14, 15, 16, 17, 18, 19, 20], "visible": false }
+                ],
+                "colReorder": {
+                    "order": getOrdersTableColumnOrder(),
+                    "fixedColumnsLeft": 0,
+                    "fixedColumnsRight": 0
+                },
+                "dom": '<"row"<"col-sm-12 col-md-6"l>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                "drawCallback": function(settings) {
+                    // Применяем тему к таблице после перерисовки
+                    applyTableTheme();
+                    // После перерисовки таблицы обновляем обработчики событий
+                    initQuickStatusSelects();
+                    // Превью по hover полностью отключено, обработчики не навешиваем.
+                    $('#ordersTable tbody tr.order-row').off('mouseenter mouseleave mousemove');
+                    // Восстанавливаем видимость колонок после перерисовки
+                    restoreColumnVisibility();
+                    // Ширина верхнего скролла под ширину таблицы
+                    updateOrdersTableScrollSpacer();
+                },
+                "initComplete": function(settings, json) {
+                    // Перемещаем кнопку "Колонки" рядом с элементом "Показать записей"
+                    var lengthContainer = $('#ordersTable_wrapper .dataTables_length');
+                    var columnToggleContainer = $('#columnToggleContainer');
+                    if (lengthContainer.length && columnToggleContainer.length) {
+                        columnToggleContainer.css('display', 'inline-block');
+                        columnToggleContainer.css('margin-left', '10px');
+                        lengthContainer.append(columnToggleContainer);
+                    }
+                    // Применяем начальный поиск из поля (если страница открыта с ?q=...)
+                    const initialSearch = ($('#searchInput').val() || '').trim();
+                    if (initialSearch) {
+                        this.api().search(initialSearch).draw();
+                    }
+                    // Ширина спейсера и синхронизация верхнего скролла с таблицей
+                    updateOrdersTableScrollSpacer();
+                    initOrdersTableTopScrollSync();
+                    // Сохранение порядка колонок при перетаскивании (порядок задаётся один раз при init в colReorder.order)
+                    $('#ordersTable').off('column-reorder.dt').on('column-reorder.dt', function(e, settings, details) {
+                        var api = $(this).DataTable();
+                        if (api && api.colReorder && typeof api.colReorder.order === 'function') {
+                            var order = api.colReorder.order();
+                            saveOrdersTableColumnOrder(order);
+                        }
+                        // После перестановки колонок повторно применяем видимость из чекбоксов.
+                        restoreColumnVisibility();
+                    });
+                }
+                });
+            } catch (error) {
+                console.error('Ошибка при инициализации DataTables:', error);
+                console.error('Детали ошибки:', error.message, error.stack);
+                // Не продолжаем, если инициализация не удалась
+                return;
+            }
+            
+            // Проверяем, что ordersTable успешно инициализирована
+            if (!ordersTable) {
+                console.error('DataTables не была инициализирована');
+                return;
+            }
+
+            function getCsrfTokenFromMeta() {
+                var meta = document.querySelector('meta[name="csrf-token"]');
+                return meta && meta.content ? meta.content : '';
+            }
+
+            function updateOrderPinButtonState(buttonEl, pinned) {
+                if (!buttonEl) return;
+                buttonEl.setAttribute('data-pinned', pinned ? '1' : '0');
+                buttonEl.classList.toggle('is-pinned', !!pinned);
+                var icon = buttonEl.querySelector('i');
+                if (icon) {
+                    icon.classList.add('fas');
+                    icon.classList.remove('far');
+                }
+                var title = pinned ? 'Открепить заявку' : 'Закрепить заявку';
+                buttonEl.setAttribute('title', title);
+                buttonEl.setAttribute('aria-label', title);
+            }
+
+            function initOrderPins() {
+                $('#ordersTable tbody').off('click.orderPin').on('click.orderPin', '.order-pin-btn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+                    var button = this;
+                    var orderDbId = parseInt(button.getAttribute('data-order-db-id'), 10);
+                    if (!orderDbId) return;
+                    if (button.getAttribute('data-loading') === '1') return;
+
+                    var isPinned = String(button.getAttribute('data-pinned') || '0') === '1';
+                    var method = isPinned ? 'DELETE' : 'POST';
+                    button.setAttribute('data-loading', '1');
+
+                    fetch('/api/order/' + encodeURIComponent(orderDbId) + '/pin', {
+                        method: method,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCsrfTokenFromMeta()
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(function(resp) {
+                        return resp.json().catch(function() { return { success: false }; }).then(function(data) {
+                            return { ok: resp.ok, data: data };
+                        });
+                    })
+                    .then(function(result) {
+                        if (!result.ok || !result.data || !result.data.success) {
+                            var msg = (result.data && result.data.error) ? result.data.error : 'Не удалось обновить закрепление заявки';
+                            alert(msg);
+                            return;
+                        }
+                        updateOrderPinButtonState(button, !!result.data.pinned);
+                        ordersTable.ajax.reload(null, false);
+                    })
+                    .catch(function() {
+                        alert('Ошибка сети при обновлении закрепления заявки');
+                    })
+                    .finally(function() {
+                        button.removeAttribute('data-loading');
+                    });
+                });
+            }
+
+            initOrderPins();
+
+            // Верхняя горизонтальная прокрутка: ширина спейсера = ширина таблицы
+            function updateOrdersTableScrollSpacer() {
+                var responsive = document.getElementById('ordersTableResponsive');
+                var spacer = document.getElementById('ordersTableScrollSpacer');
+                var tbl = document.getElementById('ordersTable');
+                if (responsive && spacer && tbl) {
+                    var w = Math.max(tbl.scrollWidth, responsive.scrollWidth);
+                    spacer.style.width = (w || 1) + 'px';
+                }
+            }
+
+            // Синхронизация прокрутки верхней полосы и таблицы
+            function initOrdersTableTopScrollSync() {
+                var scrollTop = document.getElementById('ordersTableScrollTop');
+                var responsive = document.getElementById('ordersTableResponsive');
+                if (!scrollTop || !responsive) return;
+                var syncing = false;
+                scrollTop.addEventListener('scroll', function() {
+                    if (syncing) return;
+                    syncing = true;
+                    responsive.scrollLeft = scrollTop.scrollLeft;
+                    syncing = false;
+                });
+                responsive.addEventListener('scroll', function() {
+                    if (syncing) return;
+                    syncing = true;
+                    scrollTop.scrollLeft = responsive.scrollLeft;
+                    syncing = false;
+                });
+            }
+            {% endif %}
+
+            // Автоматический поиск с задержкой для registry view (как в /clients)
+            {% if view == 'registry' %}
+            let searchTimeout;
+            let lastSearchValue = '';
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimeout);
+                const searchValue = $(this).val().trim();
+                
+                searchTimeout = setTimeout(function() {
+                    lastSearchValue = searchValue;
+                    if (ordersTable) {
+                        ordersTable.search(searchValue).draw();
+                    }
+                }, 300);
+            });
+            {% endif %}
+
+            /**
+             * Инициализация быстрой смены статуса заявки
+             * Обрабатывает клики по элементам выпадающего меню статусов
+             * Обновляет статус через API без перезагрузки страницы
+             */
+            {% if view == 'registry' %}
+            function initQuickStatusSelects() {
+                if (window.debugLog) window.debugLog('Инициализация initQuickStatusSelects');
+                function closeAllStatusMenus() {
+                    if (window.closeAllStatusMenusGlobal) {
+                        window.closeAllStatusMenusGlobal();
+                    }
+                }
+
+                function positionStatusMenu(buttonEl, menuEl) {
+                    if (window.positionStatusMenuGlobal) {
+                        window.positionStatusMenuGlobal(buttonEl, menuEl);
+                    }
+                }
+
+                $('.quick-status-btn').off('click.statusQuickBtn').on('click.statusQuickBtn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+                    const button = this;
+                    const row = $(button).closest('tr.order-row');
+                    const menu = $(button).closest('.dropdown').find('.status-dropdown-menu').first();
+                    if (!menu.length) return;
+
+                    const isOpen = menu.hasClass('show');
+                    closeAllStatusMenus();
+                    if (isOpen) return;
+
+                    row.addClass('dropdown-open');
+                    menu.addClass('show');
+                    positionStatusMenu(button, menu[0]);
+                    $(button).attr('aria-expanded', 'true');
+                });
+
+                $('.quick-status-btn').off('mousedown.statusQuickBtn').on('mousedown.statusQuickBtn', function(e) {
+                    e.stopPropagation();
+                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+                });
+                $('.status-dropdown-menu').off('click.statusQuickMenu').on('click.statusQuickMenu', function(e) {
+                    // Меню живет внутри кликабельной строки, блокируем всплытие.
+                    e.stopPropagation();
+                });
+                $('.status-dropdown-menu').off('mousedown.statusQuickMenu').on('mousedown.statusQuickMenu', function(e) {
+                    e.stopPropagation();
+                });
+                $('.status-dropdown-item').off('click.statusQuickItem').on('click.statusQuickItem', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const dropdownItem = $(this);
+                    const dropdown = dropdownItem.closest('.dropdown');
+                    const button = dropdown.find('.quick-status-btn');
+                    
+                    const orderId = button.data('order-id');
+                    const orderDbId = button.data('order-db-id');
+                    const statusId = dropdownItem.data('status-id');
+                    const statusName = dropdownItem.data('status-name');
+                    const statusColor = dropdownItem.data('status-color');
+                    const statusCode = dropdownItem.data('status-code') || '';
+                    
+                    if (window.debugLog) window.debugLog('Клик по статусу:', {
+                        orderId,
+                        orderDbId,
+                        statusId,
+                        statusName,
+                        statusColor,
+                        statusCode
+                    });
+                    
+                    // Обновляем кнопку визуально
+                    button.text(statusName);
+                    button.css({
+                        'background-color': statusColor,
+                        'border-color': statusColor
+                    });
+                    button.data('status-id', statusId);
+                    button.data('status-color', statusColor);
+                    
+                    // Обновляем активный элемент в меню
+                    dropdown.find('.status-dropdown-item').removeClass('active');
+                    dropdownItem.addClass('active');
+                    closeAllStatusMenus();
+                    
+                    // Вызываем функцию обновления статуса
+                    if (window.updateOrderStatus) {
+                        updateOrderStatus(button[0], orderId, orderDbId, statusId, statusName, statusColor, statusCode);
+                    }
+                });
+
+                $(document).off('click.statusMenu').on('click.statusMenu', function(e) {
+                    const target = e.target;
+                    const targetEl = target && target.nodeType === 1 ? target : (target && target.parentElement ? target.parentElement : null);
+                    if (targetEl && targetEl.closest && targetEl.closest('.quick-status-btn, .status-dropdown-menu')) {
+                        return;
+                    }
+                    closeAllStatusMenus();
+                });
+                $(window).off('resize.statusMenu scroll.statusMenu').on('resize.statusMenu scroll.statusMenu', function() {
+                    closeAllStatusMenus();
+                });
+            }
+            
+            // Вызываем инициализацию сразу после загрузки
+            initQuickStatusSelects();
+            
+            {% endif %}
+
+            // Автоматический поиск для Kanban view (как в registry)
+            {% if view == 'kanban' %}
+            let kanbanSearchTimeout;
+            let lastKanbanSearchValue = '';
+            
+            function filterKanbanCards(searchValue) {
+                if (!searchValue) {
+                    // Показываем все карточки
+                    $('.kanban-card').show();
+                    return;
+                }
+                
+                // Нормализуем поисковый запрос (используем ту же функцию, что и в registry)
+                const normalizedSearch = normalizeSearchQuery(searchValue);
+                const searchTerms = normalizedSearch.toLowerCase().split(' ').filter(term => term.length > 0);
+                
+                $('.kanban-card').each(function() {
+                    const card = $(this);
+                    const searchData = card.attr('data-search') || '';
+                    const searchDataLower = searchData.toLowerCase();
+                    
+                    let found = false;
+                    // Проверяем все варианты поиска (7 и 8 для телефонов)
+                    for (let i = 0; i < searchTerms.length; i++) {
+                        if (searchTerms[i] && searchDataLower.indexOf(searchTerms[i]) !== -1) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    // Также проверяем прямой поиск по исходному запросу
+                    if (!found && searchValue.toLowerCase()) {
+                        if (searchDataLower.indexOf(searchValue.toLowerCase()) !== -1) {
+                            found = true;
+                        }
+                    }
+                    
+                    if (found) {
+                        card.show();
+                    } else {
+                        card.hide();
+                    }
+                });
+            }
+            
+            $('#searchInputKanban').on('input', function() {
+                clearTimeout(kanbanSearchTimeout);
+                const searchValue = $(this).val().trim();
+                
+                // Если значение не изменилось, не выполняем поиск
+                if (searchValue === lastKanbanSearchValue) {
+                    return;
+                }
+                
+                kanbanSearchTimeout = setTimeout(function() {
+                    const currentValue = $('#searchInputKanban').val().trim();
+                    if (currentValue !== lastKanbanSearchValue) {
+                        lastKanbanSearchValue = currentValue;
+                        filterKanbanCards(currentValue);
+                    }
+                }, 1000); // Задержка 1 секунда (как в registry)
+            });
+            {% endif %}
+
+            // Автоматическая отправка формы фильтров для Registry view
+            {% if view == 'registry' %}
+            let registryFiltersTimeout;
+            let lastRegistryFiltersState = '';
+            
+            function getRegistryFiltersState() {
+                const form = document.getElementById('registryFiltersForm');
+                if (!form) return '';
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    if (value) params.append(key, value);
+                }
+                return params.toString();
+            }
+            
+            function submitRegistryFilters() {
+                const form = document.getElementById('registryFiltersForm');
+                if (form) {
+                    // Добавляем поисковый запрос, если он есть
+                    const searchValue = $('#searchInput').val().trim();
+                    const url = new URL(form.action, window.location.origin);
+                    const formData = new FormData(form);
+                    for (const [key, value] of formData.entries()) {
+                        if (value) url.searchParams.set(key, value);
+                    }
+                    if (searchValue) {
+                        url.searchParams.set('q', searchValue);
+                    }
+                    window.location.href = url.toString();
+                }
+            }
+            
+            $('#registryFiltersForm .filter-field').on('change', function() {
+                clearTimeout(registryFiltersTimeout);
+                const currentState = getRegistryFiltersState();
+                
+                // Если состояние не изменилось, не отправляем
+                if (currentState === lastRegistryFiltersState) {
+                    return;
+                }
+                
+                registryFiltersTimeout = setTimeout(function() {
+                    const newState = getRegistryFiltersState();
+                    if (newState !== lastRegistryFiltersState) {
+                        lastRegistryFiltersState = newState;
+                        submitRegistryFilters();
+                    }
+                }, 1000); // Задержка 1 секунда
+            });
+            
+            // Инициализируем начальное состояние
+            lastRegistryFiltersState = getRegistryFiltersState();
+            {% endif %}
+
+            // Автоматическая отправка формы фильтров для Kanban view
+            {% if view == 'kanban' %}
+            let kanbanFiltersTimeout;
+            let lastKanbanFiltersState = '';
+            
+            function getKanbanFiltersState() {
+                const form = document.getElementById('kanbanFiltersForm');
+                if (!form) return '';
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    if (value) params.append(key, value);
+                }
+                return params.toString();
+            }
+            
+            function submitKanbanFilters() {
+                const form = document.getElementById('kanbanFiltersForm');
+                if (form) {
+                    // Добавляем поисковый запрос, если он есть
+                    const searchValue = $('#searchInputKanban').val().trim();
+                    const url = new URL(form.action, window.location.origin);
+                    const formData = new FormData(form);
+                    for (const [key, value] of formData.entries()) {
+                        if (value) url.searchParams.set(key, value);
+                    }
+                    if (searchValue) {
+                        url.searchParams.set('q', searchValue);
+                    }
+                    window.location.href = url.toString();
+                }
+            }
+            
+            $('#kanbanFiltersForm .filter-field').on('change', function() {
+                clearTimeout(kanbanFiltersTimeout);
+                const currentState = getKanbanFiltersState();
+                
+                // Если состояние не изменилось, не отправляем
+                if (currentState === lastKanbanFiltersState) {
+                    return;
+                }
+                
+                kanbanFiltersTimeout = setTimeout(function() {
+                    const newState = getKanbanFiltersState();
+                    if (newState !== lastKanbanFiltersState) {
+                        lastKanbanFiltersState = newState;
+                        submitKanbanFilters();
+                    }
+                }, 1000); // Задержка 1 секунда
+            });
+            
+            // Инициализируем начальное состояние
+            lastKanbanFiltersState = getKanbanFiltersState();
+            {% endif %}
+
+            // Инициализация выпадающих меню Bootstrap 5
+            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle:not(.quick-status-btn)'));
+            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
+
+            // Управление видимостью колонок (только для registry view)
+            {% if view == 'registry' %}
+            const columnToggles = document.querySelectorAll('.column-toggle');
+
+            function getCurrentColumnIndex(colIndex) {
+                if (ordersTable && ordersTable.colReorder && typeof ordersTable.colReorder.transpose === 'function') {
+                    return ordersTable.colReorder.transpose(colIndex, 'toCurrent');
+                }
+                return colIndex;
+            }
+            
+            function toggleColumn(colIndex, isVisible) {
+                // Используем API DataTables для скрытия/показа колонок
+                if (ordersTable) {
+                    var currentIndex = getCurrentColumnIndex(colIndex);
+                    var column = ordersTable.column(currentIndex);
+                    if (column && column.length) {
+                        column.visible(isVisible, false);
+                        ordersTable.columns.adjust();
+                        updateOrdersTableScrollSpacer();
+                    }
+                }
+            }
+            
+            function restoreColumnVisibility() {
+                // Восстанавливаем видимость колонок после перерисовки DataTables
+                if (columnToggles.length) {
+                    var hasChanges = false;
+                    columnToggles.forEach(toggle => {
+                        const colIndex = parseInt(toggle.getAttribute('data-column'));
+                        const isVisible = toggle.checked;
+                        var currentIndex = getCurrentColumnIndex(colIndex);
+                        var column = ordersTable.column(currentIndex);
+                        if (column && column.length && column.visible() !== isVisible) {
+                            column.visible(isVisible, false);
+                            hasChanges = true;
+                        }
+                    });
+                    if (hasChanges) {
+                        // В drawCallback нельзя вызывать draw(), иначе получаем цикл запросов.
+                        ordersTable.columns.adjust();
+                        updateOrdersTableScrollSpacer();
+                    }
+                }
+            }
+            
+            if (columnToggles.length) {
+                // Загружаем сохраненные настройки колонок
+                const savedColumns = localStorage.getItem('ordersTableColumns');
+                if (savedColumns) {
+                    try {
+                        const columns = JSON.parse(savedColumns);
+                        columnToggles.forEach(toggle => {
+                            const colIndex = parseInt(toggle.getAttribute('data-column'));
+                            if (columns.hasOwnProperty(colIndex)) {
+                                toggle.checked = columns[colIndex];
+                                toggleColumn(colIndex, columns[colIndex]);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Ошибка загрузки настроек колонок:', e);
+                    }
+                }
+                
+                // Синхронизируем чекбоксы с фактической видимостью таблицы
+                // (на случай старого/битого состояния в браузере).
+                columnToggles.forEach(toggle => {
+                    const colIndex = parseInt(toggle.getAttribute('data-column'));
+                    var currentIndex = getCurrentColumnIndex(colIndex);
+                    var column = ordersTable.column(currentIndex);
+                    if (column && column.length) {
+                        toggle.checked = column.visible();
+                    }
+                });
+
+                columnToggles.forEach(toggle => {
+                    toggle.addEventListener('change', function() {
+                        const colIndex = parseInt(toggle.getAttribute('data-column'));
+                        const isVisible = toggle.checked;
+                        toggleColumn(colIndex, isVisible);
+                        saveColumnSettings();
+                    });
+                });
+
+                function saveColumnSettings() {
+                    const settings = {};
+                    columnToggles.forEach(toggle => {
+                        const colIndex = parseInt(toggle.getAttribute('data-column'));
+                        settings[colIndex] = toggle.checked;
+                    });
+                    localStorage.setItem('ordersTableColumns', JSON.stringify(settings));
+                }
+            }
+            
+            // Ранее здесь инициализировалось всплывающее превью заявки при наведении на строку.
+            // Сейчас превью отключено по требованию, оставляем только подсветку строки за счёт CSS.
+            {% endif %}
+        });
+
+        const CLOSED_PRINT_MODE = '{{ close_print_mode or "choice" }}';
+
+        function handleClosedPrintFromAllOrders(orderUuid, openPaymentModal) {
+            if (!orderUuid) return;
+            const mode = String(CLOSED_PRINT_MODE || 'choice');
+            const target = mode === 'choice' ? 'choice' : mode;
+            let url = `/order/${encodeURIComponent(orderUuid)}?auto_print=${encodeURIComponent(target)}`;
+            if (openPaymentModal) {
+                url += '&open_payment_modal=1';
+            }
+            window.open(url, '_blank');
+        }
+
+        // Функция для быстрого обновления статуса заявки (глобальная)
+        window.updateOrderStatus = async function(buttonElement, orderId, orderDbId, statusId, statusName, statusColor, statusCode) {
+            if (window.debugLog) window.debugLog('updateOrderStatus вызвана:', {
+                orderId,
+                orderDbId,
+                statusId,
+                statusName,
+                statusColor,
+                statusCode,
+                buttonElement: buttonElement.tagName
+            });
+            
+            // Если функция вызвана со старым API (select), преобразуем в новый формат
+            if (buttonElement.tagName === 'SELECT') {
+                statusId = buttonElement.value;
+                const selectedOption = buttonElement.options[buttonElement.selectedIndex];
+                statusName = selectedOption.text;
+                statusColor = selectedOption.dataset.color || buttonElement.dataset.statusColor || '#6c757d';
+                statusCode = selectedOption.dataset.code || 'unknown';
+                
+                // Находим соответствующий button в том же row
+                const row = buttonElement.closest('tr');
+                buttonElement = row.querySelector('.quick-status-btn');
+                if (!buttonElement) {
+                    if (window.debugLog) window.debugLog('ERROR: Не найден button элемент');
+                    return;
+                }
+            }
+            
+            const originalStatusId = buttonElement.dataset.statusId || '';
+            const originalStatusName = buttonElement.textContent.trim();
+            const originalStatusColor = buttonElement.dataset.statusColor || '#6c757d';
+            
+            if (window.debugLog) window.debugLog('Оригинальные значения:', {
+                originalStatusId,
+                originalStatusName,
+                originalStatusColor
+            });
+            
+            // Сохраняем оригинальное значение для отката при ошибке
+            if (!buttonElement.dataset.originalStatusId) {
+                buttonElement.dataset.originalStatusId = originalStatusId;
+                buttonElement.dataset.originalStatusName = originalStatusName;
+                buttonElement.dataset.originalStatusColor = originalStatusColor;
+            }
+            
+            // Визуальная индикация загрузки
+            buttonElement.disabled = true;
+            buttonElement.style.opacity = '0.6';
+            buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Обновление...';
+            
+            try {
+                // Обрабатываем statusId - может быть пустой строкой, null, undefined или числом
+                let statusIdValue = null;
+                if (statusId && statusId !== '' && statusId !== 'null' && statusId !== 'undefined') {
+                    const parsed = parseInt(statusId);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        statusIdValue = parsed;
+                    }
+                }
+                
+                if (window.debugLog) window.debugLog('Подготовка запроса:', {
+                    url: `/api/order/${encodeURIComponent(orderId)}/status`,
+                    statusId: statusId,
+                    statusIdValue: statusIdValue,
+                    requestBody: { status_id: statusIdValue }
+                });
+                
+                const response = await fetch(`/api/order/${encodeURIComponent(orderId)}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status_id: statusIdValue
+                    })
+                });
+                
+                if (window.debugLog) window.debugLog('Ответ сервера:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    headers: Object.fromEntries(response.headers.entries())
+                });
+                
+                // Получаем текст ответа для отладки
+                const responseText = await response.text();
+                if (window.debugLog) window.debugLog('Текст ответа (raw):', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                    if (window.debugLog) window.debugLog('Данные ответа (parsed):', data);
+                } catch (e) {
+                    if (window.debugLog) window.debugLog('ERROR: Не удалось распарсить JSON:', e, responseText);
+                    throw new Error(`Ошибка парсинга ответа сервера: ${responseText.substring(0, 200)}`);
+                }
+                
+                // Проверяем статус ответа
+                if (!response.ok) {
+                    const errorMsg = data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
+                    if (window.debugLog) window.debugLog('ERROR: Ответ сервера с ошибкой:', {
+                        status: response.status,
+                        error: errorMsg,
+                        data: data
+                    });
+                    throw new Error(errorMsg);
+                }
+                
+                // Проверяем успешность операции
+                if (data && data.success) {
+                    // Обновляем визуальное отображение кнопки
+                    const finalStatusColor = data.status_color || statusColor || '#6c757d';
+                    const finalStatusName = data.status_name || statusName || 'Не указан';
+                    
+                    buttonElement.textContent = finalStatusName;
+                    buttonElement.style.backgroundColor = finalStatusColor;
+                    buttonElement.style.borderColor = finalStatusColor;
+                    buttonElement.dataset.statusId = statusId || '';
+                    buttonElement.dataset.statusColor = finalStatusColor;
+                    
+                    // Обновляем цвет в родительской ячейке
+                    const statusCell = buttonElement.closest('.status-cell');
+                    if (statusCell) {
+                        statusCell.style.setProperty('--status-color', finalStatusColor);
+                    }
+                    
+                    // Функция для преобразования hex в RGB
+                    function hexToRgb(hex) {
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                        return result ? {
+                            r: parseInt(result[1], 16),
+                            g: parseInt(result[2], 16),
+                            b: parseInt(result[3], 16)
+                        } : { r: 108, g: 117, b: 125 }; // По умолчанию серый цвет
+                    }
+                    
+                    // Показываем уведомление по центру сверху с цветом статуса
+                    const toast = document.createElement('div');
+                    toast.className = 'alert alert-dismissible fade show position-fixed';
+                    // Используем цвет статуса для фона
+                    const statusBgColor = finalStatusColor || '#6c757d';
+                    // Определяем цвет текста (светлый или темный) в зависимости от яркости фона
+                    const rgb = hexToRgb(statusBgColor);
+                    const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+                    const textColor = brightness > 128 ? '#000' : '#fff';
+                    
+                    toast.style.cssText = `
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        z-index: 9999;
+                        min-width: 300px;
+                        max-width: 600px;
+                        background-color: ${statusBgColor};
+                        color: ${textColor};
+                        border: 2px solid ${statusBgColor};
+                        border-radius: 8px;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                        padding: 15px 25px;
+                        font-size: 14px;
+                        text-align: center;
+                    `;
+                    
+                    // Используем числовой ID заявки вместо UUID
+                    const displayOrderId = orderDbId || orderId;
+                    toast.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <i class="fas fa-check-circle" style="font-size: 20px;"></i>
+                            <div>
+                                <strong style="display: block; margin-bottom: 3px;">Статус обновлен!</strong>
+                                <span>Заявка #${displayOrderId} теперь в статусе "${finalStatusName}"</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" style="filter: ${brightness > 128 ? 'invert(1)' : 'invert(0)'};"></button>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    // Автоматически скрываем уведомление через 3 секунды с анимацией
+                    setTimeout(() => {
+                        toast.style.opacity = '0';
+                        toast.style.transition = 'opacity 0.3s ease-out';
+                        setTimeout(() => {
+                            toast.remove();
+                        }, 300);
+                    }, 3000);
+                    
+                    // Обновляем оригинальное значение
+                    buttonElement.dataset.originalStatusId = statusId || '';
+                    buttonElement.dataset.originalStatusName = finalStatusName;
+                    buttonElement.dataset.originalStatusColor = finalStatusColor;
+
+                    const closedByCode = String(statusCode || '').toLowerCase() === 'closed';
+                    const closedByName = String(finalStatusName || '').toLowerCase().includes('закры');
+                    if (closedByCode || closedByName) {
+                        handleClosedPrintFromAllOrders(orderId, !!data.triggers_payment_modal);
+                    }
+                } else {
+                    if (window.debugLog) window.debugLog('ERROR: Ошибка в ответе сервера:', data);
+                    // Откатываем изменение при ошибке
+                    buttonElement.textContent = buttonElement.dataset.originalStatusName || originalStatusName;
+                    buttonElement.style.backgroundColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
+                    buttonElement.style.borderColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
+                    buttonElement.dataset.statusId = buttonElement.dataset.originalStatusId || originalStatusId;
+                    
+                    // Показываем детальное сообщение об ошибке
+                    const errorMsg = data.error || data.message || 'Не удалось обновить статус';
+                    console.error('Ошибка обновления статуса:', {
+                        orderId: orderId,
+                        statusId: statusId,
+                        statusIdValue: statusIdValue,
+                        response: data,
+                        error: errorMsg
+                    });
+                    alert('Ошибка обновления статуса: ' + errorMsg);
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении статуса:', error);
+                if (window.debugLog) window.debugLog('EXCEPTION:', {
+                    error: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+                // Откатываем изменение при ошибке
+                buttonElement.textContent = buttonElement.dataset.originalStatusName || originalStatusName;
+                buttonElement.style.backgroundColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
+                buttonElement.style.borderColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
+                buttonElement.dataset.statusId = buttonElement.dataset.originalStatusId || originalStatusId;
+                alert('Произошла ошибка при обновлении статуса');
+            } finally {
+                // Восстанавливаем элемент
+                buttonElement.disabled = false;
+                buttonElement.style.opacity = '1';
+            }
+        }
+    </script>
+{% endblock %}

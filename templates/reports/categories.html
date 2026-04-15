@@ -1,0 +1,205 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по статьям доходов и расходов — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+        <div class="row g-2 mt-2">
+            <div class="col-md-3">
+                <select name="category_type" class="form-select">
+                    <option value="">Все типы</option>
+                    <option value="income" {% if category_type == 'income' %}selected{% endif %}>Доходы</option>
+                    <option value="expense" {% if category_type == 'expense' %}selected{% endif %}>Расходы</option>
+                </select>
+            </div>
+        </div>
+    </form>
+
+                <div class="mb-3 d-flex justify-content-end">
+                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#categoriesCalculationMethod" aria-expanded="false" aria-controls="categoriesCalculationMethod">
+                        <i class="fas fa-question-circle me-1"></i>Методика расчета
+                    </button>
+                </div>
+                <div class="collapse mb-3" id="categoriesCalculationMethod">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <ul class="mb-0 small">
+                                <li><strong>Доходы/расходы:</strong> суммы считаются по выбранным категориям и периоду.</li>
+                                <li><strong>Баланс:</strong> <code>доходы - расходы</code>.</li>
+                                <li><strong>Статистика по статьям:</strong> агрегаты по категории (кол-во, сумма, среднее, минимум, максимум).</li>
+                                <li><strong>Фильтр типа:</strong> позволяет показать только доходные или расходные статьи.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Сводка -->
+                <div class="card mb-3">
+                    <div class="card-header bg-primary">
+                        <h3 class="card-title text-white"><i class="fas fa-info-circle me-2"></i>Сводка</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <p><strong>Операций:</strong> <span class="h5">{{ report.total_transactions }}</span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Доходы:</strong> <span class="h5 text-success">{{ report.total_income|round(2) }} ₽</span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Расходы:</strong> <span class="h5 text-danger">{{ report.total_expense|round(2) }} ₽</span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Баланс:</strong> 
+                                    <span class="h5 {% if report.total_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ report.total_balance|round(2) }} ₽
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статистика по категориям -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-chart-pie me-2"></i>Статистика по статьям</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Статья</th>
+                                        <th>Тип</th>
+                                        <th>Операций</th>
+                                        <th>Сумма</th>
+                                        <th>Средняя</th>
+                                        <th>Макс.</th>
+                                        <th>Мин.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cat in report.categories_stats %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge" style="background-color: {{ cat.category_color or '#6c757d' }};">
+                                                {{ cat.category_name }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if cat.category_type == 'income' %}
+                                                <span class="badge bg-success">Доход</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Расход</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ cat.transactions_count }}</td>
+                                        <td class="fw-bold {% if cat.category_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                            {{ cat.total_amount|round(2) }} ₽
+                                        </td>
+                                        <td>{{ cat.avg_amount|round(2) }} ₽</td>
+                                        <td>{{ cat.max_amount|round(2) }} ₽</td>
+                                        <td>{{ cat.min_amount|round(2) }} ₽</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if not report.categories_stats %}
+                                    <tr>
+                                        <td colspan="7" class="text-muted text-center">Нет данных за выбранный период</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Детализация операций -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-list me-2"></i>Детализация операций</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Дата</th>
+                                        <th>Статья</th>
+                                        <th>Тип</th>
+                                        <th>Сумма</th>
+                                        <th>Способ оплаты</th>
+                                        <th>Описание</th>
+                                        <th>Заявка</th>
+                                        <th>Клиент</th>
+                                        <th>Автор</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in report.transactions %}
+                                    <tr>
+                                        <td>{{ t.transaction_date|format_date(true) }}</td>
+                                        <td>
+                                            <span class="badge" style="background-color: {{ t.category_color or '#6c757d' }};">
+                                                {{ t.category_name }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if t.transaction_type == 'income' %}
+                                                <span class="badge bg-success">Доход</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Расход</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="fw-bold {% if t.transaction_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                            {{ t.amount|round(2) }} ₽
+                                        </td>
+                                        <td>
+                                            {% if t.payment_method == 'cash' %}
+                                                <span class="badge bg-success">Наличные</span>
+                                            {% elif t.payment_method == 'card' %}
+                                                <span class="badge bg-primary">Карта</span>
+                                            {% elif t.payment_method == 'transfer' %}
+                                                <span class="badge bg-info">Перевод</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ t.payment_method or '—' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if t.order_uuid and t.order_internal_id and t.description and t.order_uuid in (t.description or '') %}
+                                                {{ (t.description or '')|replace(t.order_uuid, t.order_internal_id) }}
+                                            {% else %}
+                                                {{ t.description or '—' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if t.order_uuid or t.order_internal_id %}
+                                            <a href="{{ url_for('orders.order_detail', order_id=t.order_uuid or t.order_internal_id) }}" class="text-primary text-decoration-none">#{{ t.order_internal_id or t.order_uuid }}</a>
+                                            {% else %}
+                                            <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if t.customer_id and t.client_name %}
+                                            <a href="{{ url_for('customers.client_detail', client_id=t.customer_id) }}" class="text-primary text-decoration-none">{{ t.client_name }}</a>
+                                            {% else %}
+                                            {{ t.client_name or '—' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ t.created_by_username or 'Система' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if not report.transactions %}
+                                    <tr>
+                                        <td colspan="9" class="text-muted text-center">Нет операций за выбранный период</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+{% endblock %}
+
