@@ -418,6 +418,7 @@ def api_dashboard():
 
 @bp.route('/api/dashboard/send-to-director', methods=['POST'])
 @login_required
+@permission_required('view_reports')
 def api_dashboard_send_to_director():
     """
     Отправляет сводный отчёт по компании на email директора (из настроек «Уведомления директору»).

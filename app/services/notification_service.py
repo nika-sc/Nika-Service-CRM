@@ -1002,6 +1002,7 @@ class NotificationService:
         try:
             from app.services.settings_service import SettingsService
             from app.services.dashboard_service import DashboardService
+            from app.services.finance_service import FinanceService
             from flask import current_app, render_template
 
             settings = SettingsService.get_general_settings() or {}
@@ -1017,9 +1018,41 @@ class NotificationService:
                     date_from=date_from,
                     date_to=date_to,
                 )
+                # Не мутируем объект из кеша DashboardService.
+                data = dict(data or {})
             except Exception as e:
                 logger.warning(f"Ошибка получения данных dashboard для письма: {e}")
                 return False, f"Не удалось сформировать отчёт: {e}"
+
+            # Добавляем в письмо состояние кассы (как на странице /finance/cash):
+            # остатки на конец периода по способам оплаты + подсказку «доложить в наличку».
+            period = data.get("period") or {}
+            period_from = period.get("current_from") or date_from
+            period_to = period.get("current_to") or date_to
+            payment_method_settings = SettingsService.get_payment_method_settings() or {}
+            cash_label = (payment_method_settings.get("cash_label") or "Наличные").strip()
+            transfer_label = (payment_method_settings.get("transfer_label") or "Перевод").strip()
+            try:
+                cash_summary = FinanceService.get_cash_summary(
+                    date_from=period_from,
+                    date_to=period_to,
+                ) or {}
+            except Exception as e:
+                logger.warning(f"Ошибка расчёта состояния кассы для письма директору: {e}")
+                cash_summary = {}
+
+            balance_by_method = cash_summary.get("balance_by_method") or {}
+            cash_balance_end = float(balance_by_method.get("cash", 0) or 0)
+            transfer_balance_end = float(balance_by_method.get("transfer", 0) or 0)
+            data["cash_state"] = {
+                "cash_label": cash_label,
+                "transfer_label": transfer_label,
+                "cash_balance_end": cash_balance_end,
+                "transfer_balance_end": transfer_balance_end,
+                "cash_topup_needed": max(0.0, -cash_balance_end),
+                "by_payment_method": cash_summary.get("by_payment_method") or {},
+                "opening_balance_by_method": cash_summary.get("opening_balance_by_method") or {},
+            }
 
             with current_app.app_context():
                 html_body = render_template('email/dashboard_report.html', data=data)

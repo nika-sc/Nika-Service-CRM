@@ -135,6 +135,56 @@
     </table>
     {% endif %}
 
+    {% if data and data.cash_state %}
+    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">Состояние кассы на конец периода</h2>
+    <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+        <tr style="background: #f5f5f5;">
+            <th style="text-align: left;">Показатель</th>
+            <th style="text-align: right;">Сумма</th>
+        </tr>
+        <tr>
+            <td>Остаток на конец периода: {{ data.cash_state.cash_label|default('Наличные') }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(data.cash_state.cash_balance_end|default(0)) }} ₽</td>
+        </tr>
+        <tr>
+            <td>Остаток на конец периода: {{ data.cash_state.transfer_label|default('Перевод') }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(data.cash_state.transfer_balance_end|default(0)) }} ₽</td>
+        </tr>
+        <tr>
+            <td><strong>Доложить в наличку (чтобы покрыть выплаты наличными, включая зарплату)</strong></td>
+            <td style="text-align: right;"><strong>{{ "%.2f"|format(data.cash_state.cash_topup_needed|default(0)) }} ₽</strong></td>
+        </tr>
+    </table>
+
+    <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+        <tr style="background: #f5f5f5;">
+            <th style="text-align: left;">Метод</th>
+            <th style="text-align: right;">На начало</th>
+            <th style="text-align: right;">Приход</th>
+            <th style="text-align: right;">Расход</th>
+            <th style="text-align: right;">На конец</th>
+        </tr>
+        {% set cash_open = (data.cash_state.opening_balance_by_method|default({})).get('cash', 0) %}
+        {% set cash_totals = (data.cash_state.by_payment_method|default({})).get('cash', {}) %}
+        <tr>
+            <td>{{ data.cash_state.cash_label|default('Наличные') }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(cash_open|default(0)) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format((cash_totals.income|default(0))) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format((cash_totals.expense|default(0))) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format(data.cash_state.cash_balance_end|default(0)) }} ₽</td>
+        </tr>
+        {% set transfer_open = (data.cash_state.opening_balance_by_method|default({})).get('transfer', 0) %}
+        {% set transfer_totals = (data.cash_state.by_payment_method|default({})).get('transfer', {}) %}
+        <tr>
+            <td>{{ data.cash_state.transfer_label|default('Перевод') }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(transfer_open|default(0)) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format((transfer_totals.income|default(0))) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format((transfer_totals.expense|default(0))) }} ₽</td>
+            <td style="text-align: right;">{{ "%.2f"|format(data.cash_state.transfer_balance_end|default(0)) }} ₽</td>
+        </tr>
+    </table>
+    {% endif %}
+
     {% if data and data.receivables and (data.receivables.total_debt|default(0)) > 0 %}
     <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">Дебиторская задолженность</h2>
     <p style="margin: 0 0 8px 0;">Всего: <strong>{{ "%.0f"|format(data.receivables.total_debt|default(0)) }} ₽</strong> (заказов с долгом: {{ data.receivables.orders_with_debt|default(0) }})</p>
