@@ -2235,28 +2235,10 @@ def order_detail(order_id):
         try:
             salary_profit = SalaryService.calculate_order_profit(order.id)
             salary_accruals = SalaryService.get_accruals_for_order(order.id) or []
-            # Если у статуса заявки включено начисление зарплаты:
-            # - создаем начисления при их отсутствии
-            # - пересчитываем, если после последнего начисления были изменения по заявке
-            if order_data['order'].get('status_id'):
-                with get_db_connection() as conn:
-                    cur = conn.cursor()
-                    cur.execute(
-                        'SELECT accrues_salary FROM order_statuses WHERE id = ?',
-                        (order_data['order']['status_id'],)
-                    )
-                    row = cur.fetchone()
-                    if row and row[0]:
-                        try:
-                            if not salary_accruals:
-                                SalaryService.accrue_salary_for_order(order.id)
-                                logger.info(f"Зарплата по заявке #{order.id} рассчитана при открытии карточки (начислений не было)")
-                            elif SalaryService.order_changed_since_last_accrual(order.id):
-                                SalaryService.accrue_salary_for_order(order.id, force_recalculate=True)
-                                logger.info(f"Зарплата по заявке #{order.id} пересчитана при открытии карточки (обнаружены изменения)")
-                            salary_accruals = SalaryService.get_accruals_for_order(order.id) or []
-                        except Exception as accrue_e:
-                            logger.warning(f"Не удалось автоматически начислить зарплату для заявки #{order.id}: {accrue_e}")
+            # Зарплату не начисляем и не пересчитываем при GET карточки заявки: просмотр не должен
+            # менять БД (иначе «поиск по заявкам» создаёт новые salary_accruals с сегодняшней датой).
+            # Начисление: смена статуса (OrderService), добавление оплаты (POST payments), явный POST
+            # /api/salary/recalculate/<order_id>.
             for a in salary_accruals:
                 amount_cents = int(a.get('amount_cents') or 0)
                 salary_totals['total_cents'] += amount_cents

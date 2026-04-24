@@ -22,15 +22,15 @@
                         </div>
                         <div class="mt-2">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="type" value="orders" id="filterOrders" checked>
+                                <input class="form-check-input" type="checkbox" name="type" value="orders" id="filterOrders"{% if type_filters %}{% if 'orders' in type_filters %} checked{% endif %}{% else %} checked{% endif %}>
                                 <label class="form-check-label" for="filterOrders">Заявки</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="type" value="customers" id="filterCustomers" checked>
+                                <input class="form-check-input" type="checkbox" name="type" value="customers" id="filterCustomers"{% if type_filters %}{% if 'customers' in type_filters %} checked{% endif %}{% else %} checked{% endif %}>
                                 <label class="form-check-label" for="filterCustomers">Клиенты</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="type" value="parts" id="filterParts" checked>
+                                <input class="form-check-input" type="checkbox" name="type" value="parts" id="filterParts"{% if type_filters %}{% if 'parts' in type_filters %} checked{% endif %}{% else %} checked{% endif %}>
                                 <label class="form-check-label" for="filterParts">Товары</label>
                             </div>
                         </div>
@@ -91,7 +91,7 @@
                                             <small>{{ part.price|default(0)|round(2) }} ₽</small>
                                         </div>
                                         <p class="mb-1">
-                                            {% if part.article %}Артикул: {{ part.article }}{% endif %}
+                                            {% if part.part_number %}Артикул: {{ part.part_number }}{% endif %}
                                             {% if part.category_name %} | {{ part.category_name }}{% endif %}
                                             {% if part.stock_quantity is not none %} | Остаток: {{ part.stock_quantity }}{% endif %}
                                         </p>

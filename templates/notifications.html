@@ -33,15 +33,17 @@
     const listEl = document.getElementById('notificationsPageList');
     const markAllBtn = document.getElementById('markAllReadBtnPage');
 
-    function escapeHtml(text) {
-        if (!text) return '';
+    var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (text) {
+        if (text == null || text === '') return '';
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = String(text);
         return div.innerHTML;
-    }
+    };
 
     function getEntityLink(entityType, entityId) {
-        const links = { 'order': '/order/' + entityId, 'customer': '/clients/' + entityId, 'part': '/warehouse/parts/' + entityId };
+        const id = parseInt(entityId, 10);
+        if (isNaN(id) || id < 1) return '';
+        const links = { 'order': '/order/' + id, 'customer': '/clients/' + id, 'part': '/warehouse/parts/' + id };
         return links[entityType] || '';
     }
 
@@ -77,14 +79,14 @@
             const isRead = notif.read_at !== null;
             const timeAgo = formatTimeAgo(notif.created_at);
             const entityLink = (notif.entity_type && notif.entity_id) ? getEntityLink(notif.entity_type, notif.entity_id) : '';
-            return '<div class="notification-page-item d-flex align-items-start gap-3 py-3 border-bottom' + (isRead ? '' : ' bg-light') + '" data-notification-id="' + notif.id + '">' +
+            return '<div class="notification-page-item d-flex align-items-start gap-3 py-3 border-bottom' + (isRead ? '' : ' bg-light') + '" data-notification-id="' + parseInt(notif.id, 10) + '">' +
                 '<div class="flex-grow-1">' +
                 '<div class="fw-semibold">' + escapeHtml(notif.title) + '</div>' +
                 '<div class="text-muted small">' + escapeHtml(notif.message) + '</div>' +
                 '<div class="mt-1 small text-muted">' + timeAgo +
                 (entityLink ? ' &middot; <a href="' + entityLink + '">Открыть</a>' : '') + '</div>' +
                 '</div>' +
-                (!isRead ? '<button type="button" class="btn btn-sm btn-outline-success mark-read-page-btn" data-id="' + notif.id + '"><i class="fas fa-check"></i></button>' : '') +
+                (!isRead ? '<button type="button" class="btn btn-sm btn-outline-success mark-read-page-btn" data-id="' + parseInt(notif.id, 10) + '"><i class="fas fa-check"></i></button>' : '') +
                 '</div>';
         }).join('');
 

@@ -26,6 +26,13 @@
         if (errorEl) { errorEl.classList.remove('d-none'); errorEl.textContent = msg || 'Ошибка загрузки данных'; }
     }
 
+    var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (str) {
+        if (str == null || str === '') return '';
+        var d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    };
+
     function formatDate(s) {
         if (!s) return '—';
         try {
@@ -36,7 +43,8 @@
     function formatPaymentType(pt) {
         if (!pt) return '—';
         var labels = { 'cash': 'Наличные', 'card': 'Карта', 'transfer': 'Перевод' };
-        return labels[(pt + '').toLowerCase()] || pt;
+        var key = (pt + '').toLowerCase();
+        return labels[key] || escapeHtml(pt);
     }
     function formatPaymentKindAndType(p) {
         var kind = (p.kind || '').toLowerCase();
@@ -62,14 +70,14 @@
         const paid = parseFloat(totals.paid || 0);
         const debt = parseFloat(totals.debt || 0);
         var html = '<div class="portal-receipt">';
-        html += '<div class="receipt-header">КВИТАНЦИЯ / ЧЕК<br>Заявка #' + (o.id || o.order_id || '') + '</div>';
-        html += '<p><strong>Устройство:</strong> ' + (deviceStr || '—') + '</p>';
-        html += '<p><strong>Модель:</strong> ' + (o.model || '—') + '</p>';
-        html += '<p><strong>Дата:</strong> ' + formatDate(o.created_at) + '</p><hr>';
+        html += '<div class="receipt-header">КВИТАНЦИЯ / ЧЕК<br>Заявка #' + escapeHtml(String(o.id || o.order_id || '')) + '</div>';
+        html += '<p><strong>Устройство:</strong> ' + escapeHtml(deviceStr || '—') + '</p>';
+        html += '<p><strong>Модель:</strong> ' + escapeHtml(o.model || '—') + '</p>';
+        html += '<p><strong>Дата:</strong> ' + escapeHtml(formatDate(o.created_at)) + '</p><hr>';
         if (services.length) {
             html += '<p><strong>Услуги:</strong></p><table>';
             services.forEach(function(s) {
-                html += '<tr><td>' + (s.name || s.service_name || '—') + '</td><td style="text-align:right">' + (s.price ? parseFloat(s.price).toFixed(2) : '0.00') + ' ₽</td></tr>';
+                html += '<tr><td>' + escapeHtml(s.name || s.service_name || '—') + '</td><td style="text-align:right">' + (s.price ? parseFloat(s.price).toFixed(2) : '0.00') + ' ₽</td></tr>';
             });
             html += '</table>';
         }
@@ -77,7 +85,9 @@
             html += '<p><strong>Запчасти:</strong></p><table>';
             parts.forEach(function(p) {
                 var pr = p.price ? (parseFloat(p.price) * (p.quantity || 1)).toFixed(2) : '0.00';
-                html += '<tr><td>' + (p.name || p.part_name || '—') + ' × ' + (p.quantity || 1) + '</td><td style="text-align:right">' + pr + ' ₽</td></tr>';
+                var q = parseInt(p.quantity, 10);
+                if (isNaN(q) || q < 1) q = 1;
+                html += '<tr><td>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + '</td><td style="text-align:right">' + pr + ' ₽</td></tr>';
             });
             html += '</table>';
         }
@@ -90,7 +100,7 @@
                 var lbl = formatPaymentKindAndType(p);
                 var amt = parseFloat(p.amount || 0);
                 var amtStr = ((p.kind || '').toLowerCase() === 'refund' ? '−' : '') + amt.toFixed(2) + ' ₽';
-                html += '<tr><td>' + formatDate(p.payment_date || p.created_at) + ' ' + lbl + '</td><td style="text-align:right">' + amtStr + '</td></tr>';
+                html += '<tr><td>' + escapeHtml(formatDate(p.payment_date || p.created_at)) + ' ' + lbl + '</td><td style="text-align:right">' + amtStr + '</td></tr>';
             });
             html += '</table>';
         }
@@ -120,14 +130,16 @@
         var servicesEl = document.getElementById('modalServices');
         if (servicesEl) {
             if (services.length) servicesEl.innerHTML = '<ul class="list-unstyled mb-0">' + services.map(function(s) {
-                return '<li>' + (s.name || s.service_name || '—') + (s.price ? ' — ' + parseFloat(s.price).toFixed(2) + ' ₽' : '') + '</li>';
+                return '<li>' + escapeHtml(s.name || s.service_name || '—') + (s.price ? ' — ' + parseFloat(s.price).toFixed(2) + ' ₽' : '') + '</li>';
             }).join('') + '</ul>';
             else servicesEl.textContent = '—';
         }
         var partsEl = document.getElementById('modalParts');
         if (partsEl) {
             if (parts.length) partsEl.innerHTML = '<ul class="list-unstyled mb-0">' + parts.map(function(p) {
-                return '<li>' + (p.name || p.part_name || '—') + ' × ' + (p.quantity || 1) + (p.price ? ' — ' + parseFloat(p.price).toFixed(2) + ' ₽' : '') + '</li>';
+                var q = parseInt(p.quantity, 10);
+                if (isNaN(q) || q < 1) q = 1;
+                return '<li>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + (p.price ? ' — ' + parseFloat(p.price).toFixed(2) + ' ₽' : '') + '</li>';
             }).join('') + '</ul>';
             else partsEl.textContent = '—';
         }
@@ -143,7 +155,7 @@
         var paymentsEl = document.getElementById('modalPayments');
         if (paymentsEl) {
             if (payments.length) paymentsEl.innerHTML = '<table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Сумма</th><th>Тип</th></tr></thead><tbody>' + payments.map(function(p) {
-                return '<tr><td>' + formatDate(p.payment_date || p.created_at) + '</td><td>' + formatPaymentAmount(p) + '</td><td>' + formatPaymentKindAndType(p) + '</td></tr>';
+                return '<tr><td>' + escapeHtml(formatDate(p.payment_date || p.created_at)) + '</td><td>' + formatPaymentAmount(p) + '</td><td>' + formatPaymentKindAndType(p) + '</td></tr>';
             }).join('') + '</tbody></table>';
             else paymentsEl.textContent = '—';
         }

@@ -535,12 +535,28 @@
                 </div>
             </div>
 
+<script type="application/json" id="salary-employee-page-config">{{ {
+    'employee_id': employee_id,
+    'role': role,
+    'can_register_payment': can_register_payment
+} | tojson }}</script>
 <script>
 function escapeHtml(text) {
     if (text == null) return '';
     const div = document.createElement('div');
     div.textContent = String(text);
     return div.innerHTML;
+}
+
+function safeOrderHref(orderId, orderUuid) {
+    if (orderId != null && String(orderId).trim() !== '' && /^[0-9]+$/.test(String(orderId).trim())) {
+        return '/order/' + String(parseInt(orderId, 10));
+    }
+    var u = orderUuid != null ? String(orderUuid).trim() : '';
+    if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(u)) {
+        return '/order/' + u;
+    }
+    return '#';
 }
 
 async function showAccrualDetailModal(orderId) {
@@ -558,7 +574,7 @@ async function showAccrualDetailModal(orderId) {
             return;
         }
         const d = data.details;
-        const orderHref = d.order_uuid ? '/order/' + d.order_uuid : (d.order_id ? '/order/' + d.order_id : '#');
+        const orderHref = safeOrderHref(d.order_id, d.order_uuid);
         const orderDisplay = d.order_id != null ? '#' + d.order_id : (d.order_uuid || '—');
         const fmt = (c) => ((c || 0) / 100).toFixed(2);
         const byRole = { master: [], manager: [] };
@@ -592,15 +608,16 @@ async function showAccrualDetailModal(orderId) {
             });
             return '<div class="mb-4"><h6 class="d-flex align-items-center gap-2 mb-2"><span class="badge ' + badgeClass + '">' + label + '</span><span class="fw-bold">Итого: ' + fmt(totalCents) + ' ₽</span></h6><table class="table table-sm table-bordered"><thead><tr><th>Сотрудник</th><th>За что</th><th>Сумма</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
         }
-        body.innerHTML = '<div class="mb-3"><a href="' + orderHref + '" class="fw-bold">Заявка ' + escapeHtml(orderDisplay) + '</a></div><div class="row mb-3"><div class="col-md-4"><strong>Выручка:</strong> ' + fmt(d.revenue_cents) + ' ₽</div><div class="col-md-4"><strong>Прибыль:</strong> ' + fmt(d.order_profit_cents) + ' ₽</div><div class="col-md-4"><strong>Руководителю:</strong> ' + fmt(d.owner_net_cents) + ' ₽</div></div><hr>' + roleBlock('master', 'Мастер', 'bg-primary') + roleBlock('manager', 'Менеджер', 'bg-info');
+        body.innerHTML = '<div class="mb-3"><a href="' + orderHref + '" class="fw-bold">Заявка ' + escapeHtml(String(orderDisplay)) + '</a></div><div class="row mb-3"><div class="col-md-4"><strong>Выручка:</strong> ' + fmt(d.revenue_cents) + ' ₽</div><div class="col-md-4"><strong>Прибыль:</strong> ' + fmt(d.order_profit_cents) + ' ₽</div><div class="col-md-4"><strong>Руководителю:</strong> ' + fmt(d.owner_net_cents) + ' ₽</div></div><hr>' + roleBlock('master', 'Мастер', 'bg-primary') + roleBlock('manager', 'Менеджер', 'bg-info');
     } catch (e) {
         body.innerHTML = '<p class="text-danger">Ошибка: ' + escapeHtml(e.message) + '</p>';
     }
 }
 
-const employeeId = {{ employee_id }};
-const employeeRole = '{{ role }}';
-const canRegisterPayment = {{ 'true' if can_register_payment else 'false' }};
+const _salaryEmployeePage = JSON.parse(document.getElementById('salary-employee-page-config').textContent);
+const employeeId = _salaryEmployeePage.employee_id;
+const employeeRole = String(_salaryEmployeePage.role != null ? _salaryEmployeePage.role : '');
+const canRegisterPayment = Boolean(_salaryEmployeePage.can_register_payment);
 let currentPeriod = 'today';
 let periodOwedCents = 0;
 let overallOwedCents = 0;
@@ -804,10 +821,11 @@ function renderAccruals(accruals) {
             ? `${accrual.rule_value}%` 
             : `${(accrual.rule_value || 0) / 100} ₽`;
         const orderNumber = accrual.order_id != null ? accrual.order_id : (accrual.order_number || 'N/A');
-        const orderHref = accrual.order_id != null ? `/order/${accrual.order_id}` : (accrual.order_uuid ? `/order/${accrual.order_uuid}` : '#');
-        const orderLink = orderHref !== '#' 
-            ? `<a href="${orderHref}" onclick="event.stopPropagation()">Заявка #${orderNumber}</a>`
-            : (orderNumber !== 'N/A' ? `Заявка #${orderNumber}` : 'N/A');
+        const orderHref = safeOrderHref(accrual.order_id, accrual.order_uuid);
+        const orderLinkText = orderNumber !== 'N/A' ? 'Заявка #' + orderNumber : 'N/A';
+        const orderLink = orderHref !== '#'
+            ? `<a href="${orderHref}" onclick="event.stopPropagation()">${escapeHtml(orderLinkText)}</a>`
+            : escapeHtml(orderLinkText);
         const paymentTypeLabels = {
             cash: 'Наличные',
             card: 'Карта',
@@ -823,17 +841,26 @@ function renderAccruals(accruals) {
         };
         const sourceLabel = accrual.is_payment_split
             ? 'Оплата'
-            : (sourceLabels[accrual.calculated_from] || '—');
+            : (sourceLabels[accrual.calculated_from] != null
+                ? sourceLabels[accrual.calculated_from]
+                : (accrual.calculated_from != null && accrual.calculated_from !== ''
+                    ? escapeHtml(String(accrual.calculated_from))
+                    : '—'));
+        const paymentTypeRaw = accrual.payment_type;
+        const paymentTypeShown = paymentTypeLabels[paymentTypeRaw] || (paymentTypeRaw ? escapeHtml(String(paymentTypeRaw)) : 'Оплата');
         const paymentInfo = accrual.is_payment_split
             ? `<div class="small text-muted mt-1">
-                    <i class="fas fa-credit-card me-1"></i>${paymentTypeLabels[accrual.payment_type] || (accrual.payment_type || 'Оплата')}
+                    <i class="fas fa-credit-card me-1"></i>${paymentTypeShown}
                     · ${((accrual.payment_amount_cents || 0) / 100).toFixed(2)} ₽
-                    ${accrual.payment_comment ? `· ${accrual.payment_comment}` : ''}
+                    ${accrual.payment_comment ? `· ${escapeHtml(String(accrual.payment_comment))}` : ''}
                </div>`
             : '';
         const orderId = accrual.order_id;
         const detailBtn = orderId ? `<button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation(); showAccrualDetailModal(${orderId})" title="Подробнее"><i class="fas fa-info-circle"></i></button>` : '';
-        const viewOrderHref = accrual.order_id != null ? `/order/${accrual.order_id}` : (accrual.order_uuid ? `/order/${accrual.order_uuid}` : null);
+        const viewOrderHref = (function () {
+            var h = safeOrderHref(accrual.order_id, accrual.order_uuid);
+            return h !== '#' ? h : null;
+        })();
         const viewBtn = viewOrderHref ? `<a href="${viewOrderHref}" class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation()">Просмотр</a>` : '';
         const dateStr = (accrual.created_at || accrual.payment_date || '').toString().substring(0, 10);
         const payoutBtn = (dateStr && typeof canRegisterPayment !== 'undefined' && canRegisterPayment) ? `<button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showAddPaymentModal('${dateStr}')" title="Зарегистрировать выплату в день закрытия заявки"><i class="fas fa-money-check-alt me-1"></i>Выплата</button>` : '';
@@ -885,7 +912,7 @@ function renderPayments(payments) {
             'bonus': 'Премия',
             'advance': 'Аванс'
         };
-        const typeLabel = typeLabels[payment.payment_type] || payment.payment_type;
+        const typeLabel = typeLabels[payment.payment_type] || escapeHtml(String(payment.payment_type || '—'));
         
         return `
             <tr>
@@ -893,8 +920,8 @@ function renderPayments(payments) {
                 <td class="fw-bold text-success">${amount.toFixed(2)} ₽</td>
                 <td>${period}</td>
                 <td>${typeLabel}</td>
-                <td>${payment.comment || '—'}</td>
-                <td>${payment.created_by_username || '—'}</td>
+                <td>${payment.comment ? escapeHtml(String(payment.comment)) : '—'}</td>
+                <td>${payment.created_by_username ? escapeHtml(String(payment.created_by_username)) : '—'}</td>
             </tr>
         `;
     }).join('');
@@ -938,9 +965,9 @@ function renderBonusesFines(bonuses, fines) {
                 <td class="fw-bold ${isBonus ? 'text-success' : 'text-danger'}">
                     ${isBonus ? '+' : '-'}${amount.toFixed(2)} ₽
                 </td>
-                <td>${item.reason || '—'}</td>
+                <td>${item.reason ? escapeHtml(String(item.reason)) : '—'}</td>
                 <td>${orderLink}</td>
-                <td>${item.created_by_username || '—'}</td>
+                <td>${item.created_by_username ? escapeHtml(String(item.created_by_username)) : '—'}</td>
             </tr>
         `;
     }).join('');
@@ -1384,7 +1411,7 @@ if (typeof showToast === 'undefined') {
         alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
         alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
         alertDiv.innerHTML = `
-            ${title ? `<strong>${title}:</strong> ` : ''}${message}
+            ${title ? `<strong>${escapeHtml(String(title))}:</strong> ` : ''}${escapeHtml(String(message))}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         document.body.appendChild(alertDiv);

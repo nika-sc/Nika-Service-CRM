@@ -16,18 +16,30 @@ bp = Blueprint('search', __name__, url_prefix='/search')
 def search_results():
     """Страница результатов поиска."""
     query = request.args.get('q', '').strip()
-    entity_types = request.args.getlist('type')  # ?type=orders&type=customers
-    
+    # Пустой список = «из шапки» — ищем по всем типам; непустой = фильтр с формы результатов.
+    type_filters = request.args.getlist('type')
+    entity_types = type_filters if type_filters else None
+
     if not query:
-        return render_template('search/results.html', query='', results={})
-    
+        return render_template(
+            'search/results.html',
+            query='',
+            results={},
+            type_filters=type_filters,
+        )
+
     results = SearchService.global_search(
         query=query,
         limit=50,
-        entity_types=entity_types if entity_types else None
+        entity_types=entity_types,
     )
-    
-    return render_template('search/results.html', query=query, results=results)
+
+    return render_template(
+        'search/results.html',
+        query=query,
+        results=results,
+        type_filters=type_filters,
+    )
 
 
 @bp.route('/api/autocomplete', methods=['GET'])

@@ -1404,6 +1404,12 @@
                 const preset = {{ preset|tojson if preset is defined else 'null' }};
                 const dateFrom = {{ date_from|tojson if date_from is defined else 'null' }};
                 const dateTo = {{ date_to|tojson if date_to is defined else 'null' }};
+                var esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (s) {
+                    if (s == null || s === '') return '';
+                    var d = document.createElement('div');
+                    d.textContent = String(s);
+                    return d.innerHTML;
+                };
                 sendBtn.disabled = true;
                 resultEl.style.display = 'none';
                 resultEl.className = 'mb-3';
@@ -1419,16 +1425,16 @@
                     resultEl.style.display = 'block';
                     if (ok && data.success) {
                         resultEl.className = 'mb-3 alert alert-success';
-                        resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (data.message || 'Отчёт отправлен на email директора.');
+                        resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + esc(data.message || 'Отчёт отправлен на email директора.');
                     } else {
                         resultEl.className = 'mb-3 alert alert-danger';
-                        resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + (data.error || 'Ошибка отправки.');
+                        resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + esc(data.error || 'Ошибка отправки.');
                     }
                 })
                 .catch(function(e) {
                     resultEl.style.display = 'block';
                     resultEl.className = 'mb-3 alert alert-danger';
-                    resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Ошибка сети: ' + (e.message || 'не удалось отправить запрос');
+                    resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Ошибка сети: ' + esc(e.message || 'не удалось отправить запрос');
                 })
                 .finally(function() { sendBtn.disabled = false; });
             });

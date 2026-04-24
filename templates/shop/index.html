@@ -648,24 +648,24 @@ document.addEventListener('DOMContentLoaded', function() {
     let customerSearchTimeout;
     let selectedCustomerData = null;
     
-    function escapeHtml(text) {
+    var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (text) {
         if (text == null || text === undefined) return '';
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
-    }
-    
-    // Функция отображения результатов поиска
+    };
+
+    // Функция отображения результатов поиска (payload в data-*, без inline JSON в onclick — XSS)
     function displaySearchResults(results) {
         const searchResults = document.getElementById('searchResults');
         if (!searchResults) return;
-        
+
         searchResults.innerHTML = results.map(item => `
-            <div class="search-result-item" onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+            <div class="search-result-item" role="button" tabindex="0" data-cart-item="${encodeURIComponent(JSON.stringify(item))}">
                 <div class="fw-bold">${escapeHtml(item.label)}</div>
                 <small class="text-muted">${item.type === 'service' ? 'Услуга' : 'Товар'}</small>
-                        </div>
-                    `).join('');
+            </div>
+        `).join('');
         searchResults.style.display = 'block';
     }
     
@@ -725,6 +725,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация при загрузке страницы
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
+    if (searchResults && !searchResults.dataset.shopSearchBound) {
+        searchResults.dataset.shopSearchBound = '1';
+        searchResults.addEventListener('click', function (e) {
+            const el = e.target.closest('.search-result-item[data-cart-item]');
+            if (!el) return;
+            try {
+                const item = JSON.parse(decodeURIComponent(el.getAttribute('data-cart-item')));
+                window.addToCart(item);
+            } catch (err) {
+                console.error('Некорректные данные позиции корзины', err);
+            }
+        });
+    }
     const cartItems = document.getElementById('cartItems');
     const totalSection = document.getElementById('totalSection');
     const customerSection = document.getElementById('customerSection');
@@ -734,6 +747,38 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const customerSearchInput = document.getElementById('customerSearchInput');
     const customerResults = document.getElementById('customerResults');
+    if (customerResults && !customerResults.dataset.shopCustomerBound) {
+        customerResults.dataset.shopCustomerBound = '1';
+        customerResults.addEventListener('click', function (e) {
+            if (e.target.closest('a.customer-link')) return;
+            const row = e.target.closest('.customer-result-item[data-customer-payload]');
+            if (!row) return;
+            try {
+                const c = JSON.parse(decodeURIComponent(row.getAttribute('data-customer-payload')));
+                window.selectCustomer(c);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+    const catalogServicesList = document.getElementById('catalogServicesList');
+    const catalogPartsList = document.getElementById('catalogPartsList');
+    function bindCatalogClicks(listEl) {
+        if (!listEl || listEl.dataset.shopCatalogBound) return;
+        listEl.dataset.shopCatalogBound = '1';
+        listEl.addEventListener('click', function (e) {
+            const a = e.target.closest('a.shop-catalog-add[data-cart-item]');
+            if (!a) return;
+            e.preventDefault();
+            try {
+                window.addToCart(JSON.parse(decodeURIComponent(a.getAttribute('data-cart-item'))));
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+    bindCatalogClicks(catalogServicesList);
+    bindCatalogClicks(catalogPartsList);
     const selectedCustomer = document.getElementById('selectedCustomer');
     const selectedCustomerName = document.getElementById('selectedCustomerName');
     const selectedCustomerPhone = document.getElementById('selectedCustomerPhone');
@@ -766,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.services && data.services.length > 0) {
                     servicesLoad.style.display = 'none';
                     servicesList.innerHTML = data.services.map(s => `
-                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2" onclick="event.preventDefault(); addToCart(${JSON.stringify(s).replace(/"/g, '&quot;')});">
+                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2 shop-catalog-add" data-cart-item="${encodeURIComponent(JSON.stringify(s))}">
                             ${escapeHtml(s.label)}
                         </a>
                     `).join('');
@@ -776,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.parts && data.parts.length > 0) {
                     partsLoad.style.display = 'none';
                     partsList.innerHTML = data.parts.map(p => `
-                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2" onclick="event.preventDefault(); addToCart(${JSON.stringify(p).replace(/"/g, '&quot;')});">
+                        <a href="#" class="list-group-item list-group-item-action list-group-item-sm py-2 shop-catalog-add" data-cart-item="${encodeURIComponent(JSON.stringify(p))}">
                             ${escapeHtml(p.label)}
                         </a>
                     `).join('');
@@ -834,16 +879,16 @@ document.addEventListener('DOMContentLoaded', function() {
         cartItems.innerHTML = cart.map((item, index) => `
                 <div class="cart-item">
                 <div class="cart-item-info">
-                    <div class="cart-item-name">${item.name}</div>
+                    <div class="cart-item-name">${escapeHtml(item.name)}</div>
                     <div class="cart-item-type">
                         ${item.type === 'service' ? '🔧 Услуга' : '📦 Товар'}
-                        ${item.sku ? ` (${item.sku})` : ''}
+                        ${item.sku ? ` (${escapeHtml(String(item.sku))})` : ''}
                         </div>
                     </div>
                     <div class="cart-item-price">${(item.price * item.quantity).toFixed(2)} ₽</div>
                 <input type="number" 
                        class="form-control cart-item-quantity" 
-                       value="${item.quantity}" 
+                       value="${parseInt(item.quantity, 10) || 1}" 
                        min="1" 
                        onchange="updateQuantity(${index}, this.value)">
                 <i class="fas fa-times cart-item-remove" onclick="removeFromCart(${index})"></i>
@@ -975,12 +1020,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function displayCustomerResults(customers) {
         customerResults.innerHTML = customers.map(customer => `
-            <div class="customer-result-item" onclick="selectCustomer(${JSON.stringify(customer).replace(/"/g, '&quot;')})">
+            <div class="customer-result-item" role="button" tabindex="0" data-customer-payload="${encodeURIComponent(JSON.stringify(customer))}">
                 <div class="customer-info">
                     <div class="customer-name">${escapeHtml(customer.name)}</div>
                     ${customer.phone ? `<div class="customer-phone">${escapeHtml(customer.phone)}</div>` : ''}
                 </div>
-                <a href="/clients/${customer.id}" class="customer-link" onclick="event.stopPropagation();" >
+                <a href="/clients/${parseInt(customer.id, 10) || 0}" class="customer-link" onclick="event.stopPropagation();" >
                     <i class="fas fa-external-link-alt"></i>
                 </a>
             </div>

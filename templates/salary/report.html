@@ -250,6 +250,18 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/** Ссылка на карточку заявки только для числового id или UUID (без javascript:/data: в href). */
+function safeOrderHref(orderId, orderUuid) {
+    if (orderId != null && String(orderId).trim() !== '' && /^[0-9]+$/.test(String(orderId).trim())) {
+        return '/order/' + String(parseInt(orderId, 10));
+    }
+    var u = orderUuid != null ? String(orderUuid).trim() : '';
+    if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(u)) {
+        return '/order/' + u;
+    }
+    return '#';
+}
+
 function formatDateYmd(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -449,7 +461,7 @@ function showAccrualDetailModal(orderId) {
     const orderAccruals = _salaryReportAccruals.filter(a => a.order_id === orderId);
     if (orderAccruals.length === 0) return;
     const first = orderAccruals[0];
-    const orderHref = first.order_uuid ? '/order/' + first.order_uuid : (first.order_id ? '/order/' + first.order_id : '#');
+    const orderHref = safeOrderHref(first.order_id, first.order_uuid);
     const orderDisplay = first.order_id != null ? '#' + first.order_id : (first.order_uuid || '—');
     const revenueCents = first.revenue_cents != null ? first.revenue_cents : 0;
     const profitCents = first.order_profit_cents != null ? first.order_profit_cents : 0;
@@ -499,7 +511,7 @@ function showAccrualDetailModal(orderId) {
     const body = document.getElementById('accrualDetailModalBody');
     body.innerHTML = `
         <div class="mb-3">
-            <a href="${orderHref}" class="fw-bold">Заявка ${orderDisplay}</a>
+            <a href="${orderHref}" class="fw-bold">Заявка ${escapeHtml(String(orderDisplay))}</a>
         </div>
         <div class="row mb-3">
             <div class="col-md-4"><strong>Выручка:</strong> ${fmt(revenueCents)} ₽</div>
@@ -570,9 +582,11 @@ function renderAccruals(accruals) {
             ? `${accrual.rule_value}%` 
             : `${(accrual.rule_value / 100).toFixed(2)} ₽`;
         
-        const orderHref = accrual.order_uuid ? `/order/${accrual.order_uuid}` : (accrual.order_id != null ? `/order/${accrual.order_id}` : '#');
+        const orderHref = safeOrderHref(accrual.order_id, accrual.order_uuid);
         const orderDisplay = accrual.order_id != null ? `#${accrual.order_id}` : (accrual.order_uuid || '—');
-        const orderLink = accrual.order_id != null ? `<a href="${orderHref}" onclick="event.stopPropagation()">${orderDisplay}</a>` : orderDisplay;
+        const orderLink = orderHref !== '#'
+            ? `<a href="${orderHref}" onclick="event.stopPropagation()">${escapeHtml(String(orderDisplay))}</a>`
+            : escapeHtml(String(orderDisplay));
         
         const revenueCents = accrual.revenue_cents != null ? accrual.revenue_cents : 0;
         const ownerNetCents = accrual.owner_net_cents != null ? accrual.owner_net_cents : 0;

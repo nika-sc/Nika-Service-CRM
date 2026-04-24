@@ -27,11 +27,14 @@
         return { input: input, autocomplete: autocomplete, form: form };
     }
 
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+    var escapeHtml = typeof window.escapeHtml === 'function'
+        ? window.escapeHtml
+        : function (text) {
+            if (text == null || text === '') return '';
+            var div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        };
 
     function fetchAutocomplete(query) {
         var box = document.querySelector('.mac-search-box');

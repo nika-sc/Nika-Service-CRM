@@ -821,6 +821,12 @@
 <script src="{{ url_for('static', filename='cdn/chart.js/4.4.0/chart.umd.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var escHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (s) {
+        if (s == null || s === '') return '';
+        var d = document.createElement('div');
+        d.textContent = String(s);
+        return d.innerHTML;
+    };
     // Данные для графиков
     const revenueData = {{ data.revenue_chart|tojson if data.revenue_chart else '{}' }};
     const ordersData = {{ data.orders_chart|tojson if data.orders_chart else '{}' }};
@@ -986,16 +992,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultEl.style.display = 'block';
                 if (ok && data.success) {
                     resultEl.className = 'mb-3 alert alert-success';
-                    resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (data.message || 'Отчёт отправлен на email директора.');
+                    resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + escHtml(data.message || 'Отчёт отправлен на email директора.');
                 } else {
                     resultEl.className = 'mb-3 alert alert-danger';
-                    resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + (data.error || 'Ошибка отправки.');
+                    resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + escHtml(data.error || 'Ошибка отправки.');
                 }
             })
             .catch(function(e) {
                 resultEl.style.display = 'block';
                 resultEl.className = 'mb-3 alert alert-danger';
-                resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Ошибка сети: ' + (e.message || 'не удалось отправить запрос');
+                resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Ошибка сети: ' + escHtml(e.message || 'не удалось отправить запрос');
             })
             .finally(function() { sendBtn.disabled = false; });
         });

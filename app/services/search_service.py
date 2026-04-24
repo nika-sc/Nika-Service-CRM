@@ -335,7 +335,16 @@ class SearchService:
         
         if not entity_type or entity_type == 'customers':
             customers = SearchService._search_customers(query, limit)
-            results.extend([{'type': 'customer', 'id': c['id'], 'text': f"{c['name']} ({c['phone']})"} for c in customers[:5]])
+            results.extend(
+                [
+                    {
+                        'type': 'customer',
+                        'id': c['id'],
+                        'text': f"{c.get('name') or '—'} ({c.get('phone') or '—'})",
+                    }
+                    for c in customers[:5]
+                ]
+            )
         
         if not entity_type or entity_type == 'parts':
             parts = SearchService._search_parts(query, limit)

@@ -613,22 +613,6 @@
                                                 <i class="fas fa-plus me-1"></i> Новая заявка
                                             </a>
                                         </div>
-                                        <!-- Поиск (DataTables server-side) -->
-                                        <div class="flex-grow-1" style="min-width: 10rem; max-width: 20rem;">
-                                            <div class="d-flex gap-1 align-items-center">
-                                                <input type="text"
-                                                       id="searchInput"
-                                                       class="form-control form-control-sm"
-                                                       value="{{ search_query }}"
-                                                       placeholder="Поиск: клиент, телефон, №…"
-                                                       autocomplete="off">
-                                                {% if search_query %}
-                                                <a href="/all_orders?view=registry" class="btn btn-outline-secondary btn-sm flex-shrink-0 px-2" title="Сбросить поиск">
-                                                    <i class="fas fa-times"></i>
-                                                </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
                                         <!-- Форма сортировки справа -->
                                         <form method="get" action="/all_orders" id="registryFiltersForm" class="d-flex align-items-center gap-2 ms-lg-auto flex-wrap flex-lg-nowrap">
                                             <input type="hidden" name="view" value="registry">
@@ -874,22 +858,6 @@
                                             <a href="/add_order" class="btn btn-success btn-sm">
                                                 <i class="fas fa-plus me-1"></i> Новая заявка
                                             </a>
-                                        </div>
-                                        <!-- Поиск по канбану (клиентский фильтр карточек) -->
-                                        <div class="flex-grow-1" style="min-width: 10rem; max-width: 20rem;">
-                                            <div class="d-flex gap-1 align-items-center">
-                                                <input type="text"
-                                                       id="searchInputKanban"
-                                                       class="form-control form-control-sm"
-                                                       value="{{ search_query }}"
-                                                       placeholder="Поиск: клиент, телефон, №…"
-                                                       autocomplete="off">
-                                                {% if search_query %}
-                                                <a href="/all_orders?view=kanban" class="btn btn-outline-secondary btn-sm flex-shrink-0 px-2" title="Сбросить поиск">
-                                                    <i class="fas fa-times"></i>
-                                                </a>
-                                                {% endif %}
-                                            </div>
                                         </div>
                                         <!-- Форма сортировки справа -->
                                         <form method="get" action="/all_orders" id="kanbanFiltersForm" class="d-flex align-items-center gap-2 ms-lg-auto flex-wrap flex-lg-nowrap">
@@ -1401,48 +1369,6 @@
             
             debugLog('Страница загружена, инициализация компонентов');
             
-            /**
-             * Нормализует поисковый запрос для телефонов
-             * Создает варианты с 7 и 8 для поиска по российским номерам
-             * 
-             * @param {string} query - Поисковый запрос
-             * @returns {string} - Нормализованный запрос с вариантами телефона
-             */
-            function normalizeSearchQuery(query) {
-                if (!query) return '';
-                
-                // Убираем все пробелы, дефисы, скобки и другие символы
-                const cleaned = query.replace(/[\s\-\(\)\+]/g, '');
-                
-                // Если это похоже на номер телефона (начинается с 8 или 7, или только цифры длиной 10-11)
-                if (/^[78]?\d{10,11}$/.test(cleaned) || /^\d{10,11}$/.test(cleaned)) {
-                    let digits = cleaned;
-                    
-                    // Если начинается с 8 и длина 11, заменяем на 7
-                    if (digits.startsWith('8') && digits.length === 11) {
-                        digits = '7' + digits.substring(1);
-                    }
-                    // Если начинается с 8 и длина 10, добавляем 7 в начало
-                    else if (digits.startsWith('8') && digits.length === 10) {
-                        digits = '7' + digits;
-                    }
-                    // Если не начинается с 7 и длина 10, добавляем 7
-                    else if (!digits.startsWith('7') && digits.length === 10) {
-                        digits = '7' + digits;
-                    }
-                    // Если не начинается с 7 и длина 11, заменяем первую цифру на 7
-                    else if (!digits.startsWith('7') && digits.length === 11) {
-                        digits = '7' + digits.substring(1);
-                    }
-                    
-                    // Возвращаем нормализованный номер с 7 и вариант с 8 для поиска
-                    const with8 = digits.startsWith('7') ? '8' + digits.substring(1) : digits;
-                    return digits + ' ' + with8;
-                }
-                
-                return query;
-            }
-            
             // Инициализация DataTables для таблицы заявок (только для registry view)
             {% if view == 'registry' %}
             // Проверяем, что таблица существует и имеет правильную структуру
@@ -1651,8 +1577,8 @@
                         columnToggleContainer.css('margin-left', '10px');
                         lengthContainer.append(columnToggleContainer);
                     }
-                    // Применяем начальный поиск из поля (если страница открыта с ?q=...)
-                    const initialSearch = ($('#searchInput').val() || '').trim();
+                    // Начальный поиск из ?q= (глобальный поиск в шапке ведёт на /search; здесь — только URL)
+                    const initialSearch = (new URLSearchParams(window.location.search).get('q') || '').trim();
                     if (initialSearch) {
                         this.api().search(initialSearch).draw();
                     }
@@ -1783,23 +1709,6 @@
             }
             {% endif %}
 
-            // Автоматический поиск с задержкой для registry view (как в /clients)
-            {% if view == 'registry' %}
-            let searchTimeout;
-            let lastSearchValue = '';
-            $('#searchInput').on('input', function() {
-                clearTimeout(searchTimeout);
-                const searchValue = $(this).val().trim();
-                
-                searchTimeout = setTimeout(function() {
-                    lastSearchValue = searchValue;
-                    if (ordersTable) {
-                        ordersTable.search(searchValue).draw();
-                    }
-                }, 300);
-            });
-            {% endif %}
-
             /**
              * Инициализация быстрой смены статуса заявки
              * Обрабатывает клики по элементам выпадающего меню статусов
@@ -1913,70 +1822,6 @@
             
             {% endif %}
 
-            // Автоматический поиск для Kanban view (как в registry)
-            {% if view == 'kanban' %}
-            let kanbanSearchTimeout;
-            let lastKanbanSearchValue = '';
-            
-            function filterKanbanCards(searchValue) {
-                if (!searchValue) {
-                    // Показываем все карточки
-                    $('.kanban-card').show();
-                    return;
-                }
-                
-                // Нормализуем поисковый запрос (используем ту же функцию, что и в registry)
-                const normalizedSearch = normalizeSearchQuery(searchValue);
-                const searchTerms = normalizedSearch.toLowerCase().split(' ').filter(term => term.length > 0);
-                
-                $('.kanban-card').each(function() {
-                    const card = $(this);
-                    const searchData = card.attr('data-search') || '';
-                    const searchDataLower = searchData.toLowerCase();
-                    
-                    let found = false;
-                    // Проверяем все варианты поиска (7 и 8 для телефонов)
-                    for (let i = 0; i < searchTerms.length; i++) {
-                        if (searchTerms[i] && searchDataLower.indexOf(searchTerms[i]) !== -1) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    
-                    // Также проверяем прямой поиск по исходному запросу
-                    if (!found && searchValue.toLowerCase()) {
-                        if (searchDataLower.indexOf(searchValue.toLowerCase()) !== -1) {
-                            found = true;
-                        }
-                    }
-                    
-                    if (found) {
-                        card.show();
-                    } else {
-                        card.hide();
-                    }
-                });
-            }
-            
-            $('#searchInputKanban').on('input', function() {
-                clearTimeout(kanbanSearchTimeout);
-                const searchValue = $(this).val().trim();
-                
-                // Если значение не изменилось, не выполняем поиск
-                if (searchValue === lastKanbanSearchValue) {
-                    return;
-                }
-                
-                kanbanSearchTimeout = setTimeout(function() {
-                    const currentValue = $('#searchInputKanban').val().trim();
-                    if (currentValue !== lastKanbanSearchValue) {
-                        lastKanbanSearchValue = currentValue;
-                        filterKanbanCards(currentValue);
-                    }
-                }, 1000); // Задержка 1 секунда (как в registry)
-            });
-            {% endif %}
-
             // Автоматическая отправка формы фильтров для Registry view
             {% if view == 'registry' %}
             let registryFiltersTimeout;
@@ -1996,8 +1841,8 @@
             function submitRegistryFilters() {
                 const form = document.getElementById('registryFiltersForm');
                 if (form) {
-                    // Добавляем поисковый запрос, если он есть
-                    const searchValue = $('#searchInput').val().trim();
+                    // Сохраняем ?q= из адреса при смене фильтров (поля поиска на странице нет)
+                    const searchValue = (new URLSearchParams(window.location.search).get('q') || '').trim();
                     const url = new URL(form.action, window.location.origin);
                     const formData = new FormData(form);
                     for (const [key, value] of formData.entries()) {
@@ -2051,8 +1896,7 @@
             function submitKanbanFilters() {
                 const form = document.getElementById('kanbanFiltersForm');
                 if (form) {
-                    // Добавляем поисковый запрос, если он есть
-                    const searchValue = $('#searchInputKanban').val().trim();
+                    const searchValue = (new URLSearchParams(window.location.search).get('q') || '').trim();
                     const url = new URL(form.action, window.location.origin);
                     const formData = new FormData(form);
                     for (const [key, value] of formData.entries()) {
@@ -2345,8 +2189,19 @@
                     // Показываем уведомление по центру сверху с цветом статуса
                     const toast = document.createElement('div');
                     toast.className = 'alert alert-dismissible fade show position-fixed';
-                    // Используем цвет статуса для фона
-                    const statusBgColor = finalStatusColor || '#6c757d';
+                    var escToast = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (s) {
+                        if (s == null || s === '') return '';
+                        var d = document.createElement('div');
+                        d.textContent = String(s);
+                        return d.innerHTML;
+                    };
+                    function safeStatusHex(c) {
+                        if (!c || typeof c !== 'string') return '#6c757d';
+                        var h = c.trim();
+                        return /^#[0-9A-Fa-f]{6}$/i.test(h) ? h : '#6c757d';
+                    }
+                    // Используем цвет статуса для фона (только #RRGGBB — без инъекций в style)
+                    const statusBgColor = safeStatusHex(finalStatusColor || '#6c757d');
                     // Определяем цвет текста (светлый или темный) в зависимости от яркости фона
                     const rgb = hexToRgb(statusBgColor);
                     const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
@@ -2376,7 +2231,7 @@
                             <i class="fas fa-check-circle" style="font-size: 20px;"></i>
                             <div>
                                 <strong style="display: block; margin-bottom: 3px;">Статус обновлен!</strong>
-                                <span>Заявка #${displayOrderId} теперь в статусе "${finalStatusName}"</span>
+                                <span>Заявка #${escToast(displayOrderId)} теперь в статусе "${escToast(finalStatusName)}"</span>
                             </div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" style="filter: ${brightness > 128 ? 'invert(1)' : 'invert(0)'};"></button>

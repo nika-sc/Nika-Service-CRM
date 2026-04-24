@@ -1,7 +1,21 @@
 /**
  * Утилиты для безопасной работы с DOM и логирования
- * Используется в order_detail.html и других шаблонах
+ * Подключается из base.html — глобально доступен escapeHtml.
  */
+
+/**
+ * Экранирование текста для вставки в HTML (защита от XSS).
+ * @param {unknown} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+    if (str == null || str === '') return '';
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
+}
+
+window.escapeHtml = escapeHtml;
 
 // ===== ЛОГИРОВАНИЕ (только в dev режиме) =====
 const Logger = {
@@ -122,7 +136,9 @@ const DOMUtils = {
         });
         
         return element;
-    }
+    },
+
+    escapeHtml: escapeHtml
 };
 
 // Экспорт для использования в других скриптах
