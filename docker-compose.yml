@@ -10,7 +10,7 @@ services:
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
-      - DB_DRIVER=${DB_DRIVER:-sqlite}
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DATABASE_URL=${DATABASE_URL:-}
       - DATABASE_PATH=/app/database/service_center.db
       - RATELIMIT_STORAGE_URI=${RATELIMIT_STORAGE_URI:-memory://}
@@ -50,15 +50,16 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: nikanewcrm-postgres
     restart: unless-stopped
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-nikacrm}
       - POSTGRES_USER=${POSTGRES_USER:-nikacrm}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me}
+    # PG18+ официальный образ: том на /var/lib/postgresql (не …/data)
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     expose:
       - "5432"
     healthcheck:
