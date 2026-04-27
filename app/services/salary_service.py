@@ -802,6 +802,30 @@ class SalaryService:
         return created_ids
 
     @staticmethod
+    def sync_accruals_after_order_payment_change(order_id: Optional[int]) -> None:
+        """
+        После возврата или отмены оплаты пересчитывает начисления по заявке, если они уже есть.
+
+        Иначе зарплата «зависает»: calculate_salary_for_order учитывает refunds в сумме оплат,
+        но refund_payment раньше не вызывал пересчёт.
+        """
+        if not order_id or int(order_id) <= 0:
+            return
+        oid = int(order_id)
+        try:
+            existing = SalaryQueries.get_accruals_for_order(oid)
+            if not existing:
+                return
+            SalaryService.accrue_salary_for_order(oid, force_recalculate=True)
+        except Exception as e:
+            logger.warning(
+                "Не удалось пересчитать зарплату по заявке %s после изменения оплат: %s",
+                oid,
+                e,
+                exc_info=True,
+            )
+
+    @staticmethod
     def order_changed_since_last_accrual(order_id: int) -> bool:
         """
         Проверяет, изменилась ли заявка после последнего начисления (новые/изменённые услуги,

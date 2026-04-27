@@ -1849,13 +1849,24 @@ class SalaryDashboardService:
         """
         Платежи за период, которые попали в кассу, но не попали в salary-выручку.
         Причина: по заявке отсутствуют начисления salary_accruals.
+
+        Учитываются возвраты (kind='refund') со знаком минус, как в calculate_order_profit,
+        иначе после полного возврата заявка ошибочно попадала сюда как «предоплата».
         """
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
 
             cursor.execute("PRAGMA table_info(payments)")
             pay_cols = [r[1] for r in cursor.fetchall()]
-            kind_filter = " AND (p.kind IS NULL OR p.kind != 'refund')" if 'kind' in pay_cols else ""
+            has_kind = "kind" in pay_cols
+            if has_kind:
+                net_pay_sum = """
+                    COALESCE(SUM(
+                        CASE WHEN p.kind = 'refund' THEN -p.amount ELSE p.amount END
+                    ), 0)
+                """
+            else:
+                net_pay_sum = "COALESCE(SUM(p.amount), 0)"
             status_filter = " AND p.status = 'captured'" if 'status' in pay_cols else " AND (p.status IS NULL OR p.status != 'cancelled')"
 
             params: List[Any] = []
@@ -1867,21 +1878,20 @@ class SalaryDashboardService:
                 date_filter += " AND DATE(COALESCE(p.payment_date, p.created_at)) <= DATE(?)"
                 params.append(date_to)
 
-            cursor.execute(
-                f"""
+            _net = net_pay_sum.strip()
+            not_in_salary_sql = f"""
                 SELECT p.order_id,
-                       COALESCE(SUM(p.amount), 0) AS amount,
+                       {_net} AS amount,
                        MIN(COALESCE(p.payment_date, p.created_at)) AS first_payment_date
                 FROM payments p
                 WHERE p.order_id IS NOT NULL
                   AND (p.is_cancelled = 0 OR p.is_cancelled IS NULL)
                   {status_filter}
-                  {kind_filter}
                   {date_filter}
                 GROUP BY p.order_id
-                """,
-                params,
-            )
+                HAVING {_net} > 0
+            """
+            cursor.execute(not_in_salary_sql, params)
             payment_rows = [dict(r) for r in cursor.fetchall()]
             if not payment_rows:
                 return []

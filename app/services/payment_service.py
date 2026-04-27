@@ -458,6 +458,16 @@ class PaymentService:
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
                 clear_cache(key_prefix='finance')
+
+                try:
+                    from app.services.salary_service import SalaryService
+                    SalaryService.sync_accruals_after_order_payment_change(order_id)
+                except Exception as e:
+                    logger.warning(
+                        "После отмены оплаты не удалось синхронизировать зарплату по заявке %s: %s",
+                        order_id,
+                        e,
+                    )
                 
                 return True
         except (ValidationError, NotFoundError):
@@ -659,6 +669,16 @@ class PaymentService:
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix="order")
                 clear_cache(key_prefix="finance")
+
+                try:
+                    from app.services.salary_service import SalaryService
+                    SalaryService.sync_accruals_after_order_payment_change(order_id)
+                except Exception as e:
+                    logger.warning(
+                        "После возврата оплаты не удалось синхронизировать зарплату по заявке %s: %s",
+                        order_id,
+                        e,
+                    )
 
                 return refund_payment_id
         except (ValidationError, NotFoundError):
