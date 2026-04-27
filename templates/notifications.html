@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        <div class="page-content">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h3 class="card-title mb-0"><i class="fas fa-bell me-2"></i>Уведомления</h3>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="markAllReadBtnPage" style="display: none;">
+                        <i class="fas fa-check-double me-1"></i>Отметить все как прочитанные
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="notificationsPageList">
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                            <p class="mb-0">Загрузка уведомлений...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const listEl = document.getElementById('notificationsPageList');
+    const markAllBtn = document.getElementById('markAllReadBtnPage');
+
+    var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (text) {
+        if (text == null || text === '') return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    };
+
+    function getEntityLink(entityType, entityId) {
+        const id = parseInt(entityId, 10);
+        if (isNaN(id) || id < 1) return '';
+        const links = { 'order': '/order/' + id, 'customer': '/clients/' + id, 'part': '/warehouse/parts/' + id };
+        return links[entityType] || '';
+    }
+
+    function formatTimeAgo(dateString) {
+        if (!dateString) return '';
+        let date = new Date(dateString);
+        if (isNaN(date.getTime()) && typeof dateString === 'string') {
+            const normalized = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+            date = new Date(normalized);
+        }
+        if (isNaN(date.getTime())) return '';
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffMins < 1) return 'только что';
+        if (diffMins < 60) return diffMins + ' мин. назад';
+        if (diffHours < 24) return diffHours + ' ч. назад';
+        if (diffDays < 7) return diffDays + ' дн. назад';
+        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    function render(list) {
+        if (!list || list.length === 0) {
+            listEl.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-bell-slash fa-2x mb-2"></i><p class="mb-0">Нет уведомлений</p></div>';
+            markAllBtn.style.display = 'none';
+            return;
+        }
+        const hasUnread = list.some(function(n) { return !n.read_at; });
+        markAllBtn.style.display = hasUnread ? 'inline-block' : 'none';
+        listEl.innerHTML = list.map(function(notif) {
+            const isRead = notif.read_at !== null;
+            const timeAgo = formatTimeAgo(notif.created_at);
+            const entityLink = (notif.entity_type && notif.entity_id) ? getEntityLink(notif.entity_type, notif.entity_id) : '';
+            return '<div class="notification-page-item d-flex align-items-start gap-3 py-3 border-bottom' + (isRead ? '' : ' bg-light') + '" data-notification-id="' + parseInt(notif.id, 10) + '">' +
+                '<div class="flex-grow-1">' +
+                '<div class="fw-semibold">' + escapeHtml(notif.title) + '</div>' +
+                '<div class="text-muted small">' + escapeHtml(notif.message) + '</div>' +
+                '<div class="mt-1 small text-muted">' + timeAgo +
+                (entityLink ? ' &middot; <a href="' + entityLink + '">Открыть</a>' : '') + '</div>' +
+                '</div>' +
+                (!isRead ? '<button type="button" class="btn btn-sm btn-outline-success mark-read-page-btn" data-id="' + parseInt(notif.id, 10) + '"><i class="fas fa-check"></i></button>' : '') +
+                '</div>';
+        }).join('');
+
+        listEl.querySelectorAll('.mark-read-page-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id, 10);
+                markAsRead(id);
+            });
+        });
+    }
+
+    function markAsRead(notificationId) {
+        fetch('/api/notifications/' + notificationId + '/read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : ''
+            }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) load();
+        })
+        .catch(function(err) { console.error('Error marking as read:', err); });
+    }
+
+    function load() {
+        fetch('/api/notifications?unread_only=0&limit=200')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    render(data.notifications);
+                } else {
+                    listEl.innerHTML = '<div class="alert alert-warning mb-0">Ошибка загрузки уведомлений.</div>';
+                }
+            })
+            .catch(function(err) {
+                console.error('Error loading notifications:', err);
+                listEl.innerHTML = '<div class="alert alert-danger mb-0">Не удалось загрузить уведомления. Проверьте подключение.</div>';
+            });
+    }
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
+            fetch('/api/notifications/read-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : ''
+                }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) load();
+            })
+            .catch(function(err) { console.error('Error marking all as read:', err); });
+        });
+    }
+
+    load();
+})();
+</script>
+{% endblock %}

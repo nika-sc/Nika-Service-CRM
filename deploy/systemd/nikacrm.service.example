@@ -1,0 +1,27 @@
+# Пример systemd-unit для CRM (gunicorn за nginx).
+# Установка:
+#   sudo cp deploy/systemd/nikacrm.service.example /etc/systemd/system/nikacrm.service
+#   sudo nano /etc/systemd/system/nikacrm.service   # пути WorkingDirectory, User при необходимости
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nikacrm
+#
+# --limit-request-line 8190: запас для редких длинных GET (по умолчанию gunicorn — 4094).
+# Реестр заявок в приложении использует POST для DataTables; флаг оставлен для совместимости.
+
+[Unit]
+Description=Nika CRM Gunicorn Service
+Documentation=https://example.com/your-project-docs
+After=network.target postgresql.service
+Wants=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Nika-Service-CRM
+EnvironmentFile=/root/Nika-Service-CRM/.env
+ExecStart=/root/Nika-Service-CRM/venv/bin/gunicorn --limit-request-line 8190 --workers 2 --threads 4 --bind 127.0.0.1:5000 --timeout 120 --access-logfile - --error-logfile - wsgi:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

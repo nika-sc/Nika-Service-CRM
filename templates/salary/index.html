@@ -1,0 +1,1380 @@
+{% extends "base.html" %}
+
+{% block title %}Зарплата{% endblock %}
+
+{% block styles %}
+<style>
+    /* Улучшенные стили для модуля зарплаты */
+    .employee-row:hover {
+        background-color: var(--bs-light) !important;
+        transform: scale(1.01);
+        transition: all 0.2s ease;
+    }
+    
+    .debt-row:hover {
+        background-color: var(--bs-light) !important;
+    }
+    
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        transition: all 0.2s ease;
+    }
+    
+    /* Прогресс-бары для долгов */
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        transition: width 0.6s ease;
+    }
+    
+    /* Улучшенные бейджи */
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    /* Анимация загрузки */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .loading-pulse {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    /* Улучшенные кнопки */
+    .btn-sm {
+        transition: all 0.2s ease;
+    }
+    
+    .btn-sm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Иконки в таблице */
+    .table td i {
+        width: 16px;
+        text-align: center;
+    }
+    
+    /* Цветовые индикаторы */
+    .text-success.fw-bold {
+        text-shadow: 0 0 1px rgba(40, 167, 69, 0.3);
+    }
+    
+    .text-danger.fw-bold {
+        text-shadow: 0 0 1px rgba(220, 53, 69, 0.3);
+    }
+    
+    /* Улучшенные карточки */
+    .card {
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .card-body hr {
+        margin: 0.5rem 0;
+        opacity: 0.3;
+    }
+    
+    /* Tooltip улучшения */
+    [data-bs-toggle="tooltip"] {
+        cursor: help;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Компактный заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="fas fa-money-bill-wave text-success me-2"></i>Зарплата
+        </h5>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()" title="Экспорт в Excel">
+                <i class="fas fa-file-excel me-1"></i>Экспорт
+            </button>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadEmployees()" title="Обновить" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Компактные фильтры в одну строку -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Период</label>
+                    <div class="btn-group btn-group-sm flex-wrap" role="group" id="periodButtons">
+                        <button type="button" class="btn btn-outline-primary active" data-period="today" onclick="setPeriod('today')">Сегодня</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="yesterday" onclick="setPeriod('yesterday')">Вчера</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="day_before_yesterday" onclick="setPeriod('day_before_yesterday')">Позавчера</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="7days" onclick="setPeriod('7days')">7 дней</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="30days" onclick="setPeriod('30days')">30 дней</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="week" onclick="setPeriod('week')">Неделя</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="month" onclick="setPeriod('month')">Месяц</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="quarter" onclick="setPeriod('quarter')">Квартал</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="half_year" onclick="setPeriod('half_year')">Полгода</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="last_month" onclick="setPeriod('last_month')">Прошлый месяц</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="year" onclick="setPeriod('year')">Год</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="ytd" onclick="setPeriod('ytd')">С начала года</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="custom" onclick="setPeriod('custom')">Произвольный</button>
+                    </div>
+                </div>
+                <div class="col-auto" id="dateFromContainer" style="display: none;">
+                    <label class="form-label small mb-1">От</label>
+                    <input type="date" class="form-control form-control-sm" id="dateFrom" style="width: auto;" onchange="loadEmployees()">
+                </div>
+                <div class="col-auto" id="dateToContainer" style="display: none;">
+                    <label class="form-label small mb-1">До</label>
+                    <input type="date" class="form-control form-control-sm" id="dateTo" style="width: auto;" onchange="loadEmployees()">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Поиск</label>
+                    <input type="text" class="form-control form-control-sm" id="searchFilter" onkeyup="filterEmployees()" placeholder="Имя сотрудника..." style="width: auto; min-width: 150px;">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Роль</label>
+                    <select class="form-select form-select-sm" id="roleFilter" onchange="loadEmployees()" style="width: auto;">
+                        <option value="">Все</option>
+                        <option value="master">Мастера</option>
+                        <option value="manager">Менеджеры</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Статус</label>
+                    <select class="form-select form-select-sm" id="statusFilter" onchange="loadEmployees()" style="width: auto;">
+                        <option value="">Все</option>
+                        <option value="active" selected>Активные</option>
+                        <option value="inactive">Неактивные</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Сортировка</label>
+                    <div class="btn-group btn-group-sm" role="group" id="sortButtons">
+                        <button type="button" class="btn btn-outline-secondary" data-sort="profit" onclick="setSort('profit')" title="По прибыли">💰</button>
+                        <button type="button" class="btn btn-outline-secondary" data-sort="revenue" onclick="setSort('revenue')" title="По выручке">📈</button>
+                        <button type="button" class="btn btn-outline-secondary" data-sort="orders" onclick="setSort('orders')" title="По заявкам">📋</button>
+                        <button type="button" class="btn btn-outline-secondary" data-sort="salary" onclick="setSort('salary')" title="По зарплате">💵</button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <ul class="nav nav-pills mb-0" id="employeesTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn-sm active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                                Все
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn-sm" id="masters-tab" data-bs-toggle="tab" data-bs-target="#masters" type="button" role="tab">
+                                Мастера
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn-sm" id="managers-tab" data-bs-toggle="tab" data-bs-target="#managers" type="button" role="tab">
+                                Менеджеры
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link btn-sm" id="debts-tab" data-bs-toggle="tab" data-bs-target="#debts" type="button" role="tab">
+                                Долги
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Сверка с кассой -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 small">
+                <div class="col-md-3">
+                    <div class="text-muted">Общий приход кассы (как в /finance/cash)</div>
+                    <div class="fw-bold text-success" id="cashIncomeTotal">0.00 ₽</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted">Выручка в /salary</div>
+                    <div class="fw-bold text-primary" id="salaryRevenueTotal">0.00 ₽</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted">Разница</div>
+                    <div class="fw-bold" id="cashSalaryDiff">0.00 ₽</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted">Комментарий</div>
+                    <div id="cashSalaryHint">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица вместо карточек для компактности -->
+    <div class="tab-content" id="employeesTabsContent">
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" id="employeesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30px;">#</th>
+                            <th>Сотрудник</th>
+                            <th class="text-end">Заявок</th>
+                            <th class="text-end">Выручка</th>
+                            <th class="text-end">Прибыль</th>
+                            <th class="text-end">Начислено</th>
+                            <th class="text-end">Выплачено</th>
+                            <th class="text-end">К выплате</th>
+                            <th style="width: 100px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeesList" data-view="table">
+                        <tr id="loadingRow">
+                            <td colspan="9" class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Загрузка данных о зарплате...
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="employeesFooter" class="table-light fw-bold" style="display: none;">
+                        <tr>
+                            <td colspan="2" class="text-end">Итого:</td>
+                            <td class="text-end" id="totalOrders">-</td>
+                            <td class="text-end" id="totalRevenue">-</td>
+                            <td class="text-end text-success" id="totalProfit">-</td>
+                            <td class="text-end text-info" id="totalAccrued">-</td>
+                            <td class="text-end" id="totalPaid">-</td>
+                            <td class="text-end" id="totalOwed">-</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="masters" role="tabpanel">
+            <div class="card mb-2" id="mastersTotals" style="display: none;">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-3 small">
+                        <div>Итого заявок: <span id="mastersTotalOrders">-</span></div>
+                        <div>Выручка: <span id="mastersTotalRevenue">-</span></div>
+                        <div>Прибыль: <span id="mastersTotalProfit">-</span></div>
+                        <div>Начислено: <span id="mastersTotalAccrued">-</span></div>
+                        <div>Выплачено: <span id="mastersTotalPaid">-</span></div>
+                        <div>К выплате: <span id="mastersTotalOwed">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2" id="mastersList" data-view="cards">
+                <div class="col-12 text-center text-muted py-3">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Загрузка...
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="managers" role="tabpanel">
+            <div class="card mb-2" id="managersTotals" style="display: none;">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-3 small">
+                        <div>Итого заявок: <span id="managersTotalOrders">-</span></div>
+                        <div>Выручка: <span id="managersTotalRevenue">-</span></div>
+                        <div>Прибыль: <span id="managersTotalProfit">-</span></div>
+                        <div>Начислено: <span id="managersTotalAccrued">-</span></div>
+                        <div>Выплачено: <span id="managersTotalPaid">-</span></div>
+                        <div>К выплате: <span id="managersTotalOwed">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2" id="managersList" data-view="cards">
+                <div class="col-12 text-center text-muted py-3">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Загрузка...
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="debts" role="tabpanel">
+            <div class="card mb-2">
+                <div class="card-body py-2 d-flex flex-wrap gap-3 small">
+                    <div>Всего к выплате: <span id="debtsTotalToPay">-</span></div>
+                    <div>Долг сотрудников: <span id="debtsTotalCompany">-</span></div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Сотрудник</th>
+                            <th>Роль</th>
+                            <th class="text-end">Начислено</th>
+                            <th class="text-end">Премии</th>
+                            <th class="text-end">Штрафы</th>
+                            <th class="text-end">Выплачено</th>
+                            <th class="text-end">Долг</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="debtsList">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Загрузка...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Детализация прибыли по заявкам -->
+<div class="container-fluid mt-3">
+    <div class="card">
+        <div class="card-header py-2">
+            <strong><i class="fas fa-table me-2"></i>Детализация прибыли по заявкам за период</strong>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Заявка</th>
+                            <th>Менеджер</th>
+                            <th>Мастер</th>
+                            <th class="text-end">ЗП менеджера</th>
+                            <th class="text-end">ЗП мастера</th>
+                            <th class="text-end">Выручка</th>
+                            <th class="text-end">Себестоимость</th>
+                            <th class="text-end">Прибыль</th>
+                        </tr>
+                    </thead>
+                    <tbody id="profitDetailsBody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Загрузка...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-3">
+    <div class="card">
+        <div class="card-header py-2">
+            <strong><i class="fas fa-unlink me-2 text-danger"></i>Не попало в salary</strong>
+            <span class="small text-muted ms-2">Оплаты за период, которые есть в кассе, но не вошли в зарплатную выручку</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Заявка</th>
+                            <th>Дата оплаты</th>
+                            <th class="text-end">Сумма</th>
+                            <th>Менеджер</th>
+                            <th>Мастер</th>
+                            <th>Статус</th>
+                            <th>Причина</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notInSalaryBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Загрузка...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPeriod = 'today';
+let currentSort = 'profit';
+let employeesData = [];
+let periodTotalsData = null;  // Итоги по заявкам (выручка/прибыль без дублирования)
+let debtsData = null;
+let cashReconciliationData = null;
+let profitDetailsData = [];
+let notInSalaryData = [];
+
+var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (text) {
+    if (text == null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+};
+
+function moneyRu(v) {
+    const n = Number(v || 0);
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+}
+
+function renderCashReconciliation(data) {
+    const cashIncomeEl = document.getElementById('cashIncomeTotal');
+    const salaryRevenueEl = document.getElementById('salaryRevenueTotal');
+    const diffEl = document.getElementById('cashSalaryDiff');
+    const hintEl = document.getElementById('cashSalaryHint');
+    if (!cashIncomeEl || !salaryRevenueEl || !diffEl || !hintEl) return;
+
+    const cashIncome = Number((data && data.cash_income_total) || 0);
+    const salaryRevenue = Number((data && data.salary_revenue_total) || 0);
+    const diff = Number((data && data.diff) || 0);
+
+    cashIncomeEl.textContent = moneyRu(cashIncome);
+    salaryRevenueEl.textContent = moneyRu(salaryRevenue);
+    diffEl.textContent = moneyRu(diff);
+    diffEl.classList.remove('text-success', 'text-danger', 'text-muted');
+    if (Math.abs(diff) < 0.005) {
+        diffEl.classList.add('text-success');
+        hintEl.textContent = 'Суммы совпадают';
+    } else if (diff > 0) {
+        diffEl.classList.add('text-danger');
+        hintEl.textContent = 'Разница — предоплата по заявке (еще не попала в salary)';
+    } else {
+        diffEl.classList.add('text-danger');
+        hintEl.textContent = 'В зарплатной выручке больше, чем в кассе';
+    }
+}
+
+function renderProfitDetails(rows) {
+    const body = document.getElementById('profitDetailsBody');
+    if (!body) return;
+    if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan=\"8\" class=\"text-center text-muted py-3\">Нет данных за период</td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map(r => {
+        const oid = parseInt(r.order_id, 10);
+        const orderLabel = escapeHtml(r.order_display || ('#' + (r.order_id || '')));
+        const orderLink = oid > 0 ? `<a href="/order/${oid}" target="_blank" rel="noopener" class="text-decoration-none">${orderLabel}</a>` : orderLabel;
+        const manager = escapeHtml(r.manager_name || '—');
+        const master = escapeHtml(r.master_name || '—');
+        const managerSalary = Number((r.manager_salary_cents || 0) / 100);
+        const masterSalary = Number((r.master_salary_cents || 0) / 100);
+        const revenue = Number((r.revenue_cents || 0) / 100);
+        const cost = Number((r.cost_cents || 0) / 100);
+        const profit = Number((r.profit_cents || 0) / 100);
+        const pClass = profit >= 0 ? 'text-success' : 'text-danger';
+        return `
+            <tr>
+                <td>${orderLink}</td>
+                <td>${manager}</td>
+                <td>${master}</td>
+                <td class="text-end text-primary">${moneyRu(managerSalary)}</td>
+                <td class="text-end text-info">${moneyRu(masterSalary)}</td>
+                <td class="text-end">${moneyRu(revenue)}</td>
+                <td class="text-end">${moneyRu(cost)}</td>
+                <td class="text-end ${pClass} fw-bold">${moneyRu(profit)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderNotInSalary(rows) {
+    const body = document.getElementById('notInSalaryBody');
+    if (!body) return;
+    if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Все оплаты за период попали в salary</td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map(r => {
+        const oid = parseInt(r.order_id, 10);
+        const orderLabel = escapeHtml(r.order_display || ('#' + (r.order_id || '')));
+        const orderLink = oid > 0 ? `<a href="/order/${oid}" target="_blank" rel="noopener" class="text-decoration-none">${orderLabel}</a>` : orderLabel;
+        const paymentDate = escapeHtml((r.payment_date || '').toString().slice(0, 10) || '—');
+        const manager = escapeHtml(r.manager_name || '—');
+        const master = escapeHtml(r.master_name || '—');
+        const status = escapeHtml(r.status_name || '—');
+        const reason = escapeHtml(r.reason || '—');
+        const amount = Number(r.payment_amount || 0);
+        return `
+            <tr>
+                <td>${orderLink}</td>
+                <td>${paymentDate}</td>
+                <td class="text-end">${moneyRu(amount)}</td>
+                <td>${manager}</td>
+                <td>${master}</td>
+                <td>${status}</td>
+                <td class="text-danger">${reason}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function setPeriod(period) {
+    // Обновляем активную кнопку
+    const buttons = document.querySelectorAll('#periodButtons button');
+    buttons.forEach(btn => {
+        const btnPeriod = btn.getAttribute('data-period');
+        if (btnPeriod === period) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-outline-primary', 'active');
+        } else {
+            btn.classList.remove('btn-outline-primary', 'active');
+            btn.classList.add('btn-outline-secondary');
+        }
+    });
+
+    currentPeriod = period;
+
+    const dateFromContainer = document.getElementById('dateFromContainer');
+    const dateToContainer = document.getElementById('dateToContainer');
+    const dateFrom = document.getElementById('dateFrom');
+    const dateTo = document.getElementById('dateTo');
+
+    const today = new Date();
+    let fromDate, toDate;
+
+    if (period === 'custom') {
+        if (dateFromContainer) dateFromContainer.style.display = 'block';
+        if (dateToContainer) dateToContainer.style.display = 'block';
+        if (dateFrom && dateTo && dateFrom.value && dateTo.value) {
+            // оставляем текущие даты
+        } else {
+            if (dateFrom) dateFrom.value = today.toISOString().split('T')[0];
+            if (dateTo) dateTo.value = today.toISOString().split('T')[0];
+        }
+    } else {
+        if (dateFromContainer) dateFromContainer.style.display = 'none';
+        if (dateToContainer) dateToContainer.style.display = 'none';
+
+        switch(period) {
+            case 'today':
+                fromDate = toDate = new Date(today);
+                break;
+            case 'yesterday':
+                fromDate = toDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 1);
+                break;
+            case 'day_before_yesterday':
+                fromDate = toDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 2);
+                break;
+            case '7days':
+            case 'week':
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 6);
+                toDate = new Date(today);
+                break;
+            case '30days':
+            case 'month':
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 29);
+                toDate = new Date(today);
+                break;
+            case 'quarter':
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 89);
+                toDate = new Date(today);
+                break;
+            case 'half_year':
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 182);
+                toDate = new Date(today);
+                break;
+            case 'last_month':
+                toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+                break;
+            case 'year':
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 365);
+                toDate = new Date(today);
+                break;
+            case 'ytd':
+                fromDate = new Date(today.getFullYear(), 0, 1);
+                toDate = new Date(today);
+                break;
+            default:
+                fromDate = toDate = new Date(today);
+        }
+
+        if (fromDate && toDate && dateFrom && dateTo) {
+            dateFrom.value = fromDate.toISOString().split('T')[0];
+            dateTo.value = toDate.toISOString().split('T')[0];
+        }
+    }
+
+    loadEmployees();
+}
+
+function setSort(sortBy) {
+    // Обновляем активную кнопку сортировки
+    const buttons = document.querySelectorAll('#sortButtons button');
+    buttons.forEach(btn => {
+        const btnSort = btn.getAttribute('data-sort');
+        if (btnSort === sortBy) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-outline-primary', 'active');
+        } else {
+            btn.classList.remove('btn-outline-primary', 'active');
+            btn.classList.add('btn-outline-secondary');
+        }
+    });
+
+    currentSort = sortBy;
+    loadEmployees();
+}
+
+function loadEmployees() {
+    console.log('=== loadEmployees called ===');
+    
+    const refreshBtn = document.getElementById('refreshBtn');
+    const roleFilterElement = document.getElementById('roleFilter');
+    const statusFilterElement = document.getElementById('statusFilter');
+    const dateFromElement = document.getElementById('dateFrom');
+    const dateToElement = document.getElementById('dateTo');
+
+    // Проверяем, что все необходимые элементы существуют
+    if (!roleFilterElement || !statusFilterElement) {
+        console.error('Required filter elements not found:', {
+            roleFilter: !!roleFilterElement,
+            statusFilter: !!statusFilterElement
+        });
+        
+        // Показываем ошибку в таблице
+        const loadingRow = document.getElementById('loadingRow');
+        if (loadingRow) {
+            loadingRow.innerHTML = '<td colspan="9" class="text-center text-danger py-3"><p class="mb-0">Ошибка: Не найдены элементы фильтров</p></td>';
+        }
+        return;
+    }
+
+    console.log('Filter elements found, proceeding with loadEmployees');
+
+    const roleFilter = roleFilterElement.value;
+    const statusFilter = statusFilterElement.value;
+    const sortBy = currentSort || 'profit';  // Используем сохраненное значение сортировки
+    const dateFrom = dateFromElement ? dateFromElement.value : '';
+    const dateTo = dateToElement ? dateToElement.value : '';
+
+    // Показываем индикатор загрузки
+    if (refreshBtn) {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        refreshBtn.disabled = true;
+    }
+
+    let url = `/api/salary/employees?sort_by=${sortBy}&status=${statusFilter}`;
+    if (roleFilter) {
+        url += `&role=${roleFilter}`;
+    }
+    if (dateFrom) {
+        url += `&date_from=${dateFrom}`;
+    }
+    if (dateTo) {
+        url += `&date_to=${dateTo}`;
+    }
+
+    console.log('Loading employees with URL:', url);
+
+    // Таймаут для запроса (30 секунд)
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
+    });
+
+    const fetchPromise = fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',  // Важно для отправки cookies
+        redirect: 'follow'  // Следуем редиректам
+    });
+
+    Promise.race([fetchPromise, timeoutPromise])
+        .then(res => {
+            console.log('Response received:', {
+                status: res.status,
+                statusText: res.statusText,
+                url: res.url,
+                redirected: res.redirected,
+                type: res.type
+            });
+
+            // Проверяем, не HTML ли это (редирект на логин)
+            const contentType = res.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+
+            if (contentType && contentType.includes('text/html')) {
+                console.warn('Received HTML instead of JSON - likely a redirect to login');
+                // Пробуем прочитать как текст, чтобы увидеть куда редирект
+                return res.text().then(html => {
+                    console.warn('HTML response:', html.substring(0, 200));
+                    throw new Error('Redirected to login page');
+                });
+            }
+
+            // Проверяем статус ответа
+            if (!res.ok) {
+                // Пробуем прочитать ошибку
+                return res.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                });
+            }
+
+            return res.json();
+        })
+        .then(data => {
+            console.log('API response received:', data);
+            
+            if (!data) {
+                throw new Error('Empty response from server');
+            }
+
+            if (data.success) {
+                console.log(`Loaded ${data.employees ? data.employees.length : 0} employees`);
+                employeesData = data.employees || [];
+                periodTotalsData = data.period_totals || null;
+                cashReconciliationData = data.cash_reconciliation || null;
+                profitDetailsData = data.profit_details || [];
+                notInSalaryData = data.not_in_salary || [];
+                renderEmployees(employeesData, 'all');
+                renderEmployees(employeesData.filter(e => e.role === 'master'), 'masters');
+                renderEmployees(employeesData.filter(e => e.role === 'manager'), 'managers');
+                renderCashReconciliation(cashReconciliationData);
+                renderProfitDetails(profitDetailsData);
+                renderNotInSalary(notInSalaryData);
+
+                // Скрываем глобальный индикатор загрузки
+                const loadingRow = document.getElementById('loadingRow');
+                if (loadingRow) loadingRow.style.display = 'none';
+            } else {
+                const errorMsg = data.error || 'Ошибка загрузки';
+                console.error('API returned error:', errorMsg);
+                showToast(errorMsg, 'error');
+                
+                // Скрываем индикатор загрузки даже при ошибке
+                const loadingRow = document.getElementById('loadingRow');
+                if (loadingRow) {
+                    loadingRow.innerHTML = '<td colspan="9" class="text-center text-muted py-3"><p class="mb-0">Ошибка загрузки данных</p></td>';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            console.error('Error stack:', error.stack);
+            
+            if (error.message.includes('Redirected to login') || error.message.includes('login')) {
+                console.warn('Redirecting to login page');
+                showToast('Необходима авторизация. Перенаправляем...', 'warning');
+                setTimeout(() => window.location.href = '/login', 1000);
+            } else {
+                const errorMsg = error.message || 'Ошибка загрузки данных';
+                console.error('Showing error toast:', errorMsg);
+                showToast(errorMsg, 'error');
+                
+                // Показываем сообщение об ошибке в таблице
+                const loadingRow = document.getElementById('loadingRow');
+                if (loadingRow) {
+                    loadingRow.innerHTML = `<td colspan="9" class="text-center text-danger py-3">
+                        <p class="mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Ошибка загрузки данных</p>
+                        <p class="mb-0 small text-muted">${escapeHtml(errorMsg)}</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="loadEmployees()">
+                            <i class="fas fa-redo me-2"></i>Повторить попытку
+                        </button>
+                    </td>`;
+                }
+            }
+        })
+        .finally(() => {
+            // Скрываем индикатор загрузки
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                refreshBtn.disabled = false;
+            }
+        });
+}
+
+function loadDebts() {
+    const debtsList = document.getElementById('debtsList');
+    if (debtsList) {
+        debtsList.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Загрузка...</td></tr>';
+    }
+    fetch('/api/salary/debts', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin'
+    })
+        .then(res => {
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                throw new Error('Redirected to login page');
+            }
+            if (!res.ok) {
+                return res.text().then(text => { throw new Error(text); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                debtsData = data.data || {};
+                renderDebts(debtsData);
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки долгов');
+            }
+        })
+        .catch(error => {
+            console.error('Debts load error:', error);
+            if (debtsList) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 8;
+                td.className = 'text-center text-danger py-3';
+                td.textContent = error.message || 'Ошибка загрузки';
+                tr.appendChild(td);
+                debtsList.innerHTML = '';
+                debtsList.appendChild(tr);
+            }
+        });
+}
+
+function renderDebts(data) {
+    const debtsList = document.getElementById('debtsList');
+    if (!debtsList) return;
+
+    const items = (data && data.items) ? data.items : [];
+    const totals = (data && data.totals) ? data.totals : {};
+
+    const totalToPayEl = document.getElementById('debtsTotalToPay');
+    const totalCompanyEl = document.getElementById('debtsTotalCompany');
+    if (totalToPayEl) totalToPayEl.textContent = ((totals.total_to_pay_cents || 0) / 100).toFixed(2) + ' ₽';
+    if (totalCompanyEl) totalCompanyEl.textContent = ((totals.total_debt_company_cents || 0) / 100).toFixed(2) + ' ₽';
+
+    if (!items.length) {
+        debtsList.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Нет данных</td></tr>';
+        return;
+    }
+
+    debtsList.innerHTML = items.map(item => {
+        const owed = (item.owed_cents || 0) / 100;
+        const accrued = (item.accrued_cents || 0) / 100;
+        const paid = (item.paid_cents || 0) / 100;
+        const bonuses = (item.bonuses_cents || 0) / 100;
+        const fines = (item.fines_cents || 0) / 100;
+        
+        // Определяем цвет и иконку для долга
+        let owedClass = '';
+        let owedIcon = '';
+        let owedBadge = '';
+        let progressBar = '';
+        
+        if (owed < 0) {
+            // Сотрудник должен компании
+            owedClass = 'text-danger fw-bold';
+            owedIcon = '<i class="fas fa-exclamation-triangle text-danger me-1"></i>';
+            owedBadge = '<span class="badge bg-danger ms-2">Долг</span>';
+            const debtPercent = Math.min(100, Math.abs(owed / (accrued || 1)) * 100);
+            progressBar = `
+                <div class="progress mt-1" style="height: 6px;" title="Долг: ${Math.abs(owed).toFixed(2)} ₽">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: ${debtPercent}%"></div>
+                </div>
+            `;
+        } else if (owed > 0) {
+            // Компания должна сотруднику
+            owedClass = 'text-success fw-bold';
+            owedIcon = '<i class="fas fa-check-circle text-success me-1"></i>';
+            owedBadge = '<span class="badge bg-success ms-2">К выплате</span>';
+            const payPercent = Math.min(100, (owed / (accrued + bonuses || 1)) * 100);
+            progressBar = `
+                <div class="progress mt-1" style="height: 6px;" title="К выплате: ${owed.toFixed(2)} ₽">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: ${payPercent}%"></div>
+                </div>
+            `;
+        } else {
+            owedClass = 'text-muted';
+            owedIcon = '<i class="fas fa-check text-muted me-1"></i>';
+            owedBadge = '<span class="badge bg-secondary ms-2">Баланс</span>';
+        }
+        
+        const roleBadge = item.role === 'master' 
+            ? '<span class="badge bg-success">Мастер</span>' 
+            : '<span class="badge bg-primary">Менеджер</span>';
+        
+        return `
+            <tr class="debt-row" style="transition: background-color 0.2s;" 
+                onmouseover="this.style.backgroundColor='var(--bs-light)'" 
+                onmouseout="this.style.backgroundColor=''">
+                <td>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle me-2 text-muted"></i>
+                        <strong>${escapeHtml(item.employee_name || 'Неизвестно')}</strong>
+                    </div>
+                </td>
+                <td>${roleBadge}</td>
+                <td class="text-end">
+                    <span class="text-muted small">${accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                </td>
+                <td class="text-end">
+                    <span class="text-success small">+${bonuses.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                </td>
+                <td class="text-end">
+                    <span class="text-danger small">-${fines.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                </td>
+                <td class="text-end">
+                    <span class="text-muted small">${paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                </td>
+                <td class="text-end">
+                    <div>
+                        ${owedIcon}<span class="${owedClass}">${Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>${owedBadge}
+                        ${progressBar}
+                    </div>
+                </td>
+                <td class="text-end">
+                    <a href="/salary/employee/${parseInt(item.employee_id, 10) || 0}/${item.role === 'master' ? 'master' : 'manager'}" 
+                       class="btn btn-sm btn-outline-primary" 
+                       title="Открыть личный кабинет">
+                        <i class="fas fa-external-link-alt me-1"></i>Открыть
+                    </a>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderEmployees(employees, containerId) {
+    const container = document.getElementById(containerId === 'all' ? 'employeesList' :
+                                                   containerId === 'masters' ? 'mastersList' : 'managersList');
+    const footer = document.getElementById(containerId === 'all' ? 'employeesFooter' :
+                                             containerId === 'masters' ? 'mastersFooter' : 'managersFooter');
+    const totalsCard = document.getElementById(containerId === 'masters' ? 'mastersTotals' : containerId === 'managers' ? 'managersTotals' : '');
+    const viewMode = container && container.dataset ? (container.dataset.view || 'table') : 'table';
+
+    if (!container) {
+        console.error('Container element not found for:', containerId);
+        return;
+    }
+
+    if (!employees || employees.length === 0) {
+        if (viewMode === 'cards') {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-3"><p class="mb-0">Нет данных</p></div>';
+            if (totalsCard) totalsCard.style.display = 'none';
+        } else {
+            container.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3"><p class="mb-0">Нет данных</p></td></tr>';
+        }
+        if (footer) footer.style.display = 'none';
+        return;
+    }
+
+    // Подсчет итогов: по сотрудникам — начислено/выплачено/к выплате; по заявкам — выручка/прибыль/заявки (без дублирования)
+    const totals = employees.reduce((acc, emp) => {
+        acc.orders += emp.orders_count || 0;
+        acc.revenue += (emp.revenue_cents || 0) / 100;
+        acc.profit += (emp.profit_cents || 0) / 100;
+        acc.accrued += (emp.salary_accrued_cents || 0) / 100;
+        acc.paid += (emp.salary_paid_cents || 0) / 100;
+        acc.owed += (emp.salary_owed_cents || 0) / 100;
+        return acc;
+    }, { orders: 0, revenue: 0, profit: 0, accrued: 0, paid: 0, owed: 0 });
+
+    // Вкладка "Все": выручка и прибыль — по заявкам (одна заявка один раз), иначе дублируется из-за мастера и менеджера
+    const usePeriodTotals = (containerId === 'all' && periodTotalsData);
+    const ordersDisplay = usePeriodTotals ? (periodTotalsData.total_orders_count || 0) : totals.orders;
+    const revenueDisplay = usePeriodTotals ? ((periodTotalsData.total_revenue_cents || 0) / 100) : totals.revenue;
+    const profitDisplay = usePeriodTotals ? ((periodTotalsData.total_profit_cents || 0) / 100) : totals.profit;
+
+    // Обновляем итоги
+    const prefix = containerId === 'all' ? 'total' : containerId === 'masters' ? 'mastersTotal' : 'managersTotal';
+    const totalOrdersEl = document.getElementById(`${prefix}Orders`);
+    const totalRevenueEl = document.getElementById(`${prefix}Revenue`);
+    const totalProfitEl = document.getElementById(`${prefix}Profit`);
+    const totalAccruedEl = document.getElementById(`${prefix}Accrued`);
+    const totalPaidEl = document.getElementById(`${prefix}Paid`);
+    const totalOwedEl = document.getElementById(`${prefix}Owed`);
+    
+    if (totalOrdersEl) totalOrdersEl.textContent = ordersDisplay;
+    if (totalRevenueEl) totalRevenueEl.textContent = revenueDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ₽';
+    if (totalProfitEl) totalProfitEl.textContent = profitDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ₽';
+    if (totalAccruedEl) totalAccruedEl.textContent = totals.accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+    if (totalPaidEl) totalPaidEl.textContent = totals.paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+    if (totalOwedEl) totalOwedEl.textContent = totals.owed.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+    
+    if (footer) footer.style.display = 'table-footer-group';
+    if (totalsCard) totalsCard.style.display = 'block';
+
+    if (viewMode === 'cards') {
+        container.innerHTML = employees.map(emp => {
+            const roleLabel = emp.role === 'master' ? 'Мастер' : 'Менеджер';
+            const roleBadge = emp.role === 'master' ? 'bg-primary' : 'bg-success';
+            const accrued = (emp.salary_accrued_cents || 0) / 100;
+            const paid = (emp.salary_paid_cents || 0) / 100;
+            const owed = (emp.salary_owed_cents || 0) / 100;
+            const revenue = (emp.revenue_cents || 0) / 100;
+            const profit = (emp.profit_cents || 0) / 100;
+            const owedLabel = owed < 0 ? 'Долг' : 'К выплате';
+            const owedClass = owed < 0 ? 'text-danger' : owed > 0 ? 'text-success' : 'text-muted';
+            
+            // Индикатор долга
+            let debtIndicator = '';
+            if (owed < 0) {
+                const debtPercent = Math.min(100, Math.abs(owed / (accrued || 1)) * 100);
+                debtIndicator = `
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Долг</span>
+                            <span class="text-danger fw-bold">${Math.abs(owed).toFixed(2)} ₽</span>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: ${debtPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (owed > 0) {
+                const bonuses = (emp.salary_bonuses_cents || 0) / 100;
+                const payPercent = Math.min(100, (owed / (accrued + bonuses || 1)) * 100);
+                debtIndicator = `
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-success"><i class="fas fa-check-circle me-1"></i>К выплате</span>
+                            <span class="text-success fw-bold">${owed.toFixed(2)} ₽</span>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: ${payPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Рейтинговая иконка
+            const rankIcon = emp.rank <= 3 
+                ? `<span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2" title="Место в рейтинге: #${emp.rank}">
+                     <i class="fas fa-trophy me-1"></i>#${emp.rank}
+                   </span>`
+                : '';
+            
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm position-relative" 
+                         style="transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+                         onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"
+                         onmouseout="this.style.transform=''; this.style.boxShadow=''"
+                         onclick="window.location.href='/salary/employee/${parseInt(emp.employee_id, 10) || 0}/${emp.role === 'master' ? 'master' : 'manager'}'">
+                        ${rankIcon}
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fas fa-user-circle me-2 ${emp.role === 'master' ? 'text-success' : 'text-primary'}"></i>
+                                        <div class="fw-semibold">${escapeHtml(emp.employee_name || 'Неизвестно')}</div>
+                                    </div>
+                                    <div class="text-muted small">ID: ${emp.employee_id}</div>
+                                </div>
+                                <span class="badge ${roleBadge}">${roleLabel}</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <i class="fas fa-file-invoice text-muted me-1"></i>
+                                    <span class="text-muted">Заявок:</span> 
+                                    <strong>${emp.orders_count || 0}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-chart-line text-info me-1"></i>
+                                    <span class="text-muted">Выручка:</span> 
+                                    <strong>${revenue.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ₽</strong>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-coins text-success me-1"></i>
+                                    <span class="text-muted">Прибыль:</span> 
+                                    <strong class="text-success">${profit.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ₽</strong>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-money-bill-wave text-info me-1"></i>
+                                    <span class="text-muted">Начислено:</span> 
+                                    <strong>${accrued.toFixed(2)} ₽</strong>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    <span class="text-muted">Выплачено:</span> 
+                                    <strong>${paid.toFixed(2)} ₽</strong>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas ${owed < 0 ? 'fa-exclamation-triangle text-danger' : owed > 0 ? 'fa-arrow-up text-success' : 'fa-equals text-muted'} me-1"></i>
+                                    <span class="text-muted">${owedLabel}:</span> 
+                                    <strong class="${owedClass}">${Math.abs(owed).toFixed(2)} ₽</strong>
+                                </div>
+                            </div>
+                            ${debtIndicator}
+                            <div class="d-flex justify-content-end mt-3">
+                                <a href="/salary/employee/${parseInt(emp.employee_id, 10) || 0}/${emp.role === 'master' ? 'master' : 'manager'}" 
+                                   class="btn btn-sm btn-outline-primary"
+                                   onclick="event.stopPropagation()">
+                                    <i class="fas fa-external-link-alt me-1"></i>Открыть
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        return;
+    }
+
+    container.innerHTML = employees.map(emp => {
+        const profit = (emp.profit_cents || 0) / 100;
+        const revenue = (emp.revenue_cents || 0) / 100;
+        const accrued = (emp.salary_accrued_cents || 0) / 100;
+        const paid = (emp.salary_paid_cents || 0) / 100;
+        const owed = (emp.salary_owed_cents || 0) / 100;
+        const roleBadge = emp.role === 'master'
+            ? '<span class="badge bg-success">М</span>'
+            : '<span class="badge bg-primary">МГ</span>';
+        const rankIcon = emp.rank <= 3
+            ? `<span class="badge bg-warning text-dark me-1">#${emp.rank}</span>`
+            : '';
+    const owedClass = owed < 0 ? 'text-danger fw-bold' : owed > 0 ? 'text-success fw-bold' : 'text-muted';
+
+        // Индикатор долга для таблицы
+        let debtBadge = '';
+        if (owed < 0) {
+            debtBadge = `<span class="badge bg-danger ms-1" title="Долг сотрудника">Долг</span>`;
+        } else if (owed > 0) {
+            debtBadge = `<span class="badge bg-success ms-1" title="К выплате">К выплате</span>`;
+        }
+        
+        return `
+            <tr class="employee-row" 
+                style="transition: background-color 0.2s; cursor: pointer;"
+                onmouseover="this.style.backgroundColor='var(--bs-light)'" 
+                onmouseout="this.style.backgroundColor=''"
+                onclick="window.location.href='/salary/employee/${parseInt(emp.employee_id, 10) || 0}/${emp.role === 'master' ? 'master' : 'manager'}'">
+                <td>
+                    <div class="d-flex align-items-center gap-1">
+                        ${rankIcon}
+                        ${roleBadge}
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle me-2 ${emp.role === 'master' ? 'text-success' : 'text-primary'}"></i>
+                        <strong>${escapeHtml(emp.employee_name || 'Неизвестно')}</strong>
+                    </div>
+                </td>
+                <td class="text-end">
+                    <span class="badge bg-secondary" title="Количество заявок">${emp.orders_count || 0}</span>
+                </td>
+                <td class="text-end">
+                    <span title="Выручка за период">
+                        ${revenue.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ₽
+                    </span>
+                </td>
+                <td class="text-end text-success fw-bold">
+                    <i class="fas fa-coins me-1"></i>
+                    <span title="Прибыль за период">
+                        ${profit.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ₽
+                    </span>
+                </td>
+                <td class="text-end text-info">
+                    <i class="fas fa-money-bill-wave me-1"></i>
+                    <span title="Начислено зарплаты">
+                        ${accrued > 0 ? accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '-'}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <i class="fas fa-check-circle text-success me-1"></i>
+                    <span title="Выплачено зарплаты">
+                        ${paid > 0 ? paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '-'}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <span class="${owedClass}" title="${owed < 0 ? 'Долг сотрудника' : owed > 0 ? 'К выплате' : 'Баланс'}">
+                            ${owed !== 0 ? (owed < 0 ? '-' : '+') + Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '0.00 ₽'}
+                        </span>
+                        ${debtBadge}
+                    </div>
+                </td>
+                <td class="text-end" onclick="event.stopPropagation()">
+                    <a href="/salary/employee/${parseInt(emp.employee_id, 10) || 0}/${emp.role === 'master' ? 'master' : 'manager'}" 
+                       class="btn btn-sm btn-outline-primary" 
+                       title="Открыть личный кабинет сотрудника">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterEmployees() {
+    const searchFilterElement = document.getElementById('searchFilter');
+    if (!searchFilterElement) {
+        console.error('Search filter element not found');
+        return;
+    }
+
+    const searchTerm = searchFilterElement.value.toLowerCase();
+
+    if (!employeesData.length) return;
+
+    // Фильтруем данные по поисковому запросу
+    const filteredData = employeesData.filter(emp =>
+        emp.employee_name && emp.employee_name.toLowerCase().includes(searchTerm)
+    );
+
+    // Обновляем все таблицы с отфильтрованными данными
+    renderEmployees(filteredData, 'all');
+    renderEmployees(filteredData.filter(e => e.role === 'master'), 'masters');
+    renderEmployees(filteredData.filter(e => e.role === 'manager'), 'managers');
+}
+
+function exportToExcel() {
+    if (!employeesData.length) {
+        showToast('Нет данных для экспорта', 'warning');
+        return;
+    }
+
+    // Создаем CSV данные
+    const headers = ['Сотрудник', 'Роль', 'Заявок', 'Выручка', 'Прибыль', 'Начислено', 'Выплачено', 'К выплате'];
+    const csvData = [headers];
+
+    employeesData.forEach(emp => {
+        const profit = (emp.profit_cents || 0) / 100;
+        const revenue = (emp.revenue_cents || 0) / 100;
+        const accrued = (emp.salary_accrued_cents || 0) / 100;
+        const paid = (emp.salary_paid_cents || 0) / 100;
+        const owed = (emp.salary_owed_cents || 0) / 100;
+
+        csvData.push([
+            emp.employee_name || 'Неизвестно',
+            emp.role === 'master' ? 'Мастер' : 'Менеджер',
+            emp.orders_count || 0,
+            revenue,
+            profit,
+            accrued,
+            paid,
+            owed
+        ]);
+    });
+
+    // Преобразуем в CSV строку
+    const csvContent = csvData.map(row =>
+        row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
+    // Создаем и скачиваем файл
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `зарплата_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('Данные экспортированы в CSV файл', 'success');
+}
+
+// Инициализация при загрузке страницы
+// Версия скрипта для очистки кэша браузера
+const SALARY_SCRIPT_VERSION = '1.0.5';
+console.log('Salary page script version:', SALARY_SCRIPT_VERSION);
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Salary page loaded');
+
+    // Ждем полной загрузки страницы и небольшую дополнительную задержку
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            console.log('Initializing salary page...');
+
+            // Проверяем, что все необходимые элементы существуют
+            const requiredElements = [
+                'periodButtons',
+                'roleFilter',
+                'statusFilter',
+                'sortButtons',
+                'employeesTabs'
+            ];
+
+            const missingElements = requiredElements.filter(id => !document.getElementById(id));
+            if (missingElements.length > 0) {
+                console.error('Missing required elements:', missingElements);
+                console.error('Found elements:', requiredElements.map(id => ({ id, exists: !!document.getElementById(id) })));
+                return;
+            }
+
+            console.log('All required elements found, initializing...');
+
+            setPeriod('today');
+            setSort('profit');
+            
+            // Инициализация tooltips Bootstrap
+            setTimeout(() => {
+                if (typeof bootstrap !== 'undefined') {
+                    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"], [title]'));
+                    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                        if (!tooltipTriggerEl.hasAttribute('data-bs-toggle')) {
+                            tooltipTriggerEl.setAttribute('data-bs-toggle', 'tooltip');
+                        }
+                        try {
+                            new bootstrap.Tooltip(tooltipTriggerEl);
+                        } catch (e) {
+                            // Игнорируем ошибки, если tooltip уже инициализирован
+                        }
+                    });
+                }
+            }, 500);
+
+            // Обработчик переключения вкладок
+            const tabButtons = document.querySelectorAll('#employeesTabs button[data-bs-toggle="tab"]');
+            tabButtons.forEach(btn => {
+                btn.addEventListener('shown.bs.tab', function() {
+                    // Не меняем роль-фильтр при переключении табов,
+                    // чтобы не перезапрашивать данные и не ловить "Нет данных"
+                    if (employeesData && employeesData.length) {
+                        renderEmployees(employeesData, 'all');
+                        renderEmployees(employeesData.filter(e => e.role === 'master'), 'masters');
+                        renderEmployees(employeesData.filter(e => e.role === 'manager'), 'managers');
+                        if (this.getAttribute('data-bs-target') === '#debts') {
+                            if (!debtsData) {
+                                loadDebts();
+                            } else {
+                                renderDebts(debtsData);
+                            }
+                        }
+                    } else {
+                        loadEmployees();
+                    }
+                });
+            });
+
+            // Автоматическая загрузка данных
+            loadEmployees();
+            loadDebts();
+        }, 200);
+    });
+});
+
+// Функция для показа уведомлений (если не определена в базовом шаблоне)
+if (typeof showToast === 'undefined') {
+    window.showToast = function(message, type = 'info', title = null, duration = 3000) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+            ${title ? `<strong>${escapeHtml(String(title))}:</strong> ` : ''}${escapeHtml(String(message))}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        if (duration > 0) {
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, duration);
+        }
+    };
+}
+</script>
+{% endblock %}

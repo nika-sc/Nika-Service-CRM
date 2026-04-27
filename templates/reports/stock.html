@@ -1,0 +1,100 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по остаткам — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Stock report typically doesn't need date filters -->
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#stockCalculationMethod" aria-expanded="false" aria-controls="stockCalculationMethod">
+            <i class="fas fa-question-circle me-1"></i>Методика расчета
+        </button>
+    </div>
+    <div class="collapse mb-3" id="stockCalculationMethod">
+        <div class="card border-info">
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Общая стоимость:</strong> сумма по формуле <code>розничная цена × остаток</code>.</li>
+                    <li><strong>Общая себестоимость:</strong> сумма по формуле <code>закупочная цена × остаток</code>.</li>
+                    <li><strong>Общая маржа:</strong> разница между стоимостью и себестоимостью.</li>
+                    <li><strong>Низкий остаток:</strong> количество позиций ниже порогового уровня.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title text-white"><i class="fas fa-info-circle me-2"></i>Сводная информация</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Всего товаров:</strong> <span class="h5">{{ report.total_items }}</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая стоимость:</strong> <span class="h5 text-primary">{{ report.total_value }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая маржа:</strong> <span class="h5 text-success">{{ report.total_margin }} ₽</span></p>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <p><strong>Товаров с низким остатком:</strong> <span class="badge bg-warning">{{ report.low_stock_count }}</span></p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Детализация по товарам</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Артикул</th>
+                                <th>Категория</th>
+                                <th>Остаток</th>
+                                <th>Розничная цена</th>
+                                <th>Закупочная цена</th>
+                                <th>Стоимость</th>
+                                <th>Себестоимость</th>
+                                <th>Маржа</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report['items'] %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.part_number or '-' }}</td>
+                                <td>{{ item.category or '-' }}</td>
+                                <td>{{ item.stock_quantity }}</td>
+                                <td>{{ item.retail_price or 0 }} ₽</td>
+                                <td>{{ item.purchase_price or 0 }} ₽</td>
+                                <td>{{ (item.retail_price or 0) * item.stock_quantity }} ₽</td>
+                                <td>{{ (item.purchase_price or 0) * item.stock_quantity }} ₽</td>
+                                <td>{{ ((item.retail_price or 0) - (item.purchase_price or 0)) * item.stock_quantity }} ₽</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Товары не найдены</h5>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,12 @@
+# LF in repo and on checkout — avoids phantom "modified" on Windows with core.autocrlf=true
+* text=auto
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.sql text eol=lf

@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Расчет прибыли - Nika CRM{% endblock %}
+
+{% block styles %}
+<style>
+    .profit-card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .stat-box {
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+    .stat-box .value {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .stat-box .label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    .category-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    .category-row:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        <!-- Боковое меню кассы -->
+        {% include 'finance/_sidebar_menu.html' %}
+        
+        <!-- Основной контент -->
+        <div class="page-content">
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-chart-line text-primary me-2"></i>Расчет прибыли</h4>
+            <p class="text-muted mb-0">Финансовые показатели за период</p>
+        </div>
+        <div>
+            <a href="{{ url_for('finance.cash') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-cash-register me-1"></i> Касса
+            </a>
+        </div>
+    </div>
+    
+    <!-- Фильтр периода -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-3 align-items-end">
+                {% include 'partials/period_filter.html' %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- Главные показатели -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-box bg-success text-white">
+                <div class="value">{{ "%.0f"|format(report.total_income) }} ₽</div>
+                <div class="label">Общий доход</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box bg-danger text-white">
+                <div class="value">{{ "%.0f"|format(report.total_expense) }} ₽</div>
+                <div class="label">Общий расход</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box bg-warning text-dark">
+                <div class="value">{{ "%.0f"|format(report.cogs) }} ₽</div>
+                <div class="label">Себестоимость</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box {% if report.net_profit >= 0 %}bg-primary{% else %}bg-dark{% endif %} text-white">
+                <div class="value">{{ "%.0f"|format(report.net_profit) }} ₽</div>
+                <div class="label">Чистая прибыль</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Доходы по категориям -->
+        <div class="col-lg-6">
+            <div class="card profit-card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-arrow-down me-2"></i>Доходы по статьям</h5>
+                </div>
+                <div class="card-body">
+                    {% if report.income_by_category %}
+                        {% for name, amount in report.income_by_category.items() %}
+                        <div class="category-row">
+                            <span>{{ name }}</span>
+                            <span class="fw-bold text-success">{{ "%.2f"|format(amount) }} ₽</span>
+                        </div>
+                        {% endfor %}
+                        <div class="category-row border-top mt-2 pt-2">
+                            <strong>Итого:</strong>
+                            <strong class="text-success">{{ "%.2f"|format(report.total_income) }} ₽</strong>
+                        </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3 mb-0">Нет данных</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Расходы по категориям -->
+        <div class="col-lg-6">
+            <div class="card profit-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-arrow-up me-2"></i>Расходы по статьям</h5>
+                </div>
+                <div class="card-body">
+                    {% if report.expense_by_category %}
+                        {% for name, amount in report.expense_by_category.items() %}
+                        <div class="category-row">
+                            <span>{{ name }}</span>
+                            <span class="fw-bold text-danger">{{ "%.2f"|format(amount) }} ₽</span>
+                        </div>
+                        {% endfor %}
+                        <div class="category-row border-top mt-2 pt-2">
+                            <strong>Итого:</strong>
+                            <strong class="text-danger">{{ "%.2f"|format(report.total_expense) }} ₽</strong>
+                        </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3 mb-0">Нет данных</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-12">
+            <div class="card profit-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Приход по способам оплаты</h5>
+                </div>
+                <div class="card-body">
+                    {% if report.income_by_payment_method %}
+                        {% for name, amount in report.income_by_payment_method.items() %}
+                        <div class="category-row">
+                            <span>{{ name }}</span>
+                            <span class="fw-bold text-info">{{ "%.2f"|format(amount) }} ₽</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center py-3 mb-0">Нет данных</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Детализация выручки -->
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card profit-card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-cogs text-info me-2"></i>Выручка от услуг</h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-info mb-0">{{ "%.2f"|format(report.services_revenue) }} ₽</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card profit-card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-box text-warning me-2"></i>Выручка от товаров</h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-warning mb-0">{{ "%.2f"|format(report.goods_revenue) }} ₽</h3>
+                    <small class="text-muted">Маржа: {{ "%.1f"|format(report.margin_percent) }}%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Итоговый расчет -->
+    <div class="card profit-card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Итоговый расчет</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-borderless mb-0">
+                <tr>
+                    <td>Общий доход</td>
+                    <td class="text-end text-success fw-bold">+ {{ "%.2f"|format(report.total_income) }} ₽</td>
+                </tr>
+                <tr>
+                    <td>Себестоимость проданных товаров</td>
+                    <td class="text-end text-warning">- {{ "%.2f"|format(report.cogs) }} ₽</td>
+                </tr>
+                <tr class="border-top">
+                    <td><strong>Валовая прибыль</strong></td>
+                    <td class="text-end fw-bold">{{ "%.2f"|format(report.gross_profit) }} ₽</td>
+                </tr>
+                <tr>
+                    <td>Операционные расходы</td>
+                    <td class="text-end text-danger">- {{ "%.2f"|format(report.total_expense) }} ₽</td>
+                </tr>
+                <tr class="border-top table-{% if report.net_profit >= 0 %}success{% else %}danger{% endif %}">
+                    <td><strong>Чистая прибыль</strong></td>
+                    <td class="text-end fw-bold fs-4">{{ "%.2f"|format(report.net_profit) }} ₽</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

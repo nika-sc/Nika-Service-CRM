@@ -1,0 +1,163 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по продажам — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button
+            class="btn btn-sm btn-outline-info"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#salesCalculationMethod"
+            aria-expanded="false"
+            aria-controls="salesCalculationMethod"
+        >
+            <i class="fas fa-question-circle me-1"></i>Методика расчета
+        </button>
+    </div>
+    <div class="collapse mb-3" id="salesCalculationMethod">
+        <div class="card border-info">
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Услуги:</strong> Сумма всех услуг из заявок за период (без учета возвратов).</li>
+                    <li><strong>Товары:</strong> Сумма всех проданных товаров из заявок за период.</li>
+                    <li><strong>Магазин:</strong> Продажи из раздела "Магазин" (без заявок).</li>
+                    <li><strong>Итого:</strong> Общая сумма всех продаж (услуги + товары + магазин).</li>
+                    <li><strong>Примечание:</strong> По умолчанию показывается текущий месяц для оптимизации производительности.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header bg-success">
+                <h3 class="card-title text-white"><i class="fas fa-chart-line me-2"></i>Сводная информация</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Всего заявок:</strong> <span class="h5">{{ report.total_orders }}</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Сумма услуг:</strong> <span class="h5 text-primary">{{ report.total_services }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Сумма запчастей:</strong> <span class="h5 text-info">{{ report.total_parts }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} ₽</span></p>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <p><strong>Оплачено:</strong> <span class="h5 text-success">{{ "%.2f"|format(report.total_payments) }} ₽</span></p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Задолженность:</strong> 
+                            {% set debt = report.get('total_debt', 0) or 0 %}
+                            <span class="h5 {% if debt > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ "%.2f"|format(debt) }} ₽
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Процент оплаты:</strong> 
+                            <span class="h5">
+                                {% if report.total_revenue > 0 %}
+                                    {{ "%.1f"|format((report.total_payments / report.total_revenue * 100)) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Детализация по продажам</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID / Тип</th>
+                                <th>Клиент</th>
+                                <th>Дата</th>
+                                <th>Услуги</th>
+                                <th>Запчасти</th>
+                                <th>Итого</th>
+                                <th>Оплачено</th>
+                                <th>Задолженность</th>
+                                <th>Чек</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in report.orders %}
+                            <tr>
+                                <td>
+                                    {% if order.sale_type == 'shop' %}
+                                        <a href="{{ url_for('shop.sale_detail', sale_id=order.id) }}" class="text-decoration-none">
+                                            Магазин #{{ order.id }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('orders.order_detail', order_id=order.order_id) }}" class="text-decoration-none">
+                                            #{{ order.id }}
+                                        </a>
+                                        <span class="badge bg-primary ms-1">Заявка</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.customer_id %}
+                                        <a href="{{ url_for('customers.client_detail', client_id=order.customer_id) }}" class="text-decoration-none">
+                                            {{ order.client_name or '-' }}
+                                        </a>
+                                    {% else %}
+                                        {{ order.client_name or '-' }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.created_at|format_date(with_time=True) if order.created_at else '—' }}</td>
+                                <td>{{ (order.services_total or 0)|round(2) }} ₽</td>
+                                <td>{{ (order.parts_total or 0)|round(2) }} ₽</td>
+                                <td class="fw-bold">{{ (order.total_revenue or 0)|round(2) }} ₽</td>
+                                <td class="text-success">{{ (order.paid or order.paid_amount or 0)|round(2) }} ₽</td>
+                                <td class="{% if (order.debt or (order.total_revenue or 0) - (order.paid or order.paid_amount or 0)) > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                                    {{ ((order.debt or ((order.total_revenue or 0) - (order.paid or order.paid_amount or 0)))|round(2)) }} ₽
+                                </td>
+                                <td>
+                                    {% if order.payment_id %}
+                                        <a href="{{ url_for('finance.payment_detail', payment_id=order.payment_id) }}" class="badge bg-success text-decoration-none">
+                                            Чек #{{ order.payment_id }}
+                                        </a>
+                                    {% elif order.sale_type == 'shop' %}
+                                        <a href="{{ url_for('shop.sale_detail', sale_id=order.id) }}" class="badge bg-success text-decoration-none">
+                                            Чек #{{ order.id }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Заявок не найдено</h5>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+{% endblock %}

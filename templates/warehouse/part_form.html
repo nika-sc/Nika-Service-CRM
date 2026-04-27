@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Редактирование товара #{{ part.id }}{% else %}Новый товар{% endif %} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-box me-2"></i>{% if is_edit %}Редактирование товара{% else %}Создание товара{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <form id="partForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Название <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="{% if is_edit %}{{ part.name }}{% endif %}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Артикул <span class="text-danger">*</span></label>
+                                <input type="text" name="part_number" class="form-control" value="{% if is_edit %}{{ part.part_number }}{% endif %}" {% if is_edit %}readonly{% endif %} required>
+                                {% if is_edit %}
+                                <small class="form-text text-muted">Артикул нельзя изменить после создания</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Категория</label>
+                                <select name="category_id" class="form-select" id="categorySelect">
+                                    <option value="">Без категории</option>
+                                    {% macro render_category_options(nodes, level=0) -%}
+                                        {%- for node in nodes -%}
+                                            {%- set indent = ('&nbsp;' * (level * 4)) -%}
+                                            <option value="{{ node.id }}" {% if is_edit and (part.category_id == node.id or part.category == node.name) %}selected{% endif %}>
+                                                {{ (indent ~ ('└─ ' if level > 0 else ''))|safe }}{{ node.name }}
+                                            </option>
+                                            {%- if node.children -%}
+                                                {{ render_category_options(node.children, level + 1) }}
+                                            {%- endif -%}
+                                        {%- endfor -%}
+                                    {%- endmacro %}
+
+                                    {{ render_category_options(categories, 0) }}
+                                </select>
+                                <small class="form-text text-muted">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#categoryModal">Создать новую категорию</a>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Единица измерения</label>
+                                <select name="unit" class="form-select">
+                                    <option value="шт" {% if is_edit and part.unit == 'шт' %}selected{% elif not is_edit %}selected{% endif %}>Штуки</option>
+                                    <option value="кг" {% if is_edit and part.unit == 'кг' %}selected{% endif %}>Килограммы</option>
+                                    <option value="м" {% if is_edit and part.unit == 'м' %}selected{% endif %}>Метры</option>
+                                    <option value="л" {% if is_edit and part.unit == 'л' %}selected{% endif %}>Литры</option>
+                                    <option value="м²" {% if is_edit and part.unit == 'м²' %}selected{% endif %}>Квадратные метры</option>
+                                    <option value="м³" {% if is_edit and part.unit == 'м³' %}selected{% endif %}>Кубические метры</option>
+                                    <option value="уп" {% if is_edit and part.unit == 'уп' %}selected{% endif %}>Упаковки</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Количество (начальный остаток)</label>
+                                <input type="number" name="stock_quantity" class="form-control" value="{% if is_edit %}{{ part.stock_quantity }}{% else %}0{% endif %}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Мин. остаток</label>
+                                <input type="number" name="min_quantity" class="form-control" value="{% if is_edit %}{{ part.min_quantity }}{% else %}0{% endif %}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Гарантия, дн.</label>
+                                <input type="number" name="warranty_days" class="form-control" value="{% if is_edit %}{{ part.warranty_days or '' }}{% endif %}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Розничная цена, ₽ <span class="text-danger">*</span></label>
+                                <input type="number" name="retail_price" class="form-control" value="{% if is_edit %}{{ part.retail_price or part.price or 0 }}{% else %}0{% endif %}" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Закупочная цена, ₽</label>
+                                <input type="number" name="purchase_price" class="form-control" value="{% if is_edit %}{{ part.purchase_price or 0 }}{% else %}0{% endif %}" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea name="description" class="form-control" rows="3">{% if is_edit %}{{ part.description or '' }}{% endif %}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea name="comment" class="form-control" rows="2">{% if is_edit %}{{ part.comment or '' }}{% endif %}</textarea>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="mb-3">Настройки зарплаты</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Тип правила зарплаты</label>
+                                <select name="salary_rule_type" class="form-select" id="partSalaryRuleType" onchange="updatePartSalaryRuleInput()">
+                                    <option value="">Не задано</option>
+                                    <option value="percent" {% if is_edit and part.salary_rule_type == 'percent' %}selected{% endif %}>Процент от прибыли</option>
+                                    <option value="fixed" {% if is_edit and part.salary_rule_type == 'fixed' %}selected{% endif %}>Фиксированная сумма</option>
+                                </select>
+                                <small class="form-text text-muted">Приоритет: Товар > Мастер/Менеджер > Статус</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3" id="partSalaryRuleValueGroup" style="display: {% if is_edit and part.salary_rule_type %}block{% else %}none{% endif %};">
+                                <label class="form-label" id="partSalaryRuleValueLabel">Значение</label>
+                                <div class="input-group">
+                                    <input type="number" name="salary_rule_value" class="form-control" id="partSalaryRuleValue" value="{% if is_edit %}{{ part.salary_rule_value or '' }}{% endif %}" step="0.01" min="0">
+                                    <span class="input-group-text" id="partSalaryRuleValueUnit">{% if is_edit and part.salary_rule_type == 'percent' %}%{% else %}коп.{% endif %}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> {% if is_edit %}Сохранить изменения{% else %}Создать товар{% endif %}
+                        </button>
+                        {% if is_edit %}
+                        <a href="{{ url_for('warehouse.part_detail', part_id=part.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('warehouse.parts_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания категории -->
+    <div class="modal fade" id="categoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая категория</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название категории</label>
+                        <input type="text" id="newCategoryNameModal" class="form-control" placeholder="Введите название">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание (необязательно)</label>
+                        <textarea id="newCategoryDescriptionModal" class="form-control" rows="2" placeholder="Введите описание"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="createCategoryFromModal()">Создать</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.getElementById('partForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                part_number: formData.get('part_number'),
+                category_id: formData.get('category_id') ? parseInt(formData.get('category_id')) : null,
+                unit: formData.get('unit') || 'шт',
+                stock_quantity: parseInt(formData.get('stock_quantity') || 0),
+                retail_price: parseFloat(formData.get('retail_price') || 0),
+                purchase_price: parseFloat(formData.get('purchase_price') || 0) || null,
+                warranty_days: formData.get('warranty_days') ? parseInt(formData.get('warranty_days')) : null,
+                description: formData.get('description') || null,
+                comment: formData.get('comment') || null,
+                min_quantity: parseInt(formData.get('min_quantity') || 0)
+            };
+            
+            if (!data.name || !data.part_number || !data.retail_price) {
+                alert('Заполните все обязательные поля');
+                return;
+            }
+            
+            const url = {% if is_edit %}'{{ url_for("warehouse.edit_part", part_id=part.id) }}'{% else %}'{{ url_for("warehouse.new_part") }}'{% endif %};
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(async response => {
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = '/warehouse/parts/' + result.part_id;
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при сохранении товара');
+            });
+        });
+        
+        function createCategoryFromModal() {
+            const name = document.getElementById('newCategoryNameModal').value.trim();
+            if (!name) {
+                alert('Введите название категории');
+                return;
+            }
+            
+            fetch('/warehouse/categories', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: name,
+                    description: document.getElementById('newCategoryDescriptionModal').value.trim() || null
+                })
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (data.success) {
+                    // Добавляем новую категорию в select
+                    const select = document.getElementById('categorySelect');
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.text = name;
+                    option.selected = true;
+                    select.appendChild(option);
+                    
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+                    modal.hide();
+                    
+                    // Очищаем поля
+                    document.getElementById('newCategoryNameModal').value = '';
+                    document.getElementById('newCategoryDescriptionModal').value = '';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при создании категории');
+            });
+        }
+    </script>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+

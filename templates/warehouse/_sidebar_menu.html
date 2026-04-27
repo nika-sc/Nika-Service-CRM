@@ -1,0 +1,55 @@
+<!-- Боковое меню склада -->
+<aside class="page-sidebar">
+    <ul class="page-menu">
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.parts_list') }}" class="page-menu-link{% if '/warehouse/parts' in request.path or request.path == '/warehouse' or request.path == '/warehouse/' %} active{% endif %}">
+                <i class="fas fa-boxes"></i>
+                <span>Товары</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.purchases') }}" class="page-menu-link{% if '/warehouse/purchases' in request.path %} active{% endif %}">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Закупки</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.movements') }}" class="page-menu-link{% if '/warehouse/movements' in request.path %} active{% endif %}">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Движения</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.suppliers_list') }}" class="page-menu-link{% if '/warehouse/suppliers' in request.path %} active{% endif %}">
+                <i class="fas fa-truck"></i>
+                <span>Поставщики</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.inventory_list') }}" class="page-menu-link{% if '/warehouse/inventory' in request.path %} active{% endif %}">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Инвентаризация</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('warehouse.warehouse_logs') }}" class="page-menu-link{% if '/warehouse/logs' in request.path %} active{% endif %}">
+                <i class="fas fa-history"></i>
+                <span>История</span>
+            </a>
+        </li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.stock_report') }}" class="page-menu-link{% if '/reports/stock' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Остатки (отчет)</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('reports.purchases_report') }}" class="page-menu-link{% if '/reports/purchases' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-pie"></i>
+                <span>Закупки (отчет)</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+

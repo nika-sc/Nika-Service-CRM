@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Редактирование поставщика{% else %}Новый поставщик{% endif %} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-truck me-2"></i>{% if is_edit %}Редактирование поставщика{% else %}Новый поставщик{% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form id="supplierForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Название <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="{% if is_edit %}{{ supplier.name }}{% endif %}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Контактное лицо</label>
+                                <input type="text" name="contact_person" class="form-control" value="{% if is_edit %}{{ supplier.contact_person or '' }}{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Телефон</label>
+                                <input type="text" name="phone" class="form-control" value="{% if is_edit %}{{ supplier.phone or '' }}{% endif %}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" value="{% if is_edit %}{{ supplier.email or '' }}{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Адрес</label>
+                                <textarea name="address" class="form-control" rows="2">{% if is_edit %}{{ supplier.address or '' }}{% endif %}</textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ИНН</label>
+                                <input type="text" name="inn" class="form-control" value="{% if is_edit %}{{ supplier.inn or '' }}{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea name="comment" class="form-control" rows="3">{% if is_edit %}{{ supplier.comment or '' }}{% endif %}</textarea>
+                    </div>
+                    {% if is_edit %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if supplier.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="isActive">Активен</label>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Сохранить
+                        </button>
+                        <a href="{{ url_for('warehouse.suppliers_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('supplierForm');
+    if (!form) return;
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const data = {
+            name: formData.get('name'),
+            contact_person: formData.get('contact_person'),
+            phone: formData.get('phone'),
+            email: formData.get('email'),
+            address: formData.get('address'),
+            inn: formData.get('inn'),
+            comment: formData.get('comment')
+        };
+        
+        if (document.getElementById('isActive')) {
+            data.is_active = document.getElementById('isActive').checked;
+        }
+        
+        const url = {% if is_edit %}'{{ url_for("warehouse.edit_supplier", supplier_id=supplier.id) }}'{% else %}'{{ url_for("warehouse.new_supplier") }}'{% endif %};
+        
+        // Получаем CSRF токен
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ url_for("warehouse.suppliers_list") }}';
+            } else {
+                alert(data.error || 'Ошибка при сохранении');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении: ' + (error.error || error.message || 'Неизвестная ошибка'));
+        });
+    });
+});
+</script>
+{% endblock %}
+

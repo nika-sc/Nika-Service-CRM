@@ -1,0 +1,82 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Мои устройства{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-mobile-alt me-2"></i>Мои устройства</h4>
+
+{% if devices_with_orders %}
+{% for item in devices_with_orders %}
+{% set d = item.device %}
+{% set orders = item.orders %}
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-light py-3">
+        <h5 class="mb-0">
+            <i class="fas fa-laptop me-2 text-primary"></i>
+            {{ d.device_type or '—' }} {{ d.device_brand or '' }}
+            {% if d.serial_number %}
+            <small class="text-muted ms-2">№ {{ d.serial_number }}</small>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if d.symptom_tags or d.appearance_tags %}
+        <div class="row mb-3">
+            {% if d.symptom_tags %}
+            <div class="col-md-6">
+                <h6 class="text-muted small mb-1"><i class="fas fa-wrench me-1"></i> Характерные неисправности</h6>
+                <p class="mb-0 small">{{ d.symptom_tags }}</p>
+            </div>
+            {% endif %}
+            {% if d.appearance_tags %}
+            <div class="col-md-6">
+                <h6 class="text-muted small mb-1"><i class="fas fa-eye me-1"></i> Внешний вид / комплектация</h6>
+                <p class="mb-0 small">{{ d.appearance_tags }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        <h6 class="text-muted mb-2"><i class="fas fa-tools me-1"></i> Заявки и поломки</h6>
+        {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Дата</th>
+                        <th>Модель</th>
+                        <th>Описание</th>
+                        <th>Статус</th>
+                        <th>Оплачено</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr class="order-row" data-order-id="{{ o.id }}" style="cursor: pointer;">
+                        <td>#{{ o.id }}</td>
+                        <td>{{ o.created_at|format_date(true) if o.created_at else '—' }}</td>
+                        <td>{{ o.model or '—' }}</td>
+                        <td class="text-truncate" style="max-width: 150px;">{{ o.symptom_tags or '—' }}</td>
+                        <td>
+                            <span class="badge" style="background-color: {{ o.status_color or '#6c757d' }}; color: white;">
+                                {{ o.status_name or 'Без статуса' }}
+                            </span>
+                        </td>
+                        <td>{{ "%.2f"|format(o.total_paid|default(0)) }} ₽</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0 small">Нет заявок по этому устройству</p>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>У вас пока нет зарегистрированных устройств
+</div>
+{% endif %}
+{% endblock %}

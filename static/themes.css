@@ -1,0 +1,979 @@
+/* ========== ОБЩИЕ СТИЛИ ТЕМ ========== */
+.theme-switcher {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    z-index: 1050;
+}
+
+/* Отдельный стиль, если переключатель вставлен в Mac-меню */
+.mac-menu-container .theme-switcher {
+    position: relative;
+    top: auto;
+    right: auto;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 999px;
+    padding: 0;
+    margin-right: 0.25rem;
+    flex-shrink: 0;
+}
+
+/* Фолбэк: если переключатель лежит напрямую в body (старое поведение) */
+body > .theme-switcher {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 25px;
+    padding: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.theme-switcher button {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: inherit;
+}
+
+.theme-switcher button i {
+    font-size: 0.85rem;
+}
+
+/* Текст кнопок темы — скрываем по умолчанию, только иконки, чтобы не перекрывать контент при 100% */
+.theme-btn-text {
+    display: none;
+}
+/* Показывать текст только на очень широких экранах */
+@media (min-width: 1600px) {
+    .theme-btn-text {
+        display: inline;
+    }
+}
+
+.theme-switcher button.active {
+    font-weight: 600;
+}
+
+/* ========== СВЕТЛАЯ ТЕМА (по умолчанию) ========== */
+body.theme-light {
+    background-color: #ecf0f5;
+    color: #333;
+}
+
+body.theme-light .theme-switcher {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.theme-light .theme-switcher button.active {
+    background: #007bff;
+    color: white;
+}
+
+/* ========== ТЁМНАЯ ТЕМА ========== */
+body.theme-dark {
+    background-color: #1a1a1a !important;
+    color: #e0e0e0 !important;
+}
+
+/* Сайдбар настроек в тёмной теме */
+body.theme-dark .settings-sidebar {
+    background: #242424 !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.7) !important;
+}
+
+body.theme-dark .settings-menu-link {
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .settings-menu-link:hover,
+body.theme-dark .settings-menu-link.active {
+    color: #0d6efd !important;
+    border-left-color: #0d6efd !important;
+}
+
+body.theme-dark .settings-menu-link.active::before {
+    background: #0d6efd !important;
+}
+
+/* Левая колонка/сайдбар и меню разделов в тёмной теме */
+body.theme-dark .page-sidebar {
+    background: #242424 !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6) !important;
+}
+
+body.theme-dark .page-menu-link {
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .page-menu-link:hover,
+body.theme-dark .page-menu-link.active {
+    color: #0d6efd !important;
+    border-left-color: #0d6efd !important;
+}
+
+/* Общие колонки, если где-то sidebar задан как col-md-3 без .page-sidebar */
+body.theme-dark .col-md-3 .card {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .col-md-3,
+body.theme-dark .col-lg-3 {
+    color: inherit;
+}
+
+/* Верхнее Mac-меню и sidebar в тёмной теме */
+body.theme-dark .mac-menu-bar {
+    background: rgba(30, 30, 30, 0.96) !important;
+    border-bottom-color: #444 !important;
+}
+
+body.theme-dark .mac-menu-link,
+body.theme-dark .mac-dropdown-item {
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .mac-menu-link:hover,
+body.theme-dark .mac-menu-link.active {
+    color: #0d6efd !important;
+    background: rgba(13, 110, 253, 0.12) !important;
+}
+
+body.theme-dark .mac-dropdown-menu {
+    background: rgba(40, 40, 40, 0.98) !important;
+    border-color: #555 !important;
+}
+
+/* Поле поиска в тёмной теме */
+body.theme-dark .mac-search-input-wrap {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+body.theme-dark .mac-search-input-wrap:focus-within {
+    background: #2d2d2d !important;
+    border-color: #e67e22 !important;
+    box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.2) !important;
+}
+body.theme-dark .mac-search-icon {
+    color: #9e9e9e !important;
+}
+body.theme-dark .mac-search-input-wrap:focus-within .mac-search-icon {
+    color: #e67e22 !important;
+}
+body.theme-dark .mac-search-input {
+    color: #e0e0e0 !important;
+}
+body.theme-dark .mac-search-input::placeholder {
+    color: #757575 !important;
+}
+
+/* Выдача поиска в тёмной теме */
+body.theme-dark .search-autocomplete {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #e0e0e0 !important;
+}
+body.theme-dark .autocomplete-section-header {
+    color: #9e9e9e !important;
+}
+body.theme-dark .autocomplete-item:hover {
+    background: rgba(230, 126, 34, 0.12) !important;
+}
+body.theme-dark .autocomplete-item-title {
+    color: #e0e0e0 !important;
+}
+body.theme-dark .autocomplete-item-meta {
+    color: #9e9e9e !important;
+}
+body.theme-dark .autocomplete-history .autocomplete-item-title {
+    color: #bdbdbd !important;
+}
+body.theme-dark .autocomplete-item-icon.order { background: rgba(77, 138, 240, 0.25); color: #6ba3f7; }
+body.theme-dark .autocomplete-item-icon.customer { background: rgba(76, 175, 80, 0.25); color: #81c784; }
+body.theme-dark .autocomplete-item-icon.part { background: rgba(255, 152, 0, 0.25); color: #ffb74d; }
+body.theme-dark .autocomplete-item-icon.history { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
+body.theme-dark .autocomplete-item-badge.order { background: rgba(77, 138, 240, 0.25); color: #6ba3f7; }
+body.theme-dark .autocomplete-item-badge.customer { background: rgba(76, 175, 80, 0.25); color: #81c784; }
+body.theme-dark .autocomplete-item-badge.part { background: rgba(255, 152, 0, 0.25); color: #ffb74d; }
+body.theme-dark .autocomplete-empty {
+    color: #9e9e9e !important;
+}
+
+/* Уведомления в шапке */
+body.theme-dark .mac-notifications-menu {
+    background: #2d2d2d !important;
+    border: 1px solid #555 !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .mac-notifications-header,
+body.theme-dark .mac-notifications-footer {
+    border-color: #444 !important;
+}
+
+body.theme-dark .notification-item {
+    border-bottom-color: #444 !important;
+}
+
+body.theme-dark .notification-item:hover {
+    background: #3a3a3a !important;
+}
+
+body.theme-dark .notification-item.unread {
+    background: rgba(13, 110, 253, 0.16) !important;
+}
+
+body.theme-dark .notification-message,
+body.theme-dark .notification-meta {
+    color: #bdbdbd !important;
+}
+
+body.theme-dark .bootstrap-sidebar,
+body.theme-dark .d-flex.flex-column.flex-shrink-0.bg-light {
+    background-color: #1f1f1f !important;
+}
+
+body.theme-dark .bootstrap-sidebar .nav-link {
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .bootstrap-sidebar .nav-link.active {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+body.theme-dark .main-header,
+body.theme-dark .navbar {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .main-sidebar {
+    background-color: #1e1e1e !important;
+}
+
+body.theme-dark .content-wrapper {
+    background-color: #1a1a1a !important;
+}
+
+/* Футер в тёмной теме */
+body.theme-dark .main-footer {
+    background-color: #242424 !important;
+    border-top-color: #444 !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .main-footer a {
+    color: #0d6efd !important;
+}
+
+body.theme-dark .card {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .card-header {
+    background-color: #333 !important;
+    border-color: #444 !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .table {
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .table thead th {
+    background-color: #333 !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .table tbody tr {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .table tbody tr:hover {
+    background-color: #3a3a3a !important;
+}
+
+body.theme-dark .form-control,
+body.theme-dark .form-select,
+body.theme-dark textarea {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #555 !important;
+}
+
+body.theme-dark .form-control:focus,
+body.theme-dark .form-select:focus {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #007bff !important;
+}
+
+body.theme-dark .btn-primary {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+body.theme-dark .btn-secondary {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+body.theme-dark .info-label {
+    color: #b0b0b0 !important;
+}
+
+body.theme-dark .preview-card {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .theme-switcher {
+    background: rgba(45, 45, 45, 0.95);
+}
+
+body.theme-dark .theme-switcher button.active {
+    background: #007bff;
+    color: white;
+}
+
+/* ========== РОЗОВАЯ ТЕМА 80-Х ========== */
+body.theme-retro {
+    background: linear-gradient(135deg, #ff6b9d 0%, #c44569 50%, #f8b500 100%) !important;
+    background-attachment: fixed;
+    color: #fff !important;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Сайдбар настроек в ретро-теме */
+body.theme-retro .settings-sidebar {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.9), rgba(255, 105, 180, 0.9)) !important;
+    border: 2px solid #ff00ff !important;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.6) !important;
+}
+
+body.theme-retro .settings-menu-link {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+body.theme-retro .settings-menu-link:hover,
+body.theme-retro .settings-menu-link.active {
+    border-left-color: #fff !important;
+}
+
+body.theme-retro .settings-menu-link.active::before {
+    background: #fff !important;
+}
+
+/* Левая колонка/сайдбар и меню разделов в ретро-теме */
+body.theme-retro .page-sidebar {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.9), rgba(255, 105, 180, 0.9)) !important;
+    border: 2px solid #ff00ff !important;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5) !important;
+}
+
+body.theme-retro .page-menu-link {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+body.theme-retro .page-menu-link:hover,
+body.theme-retro .page-menu-link.active {
+    border-left-color: #fff !important;
+}
+
+/* Общие колонки col-md-3 в ретро-теме */
+body.theme-retro .col-md-3 .card,
+body.theme-retro .col-lg-3 .card {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.9), rgba(255, 105, 180, 0.9)) !important;
+    border: 2px solid #ff00ff !important;
+    color: #fff !important;
+}
+
+/* Верхнее Mac-меню и sidebar в ретро-теме */
+body.theme-retro .mac-menu-bar {
+    background: linear-gradient(90deg, #ff1493, #ff69b4) !important;
+    border-bottom: 2px solid #ff00ff !important;
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.5) !important;
+}
+
+body.theme-retro .mac-menu-link,
+body.theme-retro .mac-dropdown-item {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+body.theme-retro .mac-menu-link:hover,
+body.theme-retro .mac-menu-link.active {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.theme-retro .mac-dropdown-menu {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.95), rgba(255, 105, 180, 0.95)) !important;
+    border-color: #fff !important;
+}
+
+body.theme-retro .bootstrap-sidebar,
+body.theme-retro .d-flex.flex-column.flex-shrink-0.bg-light {
+    background: linear-gradient(180deg, #ff1493, #c44569) !important;
+    border-right: 3px solid #ff00ff;
+    box-shadow: 2px 0 15px rgba(255, 20, 147, 0.4);
+}
+
+body.theme-retro .bootstrap-sidebar .nav-link {
+    color: #fff !important;
+}
+
+body.theme-retro .bootstrap-sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+body.theme-retro .main-header,
+body.theme-retro .navbar {
+    background: linear-gradient(90deg, #ff1493, #ff69b4) !important;
+    border: 2px solid #ff00ff;
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.5);
+}
+
+body.theme-retro .main-sidebar {
+    background: linear-gradient(180deg, #ff1493, #c44569) !important;
+    border-right: 3px solid #ff00ff;
+    box-shadow: 2px 0 15px rgba(255, 20, 147, 0.4);
+}
+
+body.theme-retro .content-wrapper {
+    background: transparent !important;
+}
+
+body.theme-retro .card {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.9), rgba(255, 105, 180, 0.9)) !important;
+    border: 3px solid #ff00ff !important;
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+    border-radius: 15px !important;
+}
+
+body.theme-retro .card-header {
+    background: linear-gradient(90deg, #ff00ff, #ff1493) !important;
+    border-bottom: 2px solid #fff !important;
+    color: #fff !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    font-weight: bold;
+}
+
+body.theme-retro .table {
+    color: #fff !important;
+}
+
+body.theme-retro .table thead th {
+    background: linear-gradient(90deg, #ff00ff, #ff1493) !important;
+    color: #fff !important;
+    border: 2px solid #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    font-weight: bold;
+}
+
+body.theme-retro .table tbody tr {
+    background: rgba(255, 20, 147, 0.7) !important;
+    border: 1px solid #ff69b4 !important;
+}
+
+body.theme-retro .table tbody tr:hover {
+    background: rgba(255, 0, 255, 0.8) !important;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+    transform: scale(1.02);
+    transition: all 0.3s;
+}
+
+body.theme-retro .form-control,
+body.theme-retro .form-select,
+body.theme-retro textarea {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #ff1493 !important;
+    border: 2px solid #ff00ff !important;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+body.theme-retro .form-control:focus,
+body.theme-retro .form-select:focus {
+    background: #fff !important;
+    border-color: #fff !important;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+    outline: none;
+}
+
+body.theme-retro .btn-primary {
+    background: linear-gradient(135deg, #ff00ff, #ff1493) !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+body.theme-retro .btn-primary:hover {
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.8);
+    transform: scale(1.05);
+}
+
+body.theme-retro .btn-success {
+    background: linear-gradient(135deg, #00ff00, #32cd32) !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+body.theme-retro .btn-secondary {
+    background: linear-gradient(135deg, #ff69b4, #ff1493) !important;
+    border: 2px solid #fff !important;
+}
+
+body.theme-retro .small-box {
+    border: 3px solid #fff !important;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.6) !important;
+    border-radius: 15px !important;
+}
+
+body.theme-retro .bg-gradient-info {
+    background: linear-gradient(135deg, #00ffff, #0080ff) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6) !important;
+}
+
+body.theme-retro .bg-gradient-success {
+    background: linear-gradient(135deg, #00ff00, #32cd32) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.6) !important;
+}
+
+body.theme-retro .bg-gradient-warning {
+    background: linear-gradient(135deg, #ffff00, #ffd700) !important;
+    box-shadow: 0 0 20px rgba(255, 255, 0, 0.6) !important;
+}
+
+body.theme-retro .bg-gradient-danger {
+    background: linear-gradient(135deg, #ff1493, #ff00ff) !important;
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.6) !important;
+}
+
+body.theme-retro .badge {
+    border: 2px solid #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    font-weight: bold;
+}
+
+body.theme-retro .info-label {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    font-weight: bold;
+}
+
+body.theme-retro .preview-card {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.95), rgba(255, 105, 180, 0.95)) !important;
+    border: 3px solid #fff !important;
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.8) !important;
+    color: #fff !important;
+}
+
+body.theme-retro .theme-switcher {
+    background: rgba(255, 20, 147, 0.95);
+    border: 2px solid #fff;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+}
+
+body.theme-retro .theme-switcher button {
+    color: #fff;
+}
+
+body.theme-retro .theme-switcher button.active {
+    background: #fff;
+    color: #ff1493;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+body.theme-retro .nav-link {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+body.theme-retro .nav-link:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 5px;
+}
+
+body.theme-retro .breadcrumb {
+    background: rgba(255, 20, 147, 0.7) !important;
+    border: 2px solid #fff;
+    border-radius: 10px;
+}
+
+body.theme-retro .breadcrumb-item a {
+    color: #fff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+body.theme-retro .dropdown-menu {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.95), rgba(255, 105, 180, 0.95)) !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.6) !important;
+}
+
+body.theme-retro .dropdown-item {
+    color: #fff !important;
+}
+
+body.theme-retro .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Анимация для ретро темы */
+@keyframes neonPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 255, 0.6); }
+    50% { box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+}
+
+body.theme-retro .card:hover {
+    animation: neonPulse 2s ease-in-out infinite;
+}
+
+/* ========== СТИЛИ КАТЕГОРИЙ В ТЕМНОЙ ТЕМЕ ========== */
+body.theme-dark .category-item-wrapper {
+    background-color: transparent;
+}
+
+body.theme-dark .category-item-wrapper:hover {
+    background-color: #2d2d2d;
+}
+
+body.theme-dark .category-item-wrapper.active {
+    background-color: #1e3a5f;
+    border-left-color: #0d6efd;
+}
+
+body.theme-dark .category-link {
+    color: #e0e0e0;
+}
+
+body.theme-dark .category-link:hover {
+    color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+body.theme-dark .category-item-wrapper.active .category-link {
+    color: #0d6efd;
+}
+
+body.theme-dark .category-icon {
+    color: #8a8a8a;
+}
+
+body.theme-dark .category-item-wrapper.active .category-icon,
+body.theme-dark .category-link:hover .category-icon {
+    color: #0d6efd;
+}
+
+body.theme-dark .category-toggle {
+    color: #8a8a8a;
+}
+
+body.theme-dark .category-toggle:hover {
+    color: #0d6efd;
+}
+
+body.theme-dark .category-connector {
+    background: linear-gradient(to bottom, #444 0%, #444 50%, transparent 50%);
+}
+
+body.theme-dark .category-children {
+    border-left-color: #444;
+}
+
+body.theme-dark #categoriesList > a.list-group-item {
+    color: #e0e0e0;
+}
+
+body.theme-dark #categoriesList > a.list-group-item:hover {
+    background-color: #2d2d2d;
+    color: #0d6efd;
+}
+
+body.theme-dark #categoriesList > a.list-group-item.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+/* ========== ГЛОБАЛЬНОЕ ПОКРЫТИЕ ДЛЯ ВСЕХ ШАБЛОНОВ ========== */
+/* Базовые контейнеры и типографика */
+body.theme-dark .content,
+body.theme-dark .container,
+body.theme-dark .container-fluid,
+body.theme-dark .page-content {
+    color: #e0e0e0;
+}
+
+body.theme-dark .text-dark,
+body.theme-dark [style*="color: #212529"],
+body.theme-dark [style*="color:#212529"],
+body.theme-dark [style*="color: #424242"],
+body.theme-dark [style*="color:#424242"],
+body.theme-dark [style*="color: black"],
+body.theme-dark [style*="color:black"] {
+    color: #e0e0e0 !important;
+}
+
+/* Bootstrap surface helpers */
+body.theme-dark .bg-white,
+body.theme-dark .bg-light,
+body.theme-dark [style*="background: white"],
+body.theme-dark [style*="background:white"],
+body.theme-dark [style*="background-color: white"],
+body.theme-dark [style*="background-color:white"],
+body.theme-dark [style*="background: #fff"],
+body.theme-dark [style*="background:#fff"],
+body.theme-dark [style*="background: #ffffff"],
+body.theme-dark [style*="background:#ffffff"],
+body.theme-dark [style*="background-color: #fff"],
+body.theme-dark [style*="background-color:#fff"],
+body.theme-dark [style*="background-color: #ffffff"],
+body.theme-dark [style*="background-color:#ffffff"],
+body.theme-dark [style*="background: #f8f9fa"],
+body.theme-dark [style*="background:#f8f9fa"],
+body.theme-dark [style*="background-color: #f8f9fa"],
+body.theme-dark [style*="background-color:#f8f9fa"] {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+/* Dropdowns */
+body.theme-dark .dropdown-menu,
+body.theme-dark .dropdown-item {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #555 !important;
+}
+
+/* Светлые outline/light кнопки в темной теме */
+body.theme-dark .btn-light,
+body.theme-dark .btn-outline-secondary {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #555 !important;
+}
+
+body.theme-dark .btn-light:hover,
+body.theme-dark .btn-outline-secondary:hover {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+    border-color: #666 !important;
+}
+
+body.theme-dark .dropdown-item:hover,
+body.theme-dark .dropdown-item:focus {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+body.theme-dark .dropdown-divider {
+    border-top-color: #444 !important;
+}
+
+/* Modals */
+body.theme-dark .modal-content {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #555 !important;
+}
+
+body.theme-dark .modal-header,
+body.theme-dark .modal-footer {
+    border-color: #444 !important;
+}
+
+body.theme-dark .modal-title {
+    color: #f0f0f0 !important;
+}
+
+body.theme-dark .btn-close {
+    filter: invert(1) grayscale(100%);
+}
+
+/* Tabs / pills / pagination */
+body.theme-dark .nav-tabs,
+body.theme-dark .nav-pills {
+    border-color: #444 !important;
+}
+
+body.theme-dark .nav-tabs .nav-link,
+body.theme-dark .nav-pills .nav-link,
+body.theme-dark .page-link {
+    color: #e0e0e0 !important;
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .nav-tabs .nav-link.active,
+body.theme-dark .nav-pills .nav-link.active,
+body.theme-dark .page-item.active .page-link {
+    color: #fff !important;
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+body.theme-dark .page-item.disabled .page-link {
+    color: #9e9e9e !important;
+    background-color: #262626 !important;
+    border-color: #3c3c3c !important;
+}
+
+/* Accordions / list groups */
+body.theme-dark .accordion-item {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .accordion-button {
+    background-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .accordion-button:not(.collapsed) {
+    background-color: #1e3a5f !important;
+    color: #ffffff !important;
+}
+
+body.theme-dark .accordion-button::after {
+    filter: invert(1) grayscale(100%);
+}
+
+body.theme-dark .list-group-item {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .list-group-item.active {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+/* Мелкие светлые бейджи и muted-текст (часто в settings/order_detail) */
+body.theme-dark .badge.bg-light {
+    background-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #555 !important;
+}
+
+body.theme-dark .text-muted {
+    color: #bdbdbd !important;
+}
+
+/* Shop/index custom blocks */
+body.theme-dark .period-filter,
+body.theme-dark .stat-card,
+body.theme-dark .search-results,
+body.theme-dark .customer-results,
+body.theme-dark .cart-item,
+body.theme-dark .total-section,
+body.theme-dark .selected-customer {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.theme-dark .period-filter .btn-period {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #555 !important;
+}
+
+body.theme-dark .period-filter .btn-period:hover {
+    background: #3a3a3a !important;
+    border-color: #666 !important;
+}
+
+body.theme-dark .period-filter .btn-period.active {
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+body.theme-dark .search-result-item,
+body.theme-dark .customer-result-item {
+    border-bottom-color: #444 !important;
+}
+
+body.theme-dark .search-result-item:hover,
+body.theme-dark .customer-result-item:hover,
+body.theme-dark .sale-row:hover {
+    background: #3a3a3a !important;
+}
+
+body.theme-dark .cart-item-name,
+body.theme-dark .customer-name,
+body.theme-dark .selected-customer-name,
+body.theme-dark .stat-card .stat-value {
+    color: #f0f0f0 !important;
+}
+
+body.theme-dark .cart-item-type,
+body.theme-dark .customer-phone,
+body.theme-dark .selected-customer-phone,
+body.theme-dark .stat-card .stat-label {
+    color: #bdbdbd !important;
+}
+
+body.theme-dark .payment-method label {
+    border-color: #555 !important;
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+}
+
+body.theme-dark .payment-method input[type="radio"]:checked + label {
+    border-color: #0d6efd !important;
+    background: rgba(13, 110, 253, 0.16) !important;
+    color: #ffffff !important;
+}
+
+/* Settings preview note block */
+body.theme-dark .preview-note {
+    background: #3a330f !important;
+    color: #e0e0e0 !important;
+    border-left-color: #ffc107 !important;
+}
+
+/* Reports/summary highlighted yellow card readability */
+body.theme-dark [style*="background-color: #ffc107"] .text-dark,
+body.theme-dark [style*="background:#ffc107"] .text-dark,
+body.theme-dark [style*="background-color:#ffc107"] .text-dark {
+    color: #1f1f1f !important;
+}
+
+/* Alerts and utility borders */
+body.theme-dark .alert {
+    border-color: #444 !important;
+}
+
+body.theme-dark .border,
+body.theme-dark .border-top,
+body.theme-dark .border-end,
+body.theme-dark .border-bottom,
+body.theme-dark .border-start,
+body.theme-dark hr {
+    border-color: #444 !important;
+}
+

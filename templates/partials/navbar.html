@@ -1,0 +1,94 @@
+<!-- Навбар: бренд + поиск на всю ширину + портал + кнопки -->
+<nav class="mac-menu-bar no-print">
+    <div class="mac-menu-container">
+        <button type="button" class="mac-mobile-toggle d-md-none" id="macMobileToggle" aria-label="Меню">
+            <i class="fas fa-bars"></i>
+        </button>
+        <a href="{{ url_for('main.home') }}" class="mac-menu-brand text-decoration-none" title="На главную">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Nika CRM</span>
+        </a>
+
+        <div class="mac-search mac-search-box">
+            <form action="/search" method="GET" role="search" class="mac-search-form">
+                <div class="mac-search-input-wrap">
+                    <i class="fas fa-search mac-search-icon" aria-hidden="true"></i>
+                    <input type="text" name="q" class="form-control mac-search-input" id="globalSearchInput" placeholder="Поиск заявок, клиентов, товаров…" autocomplete="off" value="">
+                    <button class="btn mac-search-submit" type="submit" id="globalSearchBtn" aria-label="Искать">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+            <div class="search-autocomplete" id="searchAutocomplete" aria-label="Результаты поиска"></div>
+        </div>
+
+        <ul class="mac-menu">
+            <li class="mac-menu-item dropdown">
+                <a href="/portal/login" class="mac-menu-link{% if '/portal' in request.path %} active{% endif %}" style="color: #ff9800;">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Портал</span>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li>
+                        <a href="/portal/login" class="mac-dropdown-item{% if '/portal/login' in request.path %} active{% endif %}">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>Вход в портал</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/portal/dashboard" class="mac-dropdown-item{% if '/portal/dashboard' in request.path or request.path == '/portal' %} active{% endif %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Дашборд клиента</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/portal/orders" class="mac-dropdown-item{% if '/portal/orders' in request.path %} active{% endif %}">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Мои заявки</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/portal/payments" class="mac-dropdown-item{% if '/portal/payments' in request.path %} active{% endif %}">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Платежи</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/portal/wallet" class="mac-dropdown-item{% if '/portal/wallet' in request.path %} active{% endif %}">
+                            <i class="fas fa-wallet"></i>
+                            <span>Кошелёк</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        <div class="mac-mobile-overlay" id="macMobileOverlay"></div>
+
+        <div class="mac-menu-actions">
+            <div class="mac-notifications-dropdown">
+                <button class="mac-action-btn" id="notificationsBtn" title="Уведомления">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                </button>
+                <div class="mac-notifications-menu" id="notificationsMenu" style="display: none;">
+                    <div class="mac-notifications-header">
+                        <h6 class="mb-0">Уведомления</h6>
+                        <button class="btn btn-sm btn-link" id="markAllReadBtn" style="display: none;">Отметить все как прочитанные</button>
+                    </div>
+                    <div class="mac-notifications-body" id="notificationsList">
+                        <div class="text-center py-3 text-muted">
+                            <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                        </div>
+                    </div>
+                    <div class="mac-notifications-footer">
+                        <a href="{{ url_for('main.notifications_page') }}" class="btn btn-sm btn-link w-100">Все уведомления</a>
+                    </div>
+                </div>
+            </div>
+            <a class="mac-action-btn" data-widget="fullscreen" href="#" role="button" title="Полный экран">
+                <i class="fas fa-expand-arrows-alt"></i>
+            </a>
+        </div>
+    </div>
+</nav>

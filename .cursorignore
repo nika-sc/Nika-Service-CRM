@@ -1,0 +1,35 @@
+# --- ДАННЫЕ, НЕ НУЖНЫЕ АГЕНТУ ---
+uploads/
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- ЛОГИ / ВЫГРУЗКИ ---
+*.log
+*.out
+audit_db_out.txt
+
+# --- КЭШИ / ВРЕМЕННОЕ ---
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.cache/
+tmp/
+temp/
+
+# --- ВЕНВЫ ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- IDE ---
+.idea/
+.vscode/
+
+# --- (опционально) статические артефакты, если их много ---
+static/**/*.map
+static/**/*.min.*

@@ -1,0 +1,30 @@
+<!-- Боковое меню кассы -->
+<aside class="page-sidebar">
+    <ul class="page-menu">
+        <li class="page-menu-item">
+            <a href="{{ url_for('finance.cash') }}" class="page-menu-link{% if '/finance/cash' in request.path %} active{% endif %}">
+                <i class="fas fa-wallet"></i>
+                <span>Операции</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('finance.profit_report') }}" class="page-menu-link{% if '/finance/profit' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>Прибыль</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('finance.analytics') }}" class="page-menu-link{% if '/finance/analytics' in request.path %} active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Аналитика</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
+            <a href="{{ url_for('finance.categories') }}" class="page-menu-link{% if '/finance/categories' in request.path %} active{% endif %}">
+                <i class="fas fa-tags"></i>
+                <span>Статьи</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+

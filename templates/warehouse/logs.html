@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}История операций со складом — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <!-- Фильтры -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter me-2"></i>Фильтры</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="mb-0">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Тип операции</label>
+                            <select name="operation_type" class="form-select">
+                                <option value="">Все операции</option>
+                                <option value="create" {% if operation_type == 'create' %}selected{% endif %}>Создание товара</option>
+                                <option value="delete" {% if operation_type == 'delete' %}selected{% endif %}>Удаление товара</option>
+                                <option value="income" {% if operation_type == 'income' %}selected{% endif %}>Оприходование</option>
+                                <option value="expense" {% if operation_type == 'expense' %}selected{% endif %}>Списание</option>
+                                <option value="category_create" {% if operation_type == 'category_create' %}selected{% endif %}>Создание категории</option>
+                                <option value="category_update" {% if operation_type == 'category_update' %}selected{% endif %}>Обновление категории</option>
+                                <option value="category_delete" {% if operation_type == 'category_delete' %}selected{% endif %}>Удаление категории</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Товар</label>
+                            <select name="part_id" class="form-select">
+                                <option value="">Все товары</option>
+                                {% for part in parts %}
+                                <option value="{{ part.id }}" {% if part_id == part.id|string %}selected{% endif %}>
+                                    {{ part.name }} ({{ part.part_number or 'без артикула' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Дата от</label>
+                            <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Дата до</label>
+                            <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-1"></i> Поиск
+                                </button>
+                                <a href="{{ url_for('warehouse.warehouse_logs') }}" class="btn btn-secondary w-100">
+                                    <i class="fas fa-times me-1"></i> Сброс
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Список логов -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list me-2"></i>История операций ({{ total }})
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Дата и время</th>
+                                <th>Операция</th>
+                                <th>Товар</th>
+                                <th>Артикул</th>
+                                <th>Количество</th>
+                                <th>Изменения</th>
+                                <th>Пользователь</th>
+                                <th>Примечание</th>
+                                <th>IP адрес</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.created_at|format_date(true) }}</td>
+                                <td>
+                                    {% if log.operation_type == 'create' %}
+                                        <span class="badge bg-success">Создание товара</span>
+                                    {% elif log.operation_type == 'delete' %}
+                                        <span class="badge bg-danger">Удаление товара</span>
+                                    {% elif log.operation_type == 'income' %}
+                                        <span class="badge bg-info">Оприходование</span>
+                                    {% elif log.operation_type == 'expense' %}
+                                        <span class="badge bg-warning">Списание</span>
+                                    {% elif log.operation_type == 'category_create' %}
+                                        <span class="badge bg-success">Создание категории</span>
+                                    {% elif log.operation_type == 'category_update' %}
+                                        <span class="badge bg-primary">Обновление категории</span>
+                                    {% elif log.operation_type == 'category_delete' %}
+                                        <span class="badge bg-danger">Удаление категории</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ log.operation_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.category_id or log.operation_type in ['category_create', 'category_update', 'category_delete'] %}
+                                        {% if log.category_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-folder me-1"></i>{{ log.category_name }}
+                                        </span>
+                                        {% elif log.part_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-folder me-1"></i>{{ log.part_name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">Категория #{{ log.category_id }}</span>
+                                        {% endif %}
+                                    {% elif log.part_id %}
+                                    <a href="{{ url_for('warehouse.part_detail', part_id=log.part_id) }}">
+                                        {{ log.part_name or 'Товар #' + log.part_id|string }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ log.part_number or '—' }}</code></td>
+                                <td>
+                                    {% if log.quantity %}
+                                    <span class="badge bg-primary">{{ log.quantity }}</span>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.old_value and log.new_value %}
+                                    <small>
+                                        <span class="text-danger">{{ log.old_value }}</span>
+                                        <i class="fas fa-arrow-right mx-1"></i>
+                                        <span class="text-success">{{ log.new_value }}</span>
+                                    </small>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.user_id %}
+                                    <strong>{{ get_user_display_name(user_id=log.user_id) }}</strong>
+                                    {% elif log.username %}
+                                    <strong>{{ get_user_display_name(username=log.username) }}</strong>
+                                    {% else %}
+                                    <span class="text-muted">Система</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ log.notes or '—' }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ log.ip_address or '—' }}</small>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Записи не найдены</h5>
+                                        <p>Попробуйте изменить параметры фильтрации.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if pages > 1 %}
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}&operation_type={{ operation_type or '' }}&part_id={{ part_id or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}">
+                                Предыдущая
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page }} / {{ pages }}</span>
+                        </li>
+                        {% if page < pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}&operation_type={{ operation_type or '' }}&part_id={{ part_id or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}">
+                                Следующая
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+

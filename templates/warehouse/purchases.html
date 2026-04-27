@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Закупки — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title d-inline-flex align-items-center gap-2">
+                    <i class="fas fa-shopping-cart me-2"></i>Список закупок
+                    <a href="{{ url_for('warehouse.new_purchase') }}" class="btn btn-success btn-sm ms-2">
+                        <i class="fas fa-plus me-1"></i> Новая закупка
+                    </a>
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Поставщик</th>
+                                <th>Дата</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Позиций</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for purchase in purchases %}
+                            <tr>
+                                <td>{{ purchase.id }}</td>
+                                <td>{{ purchase.supplier_name }}</td>
+                                <td>{{ purchase.purchase_date|format_date(true) }}</td>
+                                <td>{{ purchase.total_amount }} ₽</td>
+                                <td>
+                                    {% if purchase.status == 'draft' %}
+                                    <span class="badge bg-secondary">Черновик</span>
+                                    {% elif purchase.status == 'completed' %}
+                                    <span class="badge bg-success">Завершена</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Отменена</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ purchase.items_count or 0 }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('warehouse.purchase_detail', purchase_id=purchase.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> Детали
+                                        </a>
+                                        {% if purchase.status == 'draft' %}
+                                        <a href="{{ url_for('warehouse.edit_purchase', purchase_id=purchase.id) }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Редактировать
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="deletePurchase({{ purchase.id }}, {{ purchase.supplier_name|tojson }})">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Закупок пока нет</h5>
+                                        <p><a href="{{ url_for('warehouse.new_purchase') }}" class="alert-link">Создайте первую закупку</a>.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function deletePurchase(purchaseId, supplierName) {
+            if (confirm(`Вы уверены, что хотите удалить закупку #${purchaseId} от поставщика "${supplierName}"?\n\nЭто действие нельзя отменить.`)) {
+                fetch(`/warehouse/purchases/${purchaseId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    let errorData = null;
+                    
+                    if (!response.ok) {
+                        if (contentType && contentType.includes('application/json')) {
+                            try {
+                                errorData = await response.json();
+                            } catch (e) {
+                                console.error('Не удалось распарсить JSON ошибки:', e);
+                            }
+                        }
+                        
+                        const errorMessage = errorData?.error || `HTTP ошибка! Статус: ${response.status}`;
+                        throw new Error(errorMessage);
+                    }
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        return await response.json();
+                    } else {
+                        throw new Error('Неожиданный формат ответа от сервера');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Закупка успешно удалена');
+                        location.reload();
+                    } else {
+                        throw new Error(data.error || 'Неизвестная ошибка');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при удалении закупки:', error);
+                    alert('Ошибка при удалении закупки: ' + error.message);
+                });
+            }
+        }
+    </script>
+{% endblock %}

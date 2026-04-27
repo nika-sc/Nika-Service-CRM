@@ -1,0 +1,200 @@
+<script>
+(function () {
+    const modal = document.getElementById('orderModal');
+    if (!modal) return;
+    const modalOrderId = document.getElementById('modalOrderId');
+    const loading = document.getElementById('orderModalLoading');
+    const content = document.getElementById('orderModalContent');
+    const errorEl = document.getElementById('orderModalError');
+    const printArea = document.getElementById('printReceiptArea');
+    const btnPrint = document.getElementById('btnPrintReceipt');
+    let lastOrderData = null;
+
+    function showLoading() {
+        if (loading) loading.classList.remove('d-none');
+        if (content) content.classList.add('d-none');
+        if (errorEl) errorEl.classList.add('d-none');
+    }
+    function showContent() {
+        if (loading) loading.classList.add('d-none');
+        if (content) content.classList.remove('d-none');
+        if (errorEl) errorEl.classList.add('d-none');
+    }
+    function showError(msg) {
+        if (loading) loading.classList.add('d-none');
+        if (content) content.classList.add('d-none');
+        if (errorEl) { errorEl.classList.remove('d-none'); errorEl.textContent = msg || 'Ошибка загрузки данных'; }
+    }
+
+    var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (str) {
+        if (str == null || str === '') return '';
+        var d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    };
+
+    function formatDate(s) {
+        if (!s) return '—';
+        try {
+            var d = new Date(s);
+            return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch (e) { return s; }
+    }
+    function formatPaymentType(pt) {
+        if (!pt) return '—';
+        var labels = { 'cash': 'Наличные', 'card': 'Карта', 'transfer': 'Перевод' };
+        var key = (pt + '').toLowerCase();
+        return labels[key] || escapeHtml(pt);
+    }
+    function formatPaymentKindAndType(p) {
+        var kind = (p.kind || '').toLowerCase();
+        if (kind === 'refund') return 'Возврат';
+        return formatPaymentType(p.payment_type);
+    }
+    function formatPaymentAmount(p) {
+        var amt = parseFloat(p.amount || 0);
+        var kind = (p.kind || '').toLowerCase();
+        if (kind === 'refund') return '<span class="text-danger">−' + amt.toFixed(2) + ' ₽</span>';
+        return amt.toFixed(2) + ' ₽';
+    }
+
+    function buildReceiptHtml(data) {
+        const o = data.order || {};
+        const d = data.device || {};
+        const services = data.services || [];
+        const parts = data.parts || [];
+        const payments = data.payments || [];
+        const totals = data.totals || {};
+        const deviceStr = [(d.device_type_name || o.device_type || ''), (d.device_brand_name || o.device_brand || '')].filter(Boolean).join(' ') || '—';
+        const total = parseFloat(totals.total || 0);
+        const paid = parseFloat(totals.paid || 0);
+        const debt = parseFloat(totals.debt || 0);
+        var html = '<div class="portal-receipt">';
+        html += '<div class="receipt-header">КВИТАНЦИЯ / ЧЕК<br>Заявка #' + escapeHtml(String(o.id || o.order_id || '')) + '</div>';
+        html += '<p><strong>Устройство:</strong> ' + escapeHtml(deviceStr || '—') + '</p>';
+        html += '<p><strong>Модель:</strong> ' + escapeHtml(o.model || '—') + '</p>';
+        html += '<p><strong>Дата:</strong> ' + escapeHtml(formatDate(o.created_at)) + '</p><hr>';
+        if (services.length) {
+            html += '<p><strong>Услуги:</strong></p><table>';
+            services.forEach(function(s) {
+                html += '<tr><td>' + escapeHtml(s.name || s.service_name || '—') + '</td><td style="text-align:right">' + (s.price ? parseFloat(s.price).toFixed(2) : '0.00') + ' ₽</td></tr>';
+            });
+            html += '</table>';
+        }
+        if (parts.length) {
+            html += '<p><strong>Запчасти:</strong></p><table>';
+            parts.forEach(function(p) {
+                var pr = p.price ? (parseFloat(p.price) * (p.quantity || 1)).toFixed(2) : '0.00';
+                var q = parseInt(p.quantity, 10);
+                if (isNaN(q) || q < 1) q = 1;
+                html += '<tr><td>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + '</td><td style="text-align:right">' + pr + ' ₽</td></tr>';
+            });
+            html += '</table>';
+        }
+        html += '<hr><table><tr><td>Итого:</td><td style="text-align:right">' + total.toFixed(2) + ' ₽</td></tr>';
+        html += '<tr><td>Оплачено:</td><td style="text-align:right">' + paid.toFixed(2) + ' ₽</td></tr>';
+        html += '<tr><td>К оплате:</td><td style="text-align:right">' + debt.toFixed(2) + ' ₽</td></tr></table>';
+        if (payments.length) {
+            html += '<hr><p><strong>Платежи:</strong></p><table>';
+            payments.forEach(function(p) {
+                var lbl = formatPaymentKindAndType(p);
+                var amt = parseFloat(p.amount || 0);
+                var amtStr = ((p.kind || '').toLowerCase() === 'refund' ? '−' : '') + amt.toFixed(2) + ' ₽';
+                html += '<tr><td>' + escapeHtml(formatDate(p.payment_date || p.created_at)) + ' ' + lbl + '</td><td style="text-align:right">' + amtStr + '</td></tr>';
+            });
+            html += '</table>';
+        }
+        html += '<div class="receipt-footer">Nika CRM · Портал клиента</div></div>';
+        return html;
+    }
+
+    function renderOrder(data) {
+        lastOrderData = data;
+        const o = data.order || {};
+        const d = data.device || {};
+        const services = data.services || [];
+        const parts = data.parts || [];
+        const payments = data.payments || [];
+        const totals = data.totals || {};
+        if (modalOrderId) modalOrderId.textContent = '#' + (o.id || o.order_id || '—');
+        const deviceType = d.device_type_name || o.device_type || '—';
+        const deviceBrand = d.device_brand_name || o.device_brand || '—';
+        var deviceEl = document.getElementById('modalDevice');
+        if (deviceEl) deviceEl.textContent = (deviceType + ' ' + deviceBrand).trim() || '—';
+        var modelEl = document.getElementById('modalModel');
+        if (modelEl) modelEl.textContent = o.model || '—';
+        var symptomsEl = document.getElementById('modalSymptoms');
+        if (symptomsEl) symptomsEl.textContent = o.symptom_tags || '—';
+        var appearanceEl = document.getElementById('modalAppearance');
+        if (appearanceEl) appearanceEl.textContent = o.appearance || '—';
+        var servicesEl = document.getElementById('modalServices');
+        if (servicesEl) {
+            if (services.length) servicesEl.innerHTML = '<ul class="list-unstyled mb-0">' + services.map(function(s) {
+                return '<li>' + escapeHtml(s.name || s.service_name || '—') + (s.price ? ' — ' + parseFloat(s.price).toFixed(2) + ' ₽' : '') + '</li>';
+            }).join('') + '</ul>';
+            else servicesEl.textContent = '—';
+        }
+        var partsEl = document.getElementById('modalParts');
+        if (partsEl) {
+            if (parts.length) partsEl.innerHTML = '<ul class="list-unstyled mb-0">' + parts.map(function(p) {
+                var q = parseInt(p.quantity, 10);
+                if (isNaN(q) || q < 1) q = 1;
+                return '<li>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + (p.price ? ' — ' + parseFloat(p.price).toFixed(2) + ' ₽' : '') + '</li>';
+            }).join('') + '</ul>';
+            else partsEl.textContent = '—';
+        }
+        const total = parseFloat(totals.total || 0);
+        const paid = parseFloat(totals.paid || 0);
+        const debt = parseFloat(totals.debt || 0);
+        var totalEl = document.getElementById('modalTotal');
+        if (totalEl) totalEl.textContent = total.toFixed(2) + ' ₽';
+        var paidEl = document.getElementById('modalPaid');
+        if (paidEl) paidEl.textContent = paid.toFixed(2) + ' ₽';
+        var debtEl = document.getElementById('modalDebt');
+        if (debtEl) debtEl.textContent = debt.toFixed(2) + ' ₽';
+        var paymentsEl = document.getElementById('modalPayments');
+        if (paymentsEl) {
+            if (payments.length) paymentsEl.innerHTML = '<table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Сумма</th><th>Тип</th></tr></thead><tbody>' + payments.map(function(p) {
+                return '<tr><td>' + escapeHtml(formatDate(p.payment_date || p.created_at)) + '</td><td>' + formatPaymentAmount(p) + '</td><td>' + formatPaymentKindAndType(p) + '</td></tr>';
+            }).join('') + '</tbody></table>';
+            else paymentsEl.textContent = '—';
+        }
+    }
+
+    if (btnPrint) btnPrint.addEventListener('click', function() {
+        if (!lastOrderData || !printArea) return;
+        printArea.innerHTML = buildReceiptHtml(lastOrderData);
+        printArea.classList.remove('d-none');
+        window.print();
+        printArea.classList.add('d-none');
+    });
+
+    function openOrderModal(orderId) {
+        var m = typeof bootstrap !== 'undefined' && bootstrap.Modal ? new bootstrap.Modal(modal) : null;
+        if (m) m.show();
+        if (modalOrderId) modalOrderId.textContent = '#' + orderId;
+        showLoading();
+        fetch('/portal/api/order/' + orderId, { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+            if (json.success && json.data) { renderOrder(json.data); showContent(); }
+            else showError(json.error || 'Ошибка загрузки');
+        })
+        .catch(function(err) { showError('Ошибка сети'); });
+    }
+
+    document.querySelectorAll('.order-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+            var id = row.getAttribute('data-order-id');
+            if (id) openOrderModal(id);
+        });
+    });
+    document.querySelectorAll('.order-link').forEach(function(a) {
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            var id = a.getAttribute('data-order-id');
+            if (id) openOrderModal(id);
+        });
+    });
+})();
+</script>

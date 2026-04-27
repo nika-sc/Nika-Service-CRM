@@ -1,0 +1,1443 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд — Nika CRM{% endblock %}
+
+{% block styles %}
+    <style>
+        .small-box {
+            border-radius: 3px;
+            position: relative;
+            display: block;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            color: #fff;
+        }
+
+        .small-box > .inner {
+            padding: 10px;
+        }
+
+        .small-box h3 {
+            font-size: 38px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            white-space: nowrap;
+            padding: 0;
+        }
+
+        .small-box p {
+            font-size: 15px;
+        }
+
+        .small-box .icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 0;
+            font-size: 70px;
+            color: rgba(0,0,0,0.15);
+        }
+
+        .small-box:hover {
+            text-decoration: none;
+            color: #f9f9f9;
+        }
+
+        .bg-gradient-info {
+            background: linear-gradient(120deg, #17a2b8, #6cbad5) !important;
+        }
+
+        .bg-gradient-success {
+            background: linear-gradient(120deg, #28a745, #5cd85c) !important;
+        }
+
+        .bg-gradient-warning {
+            background: linear-gradient(120deg, #ffc107, #ffd967) !important;
+        }
+
+        .bg-gradient-danger {
+            background: linear-gradient(120deg, #dc3545, #f1737f) !important;
+        }
+        
+        /* Карточки метрик Dashboard */
+        .metric-card {
+            border-radius: 16px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: none;
+            height: 100%;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        
+        .metric-card .metric-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2.5rem;
+            opacity: 0.15;
+        }
+        
+        .metric-card .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .metric-card .metric-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-card .metric-change {
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .metric-card .metric-change.up {
+            color: #28a745;
+            background: rgba(40,167,69,0.15);
+        }
+        
+        .metric-card .metric-change.down {
+            color: #dc3545;
+            background: rgba(220,53,69,0.15);
+        }
+        
+        .metric-card .metric-change.same {
+            color: #6c757d;
+            background: rgba(108,117,125,0.15);
+        }
+        
+        /* Градиенты для карточек */
+        .bg-gradient-revenue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .bg-gradient-services {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .bg-gradient-parts {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+        }
+        
+        .bg-gradient-shop {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+        
+        .bg-gradient-orders-revenue {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .bg-gradient-created {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+        
+        .bg-gradient-profit {
+            background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+            color: white;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #424242;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section-title i {
+            color: #9e9e9e;
+        }
+        
+        .section-title a {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: auto;
+        }
+        
+        /* Фильтр периода */
+        .period-filter {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .period-filter .btn-period {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            color: #495057;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .period-filter .btn-period:hover {
+            background: #f8f9fa;
+            border-color: #9e9e9e;
+        }
+        
+        .period-filter .btn-period.active {
+            background: #6c757d;
+            border-color: #6c757d;
+            color: #fff;
+        }
+        
+        .period-filter .date-inputs {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        .period-filter .date-inputs input {
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .period-info {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+        
+        .period-info strong {
+            color: #424242;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .status-table {
+            border-collapse: separate;
+            border-spacing: 0 0.5rem;
+        }
+        
+        .status-table tr {
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .status-table td {
+            padding: 0.75rem 1rem;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .overdue-card {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .overdue-count {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #dc3545;
+        }
+        
+        .master-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .master-item .master-name {
+            font-weight: 500;
+        }
+        
+        .master-item .master-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .dashboard-section {
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #424242;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .dashboard-section-title i {
+            color: #9e9e9e;
+        }
+    </style>
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Заголовок и фильтры -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0"><i class="fas fa-chart-line me-2 text-muted"></i>Сводный отчёт по компании</h2>
+    </div>
+    
+    <!-- Фильтр периода (единый для CRM) -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button type="button" class="btn btn-sm btn-primary" id="dashboardSendToDirectorBtn" title="Отправить сводный отчёт на email директора (из настроек «Уведомления директору»)">
+            <i class="fas fa-envelope me-1"></i>Отправить отчёт руководителю
+        </button>
+    </div>
+    <div id="dashboardSendResult" class="mb-3" style="display: none;"></div>
+    
+    <!-- Информация о периоде -->
+    {% if dashboard and dashboard.period %}
+    <div class="period-info mb-3">
+        <strong>Текущий период:</strong> {{ dashboard.period.current_from }} — {{ dashboard.period.current_to }}
+        <span class="text-muted ms-3">
+            <small>(сравнение с: {{ dashboard.period.prev_from }} — {{ dashboard.period.prev_to }})</small>
+        </span>
+    </div>
+    {% endif %}
+    
+    <!-- СЕКЦИЯ: Общие показатели -->
+    {% if dashboard and dashboard.summary %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-building"></i> Общие данные по компании
+        </h4>
+        
+        <div class="row g-3 align-items-stretch">
+            <!-- Выручка по компании -->
+            <div class="col-md-6 col-lg-3 mb-0">
+                <div class="metric-card bg-gradient-revenue h-100">
+                    <i class="fas fa-coins metric-icon"></i>
+                    <div class="metric-label">Выручка по компании</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.revenue.total|default(0)) }} ₽</div>
+                    {% if dashboard.summary.revenue.change %}
+                    <span class="metric-change {{ dashboard.summary.revenue.change.direction }}">
+                        {{ dashboard.summary.revenue.change | dashboard_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Выручка по услугам -->
+            <div class="col-md-6 col-lg-3 mb-0">
+                <div class="metric-card bg-gradient-services h-100">
+                    <i class="fas fa-tools metric-icon"></i>
+                    <div class="metric-label">Выручка по услугам</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.services_revenue.total|default(0)) }} ₽</div>
+                    {% if dashboard.summary.services_revenue.change %}
+                    <span class="metric-change {{ dashboard.summary.services_revenue.change.direction }}">
+                        {{ dashboard.summary.services_revenue.change | dashboard_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Выручка по товарам -->
+            <div class="col-md-6 col-lg-3 mb-0">
+                <div class="metric-card bg-gradient-parts h-100">
+                    <i class="fas fa-box metric-icon"></i>
+                    <div class="metric-label">Выручка по товарам</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.parts_revenue.total|default(0)) }} ₽</div>
+                    {% if dashboard.summary.parts_revenue.change %}
+                    <span class="metric-change {{ dashboard.summary.parts_revenue.change.direction }}">
+                        {{ dashboard.summary.parts_revenue.change | dashboard_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Приход по кассе (как «Приход за период» на /finance/cash) -->
+            <div class="col-md-6 col-lg-3 mb-0">
+                <a class="text-decoration-none d-block h-100" href="{{ url_for('finance.cash', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) if dashboard.period else url_for('finance.cash') }}">
+                    <div class="metric-card bg-gradient-profit h-100">
+                        <i class="fas fa-arrow-down metric-icon"></i>
+                        <div class="metric-label">Приход (касса)</div>
+                        <div class="metric-value">{{ "%.0f"|format(dashboard.summary.profit.total|default(0)) }} ₽</div>
+                        {% if dashboard.summary.profit and dashboard.summary.profit.change %}
+                        <span class="metric-change {{ dashboard.summary.profit.change.direction }}">
+                            {{ dashboard.summary.profit.change | dashboard_money_delta }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <!-- График выручки -->
+        {% if dashboard.revenue_chart %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-area me-2"></i>График выручки по компании</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Прибыль и отчёт Товары и Услуги -->
+        {% if dashboard and (dashboard.profit_report or dashboard.product_analytics) %}
+        <div class="row mt-3 g-3">
+            {% if dashboard.profit_report %}
+            <div class="col-md-6">
+                <a class="text-decoration-none" href="{{ url_for('reports.profit_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white py-2">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Прибыль за период</h6>
+                        </div>
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-success">Доход:</span>
+                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_income|default(0)) }} ₽</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-danger">Расход:</span>
+                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_expense|default(0)) }} ₽</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
+                                <span>Чистая прибыль:</span>
+                                <strong class="{% if (dashboard.profit_report.net_profit|default(0)) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ "%.0f"|format(dashboard.profit_report.net_profit|default(0)) }} ₽</strong>
+                            </div>
+                            <div class="small text-muted mt-1">Подробнее →</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+            {% if dashboard.product_analytics %}
+            <div class="col-md-6">
+                <a class="text-decoration-none" href="{{ url_for('reports.analytics_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="card h-100 border-info">
+                        <div class="card-header bg-info text-white py-2">
+                            <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Товары и Услуги</h6>
+                        </div>
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between small">
+                                <span>Топ товаров:</span>
+                                <strong>{{ (dashboard.product_analytics.top_products|default([]))|length }} поз.</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span>Топ услуг:</span>
+                                <strong>{{ (dashboard.product_analytics.top_services|default([]))|length }} поз.</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
+                                <span>Оборачиваемость:</span>
+                                <strong>{{ dashboard.product_analytics.turnover_days|default(0) }} дн.</strong>
+                            </div>
+                            <div class="small text-muted mt-1">Подробнее →</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- СЕКЦИЯ: Финансы (Cashflow + Дебиторка) -->
+    {% if dashboard and dashboard.cashflow and dashboard.receivables %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-wallet"></i> Финансы
+        </h4>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <a class="text-decoration-none" href="{{ url_for('reports.cash_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="metric-card bg-white border">
+                        <i class="fas fa-arrow-down metric-icon text-success"></i>
+                        <div class="metric-label text-muted">Поступления (касса)</div>
+                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.income.total|default(0)) }} ₽</div>
+                        {% if dashboard.cashflow.income.change %}
+                        <span class="metric-change {{ dashboard.cashflow.income.change.direction }}">
+                            {{ dashboard.cashflow.income.change | dashboard_money_delta }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <a class="text-decoration-none" href="{{ url_for('reports.categories_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="metric-card bg-white border">
+                        <i class="fas fa-arrow-up metric-icon text-danger"></i>
+                        <div class="metric-label text-muted">Расходы (касса)</div>
+                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.expense.total|default(0)) }} ₽</div>
+                        {% if dashboard.cashflow.expense.change %}
+                        <span class="metric-change {{ dashboard.cashflow.expense.change.direction }}">
+                            {{ dashboard.cashflow.expense.change | dashboard_money_delta }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="metric-card bg-gradient-warning">
+                    <i class="fas fa-file-invoice-dollar metric-icon"></i>
+                    <div class="metric-label">Дебиторка (активные заявки)</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.receivables.total_debt|default(0)) }} ₽</div>
+                    <div class="metric-change same">
+                        <i class="fas fa-list"></i> {{ dashboard.receivables.orders_with_debt|default(0) }} заявок с долгом
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if dashboard.receivables['items'] %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-exclamation-circle me-2"></i>Топ долгов (до 50)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Заявка</th>
+                                <th>Клиент</th>
+                                <th>Статус</th>
+                                <th class="text-end">Сумма</th>
+                                <th class="text-end">Оплачено</th>
+                                <th class="text-end">Долг</th>
+                                <th>Создана</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for o in dashboard.receivables['items'][:10] %}
+                            <tr>
+                                <td><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">#{{ o.id }}</a></td>
+                                <td>
+                                    {% if o.customer_id %}
+                                    <a href="{{ url_for('customers.client_detail', client_id=o.customer_id) }}" class="text-primary text-decoration-none">{{ o.customer_name or '—' }}</a>
+                                    {% else %}
+                                    {{ o.customer_name or '—' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">
+                                        <span class="badge" style="background-color: {{ o.status_color or '#6c757d' }};">
+                                            {{ o.status_name or '—' }}
+                                        </span>
+                                    </a>
+                                </td>
+                                <td class="text-end"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(o.total_sum or 0) }} ₽</a></td>
+                                <td class="text-end text-success"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-success text-decoration-none">{{ "%.0f"|format(o.paid or 0) }} ₽</a></td>
+                                <td class="text-end text-danger fw-bold"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-danger text-decoration-none">{{ "%.0f"|format(o.debt or 0) }} ₽</a></td>
+                                <td><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ o.created_at|format_date(true) if o.created_at else '—' }}</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- СЕКЦИЯ: CRM (Клиенты) + Склад -->
+    {% if dashboard and dashboard.customers and dashboard.warehouse %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-users"></i> CRM и склад
+        </h4>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <a class="text-decoration-none" href="{{ url_for('reports.customers_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="metric-card bg-white border">
+                        <i class="fas fa-user-plus metric-icon text-primary"></i>
+                        <div class="metric-label text-muted">Новые клиенты</div>
+                        <div class="metric-value text-dark">{{ dashboard.customers.new_customers|default(0) }}</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-user-check metric-icon text-success"></i>
+                    <div class="metric-label text-muted">Активные клиенты</div>
+                    <div class="metric-value text-dark">{{ dashboard.customers.active_customers|default(0) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-repeat metric-icon text-info"></i>
+                    <div class="metric-label text-muted">Возвращающиеся</div>
+                    <div class="metric-value text-dark">{{ dashboard.customers.returning_customers|default(0) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a class="text-decoration-none" href="{{ url_for('reports.stock_report') }}">
+                    <div class="metric-card bg-white border">
+                        <i class="fas fa-boxes metric-icon text-warning"></i>
+                        <div class="metric-label text-muted">Low stock</div>
+                        <div class="metric-value text-dark">{{ dashboard.warehouse.low_stock_count|default(0) }}</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-warehouse me-2"></i>Склад</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-muted">Оценка по рознице</div>
+                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.retail_value|default(0)) }} ₽</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted">Себестоимость</div>
+                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.cost_value|default(0)) }} ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <a class="text-decoration-none" href="{{ url_for('reports.purchases_report', date_from=dashboard.period.current_from, date_to=dashboard.period.current_to) }}">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0"><i class="fas fa-shopping-cart me-2"></i>Закупки (за период)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-muted">Кол-во</div>
+                                    <div class="h4 mb-0">{{ dashboard.warehouse.purchases_count|default(0) }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted">Сумма</div>
+                                    <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.purchases_total|default(0)) }} ₽</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        {% if dashboard.customers.top_customers %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-crown me-2"></i>Топ клиентов по сумме (за период)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Клиент</th>
+                                <th>Телефон</th>
+                                <th class="text-end">Заявок</th>
+                                <th class="text-end">Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in dashboard.customers.top_customers %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('customers.client_detail', client_id=c.id) }}" class="text-primary text-decoration-none">{{ c.name }}</a>
+                                </td>
+                                <td>{{ c.phone }}</td>
+                                <td class="text-end">{{ c.orders_count }}</td>
+                                <td class="text-end fw-bold">{{ "%.0f"|format(c.total_sum or 0) }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- СЕКЦИЯ: Данные по заказам -->
+    {% if dashboard and dashboard.summary %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-clipboard-list"></i> Данные по заказам
+        </h4>
+        
+        <div class="row">
+            <!-- Выручка по заказам -->
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-gradient-orders-revenue">
+                    <i class="fas fa-receipt metric-icon"></i>
+                    <div class="metric-label">Выручка по заказам</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.orders.revenue|default(0)) }} ₽</div>
+                    {% if dashboard.summary.orders.revenue_change %}
+                    <span class="metric-change {{ dashboard.summary.orders.revenue_change.direction }}">
+                        {{ dashboard.summary.orders.revenue_change | dashboard_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Закрытых заказов -->
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-check-circle metric-icon text-success"></i>
+                    <div class="metric-label text-muted">Закрытых заказов</div>
+                    <div class="metric-value text-dark">{{ dashboard.summary.orders.count|default(0) }}</div>
+                    {% if dashboard.summary.orders.count_change %}
+                    <span class="metric-change {{ dashboard.summary.orders.count_change.direction }}">
+                        {{ dashboard.summary.orders.count_change | dashboard_count_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Средний чек -->
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-calculator metric-icon text-info"></i>
+                    <div class="metric-label text-muted">Средний чек заказа</div>
+                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.orders.avg_check|default(0)) }} ₽</div>
+                    {% if dashboard.summary.orders.avg_change %}
+                    <span class="metric-change {{ dashboard.summary.orders.avg_change.direction }}">
+                        {{ dashboard.summary.orders.avg_change | dashboard_avg_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Созданные заказы -->
+            <div class="col-md-3 mb-3">
+                <div class="metric-card bg-gradient-created">
+                    <i class="fas fa-plus-circle metric-icon"></i>
+                    <div class="metric-label">Создано заказов</div>
+                    <div class="metric-value">{{ dashboard.created_orders.count|default(0) }}</div>
+                    {% if dashboard.created_orders.change %}
+                            <span class="metric-change {{ dashboard.created_orders.change.direction }}">
+                                {{ dashboard.created_orders.change | dashboard_count_delta }}
+                            </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- График созданных заказов -->
+        {% if dashboard.orders_chart %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-bar me-2"></i>График созданных заказов</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- СЕКЦИЯ: Данные по магазину -->
+    {% if dashboard and dashboard.summary %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-store"></i> Данные по магазину
+        </h4>
+        
+        <div class="row">
+            <!-- Выручка по магазину -->
+            <div class="col-md-4 mb-3">
+                <div class="metric-card bg-gradient-shop">
+                    <i class="fas fa-shopping-bag metric-icon"></i>
+                    <div class="metric-label">Выручка по магазину</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.shop.revenue|default(0)) }} ₽</div>
+                    {% if dashboard.summary.shop.revenue_change %}
+                    <span class="metric-change {{ dashboard.summary.shop.revenue_change.direction }}">
+                        {{ dashboard.summary.shop.revenue_change | dashboard_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Продаж -->
+            <div class="col-md-4 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-shopping-cart metric-icon text-warning"></i>
+                    <div class="metric-label text-muted">Количество продаж</div>
+                    <div class="metric-value text-dark">{{ dashboard.summary.shop.count|default(0) }}</div>
+                    {% if dashboard.summary.shop.count_change %}
+                    <span class="metric-change {{ dashboard.summary.shop.count_change.direction }}">
+                        {{ dashboard.summary.shop.count_change | dashboard_count_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Средний чек магазина -->
+            <div class="col-md-4 mb-3">
+                <div class="metric-card bg-white border">
+                    <i class="fas fa-receipt metric-icon text-primary"></i>
+                    <div class="metric-label text-muted">Средний чек магазина</div>
+                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.shop.avg_check|default(0)) }} ₽</div>
+                    {% if dashboard.summary.shop.avg_change %}
+                    <span class="metric-change {{ dashboard.summary.shop.avg_change.direction }}">
+                        {{ dashboard.summary.shop.avg_change | dashboard_avg_money_delta }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- СЕКЦИЯ: Актуальные данные -->
+    {% if dashboard %}
+    <div class="dashboard-section">
+        <h4 class="dashboard-section-title">
+            <i class="fas fa-clock"></i> Актуальные данные (на текущий момент)
+        </h4>
+        
+        <div class="row">
+            <!-- Заказы по статусам -->
+            {% if dashboard.orders_by_status %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i>Заказы по статусам
+                            <span class="badge bg-primary ms-2">{{ dashboard.orders_by_status.active_count|default(0) }} активных</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Ожидаемая выручка: <strong>{{ "%.0f"|format(dashboard.orders_by_status.active_sum|default(0)) }} ₽</strong>
+                        </p>
+                        <table class="table status-table mb-0">
+                            <tbody>
+                                {% for status in dashboard.orders_by_status.statuses %}
+                                {% if status.count > 0 %}
+                                <tr>
+                                    <td>
+                                        <span class="status-badge">
+                                            <span class="status-dot" style="background-color: {{ status.color }};"></span>
+                                            {{ status.name }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end"><strong>{{ status.count }}</strong></td>
+                                    <td class="text-end text-muted">{{ "%.0f"|format(status.sum) }} ₽</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Заказы по исполнителям -->
+            {% if dashboard.orders_by_master %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-users me-2"></i>Заказы по исполнителям</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Показывает только активные заявки (не закрытые/не отмененные): количество в работе и суммарную стоимость по каждому мастеру.
+                        </p>
+                        {% for master in dashboard.orders_by_master %}
+                        {% if master.orders_count > 0 %}
+                        <div class="master-item">
+                            <div class="master-name">
+                                <i class="fas fa-user-circle me-2 text-muted"></i>
+                                {% if master.id %}
+                                <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=master.id, role='master') }}" class="text-primary text-decoration-none">{{ master.name }}</a>
+                                {% else %}
+                                {{ master.name }}
+                                {% endif %}
+                            </div>
+                            <div class="master-stats">
+                                <span><i class="fas fa-clipboard-list"></i> {{ master.orders_count }}</span>
+                                <span><i class="fas fa-ruble-sign"></i> {{ "%.0f"|format(master.total_sum) }}</span>
+                                <span><i class="fas fa-chart-line"></i> ср. {{ "%.0f"|format((master.total_sum / master.orders_count) if master.orders_count else 0) }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-muted text-center">Нет активных заказов</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Просроченные заказы -->
+        {% if dashboard.overdue_orders and dashboard.overdue_orders.count > 0 %}
+        <div class="card overdue-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Просроченные заказы
+                    <span class="badge bg-light text-danger ms-2">{{ dashboard.overdue_orders.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="overdue-count">{{ dashboard.overdue_orders.count }}</div>
+                        <div class="text-muted">просроченных заказов</div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="h4 text-danger">{{ "%.0f"|format(dashboard.overdue_orders.total_sum) }} ₽</div>
+                        <div class="text-muted">общая сумма</div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Клиент</th>
+                                <th>Устройство</th>
+                                <th>Мастер</th>
+                                <th>Менеджер</th>
+                                <th>Статус</th>
+                                <th>Сумма</th>
+                                <th>Создан</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in dashboard.overdue_orders.orders[:10] %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">
+                                        #{{ order.id }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if order.customer_id %}
+                                    <a href="{{ url_for('customers.client_detail', client_id=order.customer_id) }}" class="text-primary text-decoration-none">{{ order.customer_name or '—' }}</a>
+                                    {% else %}
+                                    {{ order.customer_name or '—' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.device_id %}
+                                    <a href="{{ url_for('orders.device_history', device_id=order.device_id) }}" class="text-primary text-decoration-none">{{ order.device_type or '' }} {{ order.device_brand or '' }}</a>
+                                    {% else %}
+                                    {{ order.device_type or '' }} {{ order.device_brand or '' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.master_id %}
+                                    <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=order.master_id, role='master') }}" class="text-primary text-decoration-none">{{ order.master_name or '—' }}</a>
+                                    {% else %}
+                                    {{ order.master_name or '—' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.manager_id %}
+                                    <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=order.manager_id, role='manager') }}" class="text-primary text-decoration-none">{{ order.manager_name or '—' }}</a>
+                                    {% else %}
+                                    {{ order.manager_name or '—' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">
+                                        <span class="badge" style="background-color: {{ order.status_color }};">
+                                            {{ order.status_name }}
+                                        </span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum) }} ₽</a>
+                                </td>
+                                <td>{{ order.created_at|format_date(true) if order.created_at else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {# Старый блок статистики по заявкам убран: всё выше теперь в одном стиле и одном периоде #}
+
+    <!-- Графики -->
+    <div class="row">
+        <div class="col-lg-4 col-md-6 col-12 mb-3">
+            <div class="card" style="height: 100%;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-calendar-days me-2"></i>Заявки по дням</h3>
+                </div>
+                <div class="card-body" style="height: 250px; position: relative;">
+                    <canvas id="ordersByDayChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 col-12 mb-3">
+            <div class="card" style="height: 100%;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-laptop me-2"></i>Топ типов устройств</h3>
+                </div>
+                <div class="card-body" style="height: 250px; position: relative;">
+                    <canvas id="deviceTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 col-12 mb-3">
+            <div class="card" style="height: 100%;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user-tie me-2"></i>Топ менеджеров</h3>
+                </div>
+                <div class="card-body" style="height: 250px; position: relative;">
+                    <canvas id="managerChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Последние заявки -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title d-inline-flex align-items-center gap-2">
+                        <i class="fas fa-clock-rotate-left me-2"></i>Последние заявки
+                        <a href="/add_order" class="btn btn-success btn-sm ms-2">
+                            <i class="fas fa-plus me-1"></i> Новая заявка
+                        </a>
+                    </h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Клиент</th>
+                                <th>Телефон</th>
+                                <th>Устройство</th>
+                                <th>Мастер</th>
+                                <th>Менеджер</th>
+                                <th>Статус</th>
+                                <th>Создана</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for order in recent_orders %}
+                                <tr onclick="window.location.href='{{ url_for('orders.order_detail', order_id=order.id) }}'" style="cursor: pointer;">
+                                    <td><a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">#{{ order.id }}</a></td>
+                                    <td>
+                                        {% if order.customer_id %}
+                                        <a href="{{ url_for('customers.client_detail', client_id=order.customer_id) }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">{{ order.client_name }}</a>
+                                        {% else %}
+                                        {{ order.client_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.phone_display or order.phone }}</td>
+                                    <td>
+                                        {% if order.device_id %}
+                                        <a href="{{ url_for('orders.device_history', device_id=order.device_id) }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">{{ order.device_type }} {{ order.device_brand }}</a>
+                                        {% else %}
+                                        {{ order.device_type }} {{ order.device_brand }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.master_id %}
+                                        <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=order.master_id, role='master') }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">{{ order.master_name or order.master or '—' }}</a>
+                                        {% else %}
+                                        {{ order.master_name or order.master or '—' }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.manager_id %}
+                                        <a href="{{ url_for('salary_dashboard.employee_detail', employee_id=order.manager_id, role='manager') }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">{{ order.manager_name or order.manager or '—' }}</a>
+                                        {% else %}
+                                        {{ order.manager_name or order.manager or '—' }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">
+                                            {% if order.status_name %}
+                                                <span class="badge" style="background-color: {{ order.status_color or '#6c757d' }}; color: #fff;">
+                                                    {{ order.status_name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ order.status or 'Не указан' }}</span>
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                    <td><a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">{{ order.created_at|format_date(true) if order.created_at else '—' }}</a></td>
+                                    <td>
+                                        <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <h5><i class="icon fas fa-info-circle"></i> Заявок пока нет</h5>
+                                            <p><a href="/add_order" class="alert-link">Создайте первую заявку</a>.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- Chart.js -->
+    <script src="{{ url_for('static', filename='cdn/chart.js/4.4.0/chart.umd.min.js') }}"></script>
+
+    <script>
+        // Данные из backend
+        const ordersByDayLabels = {{ orders_by_day_labels | tojson | safe }};
+        const ordersByDayValues = {{ orders_by_day_values | tojson | safe }};
+        const deviceTypeLabels = {{ device_type_labels | tojson | safe }};
+        const deviceTypeValues = {{ device_type_values | tojson | safe }};
+        const managerLabels = {{ manager_labels | tojson | safe }};
+        const managerValues = {{ manager_values | tojson | safe }};
+        
+        // Данные Dashboard
+        const revenueData = {{ dashboard.revenue_chart|tojson if dashboard and dashboard.revenue_chart else '{}' }};
+        const ordersData = {{ dashboard.orders_chart|tojson if dashboard and dashboard.orders_chart else '{}' }};
+        
+        // Настройки графиков
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    padding: 12,
+                    titleFont: { size: 14 },
+                    bodyFont: { size: 13 },
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (context.parsed.y !== null) {
+                                if (context.dataset.label && context.dataset.label.includes('Выручка')) {
+                                    label += ': ' + context.parsed.y.toLocaleString('ru-RU') + ' ₽';
+                                } else {
+                                    label += ': ' + context.parsed.y;
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                }
+            }
+        };
+        
+        // График выручки (Dashboard)
+        if (revenueData.labels && revenueData.labels.length > 0) {
+            const revenueCtx = document.getElementById('revenueChart');
+            if (revenueCtx) {
+                new Chart(revenueCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: revenueData.labels,
+                        datasets: [
+                            {
+                                label: 'Общая выручка',
+                                data: revenueData.current_values || [],
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Заказы',
+                                data: revenueData.current_orders || [],
+                                borderColor: '#4facfe',
+                                backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                                fill: false,
+                                tension: 0.4,
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Магазин',
+                                data: revenueData.current_shop || [],
+                                borderColor: '#fa709a',
+                                backgroundColor: 'rgba(250, 112, 154, 0.1)',
+                                fill: false,
+                                tension: 0.4,
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            ...chartOptions.scales,
+                            y: {
+                                ...chartOptions.scales.y,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('ru-RU') + ' ₽';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // График созданных заказов (Dashboard)
+        if (ordersData.labels && ordersData.labels.length > 0) {
+            const ordersCtx = document.getElementById('ordersChart');
+            if (ordersCtx) {
+                new Chart(ordersCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ordersData.labels,
+                        datasets: [
+                            {
+                                label: 'Создано заказов',
+                                data: ordersData.current_values || [],
+                                backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                                borderColor: '#667eea',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: chartOptions
+                });
+            }
+        }
+
+        // Линейный график "Заявки по дням"
+        const ctxDay = document.getElementById('ordersByDayChart');
+        if (ctxDay) {
+            new Chart(ctxDay.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ordersByDayLabels,
+                    datasets: [{
+                        label: 'Количество заявок',
+                        data: ordersByDayValues,
+                        borderColor: '#17a2b8',
+                        backgroundColor: 'rgba(23, 162, 184, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true,
+                        pointRadius: 3,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            precision: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        // Пирог "Топ типов устройств"
+        const ctxDevice = document.getElementById('deviceTypeChart');
+        if (ctxDevice) {
+            new Chart(ctxDevice.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: deviceTypeLabels,
+                    datasets: [{
+                        data: deviceTypeValues,
+                        backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Бар "Топ менеджеров"
+        const ctxManager = document.getElementById('managerChart');
+        if (ctxManager) {
+            new Chart(ctxManager.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: managerLabels,
+                    datasets: [{
+                        label: 'Заявок',
+                        data: managerValues,
+                        backgroundColor: '#28a745',
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            precision: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        // Отправка сводного отчёта руководителю на email
+        const sendBtn = document.getElementById('dashboardSendToDirectorBtn');
+        const resultEl = document.getElementById('dashboardSendResult');
+        if (sendBtn && resultEl) {
+            sendBtn.addEventListener('click', function() {
+                const preset = {{ preset|tojson if preset is defined else 'null' }};
+                const dateFrom = {{ date_from|tojson if date_from is defined else 'null' }};
+                const dateTo = {{ date_to|tojson if date_to is defined else 'null' }};
+                var esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (s) {
+                    if (s == null || s === '') return '';
+                    var d = document.createElement('div');
+                    d.textContent = String(s);
+                    return d.innerHTML;
+                };
+                sendBtn.disabled = true;
+                resultEl.style.display = 'none';
+                resultEl.className = 'mb-3';
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                fetch('{{ url_for("reports.api_dashboard_send_to_director") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ preset: preset, date_from: dateFrom, date_to: dateTo })
+                })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    var ok = res.ok, data = res.data;
+                    resultEl.style.display = 'block';
+                    if (ok && data.success) {
+                        resultEl.className = 'mb-3 alert alert-success';
+                        resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + esc(data.message || 'Отчёт отправлен на email директора.');
+                    } else {
+                        resultEl.className = 'mb-3 alert alert-danger';
+                        resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + esc(data.error || 'Ошибка отправки.');
+                    }
+                })
+                .catch(function(e) {
+                    resultEl.style.display = 'block';
+                    resultEl.className = 'mb-3 alert alert-danger';
+                    resultEl.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Ошибка сети: ' + esc(e.message || 'не удалось отправить запрос');
+                })
+                .finally(function() { sendBtn.disabled = false; });
+            });
+        }
+    </script>
+{% endblock %}

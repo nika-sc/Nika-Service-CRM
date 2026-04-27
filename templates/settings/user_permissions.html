@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+
+{% block title %}Управление правами пользователей{% endblock %}
+
+{% block styles %}
+    <style>
+        .settings-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .settings-sidebar {
+            width: 250px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 1.5rem 0;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .settings-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .settings-menu-item {
+            margin: 0.25rem 0;
+        }
+        
+        .settings-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.5rem;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .settings-menu-link:hover {
+            background: linear-gradient(90deg, rgba(0,123,255,0.08) 0%, rgba(0,123,255,0.02) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            transform: translateX(4px);
+        }
+        
+        .settings-menu-link.active {
+            background: linear-gradient(90deg, rgba(0,123,255,0.12) 0%, rgba(0,123,255,0.04) 100%);
+            color: #007bff;
+            border-left-color: #007bff;
+            font-weight: 600;
+        }
+        
+        .settings-menu-link.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            background: #007bff;
+            border-radius: 3px 0 0 3px;
+        }
+        
+        .settings-menu-link i {
+            width: 22px;
+            text-align: center;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-menu-link:hover i,
+        .settings-menu-link.active i {
+            transform: scale(1.15);
+        }
+        
+        .settings-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .permission-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .permission-group-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .permission-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .permission-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .permission-checkbox {
+            margin-right: 0.5rem;
+        }
+        
+        .user-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fff;
+            overflow: visible;
+        }
+        
+        .user-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .user-role {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .permissions-container {
+            max-height: 400px;
+            min-height: 120px;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            position: relative;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+        }
+        
+        @media (max-width: 992px) {
+            .settings-container {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .settings-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+            
+            .settings-menu {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0 1rem;
+            }
+            
+            .settings-menu-item {
+                flex: 1;
+                min-width: 150px;
+            }
+            
+            .settings-menu-link {
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                text-align: center;
+                justify-content: center;
+            }
+            
+            .settings-menu-link.active {
+                border-bottom-color: #007bff;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="settings-container">
+        {% include 'partials/settings_sidebar.html' %}
+        
+        <div class="settings-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-user-shield me-2"></i>Управление правами пользователей</h2>
+                <div>
+                    <a href="/settings/employees" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i> К списку сотрудников
+                    </a>
+                <button class="btn btn-primary" id="saveAllPermissionsBtn">
+                    <i class="fas fa-save me-1"></i> Сохранить все изменения
+                </button>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                <strong>Внимание!</strong> Здесь вы можете редактировать права доступа для каждого пользователя вручную.
+                Изменения применяются к роли пользователя и влияют на всех пользователей с этой ролью.
+                Будьте осторожны при изменении прав!
+            </div>
+
+            <div id="usersContainer">
+                <!-- Заполняется через JS -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Загрузка пользователей...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allUsers = [];
+let allPermissions = [];
+let allRoles = [];
+let permissionGroups = {};
+
+async function loadData() {
+    try {
+        // Загружаем пользователей
+        const usersResponse = await fetch('/api/settings/users?include_inactive=true');
+        const usersData = await usersResponse.json();
+        if (usersData.success) {
+            allUsers = usersData.users;
+        }
+        
+        // Загружаем права
+        const permsResponse = await fetch('/api/settings/permissions');
+        const permsData = await permsResponse.json();
+        if (permsData.success) {
+            allPermissions = permsData.permissions;
+            // Группируем права по категориям
+            groupPermissions();
+        }
+        
+        // Загружаем роли
+        const rolesResponse = await fetch('/api/settings/roles');
+        const rolesData = await rolesResponse.json();
+        if (rolesData.success) {
+            allRoles = rolesData.roles;
+        }
+        
+        renderUsers();
+    } catch (error) {
+        console.error('Ошибка при загрузке данных:', error);
+        showAlert('Ошибка при загрузке данных', 'danger');
+    }
+}
+
+function groupPermissions() {
+    permissionGroups = {
+        'Заявки': [],
+        'Клиенты': [],
+        'Склад': [],
+        'Отчеты': [],
+        'Финансы': [],
+        'Магазин': [],
+        'Система': [],
+        'Зарплата': [],
+        'Другое': []
+    };
+    
+    allPermissions.forEach(perm => {
+        const name = perm.name.toLowerCase();
+        if (name.includes('order')) {
+            permissionGroups['Заявки'].push(perm);
+        } else if (name.includes('customer')) {
+            permissionGroups['Клиенты'].push(perm);
+        } else if (name.includes('warehouse')) {
+            permissionGroups['Склад'].push(perm);
+        } else if (name.includes('report')) {
+            permissionGroups['Отчеты'].push(perm);
+        } else if (name.includes('finance')) {
+            permissionGroups['Финансы'].push(perm);
+        } else if (name.includes('shop')) {
+            permissionGroups['Магазин'].push(perm);
+        } else if (name.includes('user') || name.includes('setting') || name.includes('status') || name.includes('action_log')) {
+            permissionGroups['Система'].push(perm);
+        } else if (name.includes('salary')) {
+            permissionGroups['Зарплата'].push(perm);
+        } else {
+            permissionGroups['Другое'].push(perm);
+        }
+    });
+}
+
+function renderUsers() {
+    const container = document.getElementById('usersContainer');
+    container.innerHTML = '';
+    
+    if (allUsers.length === 0) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info';
+        alertDiv.textContent = 'Пользователи не найдены';
+        container.innerHTML = '';
+        container.appendChild(alertDiv);
+        return;
+    }
+    
+    allUsers.forEach(user => {
+        const userCard = document.createElement('div');
+        userCard.className = 'user-card';
+        userCard.id = `user-card-${user.id}`;
+        
+        // Получаем права для роли пользователя
+        const roleData = allRoles.find(r => r.role === user.role);
+        const userPermissionIds = roleData ? roleData.permissions.map(p => p.id) : [];
+        
+        userCard.innerHTML = `
+            <div class="user-card-header">
+                <div class="user-info">
+                    <div class="user-name">${escapeHtml(user.display_name || user.username)}</div>
+                    <div class="user-role">
+                        <span class="badge bg-primary">${escapeHtml(user.role)}</span>
+                        <span class="text-muted ms-2">${escapeHtml(user.username)}</span>
+                        ${!user.is_active ? '<span class="badge bg-secondary ms-2">Неактивен</span>' : ''}
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary btn-toggle-user" data-user-id="${user.id}">
+                    <i class="fas fa-chevron-down" id="chevron-${user.id}"></i>
+                </button>
+            </div>
+            <div class="permissions-container" id="perms-${user.id}" style="display: none;">
+                ${renderPermissionsForUser(user, userPermissionIds)}
+            </div>
+        `;
+        
+        container.appendChild(userCard);
+    });
+}
+
+function renderPermissionsForUser(user, userPermissionIds) {
+    let html = '';
+    
+    Object.keys(permissionGroups).forEach(groupName => {
+        const groupPerms = permissionGroups[groupName];
+        if (groupPerms.length === 0) return;
+        
+        html += `<div class="permission-group">
+            <div class="permission-group-title">${escapeHtml(groupName)}</div>`;
+        
+        groupPerms.forEach(perm => {
+            const isChecked = userPermissionIds.includes(perm.id);
+            html += `
+                <div class="permission-item">
+                    <label class="form-check-label">
+                        <input type="checkbox" 
+                               class="form-check-input permission-checkbox" 
+                               data-user-id="${user.id}"
+                               data-permission-id="${perm.id}"
+                               ${isChecked ? 'checked' : ''}>
+                        <strong>${escapeHtml(perm.name)}</strong>
+                        ${perm.description ? `<small class="text-muted d-block ms-4">${escapeHtml(perm.description)}</small>` : ''}
+                    </label>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+    });
+    
+    return html;
+}
+
+function toggleUserCard(userId) {
+    const permsDiv = document.getElementById(`perms-${userId}`);
+    const chevron = document.getElementById(`chevron-${userId}`);
+    
+    if (permsDiv.style.display === 'none') {
+        permsDiv.style.display = 'block';
+        chevron.classList.remove('fa-chevron-down');
+        chevron.classList.add('fa-chevron-up');
+    } else {
+        permsDiv.style.display = 'none';
+        chevron.classList.remove('fa-chevron-up');
+        chevron.classList.add('fa-chevron-down');
+    }
+}
+
+async function saveAllPermissions() {
+    if (!confirm('Сохранить все изменения прав для всех пользователей?\n\nВнимание: изменения применяются к ролям и влияют на всех пользователей с этими ролями.')) {
+        return;
+    }
+    
+    // Собираем уникальные роли из пользователей
+    const uniqueRoles = [...new Set(allUsers.map(u => u.role))];
+    
+    // Для каждой роли собираем список выбранных прав
+    const roleChanges = {};
+    
+    uniqueRoles.forEach(role => {
+        const newPermissionIds = [];
+        
+        // Находим всех пользователей с этой ролью
+        const usersWithRole = allUsers.filter(u => u.role === role);
+        
+        // Для каждого пользователя с этой ролью проверяем чекбоксы
+        usersWithRole.forEach(user => {
+            document.querySelectorAll(`.permission-checkbox[data-user-id="${user.id}"]`).forEach(checkbox => {
+                if (checkbox.checked) {
+                    const permId = parseInt(checkbox.dataset.permissionId);
+                    if (!newPermissionIds.includes(permId)) {
+                        newPermissionIds.push(permId);
+                    }
+                }
+            });
+        });
+        
+        roleChanges[role] = newPermissionIds;
+    });
+    
+    // Сохраняем изменения для каждой роли
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    for (const role in roleChanges) {
+        try {
+            const response = await fetch(`/api/settings/roles/${encodeURIComponent(role)}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    permission_ids: roleChanges[role]
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                errors.push(`${role}: ${result.error || 'Неизвестная ошибка'}`);
+                console.error(`Ошибка при сохранении роли ${role}:`, result.error);
+            }
+        } catch (error) {
+            errorCount++;
+            errors.push(`${role}: ${error.message}`);
+            console.error(`Ошибка при сохранении роли ${role}:`, error);
+        }
+    }
+    
+    if (errorCount === 0) {
+        showAlert(`Права успешно сохранены для ${successCount} ролей`, 'success');
+        // Перезагружаем данные
+        await loadData();
+    } else {
+        const errorMsg = `Сохранено для ${successCount} ролей, ошибок: ${errorCount}\n${errors.join('\n')}`;
+        showAlert(errorMsg, 'danger');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    // Безопасное создание alert - экранируем сообщение
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'alert');
+    closeBtn.setAttribute('aria-label', 'Close');
+    alertDiv.appendChild(messageSpan);
+    alertDiv.appendChild(closeBtn);
+    document.querySelector('.settings-content').insertBefore(alertDiv, document.querySelector('.settings-content').firstChild);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+    
+    // Обработчик для кнопки сохранения
+    const saveAllPermissionsBtn = document.getElementById('saveAllPermissionsBtn');
+    if (saveAllPermissionsBtn) {
+        saveAllPermissionsBtn.addEventListener('click', saveAllPermissions);
+    }
+    
+    // Обработчики для кнопок переключения карточек пользователей (делегирование)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-toggle-user')) {
+            const btn = e.target.closest('.btn-toggle-user');
+            const userId = parseInt(btn.dataset.userId);
+            if (userId) {
+                toggleUserCard(userId);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

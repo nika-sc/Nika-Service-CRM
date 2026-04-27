@@ -1,0 +1,102 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Отчет по клиентам — Nika CRM{% endblock %}
+
+{% block report_content %}
+    <!-- Фильтр периода -->
+    <form method="GET" class="mb-3">
+        {% include 'partials/period_filter.html' %}
+    </form>
+
+    <div class="mb-3 d-flex justify-content-end">
+        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#customersCalculationMethod" aria-expanded="false" aria-controls="customersCalculationMethod">
+            <i class="fas fa-question-circle me-1"></i>Методика расчета
+        </button>
+    </div>
+    <div class="collapse mb-3" id="customersCalculationMethod">
+        <div class="card border-info">
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Всего клиентов:</strong> клиенты с активностью в выбранном периоде.</li>
+                    <li><strong>Всего заявок:</strong> сумма количества заявок по всем клиентам.</li>
+                    <li><strong>Общая сумма:</strong> суммарные оплаты/выручка по клиентам за период.</li>
+                    <li><strong>Средний чек:</strong> общая сумма, деленная на количество заявок.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title text-white"><i class="fas fa-info-circle me-2"></i>Сводная информация</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Всего клиентов:</strong> <span class="h5">{{ customers|length }}</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Всего заявок:</strong> <span class="h5 text-primary">{{ customers|sum(attribute='orders_count') or 0 }}</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Общая сумма:</strong> <span class="h5 text-success">{{ (customers|sum(attribute='total_spent') or 0)|round(2) }} ₽</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Средний чек:</strong> <span class="h5 text-info">
+                            {% set total_orders = customers|sum(attribute='orders_count') or 0 %}
+                            {% set total_spent = customers|sum(attribute='total_spent') or 0 %}
+                            {% if total_orders > 0 %}
+                                {{ (total_spent / total_orders)|round(2) }} ₽
+                            {% else %}
+                                0 ₽
+                            {% endif %}
+                        </span></p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Статистика по клиентам</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Клиент</th>
+                                <th>Телефон</th>
+                                <th>Заявок</th>
+                                <th>Общая сумма</th>
+                                <th>Средний чек</th>
+                                <th>Последняя заявка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in customers %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('customers.client_detail', client_id=customer.id) }}" class="text-primary text-decoration-none">{{ customer.name }}</a>
+                                </td>
+                                <td>{{ customer.phone }}</td>
+                                <td><span class="badge bg-primary">{{ customer.orders_count }}</span></td>
+                                <td>{{ customer.total_spent or 0 }} ₽</td>
+                                <td>{{ customer.avg_order_value or 0 }} ₽</td>
+                                <td>{{ customer.last_order_date|format_date(true) if customer.last_order_date else '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <h5><i class="icon fas fa-info-circle"></i> Клиентов не найдено</h5>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+{% endblock %}

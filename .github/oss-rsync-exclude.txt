@@ -1,0 +1,44 @@
+# Исключения при копировании приватного репо → публичный Nika-Service-CRM
+# (пути относительно корня репозитория)
+
+.git/
+.github/
+.venv/
+.venv-win/
+venv/
+env/
+ENV/
+.idea/
+.cursor/
+*.code-workspace
+
+# Секреты и локальная конфигурация
+.env
+.env.*
+!.env.example
+
+# Локальные данные и бэкапы
+save/
+uploads/
+static/uploads/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+database/backups/
+app.log
+*.log
+
+# Внутренние скрипты деплоя (пути/хосты не для OSS)
+deploy.sh
+
+# Кэши Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Прочее
+*.sqlite
+*.sqlite3

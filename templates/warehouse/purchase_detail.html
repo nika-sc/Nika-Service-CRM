@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Закупка #{{ purchase.id }} — Nika CRM{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="page-container">
+            <!-- Боковое меню склада -->
+            {% include 'warehouse/_sidebar_menu.html' %}
+
+            <!-- Основной контент -->
+            <div class="page-content">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle me-2"></i>Информация о закупке</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Поставщик:</strong> {{ purchase.supplier_name }}</p>
+                        <p><strong>Дата и время:</strong> {{ purchase.purchase_date|format_date(true) }}</p>
+                        <p><strong>Статус:</strong> 
+                            {% if purchase.status == 'draft' %}
+                            <span class="badge bg-secondary">Черновик</span>
+                            {% elif purchase.status == 'completed' %}
+                            <span class="badge bg-success">Завершена</span>
+                            {% else %}
+                            <span class="badge bg-danger">Отменена</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Сумма:</strong> <span class="h4 text-primary">{{ purchase.total_amount }} ₽</span></p>
+                        {% if purchase.notes %}
+                        <p><strong>Примечания:</strong> {{ purchase.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list me-2"></i>Позиции</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Количество</th>
+                                <th>Цена закупки</th>
+                                <th>Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in purchase['items'] %}
+                            <tr>
+                                <td>{{ item.part_name }} ({{ item.part_number }})</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.purchase_price }} ₽</td>
+                                <td>{{ item.total_price }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-footer">
+                {% if purchase.status == 'draft' %}
+                <a href="{{ url_for('warehouse.edit_purchase', purchase_id=purchase.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i> Редактировать
+                </a>
+                <button id="completePurchaseBtn" class="btn btn-success" onclick="completePurchase({{ purchase.id }}, this)">
+                    <i class="fas fa-check me-1"></i> Завершить закупку
+                </button>
+                <button type="button" class="btn btn-danger" onclick="deletePurchase({{ purchase.id }}, {{ purchase.supplier_name|tojson }})">
+                    <i class="fas fa-trash me-1"></i> Удалить
+                </button>
+                {% endif %}
+                <a href="{{ url_for('warehouse.purchases') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Назад
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function completePurchase(purchaseId, buttonElement) {
+            if (confirm('Завершить закупку? Остатки товаров будут обновлены.')) {
+                // Показываем индикатор загрузки
+                const button = buttonElement || document.getElementById('completePurchaseBtn');
+                const originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Обработка...';
+                
+                fetch(`/warehouse/purchases/${purchaseId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    let errorData = null;
+                    
+                    if (!response.ok) {
+                        // Пытаемся получить JSON с ошибкой
+                        if (contentType && contentType.includes('application/json')) {
+                            try {
+                                errorData = await response.json();
+                            } catch (e) {
+                                console.error('Не удалось распарсить JSON ошибки:', e);
+                            }
+                        }
+                        
+                        const errorMessage = errorData?.error || `HTTP ошибка! Статус: ${response.status}`;
+                        throw new Error(errorMessage);
+                    }
+                    
+                    // Парсим успешный ответ
+                    if (contentType && contentType.includes('application/json')) {
+                        return await response.json();
+                    } else {
+                        throw new Error('Неожиданный формат ответа от сервера');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Показываем сообщение об успехе
+                        button.innerHTML = '<i class="fas fa-check me-1"></i> Завершено!';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-success');
+                        // Перезагружаем страницу через небольшую задержку
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        throw new Error(data.error || 'Неизвестная ошибка');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при завершении закупки:', error);
+                    console.error('Детали ошибки:', {
+                        message: error.message,
+                        stack: error.stack
+                    });
+                    
+                    // Показываем пользователю понятное сообщение
+                    let userMessage = 'Ошибка при завершении закупки';
+                    if (error.message) {
+                        userMessage += ': ' + error.message;
+                    } else {
+                        userMessage += '. Попробуйте обновить страницу и повторить попытку.';
+                    }
+                    
+                    alert(userMessage);
+                    
+                    // Восстанавливаем кнопку
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }
+        }
+        
+        function deletePurchase(purchaseId, supplierName) {
+            if (confirm(`Вы уверены, что хотите удалить закупку #${purchaseId} от поставщика "${supplierName}"?\n\nЭто действие нельзя отменить.`)) {
+                fetch(`/warehouse/purchases/${purchaseId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    let errorData = null;
+                    
+                    if (!response.ok) {
+                        if (contentType && contentType.includes('application/json')) {
+                            try {
+                                errorData = await response.json();
+                            } catch (e) {
+                                console.error('Не удалось распарсить JSON ошибки:', e);
+                            }
+                        }
+                        
+                        const errorMessage = errorData?.error || `HTTP ошибка! Статус: ${response.status}`;
+                        throw new Error(errorMessage);
+                    }
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        return await response.json();
+                    } else {
+                        throw new Error('Неожиданный формат ответа от сервера');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Закупка успешно удалена');
+                        window.location.href = '{{ url_for("warehouse.purchases") }}';
+                    } else {
+                        throw new Error(data.error || 'Неизвестная ошибка');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при удалении закупки:', error);
+                    alert('Ошибка при удалении закупки: ' + error.message);
+                });
+            }
+            }
+        </script>
+            </div>
+        </div>
+    </div>
+{% endblock %}

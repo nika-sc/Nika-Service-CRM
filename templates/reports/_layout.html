@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{# Common layout for all reports pages: sidebar + content wrapper #}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-container">
+        {% include "reports/_sidebar.html" %}
+
+        <div class="page-content">
+            {% block report_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

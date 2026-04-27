@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}Личный кабинет{% endblock %} - Nika CRM</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    
+    <!-- Font Awesome 7 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .portal-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        .portal-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .portal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .portal-nav {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .portal-nav a {
+            color: #495057;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .portal-nav a:hover,
+        .portal-nav a.active {
+            background: #007bff;
+            color: white;
+        }
+        /* Стили для печати чека (модалка заявки) */
+        @media print {
+            body * { visibility: hidden; }
+            #printReceiptArea, #printReceiptArea * { visibility: visible; }
+            #printReceiptArea {
+                position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important;
+                background: white !important; padding: 20px !important; z-index: 99999 !important;
+                display: block !important;
+            }
+        }
+        .portal-receipt { font-family: 'Courier New', monospace; font-size: 12px; max-width: 400px; margin: 0 auto; }
+        .portal-receipt table { width: 100%; border-collapse: collapse; }
+        .portal-receipt th, .portal-receipt td { padding: 4px 8px; text-align: left; border-bottom: 1px dashed #ccc; }
+        .portal-receipt .receipt-header { text-align: center; font-weight: bold; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+        .portal-receipt .receipt-footer { margin-top: 12px; border-top: 2px solid #000; padding-top: 8px; text-align: center; font-size: 10px; color: #666; }
+        
+        /* Мобильная адаптивность портала */
+        @media (max-width: 768px) {
+            .portal-container { padding: 1rem 0.75rem; }
+            .portal-header, .portal-content, .portal-nav { padding: 1rem; }
+            .portal-header .d-flex { flex-direction: column; gap: 1rem; align-items: stretch !important; }
+            .portal-nav .d-flex { flex-direction: column; }
+            .portal-nav a { display: block; text-align: center; }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="portal-container">
+        <div class="portal-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-user-circle me-2"></i>
+                    {% if session.get('portal_customer_name') %}
+                        {{ session.portal_customer_name }}
+                    {% else %}
+                        Личный кабинет
+                    {% endif %}
+                </h3>
+                <form method="POST" action="{{ url_for('customer_portal.portal_logout') }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i>Выход
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <nav class="portal-nav">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('customer_portal.portal_dashboard') }}" 
+                   class="{% if request.endpoint == 'customer_portal.portal_dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Главная
+                </a>
+                <a href="{{ url_for('customer_portal.portal_orders') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_orders' %}active{% endif %}">
+                    <i class="fas fa-file-alt me-1"></i>Мои заявки
+                </a>
+                <a href="{{ url_for('customer_portal.portal_devices') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_devices' %}active{% endif %}">
+                    <i class="fas fa-mobile-alt me-1"></i>Мои устройства
+                </a>
+                <a href="{{ url_for('customer_portal.portal_payments') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_payments' %}active{% endif %}">
+                    <i class="fas fa-credit-card me-1"></i>Платежи
+                </a>
+                <a href="{{ url_for('customer_portal.portal_wallet') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_wallet' %}active{% endif %}">
+                    <i class="fas fa-wallet me-1"></i>Кошелёк
+                </a>
+            </div>
+        </nav>
+        
+        <div class="portal-content">
+            {% if error %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+            </div>
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </div>
+        <footer class="text-center text-muted py-3 mt-4" style="font-size: 0.85rem;">
+            Nika CRM &copy; 2026
+        </footer>
+    </div>
+
+    {% include 'portal/partials/order_modal.html' %}
+    
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    {% include 'portal/partials/order_modal_scripts.html' %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

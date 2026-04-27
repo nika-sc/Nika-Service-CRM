@@ -1,0 +1,36 @@
+{
+  "name": "Nika CRM",
+  "short_name": "Nika CRM",
+  "description": "Система управления сервисным центром",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Заявки",
+      "short_name": "Заявки",
+      "description": "Список заявок",
+      "url": "/all_orders",
+      "icons": []
+    },
+    {
+      "name": "Клиенты",
+      "short_name": "Клиенты",
+      "description": "Список клиентов",
+      "url": "/clients",
+      "icons": []
+    }
+  ]
+}

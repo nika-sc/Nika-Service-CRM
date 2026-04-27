@@ -1,0 +1,90 @@
+<!-- Боковая панель -->
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Бренд лого -->
+    <a href="{{ url_for('main.home') }}" class="brand-link">
+        <i class="fas fa-tachometer-alt brand-icon ml-3"></i>
+        <span class="brand-text font-weight-light">Nika CRM</span>
+    </a>
+
+    <!-- Сайдбар -->
+    <div class="sidebar">
+       
+
+        <!-- Меню навигации -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                <li class="nav-item">
+                    <a href="/" class="nav-link{% if request.path == '/' %} active{% endif %}">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>Дашборд</p>
+                    </a>
+                </li>
+                {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('orders.all_orders') }}" class="nav-link{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-file-alt"></i>
+                        <p>Заявки</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_permission('view_customers') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('customers.clients') }}" class="nav-link{% if request.path == '/clients' or '/clients/' in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>Клиенты</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_any_permission('view_warehouse', 'manage_warehouse') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('warehouse.parts_list') }}" class="nav-link{% if '/warehouse' in request.path and '/purchases' not in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-boxes"></i>
+                        <p>Склад</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_any_permission('view_shop', 'manage_shop') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('shop.index') }}" class="nav-link{% if '/shop' in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <p>Магазин</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_any_permission('view_finance', 'manage_finance') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('finance.cash') }}" class="nav-link{% if '/finance' in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-cash-register"></i>
+                        <p>Касса</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_permission('view_reports') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('reports.dashboard') }}" class="nav-link{% if '/reports' in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-chart-pie"></i>
+                        <p>Отчеты</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_permission('salary.view') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('salary_dashboard.index') }}" class="nav-link{% if '/salary' in request.path and '/reports/salary' not in request.path %} active{% endif %}">
+                        <i class="nav-icon fas fa-user-tie"></i>
+                        <p>Зарплата</p>
+                    </a>
+                </li>
+                {% endif %}
+                {% if has_permission('manage_users') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('main.settings') }}" class="nav-link{% if request.path == '/settings' %} active{% endif %}">
+                        <i class="nav-icon fas fa-sliders-h"></i>
+                        <p>Настройки</p>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</aside>
+
