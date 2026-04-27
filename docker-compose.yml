@@ -32,6 +32,13 @@ services:
       - STAFF_CHAT_VAPID_PUBLIC_KEY=${STAFF_CHAT_VAPID_PUBLIC_KEY:-}
       - STAFF_CHAT_VAPID_PRIVATE_KEY=${STAFF_CHAT_VAPID_PRIVATE_KEY:-}
       - STAFF_CHAT_VAPID_CLAIM_EMAIL=${STAFF_CHAT_VAPID_CLAIM_EMAIL:-mailto:noreply@localhost}
+      # Must match Host / Origin in production (see .env.example). Omitting these in Docker leaves app defaults (localhost only) → 400 invalid_host behind nginx.
+      - TRUSTED_HOSTS=${TRUSTED_HOSTS:-}
+      - CSP_REPORT_ONLY=${CSP_REPORT_ONLY:-true}
+      - CSP_REPORT_URI=${CSP_REPORT_URI:-}
+      - CSP_ENFORCE_PATH_PREFIXES=${CSP_ENFORCE_PATH_PREFIXES:-}
+      - WRITE_API_RATE_LIMIT_PER_MIN=${WRITE_API_RATE_LIMIT_PER_MIN:-120}
+      - SOCKETIO_CORS_ALLOWED_ORIGINS=${SOCKETIO_CORS_ALLOWED_ORIGINS:-}
     volumes:
       - ../data/database:/app/database
       - ../data/logs:/app/logs
