@@ -30,6 +30,7 @@ cd <имя_каталога_после_клона>
 - [Описание и возможности](#описание)
 - [Основные функции](#основные-функции)
 - [Установка и конфигурация](#установка)
+- [После клона: reverse proxy, Docker, PostgreSQL](#post-clone-reverse-proxy-docker-and-postgresql)
 - [Установка на VPS (Ubuntu 24.04)](#vps-ubuntu-2404-lts)
 - [VPS-хостинг FirstVDS (реферал и помощь с запуском)](#firstvds-vps)
 - [Архитектура](#архитектура)
@@ -315,6 +316,35 @@ docker compose up -d
 ```
 
 Веб-интерфейс через nginx: **http://localhost:8080**. Подробности, импорт демо-дампа в контейнер и обновление — в [`docker/README.md`](docker/README.md).
+
+### Post-clone: reverse proxy, Docker, and PostgreSQL
+
+После **`git clone`** чаще всего сталкиваются с двумя проблемами: ответ **`400`** с телом вроде **`invalid_host`** за nginx и ошибки **`InsufficientPrivilege` / «нет доступа к таблице …»** в PostgreSQL после восстановления дампа.
+
+#### 1. `400` / `invalid_host` за nginx или reverse proxy
+
+Приложение сравнивает заголовок **`Host`** со списком **`TRUSTED_HOSTS`** (см. `app/config.py`, `app/__init__.py`).
+
+- В **`.env`** на сервере укажите реальный домен (и при необходимости IP), **без** префикса `https://`, через запятую, например:  
+  `TRUSTED_HOSTS=example.com,www.example.com,localhost,127.0.0.1`
+- **Docker Compose:** переменные из файла `.env` в каталоге проекта **не попадают в контейнер `web` сами по себе** — их нужно явно перечислить в `services.web.environment`. В актуальном дереве OSS это сделано в корневом [`docker-compose.yml`](docker-compose.yml) (ключи `TRUSTED_HOSTS`, `SOCKETIO_CORS_ALLOWED_ORIGINS`, CSP, лимит API). Если вы взяли старый fork или вырезали этот блок — верните строки по образцу из репозитория, иначе в контейнере останутся дефолты только для `localhost`, и за nginx будет **`400`**.
+- **systemd + `EnvironmentFile=.env`:** весь `.env` подхватывается процессом — отдельный проброс через compose не нужен.
+
+Для **Socket.IO** (чат) за HTTPS задайте **`SOCKETIO_CORS_ALLOWED_ORIGINS`** с вашим `https://…` (см. комментарии в [`.env.example`](.env.example)).
+
+#### 2. PostgreSQL: «нет доступа к таблице …» после `pg_restore`
+
+Типичный случай: дамп восстановлен с **`--no-owner`** (или под суперпользователем `postgres`), владельцем таблиц остаётся другая роль, а **`DATABASE_URL`** указывает на вашего прикладного пользователя — у него нет прав.
+
+**Практично:** пересоздать целевую БД с **владельцем = роли из `DATABASE_URL`**, затем сделать restore; либо один раз от суперпользователя выдать права, например:
+
+```sql
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO имя_пользователя_из_DATABASE_URL;
+```
+
+В приватном репозитории есть скрипт **`scripts/Import-VpsDumpToLocal.ps1`** для полной замены локальной БД из дампа `-Fc` (см. комментарии в файле).
 
 ### Требования
 
