@@ -1,0 +1,23 @@
+# OWASP ZAP Automation Framework — паук + пассивное сканирование (без входа в CRM).
+# Docker (Windows): монтируйте каталог отчётов в /zap/wrk и первой строкой замените URL на свой.
+#   docker run --rm -v "${PWD}:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+#     zap.sh -cmd -autorun /zap/wrk/automation-baseline.yaml
+---
+env:
+  contexts:
+    - name: "nikacrm-baseline"
+      urls:
+        - "http://host.docker.internal:5000/"
+
+jobs:
+  - type: spider
+    parameters:
+      context: "nikacrm-baseline"
+      maxDuration: 8
+      maxDepth: 5
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+  - type: outputSummary
+    parameters:
+      format: "Long"

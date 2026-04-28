@@ -135,6 +135,8 @@ def create_app(config_class=Config):
         response.headers.setdefault('X-Frame-Options', 'DENY')
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        # Глобально запрещаем индексацию поисковиками для закрытой CRM.
+        response.headers.setdefault('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex')
         response.headers.setdefault('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
         csp_parts = [
             "default-src 'self'",
@@ -173,7 +175,7 @@ def create_app(config_class=Config):
         resp.headers['Cache-Control'] = 'no-cache, max-age=0'
         resp.headers['Service-Worker-Allowed'] = '/'
         return resp
-    
+
     # Проверка SECRET_KEY для продакшена (только для ProductionConfig)
     from app.config import ProductionConfig
     if isinstance(config_class, type) and issubclass(config_class, ProductionConfig) and config_class != ProductionConfig:

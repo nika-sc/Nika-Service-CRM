@@ -85,3 +85,7 @@ app.log
 
 # Archived / saved (удалить или исключить из проекта)
 save/
+
+# OWASP ZAP отчёты и локальные учётки для security-скриптов
+reports/zap/
+scripts/zap/scan_users.json

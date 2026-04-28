@@ -156,9 +156,9 @@ def rate_limit_if_available(limit_str):
     return decorator
 
 
-# Блокировка по IP после N неверных попыток входа (защита от подбора паролей)
-_LOGIN_FAILURE_LOCK = threading.Lock()
-_LOGIN_FAILURES = {}  # ip -> {"count": int, "blocked_until": float (timestamp)}
+# Резерв: блокировка по IP (отдельный словарь — не пересекать с _LOGIN_FAILURES / per-user guard выше).
+_IP_LOGIN_FAILURE_LOCK = threading.Lock()
+_IP_LOGIN_FAILURES = {}  # ip -> {"count": int, "blocked_until": float (timestamp)}
 LOGIN_MAX_ATTEMPTS = 3
 LOGIN_BLOCK_MINUTES = 15
 
@@ -166,9 +166,9 @@ LOGIN_BLOCK_MINUTES = 15
 def _login_failure_blocked(ip: str) -> bool:
     """Проверяет, заблокирован ли IP из-за неверных попыток входа."""
     now = time.time()
-    with _LOGIN_FAILURE_LOCK:
+    with _IP_LOGIN_FAILURE_LOCK:
         _prune_login_failures(now)
-        entry = _LOGIN_FAILURES.get(ip)
+        entry = _IP_LOGIN_FAILURES.get(ip)
         if not entry:
             return False
         if entry["blocked_until"] and entry["blocked_until"] > now:
@@ -178,18 +178,18 @@ def _login_failure_blocked(ip: str) -> bool:
 
 def _prune_login_failures(now: float) -> None:
     """Удаляет устаревшие записи (уже разблокированные)."""
-    expired = [ip for ip, e in _LOGIN_FAILURES.items() if e.get("blocked_until") and e["blocked_until"] <= now]
+    expired = [ip for ip, e in _IP_LOGIN_FAILURES.items() if e.get("blocked_until") and e["blocked_until"] <= now]
     for ip in expired:
-        del _LOGIN_FAILURES[ip]
+        del _IP_LOGIN_FAILURES[ip]
 
 
 def _record_login_failure(ip: str) -> None:
     """Увеличивает счётчик неудачных попыток; при 3+ — блокирует IP на LOGIN_BLOCK_MINUTES."""
-    with _LOGIN_FAILURE_LOCK:
-        entry = _LOGIN_FAILURES.get(ip)
+    with _IP_LOGIN_FAILURE_LOCK:
+        entry = _IP_LOGIN_FAILURES.get(ip)
         if not entry:
             entry = {"count": 0, "blocked_until": None}
-            _LOGIN_FAILURES[ip] = entry
+            _IP_LOGIN_FAILURES[ip] = entry
         entry["count"] += 1
         if entry["count"] >= LOGIN_MAX_ATTEMPTS:
             entry["blocked_until"] = time.time() + LOGIN_BLOCK_MINUTES * 60
@@ -197,8 +197,8 @@ def _record_login_failure(ip: str) -> None:
 
 def _clear_login_failures(ip: str) -> None:
     """Сбрасывает счётчик после успешного входа."""
-    with _LOGIN_FAILURE_LOCK:
-        _LOGIN_FAILURES.pop(ip, None)
+    with _IP_LOGIN_FAILURE_LOCK:
+        _IP_LOGIN_FAILURES.pop(ip, None)
 
 
 def role_required(required_role: str):

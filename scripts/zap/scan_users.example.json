@@ -1,0 +1,22 @@
+[
+  {
+    "role": "admin",
+    "username": "admin",
+    "password": "CHANGE_ME"
+  },
+  {
+    "role": "manager",
+    "username": "manager1",
+    "password": "CHANGE_ME"
+  },
+  {
+    "role": "master",
+    "username": "master1",
+    "password": "CHANGE_ME"
+  },
+  {
+    "role": "viewer",
+    "username": "viewer1",
+    "password": "CHANGE_ME"
+  }
+]
