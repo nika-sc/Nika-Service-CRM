@@ -40,6 +40,7 @@
         incomingAudio: null,
         audioUnlocked: false,
         pendingIncomingSound: false,
+        lastIncomingSoundAt: 0,
         audioUnlockHandler: null,
         emojiPickerOpen: false,
         myReactions: new Map(),
@@ -279,8 +280,6 @@
     }
 
     async function syncLatestMessages() {
-        // Если realtime канал уже тянет события — лишний polling не нужен.
-        if (state.hasSocketStream) return;
         if (state.syncInFlight) return;
         state.syncInFlight = true;
         try {
@@ -387,12 +386,15 @@
             if (!own) {
                 const hadPanelOpen =
                     typeof hadPanelOpenOverride === "boolean" ? hadPanelOpenOverride : state.isOpen;
+                const attentionOnPage = userAttentionOnPage();
+                // Звук пытаемся проиграть сразу при входящем событии, даже если вкладка не в фокусе.
+                // Частоту ограничиваем в playIncomingSound(), чтобы не было "залпа".
                 playIncomingSound();
                 if (!state.isOpen) {
                     setPanelOpen(true);
                 }
                 alertDocumentTitleForIncomingChat(hadPanelOpen);
-                maybeBrowserNotify(message, hadPanelOpen);
+                maybeBrowserNotify(message, hadPanelOpen, !attentionOnPage);
             }
         }
 
@@ -1071,12 +1073,14 @@
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 clearChatTitleNotification();
+                syncLatestMessages();
             } else if (state.titleIncomingCount > 0) {
                 startTitleBlinkTimer();
             }
         });
         window.addEventListener("focus", () => {
             clearChatTitleNotification();
+            syncLatestMessages();
         });
     }
 
@@ -1135,6 +1139,11 @@
 
     function playIncomingSound() {
         try {
+            const now = Date.now();
+            if (state.lastIncomingSoundAt && now - state.lastIncomingSoundAt < 850) {
+                return;
+            }
+            state.lastIncomingSoundAt = now;
             const audio = state.incomingAudio;
             if (!audio) return;
             const node = audio.cloneNode();
@@ -1426,9 +1435,12 @@
         refreshNotifyButton();
     }
 
-    function maybeBrowserNotify(message, hadPanelOpenWhenMessageArrived) {
-        if (!state.browserNotifyEnabled || typeof Notification === "undefined") return;
+    function maybeBrowserNotify(message, hadPanelOpenWhenMessageArrived, forceWhenBackground = false) {
+        if (typeof Notification === "undefined") return;
         if (Notification.permission !== "granted") return;
+        // Для фоновой вкладки системное уведомление отправляем даже когда тумблер в чате выключен:
+        // это fallback, если вкладка/браузер блокирует вкладочный звук.
+        if (!forceWhenBackground && !state.browserNotifyEnabled) return;
         if (userLikelyViewingOpenChat(hadPanelOpenWhenMessageArrived)) return;
         const title = message.actor_display_name || message.username || "Чат";
         let body = (message.message_text || "").replace(/\s+/g, " ").trim();
