@@ -23,42 +23,158 @@
         </div>
 
         <ul class="mac-menu">
+            {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('orders.all_orders') }}" class="mac-menu-link{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Заявки</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li>
+                        <a href="{{ url_for('orders.all_orders') }}" class="mac-dropdown-item{% if request.path == '/all_orders' %} active{% endif %}">
+                            <i class="fas fa-list"></i>
+                            <span>Список заявок</span>
+                        </a>
+                    </li>
+                    {% if has_permission('create_orders') %}
+                    <li>
+                        <a href="{{ url_for('orders.add_order') }}" class="mac-dropdown-item{% if request.path == '/add_order' %} active{% endif %}">
+                            <i class="fas fa-plus"></i>
+                            <span>Новая заявка</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_permission('view_customers') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('customers.clients') }}" class="mac-menu-link{% if request.path == '/clients' or '/clients/' in request.path %} active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>Клиенты</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li>
+                        <a href="{{ url_for('customers.clients') }}" class="mac-dropdown-item{% if request.path == '/clients' or '/clients/' in request.path %} active{% endif %}">
+                            <i class="fas fa-address-book"></i>
+                            <span>База клиентов</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_any_permission('view_warehouse', 'manage_warehouse') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('warehouse.parts_list') }}" class="mac-menu-link{% if '/warehouse' in request.path %} active{% endif %}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Склад</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('warehouse.parts_list') }}" class="mac-dropdown-item{% if '/warehouse/parts' in request.path or request.path == '/warehouse' or request.path == '/warehouse/' %} active{% endif %}"><i class="fas fa-box"></i><span>Товары</span></a></li>
+                    <li><a href="{{ url_for('warehouse.inventory_list') }}" class="mac-dropdown-item{% if '/warehouse/inventory' in request.path %} active{% endif %}"><i class="fas fa-layer-group"></i><span>Инвентаризация</span></a></li>
+                    <li><a href="{{ url_for('warehouse.purchases') }}" class="mac-dropdown-item{% if '/warehouse/purchases' in request.path %} active{% endif %}"><i class="fas fa-truck-loading"></i><span>Закупки</span></a></li>
+                    <li><a href="{{ url_for('warehouse.movements') }}" class="mac-dropdown-item{% if '/warehouse/movements' in request.path %} active{% endif %}"><i class="fas fa-exchange-alt"></i><span>Движения</span></a></li>
+                    <li><a href="{{ url_for('warehouse.suppliers_list') }}" class="mac-dropdown-item{% if '/warehouse/suppliers' in request.path %} active{% endif %}"><i class="fas fa-handshake"></i><span>Поставщики</span></a></li>
+                    <li><a href="{{ url_for('warehouse.warehouse_logs') }}" class="mac-dropdown-item{% if '/warehouse/logs' in request.path %} active{% endif %}"><i class="fas fa-history"></i><span>Логи склада</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_any_permission('view_shop', 'manage_shop') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('shop.index') }}" class="mac-menu-link{% if '/shop' in request.path %} active{% endif %}">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Магазин</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('shop.index') }}" class="mac-dropdown-item{% if '/shop' in request.path %} active{% endif %}"><i class="fas fa-store"></i><span>Продажи</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_any_permission('view_finance', 'manage_finance') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('finance.cash') }}" class="mac-menu-link{% if '/finance' in request.path %} active{% endif %}">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Касса</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('finance.cash') }}" class="mac-dropdown-item{% if '/finance/cash' in request.path %} active{% endif %}"><i class="fas fa-wallet"></i><span>Движение денег</span></a></li>
+                    <li><a href="{{ url_for('finance.profit_report') }}" class="mac-dropdown-item{% if '/finance/profit' in request.path %} active{% endif %}"><i class="fas fa-chart-line"></i><span>Прибыль</span></a></li>
+                    <li><a href="{{ url_for('finance.analytics') }}" class="mac-dropdown-item{% if '/finance/analytics' in request.path %} active{% endif %}"><i class="fas fa-chart-pie"></i><span>Аналитика</span></a></li>
+                    <li><a href="{{ url_for('finance.categories') }}" class="mac-dropdown-item{% if '/finance/categories' in request.path %} active{% endif %}"><i class="fas fa-tags"></i><span>Категории</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_permission('view_reports') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('reports.dashboard') }}" class="mac-menu-link{% if '/reports' in request.path %} active{% endif %}">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Отчёты</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('reports.dashboard') }}" class="mac-dropdown-item{% if '/reports/dashboard' in request.path %} active{% endif %}"><i class="fas fa-tachometer-alt"></i><span>Сводный</span></a></li>
+                    <li><a href="{{ url_for('reports.profit_report') }}" class="mac-dropdown-item{% if '/reports/profit' in request.path %} active{% endif %}"><i class="fas fa-coins"></i><span>Прибыль</span></a></li>
+                    <li><a href="{{ url_for('reports.analytics_report') }}" class="mac-dropdown-item{% if '/reports/analytics' in request.path %} active{% endif %}"><i class="fas fa-chart-area"></i><span>Аналитика</span></a></li>
+                    <li><a href="{{ url_for('reports.cash_report') }}" class="mac-dropdown-item{% if '/reports/cash' in request.path %} active{% endif %}"><i class="fas fa-cash-register"></i><span>Касса</span></a></li>
+                    <li><a href="{{ url_for('reports.stock_report') }}" class="mac-dropdown-item{% if '/reports/stock' in request.path %} active{% endif %}"><i class="fas fa-boxes"></i><span>Остатки</span></a></li>
+                    <li><a href="{{ url_for('reports.action_logs_report') }}" class="mac-dropdown-item{% if '/reports/action-logs' in request.path %} active{% endif %}"><i class="fas fa-clipboard-list"></i><span>Журнал действий</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_permission('salary.view') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('salary_dashboard.index') }}" class="mac-menu-link{% if '/salary' in request.path and '/reports/salary' not in request.path %} active{% endif %}">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Зарплата</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('salary_dashboard.index') }}" class="mac-dropdown-item{% if '/salary' in request.path and '/reports/salary' not in request.path %} active{% endif %}"><i class="fas fa-money-check-alt"></i><span>Дашборд зарплаты</span></a></li>
+                    {% if has_permission('view_reports') %}
+                    <li><a href="{{ url_for('reports.salary_report') }}" class="mac-dropdown-item{% if '/reports/salary' in request.path %} active{% endif %}"><i class="fas fa-file-invoice-dollar"></i><span>Отчёт по зарплате</span></a></li>
+                    {% endif %}
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if has_permission('manage_users') %}
+            <li class="mac-menu-item dropdown">
+                <a href="{{ url_for('main.settings') }}" class="mac-menu-link{% if request.path == '/settings' or '/settings/' in request.path or '/settings/statuses' in request.path or '/settings/employees' in request.path %} active{% endif %}">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Настройки</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
+                </a>
+                <ul class="mac-dropdown-menu">
+                    <li><a href="{{ url_for('main.settings') }}" class="mac-dropdown-item{% if request.path == '/settings' or '/settings/' in request.path %} active{% endif %}"><i class="fas fa-cog"></i><span>Общие настройки</span></a></li>
+                    <li><a href="{{ url_for('statuses_page.statuses_settings_page') }}" class="mac-dropdown-item{% if '/settings/statuses' in request.path %} active{% endif %}"><i class="fas fa-traffic-light"></i><span>Статусы</span></a></li>
+                    <li><a href="{{ url_for('main.employees_page') }}" class="mac-dropdown-item{% if '/settings/employees' in request.path %} active{% endif %}"><i class="fas fa-users-cog"></i><span>Сотрудники</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
             <li class="mac-menu-item dropdown">
                 <a href="/portal/login" class="mac-menu-link{% if '/portal' in request.path %} active{% endif %}" style="color: #ff9800;">
                     <i class="fas fa-user-circle"></i>
                     <span>Портал</span>
+                    <i class="fas fa-chevron-down mac-dropdown-icon"></i>
                 </a>
                 <ul class="mac-dropdown-menu">
-                    <li>
-                        <a href="/portal/login" class="mac-dropdown-item{% if '/portal/login' in request.path %} active{% endif %}">
-                            <i class="fas fa-sign-in-alt"></i>
-                            <span>Вход в портал</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/portal/dashboard" class="mac-dropdown-item{% if '/portal/dashboard' in request.path or request.path == '/portal' %} active{% endif %}">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Дашборд клиента</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/portal/orders" class="mac-dropdown-item{% if '/portal/orders' in request.path %} active{% endif %}">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Мои заявки</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/portal/payments" class="mac-dropdown-item{% if '/portal/payments' in request.path %} active{% endif %}">
-                            <i class="fas fa-credit-card"></i>
-                            <span>Платежи</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/portal/wallet" class="mac-dropdown-item{% if '/portal/wallet' in request.path %} active{% endif %}">
-                            <i class="fas fa-wallet"></i>
-                            <span>Кошелёк</span>
-                        </a>
-                    </li>
+                    <li><a href="/portal/login" class="mac-dropdown-item{% if '/portal/login' in request.path %} active{% endif %}"><i class="fas fa-sign-in-alt"></i><span>Вход в портал</span></a></li>
+                    <li><a href="/portal/dashboard" class="mac-dropdown-item{% if '/portal/dashboard' in request.path or request.path == '/portal' %} active{% endif %}"><i class="fas fa-tachometer-alt"></i><span>Дашборд клиента</span></a></li>
+                    <li><a href="/portal/orders" class="mac-dropdown-item{% if '/portal/orders' in request.path %} active{% endif %}"><i class="fas fa-file-alt"></i><span>Мои заявки</span></a></li>
+                    <li><a href="/portal/payments" class="mac-dropdown-item{% if '/portal/payments' in request.path %} active{% endif %}"><i class="fas fa-credit-card"></i><span>Платежи</span></a></li>
+                    <li><a href="/portal/wallet" class="mac-dropdown-item{% if '/portal/wallet' in request.path %} active{% endif %}"><i class="fas fa-wallet"></i><span>Кошелёк</span></a></li>
                 </ul>
             </li>
         </ul>
