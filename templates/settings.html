@@ -623,7 +623,7 @@
                                             <strong>Клиент:</strong> <code>##CLIENT_NAME##</code> <code>##CLIENT_PHONE1##</code> <code>##CLIENT_PHONE##</code> <code>##CLIENT_EMAIL##</code><br>
                                             <strong>Финансы:</strong> <code>##TOTAL_PAID##</code> <code>##total.paid.words##</code> <code>##PREPAYMENT##</code> <code>##PREPAYMENT_WORDS##</code> <code>##CURRENCY##</code><br>
                                             <strong>Ответственные:</strong> <code>##ENGINEER_NAME##</code> <code>##MASTER_NAME##</code> <code>##MANAGER_NAME##</code> <code>##EMPLOYEE_NAME##</code><br>
-                                            <strong>Устройство/заявка:</strong> <code>##MODEL##</code> <code>##COMMENT##</code>; <strong>QR/штрихкод:</strong> <code>##ticket.status.qrcode##</code> <code>##ticket.numberId.barcode##</code><br>
+                                            <strong>Устройство/заявка:</strong> <code>##MODEL##</code> <code>##DEVICE_TYPE##</code> <code>##DEVICE_BRAND##</code> <code>##SERIAL_NUMBER##</code> <code>##SYMPTOM_TAGS##</code> <code>##APPEARANCE##</code> <code>##PASSWORD##</code> <code>##COMMENT##</code>; <strong>QR/штрихкод:</strong> <code>##ticket.status.qrcode##</code> <code>##ticket.numberId.barcode##</code><br>
                                             <strong>Строки чека:</strong> цикл <code>&lt;tr data-for="ITEMS"&gt;...&lt;/tr&gt;</code> — внутри: <code>##INDEX##</code> <code>##ITEM_NAME##</code> <code>##ITEM_SKU##</code> <code>##ITEM_WARRANTY##</code> <code>##ITEM_PRICE##</code> <code>##ITEM_DISCOUNT##</code> <code>##ITEM_QUANTITY##</code> <code>##ITEM_SUM##</code>; итого <code>##TOTAL_ITEMS##</code>
                                         </div>
                                     </div>
@@ -654,7 +654,7 @@
                                         Клиент: <code>##CLIENT_NAME##</code> <code>##CLIENT_PHONE1##</code> <code>##CLIENT_PHONE##</code> <code>##CLIENT_EMAIL##</code> &bull;
                                         Финансы: <code>##TOTAL_PAID##</code> <code>##total.paid.words##</code> <code>##PREPAYMENT##</code> <code>##PREPAYMENT_WORDS##</code> <code>##CURRENCY##</code> &bull;
                                         Ответственные: <code>##ENGINEER_NAME##</code> <code>##MASTER_NAME##</code> <code>##MANAGER_NAME##</code> <code>##EMPLOYEE_NAME##</code> &bull;
-                                        Устройство: <code>##MODEL##</code> <code>##COMMENT##</code> &bull;
+                                        Устройство: <code>##MODEL##</code> <code>##DEVICE_TYPE##</code> <code>##DEVICE_BRAND##</code> <code>##SERIAL_NUMBER##</code> <code>##SYMPTOM_TAGS##</code> <code>##APPEARANCE##</code> <code>##PASSWORD##</code> <code>##COMMENT##</code> &bull;
                                         Строки чека: <code>&lt;tr data-for="ITEMS"&gt;</code> → <code>##INDEX##</code> <code>##ITEM_NAME##</code> <code>##ITEM_SKU##</code> <code>##ITEM_PRICE##</code> <code>##ITEM_QUANTITY##</code> <code>##ITEM_SUM##</code>, итого <code>##TOTAL_ITEMS##</code>
                                     </div>
                                     <div class="mb-3">
@@ -681,7 +681,7 @@
                                         Клиент: <code>##CLIENT_NAME##</code> <code>##CLIENT_PHONE1##</code> <code>##CLIENT_PHONE##</code> <code>##CLIENT_EMAIL##</code> &bull;
                                         Финансы: <code>##TOTAL_PAID##</code> <code>##total.paid.words##</code> <code>##PREPAYMENT##</code> <code>##PREPAYMENT_WORDS##</code> <code>##CURRENCY##</code> &bull;
                                         Ответственные: <code>##ENGINEER_NAME##</code> <code>##MASTER_NAME##</code> <code>##MANAGER_NAME##</code> <code>##EMPLOYEE_NAME##</code> &bull;
-                                        Устройство: <code>##MODEL##</code> <code>##COMMENT##</code> &bull;
+                                        Устройство: <code>##MODEL##</code> <code>##DEVICE_TYPE##</code> <code>##DEVICE_BRAND##</code> <code>##SERIAL_NUMBER##</code> <code>##SYMPTOM_TAGS##</code> <code>##APPEARANCE##</code> <code>##PASSWORD##</code> <code>##COMMENT##</code> &bull;
                                         Строки: <code>&lt;tr data-for="ITEMS"&gt;</code> → <code>##INDEX##</code> <code>##ITEM_NAME##</code> <code>##ITEM_SKU##</code> <code>##ITEM_PRICE##</code> <code>##ITEM_QUANTITY##</code> <code>##ITEM_SUM##</code>, итого <code>##TOTAL_ITEMS##</code>
                                     </div>
                                     <div class="mb-3">
@@ -3386,7 +3386,13 @@ let editingPartId = null;
                 <h6 class="text-primary mb-1"><i class="fas fa-laptop me-1"></i>Устройство / прочее</h6>
                 <ul class="list-unstyled mb-0">
                     <li><code>##MODEL##</code> — модель устройства</li>
-                    <li><code>##COMMENT##</code> — комментарий к заявке</li>
+                    <li><code>##DEVICE_TYPE##</code> — тип устройства</li>
+                    <li><code>##DEVICE_BRAND##</code> — бренд</li>
+                    <li><code>##SERIAL_NUMBER##</code> — серийный номер</li>
+                    <li><code>##SYMPTOM_TAGS##</code> — неисправности</li>
+                    <li><code>##APPEARANCE##</code> — внешний вид / комплектация</li>
+                    <li><code>##PASSWORD##</code> — пароль/код устройства (осторожно на клиентских бланках)</li>
+                    <li><code>##COMMENT##</code> — внутренний комментарий к заявке</li>
                     <li><code>##ticket.status.qrcode##</code> — URL для QR (страница заявки)</li>
                     <li><code>##ticket.numberId.barcode##</code> — номер/UUID для штрихкода</li>
                 </ul>

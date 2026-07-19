@@ -2529,6 +2529,14 @@ def order_detail(order_id):
                 values.update({
                     'MODEL': _safe(order_obj.get('model') or ''),
                     'COMMENT': _safe(order_obj.get('comment') or ''),
+                    # Именованные алиасы устройства (для шаблонов печати; зеркало email-тегов)
+                    'DEVICE_TYPE': _safe(order_obj.get('device_type_name') or device_obj.get('device_type') or ''),
+                    'DEVICE_BRAND': _safe(order_obj.get('device_brand_name') or device_obj.get('device_brand') or ''),
+                    'SERIAL_NUMBER': _safe(order_obj.get('serial_number') or device_obj.get('serial_number') or ''),
+                    'SYMPTOM_TAGS': _safe(order_obj.get('symptom_tags') or ''),
+                    'APPEARANCE': _safe(order_obj.get('appearance') or ''),
+                    # Пароль — осознанно доступен для внутренних/рабочих бланков
+                    'PASSWORD': _safe(order_obj.get('password') or ''),
                 })
 
                 # Сумма прописью (для шаблона из настроек)

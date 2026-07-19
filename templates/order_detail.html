@@ -2371,11 +2371,21 @@
             <table class="print-info-table">
                 <tr><td>Тип устройства:</td><td>{{ order.device_type_name or 'Не указан' }}</td></tr>
                 <tr><td>Бренд:</td><td>{{ order.device_brand_name or 'Не указан' }}</td></tr>
+                <tr><td>Модель:</td><td><strong>{{ order.model or 'Не указана' }}</strong></td></tr>
                 {% if order.serial_number %}<tr><td>Серийный номер:</td><td>{{ order.serial_number }}</td></tr>{% endif %}
+                {% if order.password %}<tr><td>Пароль / код:</td><td>{{ order.password }}</td></tr>{% endif %}
             </table>
+            {% if order.symptom_tags %}
+            <p><strong>Неисправность:</strong> {{ order.symptom_tags }}</p>
+            {% endif %}
+            {% if order.appearance %}
+            <p><strong>Внешний вид / комплектация:</strong> {{ order.appearance }}</p>
+            {% endif %}
             <table class="print-info-table">
                 <tr><td>Предоплата:</td><td><strong>{{ order.prepayment or '0' }} {{ settings.currency or 'RUB' }}</strong></td></tr>
                 <tr><td>Статус:</td><td><strong>{{ order.status_name or 'Не указан' }}</strong></td></tr>
+                <tr><td>Менеджер:</td><td>{{ order.manager_name or '—' }}</td></tr>
+                <tr><td>Мастер:</td><td>{{ order.master_name or 'Не назначен' }}</td></tr>
             </table>
             <div class="print-footer">
                 <p><strong>Условия приема:</strong></p>
@@ -2617,11 +2627,11 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                            <!-- Комментарий мастера (только для CRM) -->
+                                            <!-- Внутренний комментарий приёма (только для CRM) -->
                                             {% if order.comment %}
                                             <div class="compact-info-item" style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 2px solid rgba(229, 231, 235, 0.6);">
                                                 <span class="compact-label">
-                                                    <i class="fas fa-user-cog me-1"></i>Комментарий мастера:
+                                                    <i class="fas fa-user-cog me-1"></i>Внутренний комментарий:
                                                     <small class="text-muted ms-1" style="font-size: 0.65rem; font-weight: 400;">
                                                         <i class="fas fa-eye-slash"></i> Не виден клиенту
                                                     </small>
@@ -2648,21 +2658,27 @@
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-tag me-1"></i>Тип:</span>
                                                 <span class="compact-value">{{ order.device_type_name or '—' }}</span>
-                                    </div>
+                                            </div>
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-industry me-1"></i>Бренд:</span>
                                                 <span class="compact-value">{{ order.device_brand_name or '—' }}</span>
                                             </div>
                                             <div class="compact-info-item highlight-item">
+                                                <span class="compact-label"><i class="fas fa-mobile-screen me-1"></i>Модель:</span>
+                                                <span class="compact-value fw-bold">{{ order.model or 'Не указана' }}</span>
+                                            </div>
+                                            <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-barcode me-1"></i>Серийный номер:</span>
                                                 <span class="compact-value">{{ order.serial_number or 'Не указан' }}</span>
-                                    </div>
-                                    {% if order.password %}
-                                            <div class="compact-info-item highlight-item">
-                                                <span class="compact-label"><i class="fas fa-key me-1"></i>Пароль:</span>
-                                                <span class="compact-value font-monospace">{{ order.password }}</span>
                                             </div>
-                                            {% endif %}
+                                            <div class="compact-info-item highlight-item">
+                                                <span class="compact-label"><i class="fas fa-key me-1"></i>Пароль / код:</span>
+                                                {% if order.password %}
+                                                <span class="compact-value font-monospace">{{ order.password }}</span>
+                                                {% else %}
+                                                <span class="compact-value text-muted">Не указан</span>
+                                                {% endif %}
+                                            </div>
                                             {% if order.device_id %}
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-history me-1"></i>История:</span>
@@ -2670,10 +2686,10 @@
                                                     <a href="/device/{{ order.device_id }}" class="btn btn-sm btn-info" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                         <i class="fas fa-history me-1"></i> Все заявки
                                                     </a>
-                                        </div>
-                                    </div>
-                                                    {% endif %}
+                                                </div>
                                             </div>
+                                            {% endif %}
+                                        </div>
                                         </div>
                                     </div>
                                     
@@ -2691,14 +2707,29 @@
                                             </div>
                                             {% endif %}
                                             <div class="compact-info-item highlight-item">
+                                                <span class="compact-label"><i class="fas fa-ruble-sign me-1"></i>Предоплата:</span>
+                                                <span class="compact-value fw-semibold">{{ order.prepayment or '0' }} {{ settings.currency if settings and settings.currency else 'RUB' }}</span>
+                                            </div>
+                                            <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-user-tie me-1"></i>Менеджер:</span>
                                                 <span class="compact-value">{{ order.manager_name or '—' }}</span>
-                                        </div>
+                                            </div>
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-tools me-1"></i>Мастер:</span>
                                                 <span class="compact-value">{{ order.master_name or 'Не назначен' }}</span>
                                             </div>
+                                            {% if order.order_id %}
+                                            <div class="compact-info-item highlight-item">
+                                                <span class="compact-label"><i class="fas fa-fingerprint me-1"></i>UUID:</span>
+                                                <div class="compact-value d-flex align-items-center gap-2 flex-wrap">
+                                                    <code style="font-size: 0.7rem; word-break: break-all;">{{ order.order_id }}</code>
+                                                    <button type="button" class="quick-action-btn btn-copy" onclick="copyToClipboard({{ order.order_id|tojson }}, event)" title="Копировать UUID">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
                                             </div>
+                                            {% endif %}
+                                        </div>
                                         </div>
                                     </div>
                         </div>
