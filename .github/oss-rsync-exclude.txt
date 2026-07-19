@@ -10,6 +10,7 @@ env/
 ENV/
 .idea/
 .cursor/
+.cursor/**
 *.code-workspace
 
 # Секреты и локальная конфигурация
@@ -26,6 +27,8 @@ static/uploads/
 *.db-wal
 *.db-shm
 database/backups/
+database/bootstrap/work_vps_*.sql
+**/nikacrm_from_vps*.dump
 app.log
 *.log
 
