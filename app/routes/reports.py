@@ -8,6 +8,7 @@ from app.services.reports_service import ReportsService
 from app.services.order_service import OrderService
 from app.services.action_log_service import ActionLogService
 from app.services.dashboard_service import DashboardService
+from app.services.director_day_service import DirectorDayService
 from app.services.finance_service import FinanceService
 from app.services.user_service import UserService
 from app.utils.report_period import normalize_date_range
@@ -323,6 +324,16 @@ def action_logs_report():
         total=paginator.total,
         include_system=not exclude_system_actions
     )
+
+
+@bp.route('/day')
+@login_required
+@permission_required('view_reports')
+def director_day():
+    """Сводка дня для директора: принято / закрыто / касса / ЗП к выплате."""
+    day = request.args.get('day') or request.args.get('date')
+    snapshot = DirectorDayService.get_day_snapshot(day)
+    return render_template('reports/director_day.html', data=snapshot)
 
 
 @bp.route('/dashboard')

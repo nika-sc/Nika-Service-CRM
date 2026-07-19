@@ -123,6 +123,7 @@
                 </a>
                 <ul class="mac-dropdown-menu">
                     <li><a href="{{ url_for('reports.dashboard') }}" class="mac-dropdown-item{% if '/reports/dashboard' in request.path %} active{% endif %}"><i class="fas fa-tachometer-alt"></i><span>Сводный</span></a></li>
+                    <li><a href="{{ url_for('reports.director_day') }}" class="mac-dropdown-item{% if '/reports/day' in request.path %} active{% endif %}"><i class="fas fa-calendar-day"></i><span>Сводка дня</span></a></li>
                     <li><a href="{{ url_for('reports.profit_report') }}" class="mac-dropdown-item{% if '/reports/profit' in request.path %} active{% endif %}"><i class="fas fa-coins"></i><span>Прибыль</span></a></li>
                     <li><a href="{{ url_for('reports.analytics_report') }}" class="mac-dropdown-item{% if '/reports/analytics' in request.path %} active{% endif %}"><i class="fas fa-chart-area"></i><span>Аналитика</span></a></li>
                     <li><a href="{{ url_for('reports.cash_report') }}" class="mac-dropdown-item{% if '/reports/cash' in request.path %} active{% endif %}"><i class="fas fa-cash-register"></i><span>Касса</span></a></li>

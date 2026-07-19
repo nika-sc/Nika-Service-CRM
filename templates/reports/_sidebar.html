@@ -8,6 +8,12 @@
             </a>
         </li>
         <li class="page-menu-item">
+            <a href="{{ url_for('reports.director_day') }}" class="page-menu-link{% if '/reports/day' in request.path %} active{% endif %}">
+                <i class="fas fa-calendar-day"></i>
+                <span>Сводка дня</span>
+            </a>
+        </li>
+        <li class="page-menu-item">
             <a href="{{ url_for('reports.profit_report') }}" class="page-menu-link{% if '/reports/profit' in request.path %} active{% endif %}">
                 <i class="fas fa-chart-line"></i>
                 <span>Прибыль</span>

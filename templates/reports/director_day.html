@@ -1,0 +1,197 @@
+{% extends "reports/_layout.html" %}
+
+{% block title %}Сводка дня — Nika CRM{% endblock %}
+
+{% macro delta_badge(d, money=false) -%}
+  {%- set v = d.value|default(0) -%}
+  {%- if d.direction == 'up' -%}
+    <span class="badge bg-success-subtle text-success border border-success-subtle">
+      <i class="fas fa-arrow-up me-1"></i>{% if money %}{% if v > 0 %}+{% endif %}{{ "%.0f"|format(v) }} ₽{% else %}+{{ v|int }}{% endif %} к вчера
+    </span>
+  {%- elif d.direction == 'down' -%}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+      <i class="fas fa-arrow-down me-1"></i>{% if money %}{{ "%.0f"|format(v) }} ₽{% else %}{{ v|int }}{% endif %} к вчера
+    </span>
+  {%- else -%}
+    <span class="badge bg-secondary-subtle text-secondary border">как вчера</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% block report_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h2 class="h4 mb-1">
+            <i class="fas fa-calendar-day me-2 text-primary"></i>Сводка дня
+            {% if data.is_today %}<span class="badge bg-primary ms-1">сегодня</span>{% endif %}
+        </h2>
+        <div class="text-muted small">Принято · закрыто · касса · зарплата к выплате</div>
+    </div>
+    <form method="GET" class="d-flex align-items-center gap-2">
+        <label class="form-label mb-0 small text-muted" for="day">Дата</label>
+        <input type="date" class="form-control form-control-sm" id="day" name="day" value="{{ data.day }}" style="width: auto;">
+        <button type="submit" class="btn btn-sm btn-primary">Показать</button>
+        {% if not data.is_today %}
+        <a href="{{ url_for('reports.director_day') }}" class="btn btn-sm btn-outline-secondary">Сегодня</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small text-uppercase">Принято</span>
+                    <i class="fas fa-inbox text-primary opacity-50"></i>
+                </div>
+                <div class="display-6 fw-semibold lh-1 mb-2">{{ data.orders.accepted }}</div>
+                <div class="mb-2">{{ delta_badge(data.orders.accepted_delta) }}</div>
+                <div class="small text-muted">Предоплата: <strong>{{ "%.0f"|format(data.orders.accepted_prepayment) }} ₽</strong></div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ data.links.orders_accepted }}" class="small text-decoration-none">Заявки за день <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small text-uppercase">Закрыто</span>
+                    <i class="fas fa-check-circle text-success opacity-50"></i>
+                </div>
+                <div class="display-6 fw-semibold lh-1 mb-2">{{ data.orders.closed }}</div>
+                <div class="mb-2">{{ delta_badge(data.orders.closed_delta) }}</div>
+                <div class="small text-muted">Сумма работ: <strong>{{ "%.0f"|format(data.orders.closed_revenue) }} ₽</strong></div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ url_for('reports.orders_log_report', date_from=data.day, date_to=data.day) }}" class="small text-decoration-none">Журнал заявок <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small text-uppercase">Касса</span>
+                    <i class="fas fa-cash-register text-success opacity-50"></i>
+                </div>
+                <div class="display-6 fw-semibold lh-1 mb-2 {% if data.cash.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if data.cash.net > 0 %}+{% endif %}{{ "%.0f"|format(data.cash.net) }} ₽
+                </div>
+                <div class="mb-2">{{ delta_badge(data.cash_delta.net, money=true) }}</div>
+                <div class="small text-muted">
+                    Приход <strong class="text-success">{{ "%.0f"|format(data.cash.income) }}</strong>
+                    · расход <strong class="text-danger">{{ "%.0f"|format(data.cash.expense) }}</strong>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ data.links.finance_cash }}" class="small text-decoration-none">Касса за день <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small text-uppercase">К выплате ЗП</span>
+                    <i class="fas fa-wallet text-warning opacity-50"></i>
+                </div>
+                <div class="display-6 fw-semibold lh-1 mb-2">{{ "%.0f"|format(data.salary.owed) }} ₽</div>
+                <div class="small text-muted mb-1">
+                    Начислено за день: <strong>{{ "%.0f"|format(data.salary.accrued) }} ₽</strong>
+                    {{ delta_badge(data.salary_delta.accrued, money=true) }}
+                </div>
+                <div class="small text-muted">
+                    Выплачено за день: <strong>{{ "%.0f"|format(data.salary.paid) }} ₽</strong>
+                    {{ delta_badge(data.salary_delta.paid, money=true) }}
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ data.links.salary }}" class="small text-decoration-none">Зарплата <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <strong><i class="fas fa-coins me-2"></i>Касса за {{ data.day }}</strong>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="small text-muted">На начало</div>
+                        <div class="fw-semibold">{{ "%.0f"|format(data.cash.opening) }} ₽</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="small text-muted">Приход − расход</div>
+                        <div class="fw-semibold {% if data.cash.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if data.cash.net > 0 %}+{% endif %}{{ "%.0f"|format(data.cash.net) }} ₽
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="small text-muted">На конец</div>
+                        <div class="fw-semibold">{{ "%.0f"|format(data.cash.closing) }} ₽</div>
+                    </div>
+                </div>
+                {% if data.cash.by_method %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Способ</th>
+                                <th class="text-end">Остаток</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for method, bal in data.cash.by_method.items() %}
+                            <tr>
+                                <td>
+                                    {% if method == 'cash' %}Наличные
+                                    {% elif method == 'card' %}Карта
+                                    {% elif method == 'transfer' %}Перевод
+                                    {% else %}{{ method }}{% endif %}
+                                </td>
+                                <td class="text-end fw-semibold">
+                                    {% if bal is mapping %}
+                                        {{ "%.0f"|format(bal.income|default(0) - bal.expense|default(0)) }} ₽
+                                    {% else %}
+                                        {{ "%.0f"|format(bal|default(0)) }} ₽
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0 small">Нет разбивки по способам оплаты.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <strong><i class="fas fa-info-circle me-2"></i>Как считаем</strong>
+            </div>
+            <div class="card-body small">
+                <ul class="mb-0 ps-3">
+                    <li><strong>Принято</strong> — заявки с датой создания = выбранный день.</li>
+                    <li><strong>Закрыто</strong> — переходы в финальный / начисляющий ЗП статус в этот день (по журналу статусов).</li>
+                    <li><strong>Касса</strong> — эффективные операции кассы за день (как в разделе «Финансы → Касса»).</li>
+                    <li><strong>К выплате</strong> — текущий остаток долга по зарплате на сейчас; начислено/выплачено — за выбранный день.</li>
+                    <li>Сравнение «к вчера» — с {{ data.prev_day }}.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
