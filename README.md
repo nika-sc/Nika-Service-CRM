@@ -1,27 +1,51 @@
-# CRM System - Service Center
+<p align="center">
+  <img src="docs/assets/github-banner.jpg" alt="Nika CRM — бесплатная CRM для сервисных центров" width="920">
+</p>
+
+<h1 align="center">Nika CRM</h1>
+
+<p align="center">
+  <strong>Бесплатная open-source CRM для сервисных центров</strong><br>
+  Заявки на ремонт · склад · касса · отчёты · портал клиента
+</p>
+
+<p align="center">
+  <a href="https://demo.nika-sc.ru/"><img src="https://img.shields.io/badge/Demo-online-2bb8a6?style=for-the-badge" alt="Live demo"></a>
+  <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-0f1c24?style=for-the-badge" alt="MIT License"></a>
+  <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
+</p>
+
+<p align="center">
+  <a href="https://demo.nika-sc.ru/"><b>Открыть демо</b></a>
+  ·
+  <a href="#установка"><b>Установка</b></a>
+  ·
+  <a href="docs/USER_GUIDE.md"><b>Руководство</b></a>
+  ·
+  <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM"><b>Связаться</b></a>
+</p>
+
+---
 
 Система управления сервисным центром для работы с заявками, клиентами, устройствами и складом.
 
-Проект создан для реальной эксплуатации в сервисном центре "Ника" (Сочи) и публикуется как практическое open-source решение для сервисных центров.
+Проект создан для реальной эксплуатации в сервисном центре «Ника» (Сочи) и публикуется как практическое open-source решение для СЦ.
 
 CRM может работать:
 - локально в вашей сети;
 - на VPS с вашим доменом;
 - без зависимости от SaaS-платформ.
 
-Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika-CRM`.
-Если нужна помощь по установке и интеграции, пишите на `nika-sc@bk.ru` с темой `Nika-CRM Помощь по установке`.
+Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika-CRM`.  
+Если нужна помощь по установке и интеграции — с темой `Nika-CRM Помощь по установке`.
 
-Автор: Александр Смелков  
-Сервисный центр "Ника", 2026, г. Сочи.
+Автор: **Александр Смелков** · сервисный центр «Ника», Сочи, 2026.
 
 ## Репозиторий
 
-Исходный код публикуется как open-source. **Клонирование:** в веб-интерфейсе GitHub откройте страницу репозитория и скопируйте URL из кнопки **Code** (HTTPS или SSH), затем:
-
 ```bash
-git clone <URL_ИЗ_GITHUB_CODE>
-cd <имя_каталога_после_клона>
+git clone https://github.com/nika-sc/Nika-Service-CRM.git
+cd Nika-Service-CRM
 ```
 
 ## Содержание
