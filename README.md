@@ -349,8 +349,8 @@ cd Nika-Service-CRM
 
 1. Клонируйте репозиторий:
 ```bash
-git clone <URL_ИЗ_GITHUB_CODE>
-cd <имя_каталога_после_клона>
+git clone https://github.com/nika-sc/Nika-Service-CRM.git
+cd Nika-Service-CRM
 ```
 
 2. Создайте виртуальное окружение:
@@ -452,8 +452,8 @@ sudo DEBIAN_FRONTEND=noninteractive apt install -y \
 
 ```bash
 cd /root
-git clone <URL_ИЗ_GITHUB_CODE>
-cd <имя_каталога_после_клона>
+git clone https://github.com/nika-sc/Nika-Service-CRM.git
+cd Nika-Service-CRM
 ```
 
 Если `git clone` с сервера запрашивает логин GitHub или падает с ошибкой доступа, репозиторий может быть **приватным** или недоступен анонимно. Варианты: [Deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) (read-only), Personal Access Token для HTTPS, либо перенос кода с машины, где репозиторий уже есть, например:
