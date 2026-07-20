@@ -27,19 +27,29 @@ cd <имя_каталога_после_клона>
 ## Содержание
 
 - [Репозиторий](#репозиторий)
-- [Описание и возможности](#описание)
+- [Описание](#описание)
 - [Основные функции](#основные-функции)
-- [Установка и конфигурация](#установка)
-- [После клона: reverse proxy и PostgreSQL](#post-clone-reverse-proxy-and-postgresql)
-- [Установка на VPS (Ubuntu 24.04)](#vps-ubuntu-2404-lts)
-- [VPS-хостинг FirstVDS (реферал и помощь с запуском)](#firstvds-vps)
+- [Возможности](#возможности)
+- [Технологии](#технологии)
+- [Установка](#установка)
+  - [Требования](#требования)
+  - [Шаги установки](#шаги-установки)
+  - [Быстрый старт с PostgreSQL](#быстрый-старт-с-postgresql-и-демо-дампом)
+  - [VPS: Ubuntu 24.04 LTS](#vps-ubuntu-2404-lts)
+  - [VPS-хостинг FirstVDS](#firstvds-vps)
+  - [После установки: reverse proxy и PostgreSQL](#после-установки-reverse-proxy-и-postgresql)
+- [Структура проекта](#структура-проекта)
 - [Архитектура](#архитектура)
+- [Документация](#документация)
 - [Руководство пользователя](#руководство-пользователя)
 - [API документация](#api-документация)
-- [План скриптов](#план-скриптов-и-исправлений)
+- [Скрипты](#скрипты)
 - [Маршруты и сервисы](#маршруты-и-сервисы)
 - [Полный справочник системы](#полный-справочник-системы-по-результатам-сканирования-кода)
-- [Безопасность и производительность](#безопасность)
+- [Конфигурация](#конфигурация)
+- [Миграции базы данных](#миграции-базы-данных)
+- [Безопасность](#безопасность)
+- [Производительность](#производительность)
 - [История изменений](#история-изменений)
 
 ---
@@ -51,7 +61,7 @@ cd <имя_каталога_после_клона>
 - **Services** - бизнес-логика
 - **Models** - модели данных
 - **Queries** - оптимизированные SQL запросы
-- **Database** - база данных SQLite / PostgreSQL
+- **Database** - база данных PostgreSQL (рекомендуется; см. bootstrap-дамп)
 
 ## Основные функции
 
@@ -300,38 +310,10 @@ cd <имя_каталога_после_клона>
 - **Flask-Limiter** - rate limiting
 - **Flask-SocketIO** — real-time (чат сотрудников)
 - **pywebpush** — Web Push для чата (опционально)
-- **SQLite** / **PostgreSQL** — база данных
+- **PostgreSQL** — база данных (основной режим; см. .env.example и bootstrap-дамп)
 - **Jinja2** - шаблонизатор
 
 ## Установка
-
-### Post-clone: reverse proxy and PostgreSQL
-
-После **`git clone`** чаще всего сталкиваются с двумя проблемами: ответ **`400`** с телом вроде **`invalid_host`** за nginx и ошибки **`InsufficientPrivilege` / «нет доступа к таблице …»** в PostgreSQL после восстановления дампа.
-
-#### 1. `400` / `invalid_host` за nginx или reverse proxy
-
-Приложение сравнивает заголовок **`Host`** со списком **`TRUSTED_HOSTS`** (см. `app/config.py`, `app/__init__.py`).
-
-- В **`.env`** на сервере укажите реальный домен (и при необходимости IP), **без** префикса `https://`, через запятую, например:  
-  `TRUSTED_HOSTS=example.com,www.example.com,localhost,127.0.0.1`
-- **systemd + `EnvironmentFile=.env`:** весь `.env` подхватывается процессом gunicorn — отдельный проброс переменных не нужен.
-
-Для **Socket.IO** (чат) за HTTPS задайте **`SOCKETIO_CORS_ALLOWED_ORIGINS`** с вашим `https://…` (см. комментарии в [`.env.example`](.env.example)).
-
-#### 2. PostgreSQL: «нет доступа к таблице …» после `pg_restore`
-
-Типичный случай: дамп восстановлен с **`--no-owner`** (или под суперпользователем `postgres`), владельцем таблиц остаётся другая роль, а **`DATABASE_URL`** указывает на вашего прикладного пользователя — у него нет прав.
-
-**Практично:** пересоздать целевую БД с **владельцем = роли из `DATABASE_URL`**, затем сделать restore; либо один раз от суперпользователя выдать права, например:
-
-```sql
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO имя_пользователя_из_DATABASE_URL;
-```
-
-Скрипт **`scripts/Grant-LocalPostgresAppPrivileges.ps1`** (Windows, PostgreSQL в `Program Files`) выдаёт права роли из `DATABASE_URL` на схему `public` после restore; пароль суперпользователя — в `LOCAL_PG_SUPER_PASSWORD`. Полный сценарий DROP/CREATE/`pg_restore` с автоматическим GRANT — в приватном репозитории: **`scripts/Import-VpsDumpToLocal.ps1`**.
 
 ### Требования
 
@@ -416,22 +398,9 @@ psql -U postgres -h localhost -d nikacrm -f database/bootstrap/nikacrm_public_sa
    - `DATABASE_URL=postgresql://<user>:<password>@localhost:5432/nikacrm`
 4. Запустите приложение: `python run.py`
 
-Если после импорта приложение подключается не под владельцем таблиц и не хватает прав, примените:
-- `save/scripts/grant_app_user_after_vps_restore.sql`
-- или `save/scripts/apply_pg_grants_from_env.py`
+Если после импорта не хватает прав у роли из `DATABASE_URL`, см. раздел [После установки: reverse proxy и PostgreSQL](#после-установки-reverse-proxy-и-postgresql) или на Ubuntu запустите [`scripts/ubuntu_2404_bootstrap.sh`](scripts/ubuntu_2404_bootstrap.sh).
 
-Для SQLite: создайте пустую БД и выполните миграции (см. раздел «Миграции» ниже).
 Подробности по bootstrap-дампу: [database/bootstrap/README.md](database/bootstrap/README.md).
-
-<a id="firstvds-vps"></a>
-### VPS-хостинг FirstVDS (реферал и помощь с запуском)
-
-Для развёртывания CRM удобно взять виртуальный сервер (VPS). Можно воспользоваться провайдером **FirstVDS**:
-
-- Реферальная ссылка: [https://firstvds.ru/?from=528402](https://firstvds.ru/?from=528402)
-- Промокод на скидку: **648528402**
-
-Автор проекта (**Александр Смелков**, СЦ «Ника», Сочи) может помочь с первичной настройкой сервера и запуском Nika CRM на VPS, заказанном у **FirstVDS**. Напишите на [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5) с темой письма **Nika-CRM Помощь по установке**.
 
 ### VPS: Ubuntu 24.04 LTS
 
@@ -492,7 +461,7 @@ python3 -m venv venv
 - создаёт/обновляет пользователя БД `nikacrm` и базу `nikacrm`;
 - импортирует `database/bootstrap/nikacrm_public_sanitized.sql`, если таблицы ещё не созданы;
 - **копирует SQL во `/tmp` перед импортом** — процесс `postgres` на Ubuntu обычно **не имеет права читать файлы из `/root`**, прямой `-f /root/.../дамп.sql` даёт `Permission denied`;
-- выдаёт права роли `nikacrm` на схему `public` **встроенным блоком GRANT** (в публичном репозитории нет каталога `save/`, файл `save/scripts/grant_app_user_after_vps_restore.sql` в OSS-клоне отсутствует);
+- выдаёт права роли `nikacrm` на схему `public` **встроенным блоком GRANT**;
 - создаёт `/root/Nika-Service-CRM/.env` с `SECRET_KEY`, `DB_DRIVER=postgres`, `DATABASE_URL=...`;
 - запускает `./venv/bin/python scripts/run_migrations.py`.
 
@@ -518,34 +487,64 @@ cd /root/Nika-Service-CRM
 
 Реестр заявок `/all_orders` подгружает данные через DataTables **POST** на `/api/datatables/orders`, чтобы не упираться в лимит длины строки GET у gunicorn; при ручном запуске только с `gunicorn` без правок кода достаточно примера unit или опции `--limit-request-line 8190`.
 
+<a id="firstvds-vps"></a>
+### VPS-хостинг FirstVDS (реферал и помощь с запуском)
+
+Для развёртывания CRM удобно взять виртуальный сервер (VPS). Можно воспользоваться провайдером **FirstVDS**:
+
+- Реферальная ссылка: [https://firstvds.ru/?from=528402](https://firstvds.ru/?from=528402)
+- Промокод на скидку: **648528402**
+
+Автор проекта (**Александр Смелков**, СЦ «Ника», Сочи) может помочь с первичной настройкой сервера и запуском Nika CRM на VPS, заказанном у **FirstVDS**. Напишите на [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5) с темой письма **Nika-CRM Помощь по установке**.
+
+### После установки: reverse proxy и PostgreSQL
+
+Типичные проблемы **после** локального или VPS-запуска: ответ **`400`** с телом вроде **`invalid_host`** за nginx и ошибки **`InsufficientPrivilege` / «нет доступа к таблице …»** в PostgreSQL после восстановления дампа.
+
+#### 1. `400` / `invalid_host` за nginx или reverse proxy
+
+Приложение сравнивает заголовок **`Host`** со списком **`TRUSTED_HOSTS`** (см. `app/config.py`, `app/__init__.py`).
+
+- В **`.env`** на сервере укажите реальный домен (и при необходимости IP), **без** префикса `https://`, через запятую, например:  
+  `TRUSTED_HOSTS=example.com,www.example.com,localhost,127.0.0.1`
+- **systemd + `EnvironmentFile=.env`:** весь `.env` подхватывается процессом gunicorn — отдельный проброс переменных не нужен.
+
+Для **Socket.IO** (чат) за HTTPS задайте **`SOCKETIO_CORS_ALLOWED_ORIGINS`** с вашим `https://…` (см. комментарии в [`.env.example`](.env.example)).
+
+#### 2. PostgreSQL: «нет доступа к таблице …» после `pg_restore`
+
+Типичный случай: дамп восстановлен с **`--no-owner`** (или под суперпользователем `postgres`), владельцем таблиц остаётся другая роль, а **`DATABASE_URL`** указывает на вашего прикладного пользователя — у него нет прав.
+
+**Практично:** пересоздать целевую БД с **владельцем = роли из `DATABASE_URL`**, затем сделать restore; либо один раз от суперпользователя выдать права, например:
+
+```sql
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO имя_пользователя_из_DATABASE_URL;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO имя_пользователя_из_DATABASE_URL;
+```
+
+На Ubuntu VPS те же GRANT уже делает [`scripts/ubuntu_2404_bootstrap.sh`](scripts/ubuntu_2404_bootstrap.sh). На Windows (локальный Postgres) — [`scripts/Grant-LocalPostgresAppPrivileges.ps1`](scripts/Grant-LocalPostgresAppPrivileges.ps1).
+
 ## Структура проекта
 
 ```
-NikaNewCrm/
+Nika-Service-CRM/
 ├── app/                      # Основное приложение
-│   ├── __init__.py          # Инициализация Flask приложения
-│   ├── config.py            # Конфигурация
-│   ├── database/            # Работа с БД
-│   │   ├── connection.py    # Подключение к БД
-│   │   ├── migrations/      # Миграции БД
-│   │   ├── queries/         # SQL запросы (Query классы)
-│   │   └── schema.py        # Схема БД
-│   ├── middleware/          # Middleware
-│   ├── models/              # Модели данных
-│   ├── routes/              # Blueprint'ы (маршруты)
-│   ├── services/            # Сервисы (бизнес-логика)
-│   └── utils/               # Утилиты
-├── templates/               # HTML шаблоны
-├── static/                  # Статические файлы (CSS, JS)
-├── database/                # БД: bootstrap-дамп PostgreSQL, миграции (см. database/bootstrap/)
-├── save/                    # Вспомогательные файлы (скрипты, отчёты, документация)
-│   ├── scripts/             # Скрипты проверки, анализа, миграций
-│   ├── docs/                # Документация
-│   ├── tests/               # Тесты
-│   └── database_backups/    # Резервные копии БД
-├── run.py                   # Точка входа
-├── requirements.txt         # Зависимости
-└── README.md               # Этот файл
+│   ├── config.py             # Конфигурация
+│   ├── database/             # Подключение, миграции, queries
+│   ├── models/               # Модели данных
+│   ├── routes/               # Blueprint'ы
+│   ├── services/             # Бизнес-логика
+│   └── utils/                # Утилиты
+├── templates/                # HTML-шаблоны
+├── static/                   # CSS, JS
+├── database/bootstrap/       # Демо-дамп PostgreSQL
+├── docs/                     # Руководства и политика OSS
+├── scripts/                  # Bootstrap, миграции, утилиты
+├── deploy/                   # systemd / демо-VPS
+├── run.py / wsgi.py          # Точки входа
+├── requirements.txt
+└── README.md
 ```
 
 ## Архитектура
@@ -570,7 +569,7 @@ NikaNewCrm/
     └───┬────┘
         │
 ┌───────▼────────┐
-│   Database      │  ← SQLite
+│   Database      │  ← PostgreSQL
 └────────────────┘
 ```
 
@@ -580,18 +579,19 @@ NikaNewCrm/
 2. **Services (app/services/)** - содержат бизнес-логику, валидацию, кэширование
 3. **Models (app/models/)** - представляют бизнес-сущности, работа с БД
 4. **Queries (app/database/queries/)** - оптимизированные SQL запросы, избежание N+1 проблем
-5. **Database** - SQLite база данных
+5. **Database** - PostgreSQL
 
-Подробнее об архитектуре: [save/docs/ARCHITECTURE.md](save/docs/ARCHITECTURE.md)
+Подробнее: [docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md)
 
 ## Документация
 
 Документация находится в папке `docs/`:
-- [Руководство пользователя](docs/USER_GUIDE.md) - полное руководство по использованию системы
-- [API документация](docs/API.md) - описание API endpoints
-- [Обзор системы](docs/SYSTEM_OVERVIEW.md) - архитектура и ключевые модули
-- Политика данных для OSS - какие данные допустимы в публичном репозитории (документ ведется в публичном репозитории `Nika-Service-CRM`)
-- Workflow OSS-релизов - процесс синхронизации публичного репозитория (документ ведется в публичном репозитории `Nika-Service-CRM`)
+- [Руководство пользователя](docs/USER_GUIDE.md) — полное руководство по использованию системы
+- [API документация](docs/API.md) — описание API endpoints
+- [Обзор системы](docs/SYSTEM_OVERVIEW.md) — архитектура и ключевые модули
+- [Политика данных OSS](docs/OSS_DATA_POLICY.md) — какие данные допустимы в публичном репозитории
+- [Workflow OSS-релизов](docs/OSS_RELEASE_WORKFLOW.md) — процесс синхронизации публичного репозитория
+- [Деплой](docs/DEPLOY.md) — заметки по развёртыванию
 
 ### Документация модулей
 
@@ -699,18 +699,15 @@ Socket.IO namespace: `/staff-chat`. Service Worker (Web Push): `GET /staff-chat-
 
 ---
 
-## План скриптов и исправлений
+## Скрипты
 
-### Скрипты проверки
-- `scripts/check_reports_and_finance.py` — касса, прибыль, dashboard, БД
-- `save/scripts/check_import_result.py` — результат импорта
-- `save/scripts/check_cash_balance.py` — оплаты без проводок
-- `save/scripts/create_cash_transactions_for_payments.py` — создание проводок для оплат без записи (`--dry-run`)
+Полезные скрипты в каталоге `scripts/` (полный список — в таблице «Основные скрипты» ниже):
 
-### Импорт
-- `save/scripts/import_from_old_crm.py` — импорт из старой CRM (создаёт проводки в кассе)
-- `save/scripts/import_profit_orders_v2.py` — импорт заявок
-- `save/scripts/fix_salary_for_imported_orders.py` — начисление зарплаты по импортированным заявкам
+- `scripts/run_migrations.py` — применить миграции PostgreSQL
+- `scripts/ubuntu_2404_bootstrap.sh` — установка на Ubuntu 24.04 (Postgres + демо-дамп + `.env`)
+- `scripts/Grant-LocalPostgresAppPrivileges.ps1` — GRANT для роли из `DATABASE_URL` (Windows)
+- `scripts/check_oss_tree_guards.py` — проверки дерева OSS перед релизом
+- `scripts/generate_staff_chat_vapid_keys.py` / `ensure_staff_chat_vapid_env.py` — ключи Web Push
 
 ---
 
@@ -1178,26 +1175,9 @@ Socket.IO namespace: `/staff-chat`. Service Worker (Web Push): `GET /staff-chat-
 
 ---
 
-### Основные скрипты (scripts/)
+### Основные скрипты (`scripts/`)
 
-| Скрипт | Назначение |
-|--------|------------|
-| migrate.py | Миграции БД |
-| create_cash_transactions_for_payments.py | Проводки для оплат без записи |
-| import_from_old_crm.py | Импорт из старой CRM |
-| import_profit_orders_v2.py | Импорт заявок |
-| fix_salary_for_imported_orders.py | Зарплата по импорту |
-| accrue_salary_for_order.py | Начисление зарплаты |
-| check_reports_and_finance.py | Проверка отчётов и кассы |
-| check_import_result.py | Результат импорта |
-| check_cash_balance.py | Баланс кассы |
-| audit_permissions.py | Аудит прав |
-| check_user_permissions.py | Права пользователя |
-| create_backup.py | Резервная копия |
-| add_recommended_indexes.py | Индексы БД |
-| backfill_initial_stock_movements.py | Заполнение движений |
-| import_clients_xlsx.py | Импорт клиентов |
-| import_services_parts.py | Импорт услуг/товаров |
+Актуальный набор в публичном репозитории: `run_migrations.py`, `ubuntu_2404_bootstrap.sh`, `Grant-LocalPostgresAppPrivileges.ps1`, `check_oss_tree_guards.py`, утилиты Web Push и обслуживания БД. Смотрите каталог [`scripts/`](scripts/) в клоне.
 
 ---
 
@@ -1248,7 +1228,7 @@ customer = CustomerService.create_customer({
 })
 ```
 
-Больше примеров: [save/docs/SERVICES_EXAMPLES.md](save/docs/SERVICES_EXAMPLES.md)
+Больше примеров: см. [docs/API.md](docs/API.md) и сервисы в `app/services/`.
 
 ## Конфигурация
 
@@ -1272,7 +1252,7 @@ export FLASK_DEBUG=False
 Система использует миграции для управления схемой БД. Если вы импортировали **`database/bootstrap/nikacrm_public_sanitized.sql`**, то для PostgreSQL записи в **`schema_migrations_pg`** уже соответствуют версиям **001–008** — при старте приложения новые SQL-миграции не потребуются, пока в `postgres_versions/` не появится следующая версия.
 
 ```bash
-# Применить все неприменённые миграции (SQLite или Postgres)
+# Применить все неприменённые миграции PostgreSQL
 python scripts/run_migrations.py
 ```
 
@@ -1356,7 +1336,7 @@ pytest --cov=app
 
 5. **Мониторинг** - настройте логирование и мониторинг ошибок
 
-Подробнее: [save/docs/SECURITY_IMPROVEMENTS.md](save/docs/SECURITY_IMPROVEMENTS.md)
+См. также [SECURITY.md](SECURITY.md) и [docs/SECURITY_AUDIT_XSS_SQL_2026-03-02.md](docs/SECURITY_AUDIT_XSS_SQL_2026-03-02.md).
 
 ## Производительность
 
@@ -1367,7 +1347,7 @@ pytest --cov=app
 - **Пагинация больших списков** - по умолчанию 50 элементов на странице, максимум 200
 - **Ленивая загрузка данных** - данные загружаются только при необходимости
 
-Подробнее: [save/docs/PERFORMANCE_OPTIMIZATION.md](save/docs/PERFORMANCE_OPTIMIZATION.md)
+Ориентиры по нагрузке — раздел «Производительность» выше и настройки gunicorn/nginx на VPS.
 
 ## История изменений
 
@@ -1414,8 +1394,7 @@ pytest --cov=app
 - Период отчётов по умолчанию: последние 7 дней
 
 #### Структура проекта
-- Папка `save/` — скрипты, документация, тесты, резервные копии БД
-- Вспомогательные файлы создаются в `save/` с описанием назначения
+- Документация — в `docs/`, служебные скрипты — в `scripts/`, демо-дамп PostgreSQL — в `database/bootstrap/`
 
 ### (2026-01-31)
 
@@ -1677,7 +1656,7 @@ pytest --cov=app
 - Удаление дубля поиска в списке клиентов
 - Сортировка клиентов по умолчанию (новые клиенты сверху)
 
-Подробнее: [save/docs/SECURITY_IMPROVEMENTS.md](save/docs/SECURITY_IMPROVEMENTS.md)
+См. также [SECURITY.md](SECURITY.md) и [docs/SECURITY_AUDIT_XSS_SQL_2026-03-02.md](docs/SECURITY_AUDIT_XSS_SQL_2026-03-02.md).
 
 ## Актуализация (2026-02-23)
 
@@ -1687,7 +1666,7 @@ pytest --cov=app
 - Исправлена логика начисления зарплаты при повторном закрытии заявки: повторный переход в зарплатный статус не создает дублей.
 - Выполнена дедупликация исторических начислений и добавлен скрипт `scripts/dedupe_salary_accruals.py`.
 
-Подробно: [save/docs/RELEASE_NOTES_2026-02-23.md](save/docs/RELEASE_NOTES_2026-02-23.md)
+См. раздел [История изменений](#история-изменений).
 
 ## Лицензия
 
