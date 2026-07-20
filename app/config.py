@@ -108,6 +108,17 @@ class Config:
         "STAFF_CHAT_VAPID_CLAIM_EMAIL", "mailto:noreply@localhost"
     ).strip()
 
+    # SEO-промолендинг на анонимном «/» (только демо-VPS: PUBLIC_LANDING=1).
+    # WORK / локально без флага — как раньше (редирект на /login).
+    PUBLIC_LANDING = os.environ.get("PUBLIC_LANDING", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    # Канонический URL лендинга для meta/sitemap (иначе берётся request.url_root).
+    PUBLIC_LANDING_CANONICAL = (os.environ.get("PUBLIC_LANDING_CANONICAL") or "").strip().rstrip("/")
+
     # Публичное демо: подсказка на /login (учётка, счётчики из БД, текст про железо).
     # Включать только на демо-VPS: DEMO_LOGIN_BANNER=1
     DEMO_LOGIN_BANNER = os.environ.get("DEMO_LOGIN_BANNER", "").strip().lower() in (

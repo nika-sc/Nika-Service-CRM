@@ -6,11 +6,13 @@ from fnmatch import fnmatch
 import time
 from collections import defaultdict, deque
 
-from flask import Flask, redirect, url_for, Response, send_from_directory, request, jsonify
+from flask import Flask, redirect, url_for, Response, send_from_directory, request, jsonify, g
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
+from datetime import datetime, timezone
+import os
 
 from app.config import Config
 from app.database.connection import init_db
@@ -121,13 +123,65 @@ def create_app(config_class=Config):
         project_root = os.path.dirname(os.path.dirname(__file__))
         return send_from_directory(project_root, 'oh-oh-icq-sound.mp3')
 
-    # robots.txt — запрет индексации CRM поисковыми роботами
+    # robots.txt / sitemap — при PUBLIC_LANDING разрешаем индексацию только лендинга
     @app.route('/robots.txt')
     def robots_txt():
+        if app.config.get('PUBLIC_LANDING'):
+            root = (app.config.get('PUBLIC_LANDING_CANONICAL') or '').rstrip('/')
+            if not root:
+                root = (request.url_root or '').rstrip('/')
+            body = "\n".join([
+                "User-agent: *",
+                "Allow: /$",
+                "Allow: /static/",
+                "Allow: /sitemap.xml",
+                "Allow: /favicon.ico",
+                "Disallow: /login",
+                "Disallow: /logout",
+                "Disallow: /portal",
+                "Disallow: /api",
+                "Disallow: /reports",
+                "Disallow: /warehouse",
+                "Disallow: /finance",
+                "Disallow: /shop",
+                "Disallow: /salary",
+                "Disallow: /settings",
+                "Disallow: /clients",
+                "Disallow: /all_orders",
+                "Disallow: /add_order",
+                "Disallow: /order/",
+                "Disallow: /device/",
+                "Disallow: /notifications",
+                "Disallow: /staff-chat",
+                f"Sitemap: {root}/sitemap.xml",
+                "",
+            ])
+            return Response(body, mimetype="text/plain")
         return Response(
             "User-agent: *\nDisallow: /\n",
             mimetype="text/plain",
         )
+
+    @app.route('/sitemap.xml')
+    def sitemap_xml():
+        if not app.config.get('PUBLIC_LANDING'):
+            return Response('Not Found', status=404, mimetype='text/plain')
+        root = (app.config.get('PUBLIC_LANDING_CANONICAL') or '').rstrip('/')
+        if not root:
+            root = (request.url_root or '').rstrip('/')
+        lastmod = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '  <url>\n'
+            f'    <loc>{root}/</loc>\n'
+            f'    <lastmod>{lastmod}</lastmod>\n'
+            '    <changefreq>weekly</changefreq>\n'
+            '    <priority>1.0</priority>\n'
+            '  </url>\n'
+            '</urlset>\n'
+        )
+        return Response(xml, mimetype='application/xml')
 
     @app.after_request
     def _set_security_headers(response):
@@ -135,8 +189,14 @@ def create_app(config_class=Config):
         response.headers.setdefault('X-Frame-Options', 'DENY')
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-        # Глобально запрещаем индексацию поисковиками для закрытой CRM.
-        response.headers.setdefault('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex')
+        # Глобально запрещаем индексацию; исключение — SEO-лендинг (g.allow_search_indexing).
+        if getattr(g, 'allow_search_indexing', False):
+            response.headers['X-Robots-Tag'] = 'index, follow'
+        else:
+            response.headers.setdefault(
+                'X-Robots-Tag',
+                'noindex, nofollow, noarchive, nosnippet, noimageindex',
+            )
         response.headers.setdefault('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
         csp_parts = [
             "default-src 'self'",

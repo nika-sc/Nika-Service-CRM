@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index, follow">
+    <title>Бесплатная CRM для сервисных центров — Nika CRM</title>
+    <meta name="description" content="Nika CRM — бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и портал клиента. Запустите на своём сервере или попробуйте демо онлайн.">
+    <link rel="canonical" href="{{ canonical_url }}/">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:site_name" content="Nika CRM">
+    <meta property="og:title" content="Бесплатная CRM для сервисных центров — Nika CRM">
+    <meta property="og:description" content="Заявки, склад, касса и отчёты для СЦ. Open-source, свой сервер, живое демо.">
+    <meta property="og:url" content="{{ canonical_url }}/">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Бесплатная CRM для сервисных центров — Nika CRM">
+    <meta name="twitter:description" content="Open-source CRM для ремонта техники: приёмка, склад, финансы. Попробуйте демо.">
+    <meta name="twitter:image" content="{{ og_image_url }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-landing.css') }}">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "Nika CRM",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Linux, Windows, Docker",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "RUB"
+          },
+          "description": "Бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и клиентский портал.",
+          "url": "{{ canonical_url }}/",
+          "image": "{{ og_image_url }}",
+          "author": {
+            "@type": "Person",
+            "name": "Александр Смелков",
+            "email": "nika-sc@bk.ru"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Есть ли бесплатная CRM для сервисного центра?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Да. Nika CRM — бесплатная open-source система для СЦ: заявки, склад, касса и отчёты. Код открыт, можно развернуть на своём сервере без SaaS-подписки."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Подойдёт ли CRM для ремонта телефонов и бытовой техники?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Да. Система заточена под приёмку, статусы ремонта, устройства клиентов, запчасти и расчёт зарплаты мастеров — типичный сценарий сервисного центра."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Нужно ли платить за облако?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Нет обязательной облачной подписки. Вы ставите CRM локально или на свой VPS. Демо на этом сайте — для ознакомления."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Как быстро попробовать Nika CRM?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Нажмите «Войти в демо» на этой странице и войдите демо-учёткой. Для своей копии — клонируйте репозиторий на GitHub и импортируйте демо-дамп PostgreSQL."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Какая база данных используется?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PostgreSQL — основной режим для разработки и продакшена. В репозитории есть готовый sanitised-дамп для быстрого старта."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Есть ли портал для клиентов?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Да. Клиентский портал показывает статусы заявок и историю устройств; пароль можно выдать при создании клиента."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+</head>
+<body class="ml-body">
+    <a class="ml-skip" href="#content">К содержимому</a>
+
+    <header class="ml-nav">
+        <a class="ml-brand" href="{{ canonical_url }}/">Nika CRM</a>
+        <div class="ml-nav-actions">
+            <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-github" aria-hidden="true"></i> GitHub
+            </a>
+            <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
+                <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Войти в демо
+            </button>
+        </div>
+    </header>
+
+    <main id="content">
+        <section class="ml-hero" aria-labelledby="hero-title">
+            <div class="ml-hero-inner">
+                <p class="ml-kicker">Open-source · свой сервер · без SaaS</p>
+                <h1 id="hero-title">Бесплатная CRM для сервисных центров</h1>
+                <p class="ml-lead">
+                    Nika CRM помогает принимать технику в ремонт, вести склад и кассу, считать зарплату мастеров
+                    и показывать клиенту статус заявки — на вашей инфраструктуре, без ежемесячной подписки.
+                </p>
+                <div class="ml-cta-row">
+                    <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
+                        <i class="fas fa-play" aria-hidden="true"></i> Войти в демо
+                    </button>
+                    <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
+                        Скачать с GitHub
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="ml-section" id="for-whom" aria-labelledby="for-whom-title">
+            <h2 id="for-whom-title">Для кого эта CRM</h2>
+            <p class="ml-section-lead">
+                Если у вас сервисный центр, мастерская по ремонту телефонов, ноутбуков или бытовой техники —
+                вам нужна система именно под приёмку и выдачу, а не «продажи вообще».
+            </p>
+            <div class="ml-grid ml-grid-3">
+                <article class="ml-feature">
+                    <i class="fas fa-store fa-lg" aria-hidden="true"></i>
+                    <h3>Сервисные центры</h3>
+                    <p>Реестр заявок, канбан, статусы ремонта, история устройства и клиента в одном месте.</p>
+                </article>
+                <article class="ml-feature">
+                    <i class="fas fa-screwdriver-wrench fa-lg" aria-hidden="true"></i>
+                    <h3>Мастерские и точки приёма</h3>
+                    <p>Быстрое создание заявки, печать, уведомления клиенту и контроль загрузки мастеров.</p>
+                </article>
+                <article class="ml-feature">
+                    <i class="fas fa-user-tie fa-lg" aria-hidden="true"></i>
+                    <h3>Владельцы СЦ</h3>
+                    <p>Отчёты по выручке, марже, складу и зарплате — без привязки к чужому облаку.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="ml-section" id="features" aria-labelledby="features-title">
+            <h2 id="features-title">Возможности</h2>
+            <p class="ml-section-lead">
+                Практичный набор модулей, который уже используется в реальном сервисном центре «Ника» (Сочи).
+            </p>
+            <div class="ml-grid ml-grid-2">
+                <article class="ml-feature">
+                    <h3><i class="fas fa-clipboard-list me-2" aria-hidden="true"></i>Заявки на ремонт</h3>
+                    <p>Создание, фильтры, закрепление, журнал и канбан. Динамические статусы с флагами оплаты и зарплаты.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3><i class="fas fa-boxes-stacked me-2" aria-hidden="true"></i>Склад и запчасти</h3>
+                    <p>Остатки, категории, поставщики, движения и low-stock уведомления.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3><i class="fas fa-wallet me-2" aria-hidden="true"></i>Касса и финансы</h3>
+                    <p>Оплаты, кошелёк клиента, кассовые проводки и отчёт по прибыльности.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3><i class="fas fa-chart-line me-2" aria-hidden="true"></i>Отчёты владельца</h3>
+                    <p>Дашборд дня, продажи, закупки, маржа, остатки и зарплата мастеров.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3><i class="fas fa-mobile-screen me-2" aria-hidden="true"></i>Портал клиента</h3>
+                    <p>Клиент видит свои заявки и устройства; пароль портала можно выдать при создании карточки.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3><i class="fas fa-comments me-2" aria-hidden="true"></i>Чат сотрудников</h3>
+                    <p>Внутренний чат с уведомлениями — чтобы смена не теряла контекст по заявкам.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="ml-section" id="open-source" aria-labelledby="oss-title">
+            <h2 id="oss-title">Почему бесплатно и open-source</h2>
+            <p class="ml-section-lead">
+                Код публикуется как практическое решение для СЦ: вы владеете данными и сервером.
+                Нет обязательной SaaS-подписки — платите только за свой хостинг, если выносите CRM в интернет.
+            </p>
+            <div class="ml-grid ml-grid-3">
+                <article class="ml-feature">
+                    <h3>Свой сервер</h3>
+                    <p>Локальная сеть или VPS с доменом. Данные не уходят в чужой мультитенант.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3>Прозрачный код</h3>
+                    <p>Репозиторий на GitHub: можно читать, аудировать и дорабатывать под свой процесс.</p>
+                </article>
+                <article class="ml-feature">
+                    <h3>Демо без риска</h3>
+                    <p>Этот сайт — ознакомительная среда. Для продакшена поднимаете свою копию.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="ml-section" id="howto" aria-labelledby="howto-title">
+            <h2 id="howto-title">Как запустить свою копию</h2>
+            <p class="ml-section-lead">
+                Краткий путь. Подробности — в README репозитория
+                <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">nika-sc/Nika-Service-CRM</a>.
+            </p>
+            <ol class="ml-steps">
+                <li>Клонируйте репозиторий и создайте виртуальное окружение Python.</li>
+                <li>Поднимите PostgreSQL и импортируйте демо-дамп <code>database/bootstrap/nikacrm_public_sanitized.sql</code>.</li>
+                <li>Скопируйте <code>.env.example</code> → <code>.env</code>, укажите <code>DB_DRIVER=postgres</code> и <code>DATABASE_URL</code>.</li>
+                <li>Запустите <code>python run.py</code> или используйте bootstrap-скрипт для Ubuntu 24.04.</li>
+            </ol>
+        </section>
+
+        <section class="ml-section ml-faq" id="faq" aria-labelledby="faq-title">
+            <h2 id="faq-title">Частые вопросы</h2>
+            <p class="ml-section-lead">Ответы на типовые запросы про бесплатную CRM для сервисных центров.</p>
+
+            <details>
+                <summary>Есть ли бесплатная CRM для сервисного центра?</summary>
+                <p>Да. Nika CRM распространяется как open-source: заявки, склад, касса и отчёты без обязательной облачной подписки.</p>
+            </details>
+            <details>
+                <summary>Подойдёт ли для ремонта телефонов и ноутбуков?</summary>
+                <p>Да. Сценарии приёмки, статусов ремонта, учёта устройств и запчастей — основа системы.</p>
+            </details>
+            <details>
+                <summary>Чем отличается от «облачных» CRM?</summary>
+                <p>Вы ставите ПО у себя. Нет ежемесячной платы за SaaS; ответственность за сервер и бэкапы — на вас (или на вашем хостере).</p>
+            </details>
+            <details>
+                <summary>Как посмотреть демо прямо сейчас?</summary>
+                <p>Нажмите «Войти в демо» — откроется окно входа. Учётка и подсказки показаны в модалке, если демо-баннер включён.</p>
+            </details>
+            <details>
+                <summary>Какая СУБД нужна?</summary>
+                <p>PostgreSQL. В репозитории есть готовый sanitised-дамп для быстрого старта и скрипт установки на Ubuntu 24.04.</p>
+            </details>
+            <details>
+                <summary>Есть ли клиентский портал?</summary>
+                <p>Да. Клиент может смотреть свои заявки; доступ выдаётся из карточки клиента.</p>
+            </details>
+            <details>
+                <summary>Кто автор и куда писать по установке?</summary>
+                <p>Александр Смелков, СЦ «Ника», Сочи. Помощь по установке: <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>.</p>
+            </details>
+        </section>
+    </main>
+
+    <footer class="ml-footer">
+        <div class="ml-footer-brand">Nika CRM</div>
+        <p>
+            Бесплатная CRM для сервисных центров ·
+            <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+            {% if demo_login and demo_login.vps_url %}
+            · <a href="{{ demo_login.vps_url }}" target="_blank" rel="noopener noreferrer">VPS {{ demo_login.vps_label }}</a>
+            {% endif %}
+            · <a href="mailto:nika-sc@bk.ru">nika-sc@bk.ru</a>
+        </p>
+        <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
+    </footer>
+
+    <div class="modal fade ml-modal" id="demoLoginModal" tabindex="-1" aria-labelledby="demoLoginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="demoLoginModalLabel">Вход в демо Nika CRM</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('main.login') }}" id="demoLoginForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="from_landing" value="1">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Имя пользователя</label>
+                            <input type="text" class="form-control" id="username" name="username" required autocomplete="username"
+                                   {% if demo_login %}value="{{ demo_login.username }}"{% endif %}>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Пароль</label>
+                            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password"
+                                   {% if demo_login %}value="{{ demo_login.password }}"{% endif %}>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" value="1">
+                            <label class="form-check-label" for="remember_me">Запомнить меня</label>
+                        </div>
+                        <button type="submit" class="ml-btn ml-btn-primary w-100 justify-content-center">
+                            <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Войти
+                        </button>
+                    </form>
+
+                    {% if demo_login %}
+                    <div class="ml-demo-hint" role="region" aria-label="Демо-доступ">
+                        <strong>Демо-доступ:</strong>
+                        логин <code>{{ demo_login.username }}</code>,
+                        пароль <code>{{ demo_login.password }}</code>
+                        {% if demo_login.count_orders is not none %}
+                        · заявок в базе: <strong>{{ demo_login.count_orders }}</strong>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+    (function () {
+        var shouldOpen = {{ 'true' if open_login else 'false' }};
+        if (!shouldOpen) return;
+        var el = document.getElementById('demoLoginModal');
+        if (!el || !window.bootstrap) return;
+        var modal = bootstrap.Modal.getOrCreateInstance(el);
+        modal.show();
+        var user = document.getElementById('username');
+        if (user) user.focus();
+    })();
+    </script>
+</body>
+</html>

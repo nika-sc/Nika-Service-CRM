@@ -1,7 +1,7 @@
 """
 Blueprint для главных страниц и аутентификации.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, g
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -136,6 +136,23 @@ def _login_page_extra():
     panel["vps_promo"] = (current_app.config.get("REFERRAL_VPS_PROMO_CODE") or "").strip()
     return {"demo_login": panel}
 
+
+def _public_landing_enabled() -> bool:
+    return bool(current_app.config.get("PUBLIC_LANDING"))
+
+
+def _landing_canonical_url() -> str:
+    configured = (current_app.config.get("PUBLIC_LANDING_CANONICAL") or "").strip().rstrip("/")
+    if configured:
+        return configured
+    return (request.url_root or "").rstrip("/")
+
+
+def _login_error_response():
+    """При ошибке входа с лендинга — обратно на /?login=1 (модалка), иначе страница /login."""
+    if _public_landing_enabled() and request.form.get("from_landing") == "1":
+        return redirect(url_for("main.home", login=1))
+    return render_template("auth/login.html", **_login_page_extra())
 
 
 # Инициализация limiter для этого blueprint
@@ -310,11 +327,11 @@ def login():
 
         if _is_login_locked(login_key):
             flash('Слишком много попыток входа. Повторите позже.', 'error')
-            return render_template('auth/login.html', **_login_page_extra())
+            return _login_error_response()
         
         if not username or not password:
             flash('Введите имя пользователя и пароль', 'error')
-            return render_template('auth/login.html', **_login_page_extra())
+            return _login_error_response()
         
         user_dict = UserService.get_user_by_username(username)
         if user_dict:
@@ -322,7 +339,7 @@ def login():
             if not current_hash:
                 logger.warning(f"Пользователь {username} не имеет хеша пароля")
                 flash('Неверное имя пользователя или пароль', 'error')
-                return render_template('auth/login.html', **_login_page_extra())
+                return _login_error_response()
             
             # Логируем формат хеша для диагностики
             hash_format = "werkzeug" if (current_hash.startswith('pbkdf2:') or 
@@ -352,7 +369,7 @@ def login():
                 UserService.update_user_last_login(user.id)
                 _reset_login_guard(login_key)
                 flash(f'Добро пожаловать, {username}!', 'success')
-                next_page = request.args.get('next')
+                next_page = request.args.get('next') or request.form.get('next')
                 if not _is_safe_redirect_target(next_page):
                     next_page = url_for('main.home')
                 return redirect(next_page)
@@ -360,7 +377,12 @@ def login():
         # Не раскрываем, существует ли пользователь (security best practice)
         _register_login_failure(login_key)
         flash('Неверное имя пользователя или пароль', 'error')
+        return _login_error_response()
     
+    if _public_landing_enabled() and request.method == 'GET' and not request.args.get('next'):
+        # Прямой заход на /login при включённом лендинге — на промо с открытой модалкой
+        return redirect(url_for('main.home', login=1))
+
     return render_template('auth/login.html', **_login_page_extra())
 
 
@@ -370,13 +392,28 @@ def logout():
     """Выход из системы."""
     logout_user()
     flash('Вы вышли из системы', 'info')
+    if _public_landing_enabled():
+        return redirect(url_for('main.home'))
     return redirect(url_for('main.login'))
 
 
 @bp.route('/')
-@login_required
 def home():
-    """Главная страница — дашборд с полным функционалом Dashboard."""
+    """Главная: SEO-лендинг (аноним + PUBLIC_LANDING) или дашборд."""
+    if not current_user.is_authenticated:
+        if _public_landing_enabled():
+            g.allow_search_indexing = True
+            canonical = _landing_canonical_url()
+            return render_template(
+                'marketing/landing.html',
+                open_login=(request.args.get('login') == '1'),
+                canonical_url=canonical,
+                og_image_url=f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
+                github_url='https://github.com/nika-sc/Nika-Service-CRM',
+                **_login_page_extra(),
+            )
+        return redirect(url_for('main.login'))
+
     # Период: по умолчанию сегодня
     preset = request.args.get('preset', 'today')
     date_from, date_to = normalize_date_range(
