@@ -30,7 +30,7 @@ cd <имя_каталога_после_клона>
 - [Описание и возможности](#описание)
 - [Основные функции](#основные-функции)
 - [Установка и конфигурация](#установка)
-- [После клона: reverse proxy, Docker, PostgreSQL](#post-clone-reverse-proxy-docker-and-postgresql)
+- [После клона: reverse proxy и PostgreSQL](#post-clone-reverse-proxy-and-postgresql)
 - [Установка на VPS (Ubuntu 24.04)](#vps-ubuntu-2404-lts)
 - [VPS-хостинг FirstVDS (реферал и помощь с запуском)](#firstvds-vps)
 - [Архитектура](#архитектура)
@@ -305,33 +305,7 @@ cd <имя_каталога_после_клона>
 
 ## Установка
 
-### Запуск в Docker (рекомендуется)
-
-В **корне** репозитория лежат [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml), [`docker-entrypoint.sh`](docker-entrypoint.sh) и шаблон [`.env.example`](.env.example). Конфиг nginx для контейнера — [`nginx/nginx.conf`](nginx/nginx.conf).
-
-```bash
-cp .env.example .env
-# задайте SECRET_KEY и пароль Postgres (POSTGRES_PASSWORD / DATABASE_URL)
-docker compose up -d
-```
-
-Веб-интерфейс через nginx: **http://localhost:8080**.
-
-Импорт демо-дампа в контейнер Postgres (после `up`):
-
-```bash
-docker compose exec -T postgres psql -U nikacrm -d nikacrm < database/bootstrap/nikacrm_public_sanitized.sql
-```
-
-Обновление:
-
-```bash
-git pull
-docker compose build web
-docker compose up -d
-```
-
-### Post-clone: reverse proxy, Docker, and PostgreSQL
+### Post-clone: reverse proxy and PostgreSQL
 
 После **`git clone`** чаще всего сталкиваются с двумя проблемами: ответ **`400`** с телом вроде **`invalid_host`** за nginx и ошибки **`InsufficientPrivilege` / «нет доступа к таблице …»** в PostgreSQL после восстановления дампа.
 
@@ -341,8 +315,7 @@ docker compose up -d
 
 - В **`.env`** на сервере укажите реальный домен (и при необходимости IP), **без** префикса `https://`, через запятую, например:  
   `TRUSTED_HOSTS=example.com,www.example.com,localhost,127.0.0.1`
-- **Docker Compose:** переменные из файла `.env` в каталоге проекта **не попадают в контейнер `web` сами по себе** — их нужно явно перечислить в `services.web.environment`. В актуальном дереве OSS это сделано в корневом [`docker-compose.yml`](docker-compose.yml) (ключи `TRUSTED_HOSTS`, `SOCKETIO_CORS_ALLOWED_ORIGINS`, CSP, лимит API). Если вы взяли старый fork или вырезали этот блок — верните строки по образцу из репозитория, иначе в контейнере останутся дефолты только для `localhost`, и за nginx будет **`400`**.
-- **systemd + `EnvironmentFile=.env`:** весь `.env` подхватывается процессом — отдельный проброс через compose не нужен.
+- **systemd + `EnvironmentFile=.env`:** весь `.env` подхватывается процессом gunicorn — отдельный проброс переменных не нужен.
 
 Для **Socket.IO** (чат) за HTTPS задайте **`SOCKETIO_CORS_ALLOWED_ORIGINS`** с вашим `https://…` (см. комментарии в [`.env.example`](.env.example)).
 
