@@ -307,15 +307,29 @@ cd <имя_каталога_после_клона>
 
 ### Запуск в Docker (рекомендуется)
 
-Конфигурация собрана в каталоге [`docker/`](docker/README.md). Из **корня** репозитория:
+В **корне** репозитория лежат [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml), [`docker-entrypoint.sh`](docker-entrypoint.sh) и шаблон [`.env.example`](.env.example). Конфиг nginx для контейнера — [`nginx/nginx.conf`](nginx/nginx.conf).
 
 ```bash
-cp docker/env.example .env
-# задайте SECRET_KEY и при необходимости пароли Postgres
+cp .env.example .env
+# задайте SECRET_KEY и пароль Postgres (POSTGRES_PASSWORD / DATABASE_URL)
 docker compose up -d
 ```
 
-Веб-интерфейс через nginx: **http://localhost:8080**. Подробности, импорт демо-дампа в контейнер и обновление — в [`docker/README.md`](docker/README.md).
+Веб-интерфейс через nginx: **http://localhost:8080**.
+
+Импорт демо-дампа в контейнер Postgres (после `up`):
+
+```bash
+docker compose exec -T postgres psql -U nikacrm -d nikacrm < database/bootstrap/nikacrm_public_sanitized.sql
+```
+
+Обновление:
+
+```bash
+git pull
+docker compose build web
+docker compose up -d
+```
 
 ### Post-clone: reverse proxy, Docker, and PostgreSQL
 
