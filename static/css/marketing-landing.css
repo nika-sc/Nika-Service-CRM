@@ -235,9 +235,14 @@ body.ml-body {
 .ml-shot-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
-@media (min-width: 860px) {
+@media (min-width: 640px) {
+  .ml-shot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
   .ml-shot-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -272,6 +277,11 @@ body.ml-body {
   font-family: var(--ml-font-ui);
   font-size: 0.88rem;
   color: var(--ml-muted);
+  min-height: 2.8rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .ml-shot-modal .modal-content {
@@ -282,6 +292,10 @@ body.ml-body {
 .ml-shot-modal .modal-header,
 .ml-shot-modal .modal-footer {
   border-color: rgba(255, 255, 255, 0.14);
+}
+.ml-shot-modal .modal-footer {
+  gap: 0.5rem;
+  justify-content: space-between;
 }
 .ml-shot-modal .btn-close {
   filter: invert(1);
@@ -413,6 +427,84 @@ body.ml-body {
 }
 .ml-demo-hint code {
   color: var(--ml-accent-2);
+}
+
+@media (max-width: 920px) {
+  body.ml-body {
+    font-size: 1rem;
+  }
+  .ml-nav {
+    padding: 0.75rem 0.9rem;
+    align-items: flex-start;
+  }
+  .ml-brand {
+    font-size: 1.12rem;
+  }
+  .ml-nav-actions {
+    justify-content: flex-end;
+  }
+  .ml-section {
+    padding: 3rem 1rem;
+  }
+  .ml-hero {
+    min-height: auto;
+    padding: 2.9rem 1rem 3rem;
+  }
+  .ml-lead {
+    font-size: 1.02rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .ml-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .ml-nav-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .ml-nav-actions .ml-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    padding: 0.62rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  .ml-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.11em;
+  }
+  .ml-hero h1 {
+    font-size: clamp(1.8rem, 9vw, 2.4rem);
+  }
+  .ml-cta-row {
+    width: 100%;
+  }
+  .ml-cta-row .ml-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .ml-feature {
+    padding: 1rem 1rem;
+  }
+  .ml-shot-card img {
+    height: 205px;
+  }
+  .ml-shot-modal .modal-dialog {
+    margin: 0.45rem;
+  }
+  .ml-shot-modal .modal-body {
+    min-height: 50vh;
+    padding: 0.45rem;
+  }
+  .ml-shot-modal .modal-footer .btn {
+    flex: 1 1 100%;
+  }
+  .ml-modal .modal-dialog {
+    margin: 0.55rem;
+  }
 }
 
 @keyframes ml-rise {
