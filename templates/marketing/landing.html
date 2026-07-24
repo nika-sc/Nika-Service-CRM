@@ -195,6 +195,26 @@
             </div>
         </section>
 
+        <section class="ml-section" id="screenshots" aria-labelledby="screenshots-title">
+            <h2 id="screenshots-title">Скриншоты интерфейса CRM</h2>
+            <p class="ml-section-lead">
+                Реальные экраны системы: заявки, карточки, отчёты, склад, реестр и рабочие сценарии сервисного центра.
+            </p>
+            <div class="ml-shot-grid">
+                {% for shot in screenshot_files %}
+                <a class="ml-shot-card" href="{{ url_for('static', filename=shot) }}" target="_blank" rel="noopener noreferrer">
+                    <img
+                        src="{{ url_for('static', filename=shot) }}"
+                        alt="Скриншот CRM №{{ loop.index }}"
+                        loading="lazy"
+                        decoding="async"
+                    >
+                    <span>Скриншот {{ loop.index }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+
         <section class="ml-section" id="open-source" aria-labelledby="oss-title">
             <h2 id="oss-title">Почему бесплатно и open-source</h2>
             <p class="ml-section-lead">

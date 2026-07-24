@@ -404,12 +404,17 @@ def home():
         if _public_landing_enabled():
             g.allow_search_indexing = True
             canonical = _landing_canonical_url()
+            screenshots = [
+                f"marketing/screenshots/screenshot-{idx:02d}.jpg"
+                for idx in range(1, 18)
+            ]
             return render_template(
                 'marketing/landing.html',
                 open_login=(request.args.get('login') == '1'),
                 canonical_url=canonical,
                 og_image_url=f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
                 github_url='https://github.com/nika-sc/Nika-Service-CRM',
+                screenshot_files=screenshots,
                 **_login_page_extra(),
             )
         return redirect(url_for('main.login'))
