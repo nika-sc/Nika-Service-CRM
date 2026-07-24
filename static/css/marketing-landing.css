@@ -244,11 +244,16 @@ body.ml-body {
 }
 .ml-shot-card {
   display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
   border-radius: 0.55rem;
   overflow: hidden;
   text-decoration: none;
   border: 1px solid var(--ml-border);
   background: var(--ml-surface);
+  appearance: none;
+  cursor: pointer;
   transition: transform 0.22s ease, border-color 0.22s ease;
 }
 .ml-shot-card:hover {
@@ -267,6 +272,33 @@ body.ml-body {
   font-family: var(--ml-font-ui);
   font-size: 0.88rem;
   color: var(--ml-muted);
+}
+
+.ml-shot-modal .modal-content {
+  background: rgba(8, 16, 20, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--ml-text);
+}
+.ml-shot-modal .modal-header,
+.ml-shot-modal .modal-footer {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.ml-shot-modal .btn-close {
+  filter: invert(1);
+}
+.ml-shot-modal .modal-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(72vh, 780px);
+  padding: 0.75rem;
+}
+.ml-shot-modal .modal-body img {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 0.45rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 
 .ml-steps {

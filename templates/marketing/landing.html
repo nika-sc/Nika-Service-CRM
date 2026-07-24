@@ -202,15 +202,21 @@
             </p>
             <div class="ml-shot-grid">
                 {% for shot in screenshot_files %}
-                <a class="ml-shot-card" href="{{ url_for('static', filename=shot) }}" target="_blank" rel="noopener noreferrer">
+                <button
+                    type="button"
+                    class="ml-shot-card"
+                    data-shot-index="{{ loop.index0 }}"
+                    data-bs-toggle="modal"
+                    data-bs-target="#shotCarouselModal"
+                >
                     <img
-                        src="{{ url_for('static', filename=shot) }}"
-                        alt="Скриншот CRM №{{ loop.index }}"
+                        src="{{ url_for('static', filename=shot.file) }}"
+                        alt="{{ shot.title }}"
                         loading="lazy"
                         decoding="async"
                     >
-                    <span>Скриншот {{ loop.index }}</span>
-                </a>
+                    <span>{{ shot.title }}</span>
+                </button>
                 {% endfor %}
             </div>
         </section>
@@ -299,6 +305,29 @@
         <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
     </footer>
 
+    <div class="modal fade ml-shot-modal" id="shotCarouselModal" tabindex="-1" aria-labelledby="shotCarouselTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-6" id="shotCarouselTitle">Скриншот</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="shotCarouselImage" src="" alt="" loading="eager" decoding="sync">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" id="shotPrevBtn">
+                        <i class="fas fa-arrow-left me-1" aria-hidden="true"></i> Назад
+                    </button>
+                    <button type="button" class="btn btn-outline-light" id="shotNextBtn">
+                        Вперёд <i class="fas fa-arrow-right ms-1" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade ml-modal" id="demoLoginModal" tabindex="-1" aria-labelledby="demoLoginModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -358,6 +387,53 @@
     <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
     <script>
     (function () {
+        var shots = {{ screenshot_files | tojson }};
+        var shotModalEl = document.getElementById('shotCarouselModal');
+        var shotTitleEl = document.getElementById('shotCarouselTitle');
+        var shotImageEl = document.getElementById('shotCarouselImage');
+        var prevBtn = document.getElementById('shotPrevBtn');
+        var nextBtn = document.getElementById('shotNextBtn');
+        var currentIndex = 0;
+
+        function renderShot(index) {
+            if (!shots.length) return;
+            var len = shots.length;
+            currentIndex = ((index % len) + len) % len;
+            var shot = shots[currentIndex];
+            var src = "{{ url_for('static', filename='') }}" + shot.file;
+            shotTitleEl.textContent = shot.title + " (" + (currentIndex + 1) + " / " + len + ")";
+            shotImageEl.src = src;
+            shotImageEl.alt = shot.title;
+        }
+
+        if (shotModalEl && window.bootstrap) {
+            shotModalEl.addEventListener('show.bs.modal', function (event) {
+                var trigger = event.relatedTarget;
+                var idx = 0;
+                if (trigger && trigger.dataset && trigger.dataset.shotIndex) {
+                    idx = parseInt(trigger.dataset.shotIndex, 10) || 0;
+                }
+                renderShot(idx);
+            });
+
+            prevBtn.addEventListener('click', function () {
+                renderShot(currentIndex - 1);
+            });
+            nextBtn.addEventListener('click', function () {
+                renderShot(currentIndex + 1);
+            });
+
+            shotModalEl.addEventListener('keydown', function (event) {
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    renderShot(currentIndex - 1);
+                } else if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    renderShot(currentIndex + 1);
+                }
+            });
+        }
+
         var shouldOpen = {{ 'true' if open_login else 'false' }};
         if (!shouldOpen) return;
         var el = document.getElementById('demoLoginModal');

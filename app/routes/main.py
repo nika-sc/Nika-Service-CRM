@@ -404,8 +404,30 @@ def home():
         if _public_landing_enabled():
             g.allow_search_indexing = True
             canonical = _landing_canonical_url()
+            screenshot_titles = [
+                "Главная страница с отчетами",
+                "Личный кабинет пользователя 2",
+                "Личный кабинет пользователя 3",
+                "Личный кабинет пользователя 4",
+                "Личный кабинет пользователя 5",
+                "Личный кабинет пользователя",
+                "Магазин с продажами",
+                "Раздел Зарплата по сотрудникам",
+                "Раздел касса с операциями за день",
+                "Раздел касса",
+                "Раздел клиенты с поиском и сортировкой",
+                "Раздел настройки",
+                "Раздел отчеты",
+                "Светлая тема",
+                "Склад с разделами",
+                "Страница с заявками: закрепление, поиск, фильтры и выставление статуса",
+                "Темная тема",
+            ]
             screenshots = [
-                f"marketing/screenshots/screenshot-{idx:02d}.jpg"
+                {
+                    "file": f"marketing/screenshots/screenshot-{idx:02d}.jpg",
+                    "title": screenshot_titles[idx - 1],
+                }
                 for idx in range(1, 18)
             ]
             return render_template(
