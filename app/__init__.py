@@ -135,6 +135,7 @@ def create_app(config_class=Config):
                 "Allow: /$",
                 "Allow: /static/",
                 "Allow: /sitemap.xml",
+                "Allow: /sitemap-images.xml",
                 "Allow: /favicon.ico",
                 "Disallow: /login",
                 "Disallow: /logout",
@@ -154,6 +155,7 @@ def create_app(config_class=Config):
                 "Disallow: /notifications",
                 "Disallow: /staff-chat",
                 f"Sitemap: {root}/sitemap.xml",
+                f"Sitemap: {root}/sitemap-images.xml",
                 "",
             ])
             return Response(body, mimetype="text/plain")
@@ -192,6 +194,52 @@ def create_app(config_class=Config):
             '</urlset>\n'
         )
         return Response(xml, mimetype='application/xml')
+
+    @app.route('/sitemap-images.xml')
+    def sitemap_images_xml():
+        if not app.config.get('PUBLIC_LANDING'):
+            return Response('Not Found', status=404, mimetype='text/plain')
+        root = (app.config.get('PUBLIC_LANDING_CANONICAL') or '').rstrip('/')
+        if not root:
+            root = (request.url_root or '').rstrip('/')
+        titles = [
+            "Главная страница с отчетами",
+            "Личный кабинет пользователя 2",
+            "Личный кабинет пользователя 3",
+            "Личный кабинет пользователя 4",
+            "Личный кабинет пользователя 5",
+            "Личный кабинет пользователя",
+            "Магазин с продажами",
+            "Раздел Зарплата по сотрудникам",
+            "Раздел касса с операциями за день",
+            "Раздел касса",
+            "Раздел клиенты с поиском и сортировкой",
+            "Раздел настройки",
+            "Раздел отчеты",
+            "Светлая тема",
+            "Склад с разделами",
+            "Страница с заявками: закрепление, поиск, фильтры и выставление статуса",
+            "Темная тема",
+        ]
+        lines = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+            '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+        ]
+        for idx, title in enumerate(titles, start=1):
+            image_url = f"{root}/static/marketing/screenshots/screenshot-{idx:02d}.jpg"
+            lines.extend([
+                "  <url>",
+                f"    <loc>{root}/#screenshots</loc>",
+                "    <image:image>",
+                f"      <image:loc>{image_url}</image:loc>",
+                f"      <image:title>{title}</image:title>",
+                "    </image:image>",
+                "  </url>",
+            ])
+        lines.append("</urlset>")
+        lines.append("")
+        return Response("\n".join(lines), mimetype='application/xml')
 
     @app.after_request
     def _set_security_headers(response):
