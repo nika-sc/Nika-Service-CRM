@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
+    <meta name="author" content="Александр Смелков, СЦ Ника, Сочи">
+    <meta name="theme-color" content="#16303a">
     <title>Бесплатная CRM для сервисных центров — Nika CRM</title>
     <meta name="description" content="Nika CRM — бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и портал клиента. Запустите на своём сервере или попробуйте демо онлайн.">
     <link rel="canonical" href="{{ canonical_url }}/">
+    <link rel="alternate" hreflang="ru-RU" href="{{ canonical_url }}/">
+    <link rel="alternate" hreflang="ru" href="{{ canonical_url }}/">
+    <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}/">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ru_RU">
     <meta property="og:site_name" content="Nika CRM">
@@ -14,10 +19,16 @@
     <meta property="og:description" content="Заявки, склад, касса и отчёты для СЦ. Open-source, свой сервер, живое демо.">
     <meta property="og:url" content="{{ canonical_url }}/">
     <meta property="og:image" content="{{ og_image_url }}">
+    <meta property="og:image:secure_url" content="{{ og_image_url }}">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Nika CRM — бесплатная CRM для сервисных центров">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Бесплатная CRM для сервисных центров — Nika CRM">
     <meta name="twitter:description" content="Open-source CRM для ремонта техники: приёмка, склад, финансы. Попробуйте демо.">
     <meta name="twitter:image" content="{{ og_image_url }}">
+    <meta name="twitter:image:alt" content="Nika CRM — бесплатная CRM для сервисных центров">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
@@ -44,6 +55,29 @@
             "name": "Александр Смелков",
             "email": "nika-sc@bk.ru"
           }
+        },
+        {
+          "@type": "Organization",
+          "name": "Nika CRM",
+          "url": "{{ canonical_url }}/",
+          "logo": "{{ canonical_url }}{{ url_for('static', filename='favicon.svg') }}",
+          "sameAs": [
+            "{{ github_url }}"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "nika-sc@bk.ru",
+            "availableLanguage": [
+              "ru"
+            ]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "name": "Nika CRM Demo",
+          "url": "{{ canonical_url }}/",
+          "inLanguage": "ru-RU"
         },
         {
           "@type": "FAQPage",

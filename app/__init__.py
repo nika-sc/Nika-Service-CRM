@@ -170,14 +170,24 @@ def create_app(config_class=Config):
         if not root:
             root = (request.url_root or '').rstrip('/')
         lastmod = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        image_url = f"{root}/static/marketing/og-landing.jpg"
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
+            '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n'
+            '        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
             '  <url>\n'
             f'    <loc>{root}/</loc>\n'
             f'    <lastmod>{lastmod}</lastmod>\n'
             '    <changefreq>weekly</changefreq>\n'
             '    <priority>1.0</priority>\n'
+            f'    <xhtml:link rel="alternate" hreflang="ru-RU" href="{root}/" />\n'
+            f'    <xhtml:link rel="alternate" hreflang="ru" href="{root}/" />\n'
+            f'    <xhtml:link rel="alternate" hreflang="x-default" href="{root}/" />\n'
+            '    <image:image>\n'
+            f'      <image:loc>{image_url}</image:loc>\n'
+            '      <image:title>Nika CRM — бесплатная CRM для сервисных центров</image:title>\n'
+            '    </image:image>\n'
             '  </url>\n'
             '</urlset>\n'
         )
