@@ -232,6 +232,65 @@ body.ml-body {
   display: inline-block;
 }
 
+.ml-windows-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.85fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(232, 184, 109, 0.4);
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(135deg, rgba(232, 184, 109, 0.1), rgba(43, 184, 166, 0.08)),
+    var(--ml-surface);
+}
+.ml-windows-panel h3 {
+  font-family: var(--ml-font-display);
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+  word-break: break-word;
+}
+.ml-windows-list {
+  margin: 0 0 1.25rem;
+  padding-left: 1.15rem;
+  color: var(--ml-muted);
+}
+.ml-windows-list li {
+  margin-bottom: 0.4rem;
+}
+.ml-windows-hash {
+  margin: 1rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ml-muted);
+  word-break: break-all;
+}
+.ml-windows-creds {
+  border-left: 1px solid var(--ml-border);
+  padding-left: 1.25rem;
+}
+.ml-windows-creds ul {
+  margin: 0 0 1.25rem;
+  padding-left: 1.1rem;
+  color: var(--ml-muted);
+}
+.ml-windows-creds p {
+  color: var(--ml-muted);
+  margin: 0 0 0.75rem;
+}
+.ml-windows-creds a {
+  color: var(--ml-accent);
+}
+@media (max-width: 800px) {
+  .ml-windows-panel {
+    grid-template-columns: 1fr;
+  }
+  .ml-windows-creds {
+    border-left: none;
+    border-top: 1px solid var(--ml-border);
+    padding-left: 0;
+    padding-top: 1.25rem;
+  }
+}
+
 .ml-docs-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);

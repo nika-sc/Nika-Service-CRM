@@ -90,10 +90,28 @@ def _reset_login_guard(key: str):
         _LOGIN_LOCKOUTS.pop(key, None)
 
 
+def _windows_setup_info():
+    """Ссылки на автономный Windows SETUP (публичный релиз + зеркало на демо)."""
+    version = "1.0.4"
+    filename = f"NikaCRM-Offline-Setup-{version}-x64.exe"
+    tag = f"windows-setup-{version}"
+    github_base = "https://github.com/nika-sc/Nika-Service-CRM"
+    return {
+        "version": version,
+        "filename": filename,
+        "sha256": "0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E",
+        "github_release_url": f"{github_base}/releases/tag/{tag}",
+        "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
+        "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",
+        "requires_admin": True,
+    }
+
+
 def _login_page_extra():
-    """Контекст для шаблона входа: демо-баннер (только при DEMO_LOGIN_BANNER=1)."""
+    """Контекст шаблонов входа/лендинга: Windows SETUP + опциональный демо-баннер."""
+    extra = {"windows_setup": _windows_setup_info()}
     if not current_app.config.get("DEMO_LOGIN_BANNER"):
-        return {}
+        return extra
     spec = (current_app.config.get("DEMO_SERVER_SPEC") or "").strip()
     if not spec:
         spec = (
@@ -134,7 +152,8 @@ def _login_page_extra():
     panel["vps_label"] = (current_app.config.get("REFERRAL_VPS_PROVIDER_LABEL") or "FirstVDS").strip()
     panel["vps_url"] = (current_app.config.get("REFERRAL_VPS_URL") or "").strip()
     panel["vps_promo"] = (current_app.config.get("REFERRAL_VPS_PROMO_CODE") or "").strip()
-    return {"demo_login": panel}
+    extra["demo_login"] = panel
+    return extra
 
 
 def _public_landing_enabled() -> bool:

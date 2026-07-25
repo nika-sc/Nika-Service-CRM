@@ -77,6 +77,50 @@
                                 </button>
                             </div>
                         </form>
+
+                        {% if demo_login %}
+                        <div class="alert alert-info mt-4 mb-0 small" role="region" aria-label="Демо-доступ">
+                            <div class="fw-semibold mb-2"><i class="fas fa-flask me-1"></i> Демо-доступ</div>
+                            <p class="mb-2"><strong>Логин:</strong> <code>{{ demo_login.username }}</code>
+                                &nbsp;·&nbsp; <strong>Пароль:</strong> <code>{{ demo_login.password }}</code></p>
+                            <ul class="mb-2 ps-3">
+                                <li>Заявок в базе (видимых): {% if demo_login.count_orders is not none %}<strong>{{ demo_login.count_orders }}</strong>{% else %}—{% endif %}</li>
+                                <li>Учётных записей сотрудников: {% if demo_login.count_users is not none %}<strong>{{ demo_login.count_users }}</strong>{% else %}—{% endif %}</li>
+                                <li>Клиентов: {% if demo_login.count_customers is not none %}<strong>{{ demo_login.count_customers }}</strong>{% else %}—{% endif %}</li>
+                                <li>Позиций на складе (запчасти): {% if demo_login.count_parts is not none %}<strong>{{ demo_login.count_parts }}</strong>{% else %}—{% endif %}</li>
+                            </ul>
+                            <p class="demo-login-spec text-muted mb-0"><strong>Окружение и железо:</strong><br>{{ demo_login.server_spec }}</p>
+                            {% if demo_login.vps_url %}
+                            <hr class="my-3 opacity-50">
+                            <div class="fw-semibold mb-2"><i class="fas fa-server me-1"></i> VPS для своей копии CRM</div>
+                            <p class="mb-2">
+                                Провайдер <strong>{{ demo_login.vps_label }}</strong>:
+                                <a href="{{ demo_login.vps_url }}" target="_blank" rel="noopener noreferrer">заказать сервер по реферальной ссылке</a>
+                                {% if demo_login.vps_promo %}
+                                — промокод на скидку: <code>{{ demo_login.vps_promo }}</code>
+                                {% endif %}
+                            </p>
+                            <p class="mb-0 text-muted">
+                                Автор проекта может помочь с первичной настройкой и запуском CRM на VPS у этого провайдера.
+                                Напишите на <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>
+                                с темой <strong>Nika-CRM Помощь по установке</strong>
+                                или в <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram-канал</a>
+                                · <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>.
+                            </p>
+                            {% endif %}
+                            {% if windows_setup %}
+                            <hr class="my-3 opacity-50">
+                            <div class="fw-semibold mb-2"><i class="fab fa-windows me-1"></i> Windows Offline SETUP</div>
+                            <p class="mb-2">
+                                Автономная установка на свой ПК (нужны права администратора):
+                                <a href="{{ windows_setup.github_download_url }}">скачать с GitHub</a>
+                                ·
+                                <a href="{{ windows_setup.demo_download_url }}">зеркало</a>.
+                                Логины SETUP: <code>admin</code>/<code>manager</code>/<code>master</code>/<code>viewer</code>, пароль <code>111111</code>.
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         
                         {% if config.DEBUG %}
                         <div class="mt-4 text-center">

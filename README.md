@@ -357,16 +357,24 @@ cd Nika-Service-CRM
 <a id="windows-setup-offline"></a>
 ### Windows SETUP (полный офлайн-установщик)
 
-Для Windows 10/11 x64 доступен единый `NikaCRM-Offline-Setup-1.0.4-x64.exe`.
+Для Windows 10/11 x64 доступен единый автономный установщик
+`NikaCRM-Offline-Setup-1.0.4-x64.exe`.
 Он не требует интернета и автоматически устанавливает встроенные Python 3.12
 и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
 миграции и регистрирует Nika CRM как службу Windows с автозапуском.
 
-1. Скачайте EXE из раздела Releases публичного репозитория.
-2. Запустите установщик от имени администратора.
+**Скачать:**
+
+- [NikaCRM-Offline-Setup-1.0.4-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.4/NikaCRM-Offline-Setup-1.0.4-x64.exe)
+- [Страница релиза `windows-setup-1.0.4`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.4)
+- [Зеркало на демо-сайте](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.4-x64.exe)
+
+SHA256: `0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E`
+
+1. Скачайте EXE по ссылке выше.
+2. Запустите установщик **от имени администратора** (права Admin обязательны).
 3. Откройте ярлык **Nika CRM — Открыть** на рабочем столе.
-4. Войдите демо-учёткой из [`database/bootstrap/README.md`](database/bootstrap/README.md)
-   и смените пароль.
+4. Войдите демо-учёткой и смените пароль перед реальной работой.
 
 Демо-учётки после установки (пароль для всех — `111111`):
 
@@ -410,6 +418,7 @@ cd Nika-Service-CRM
 - [онлайн-демо](https://demo.nika-sc.ru/);
 - сайт сервисного центра [nika-sc.ru](https://nika-sc.ru/);
 - связь с разработчиком: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
+  проект: [nika-sc@bk.ru](mailto:nika-sc@bk.ru) (тема `Nika-CRM Помощь по установке`),
   [Telegram-канал](https://t.me/nikaserviceadler).
 
 ### Требования

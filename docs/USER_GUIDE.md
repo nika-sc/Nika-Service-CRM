@@ -59,7 +59,27 @@
 
 Смените демонстрационные пароли перед реальной эксплуатацией.
 
-**Важно:** После 5 неудачных попыток входа доступ будет временно заблокирован на 1 минуту (защита от brute-force атак).
+### Автономная установка на Windows
+
+Можно поставить CRM отдельно на Windows 10/11 x64 одним офлайн-установщиком
+(встроенные Python 3.12, PostgreSQL 18 и демо-база):
+
+1. Скачайте
+   [NikaCRM-Offline-Setup-1.0.4-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.4/NikaCRM-Offline-Setup-1.0.4-x64.exe)
+   или зеркало
+   [demo.nika-sc.ru/downloads/…](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.4-x64.exe).
+2. Запустите установщик **от имени администратора**.
+3. Откройте ярлык **Nika CRM — Открыть** → `http://127.0.0.1:5000`.
+4. Войдите одной из учёток выше и смените пароль.
+
+Страница релиза:
+[windows-setup-1.0.4](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.4).
+
+Вопросы по установке: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
+[nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20Помощь%20по%20установке),
+[Telegram-канал](https://t.me/nikaserviceadler).
+
+**Важно:** После серии неудачных попыток входа доступ временно блокируется (защита от brute-force).
 
 ### Главная страница (Дашборд)
 

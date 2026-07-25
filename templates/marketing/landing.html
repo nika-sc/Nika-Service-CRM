@@ -47,9 +47,11 @@
             "price": "0",
             "priceCurrency": "RUB"
           },
-          "description": "Бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и клиентский портал.",
+          "description": "Бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и клиентский портал. Есть автономный установщик для Windows.",
           "url": "{{ canonical_url }}/",
           "image": "{{ og_image_url }}",
+          "downloadUrl": "{{ windows_setup.github_download_url }}",
+          "softwareVersion": "{{ windows_setup.version }}",
           "softwareHelp": "https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md",
           "author": {
             "@type": "Person",
@@ -131,7 +133,15 @@
               "name": "Как быстро попробовать Nika CRM?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Нажмите «Войти в демо» на этой странице и войдите демо-учёткой. Для своей копии — клонируйте репозиторий на GitHub и импортируйте демо-дамп PostgreSQL."
+                "text": "Нажмите «Войти в демо» на этой странице или скачайте автономный установщик для Windows 10/11 и поставьте CRM на свой ПК. Также можно клонировать репозиторий на GitHub и развернуть на Linux/Docker."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Есть ли версия для Windows без сервера?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Да. Доступен офлайн-установщик NikaCRM-Offline-Setup для Windows 10/11 x64. Запускайте от имени администратора: ставятся встроенные Python, PostgreSQL и демо-база. Вопросы: smelkov2008@yandex.ru и Telegram https://t.me/nikaserviceadler."
               }
             },
             {
@@ -162,6 +172,9 @@
     <header class="ml-nav">
         <a class="ml-brand" href="{{ canonical_url }}/">Nika CRM</a>
         <div class="ml-nav-actions">
+            <a class="ml-btn ml-btn-ghost" href="#windows-setup">
+                <i class="fab fa-windows" aria-hidden="true"></i> Windows
+            </a>
             <a class="ml-btn ml-btn-ghost" href="#documentation">
                 <i class="fas fa-book-open" aria-hidden="true"></i> Руководство
             </a>
@@ -187,12 +200,66 @@
                     <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
                         <i class="fas fa-play" aria-hidden="true"></i> Войти в демо
                     </button>
+                    <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.github_download_url }}" rel="noopener noreferrer">
+                        <i class="fab fa-windows" aria-hidden="true"></i> Скачать для Windows
+                    </a>
                     <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
-                        Скачать с GitHub
+                        Исходный код на GitHub
                     </a>
                     <a class="ml-btn ml-btn-ghost" href="#screenshots">
                         Посмотреть скриншоты
                     </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="ml-section" id="windows-setup" aria-labelledby="windows-setup-title">
+            <h2 id="windows-setup-title">Автономная версия для Windows</h2>
+            <p class="ml-section-lead">
+                Можно поставить Nika CRM отдельно на Windows 10/11 x64 без своего Linux-сервера:
+                один EXE-установщик включает Python, PostgreSQL и демо-базу.
+            </p>
+            <div class="ml-windows-panel">
+                <div>
+                    <p class="ml-kicker">Offline SETUP {{ windows_setup.version }}</p>
+                    <h3>{{ windows_setup.filename }}</h3>
+                    <ul class="ml-windows-list">
+                        <li>Установка <strong>от имени администратора</strong> (нужны права Admin).</li>
+                        <li>Интернет для установки не требуется — полный офлайн-пакет.</li>
+                        <li>После установки откройте ярлык <strong>Nika CRM — Открыть</strong> → <code>http://127.0.0.1:5000</code>.</li>
+                        <li>Перед реальной работой смените демо-пароли.</li>
+                    </ul>
+                    <div class="ml-cta-row">
+                        <a class="ml-btn ml-btn-primary" href="{{ windows_setup.github_download_url }}" rel="noopener noreferrer">
+                            <i class="fab fa-github" aria-hidden="true"></i> Скачать с GitHub
+                        </a>
+                        <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.demo_download_url }}" rel="noopener noreferrer">
+                            <i class="fas fa-download" aria-hidden="true"></i> Зеркало (demo.nika-sc.ru)
+                        </a>
+                        <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.github_release_url }}" target="_blank" rel="noopener noreferrer">
+                            Страница релиза
+                        </a>
+                    </div>
+                    <p class="ml-windows-hash">SHA256: <code>{{ windows_setup.sha256 }}</code></p>
+                </div>
+                <div class="ml-windows-creds" role="region" aria-label="Демо-логины Windows SETUP">
+                    <h3>Логины после установки</h3>
+                    <p>Пароль для всех тестовых пользователей: <code>111111</code></p>
+                    <ul>
+                        <li><code>admin</code> — полный доступ</li>
+                        <li><code>manager</code> — менеджер</li>
+                        <li><code>master</code> — мастер</li>
+                        <li><code>viewer</code> — только просмотр</li>
+                    </ul>
+                    <h3>Вопросы по установке</h3>
+                    <p>
+                        Александр Смелков, СЦ «Ника», Сочи<br>
+                        Email:
+                        <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>,
+                        <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a><br>
+                        Telegram-канал:
+                        <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">t.me/nikaserviceadler</a>
+                    </p>
                 </div>
             </div>
         </section>
@@ -385,8 +452,19 @@
                 <p>Нажмите «Войти в демо» — откроется окно входа. Учётка и подсказки показаны в модалке, если демо-баннер включён.</p>
             </details>
             <details>
+                <summary>Есть ли установщик для Windows?</summary>
+                <p>
+                    Да — автономный <a href="#windows-setup">Offline SETUP</a> для Windows 10/11 x64.
+                    Запускайте <strong>от имени администратора</strong>.
+                    Скачать:
+                    <a href="{{ windows_setup.github_download_url }}">GitHub</a>
+                    или
+                    <a href="{{ windows_setup.demo_download_url }}">зеркало на этом сайте</a>.
+                </p>
+            </details>
+            <details>
                 <summary>Какая СУБД нужна?</summary>
-                <p>PostgreSQL. В репозитории есть готовый sanitised-дамп для быстрого старта и скрипт установки на Ubuntu 24.04.</p>
+                <p>PostgreSQL. В репозитории есть готовый sanitised-дамп для быстрого старта и скрипт установки на Ubuntu 24.04. Windows SETUP ставит PostgreSQL автоматически.</p>
             </details>
             <details>
                 <summary>Есть ли клиентский портал?</summary>
@@ -394,7 +472,15 @@
             </details>
             <details>
                 <summary>Кто автор и куда писать по установке?</summary>
-                <p>Александр Смелков, СЦ «Ника», Сочи. Помощь по установке: <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>.</p>
+                <p>
+                    Александр Смелков, СЦ «Ника», Сочи.<br>
+                    Email:
+                    <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>,
+                    <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>
+                    (тема: «Nika-CRM Помощь по установке»).<br>
+                    Telegram-канал:
+                    <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">t.me/nikaserviceadler</a>.
+                </p>
             </details>
         </section>
     </main>
@@ -408,7 +494,9 @@
             · <a href="{{ demo_login.vps_url }}" target="_blank" rel="noopener noreferrer">VPS {{ demo_login.vps_label }}</a>
             {% endif %}
             · <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer">Руководство</a>
+            · <a href="{{ windows_setup.github_download_url }}">Windows SETUP</a>
             · <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>
+            · <a href="mailto:nika-sc@bk.ru">nika-sc@bk.ru</a>
             · <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram</a>
         </p>
         <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
@@ -494,6 +582,21 @@
                             <code>manager</code> — менеджер ·
                             <code>master</code> — мастер ·
                             <code>viewer</code> — просмотр
+                        </div>
+                        <div class="mt-2">
+                            <strong>Windows Offline SETUP:</strong>
+                            установка <strong>от имени администратора</strong>.
+                            <a href="{{ windows_setup.github_download_url }}">Скачать с GitHub</a>
+                            ·
+                            <a href="{{ windows_setup.demo_download_url }}">зеркало</a>
+                            ·
+                            <a href="#windows-setup" data-bs-dismiss="modal">подробнее</a>
+                        </div>
+                        <div class="mt-2">
+                            Вопросы:
+                            <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>,
+                            <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>,
+                            <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram</a>
                         </div>
                     </div>
                     {% endif %}
