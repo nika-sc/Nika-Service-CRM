@@ -18,7 +18,9 @@ param(
     [string] $PostgresSuperUserPassword = $env:LOCAL_PG_SUPER_PASSWORD,
     [string] $HostDb = "localhost",
     [int] $Port = 5432,
-    [string] $SuperUser = "postgres"
+    [string] $SuperUser = "postgres",
+    [string] $EnvFile,
+    [string] $PsqlPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,10 +31,10 @@ if (-not $PostgresSuperUserPassword) {
     throw "Укажите -PostgresSuperUserPassword или LOCAL_PG_SUPER_PASSWORD"
 }
 
-$envFile = Join-Path $root ".env"
-if (-not (Test-Path -LiteralPath $envFile)) { throw ".env не найден: $envFile" }
-$line = (Get-Content $envFile -Raw) -split "`n" | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
-if (-not $line) { throw "В .env нет строки DATABASE_URL=" }
+$resolvedEnvFile = if ($EnvFile) { $EnvFile } else { Join-Path $root ".env" }
+if (-not (Test-Path -LiteralPath $resolvedEnvFile)) { throw ".env не найден: $resolvedEnvFile" }
+$line = (Get-Content $resolvedEnvFile -Raw) -split "`n" | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
+if (-not $line) { throw "В $resolvedEnvFile нет строки DATABASE_URL=" }
 $url = ($line -replace '^DATABASE_URL=', '').Trim()
 if ($url -notmatch '^postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)$') {
     throw "DATABASE_URL не распознан как postgresql://..."
@@ -44,7 +46,7 @@ if ($appUser -notmatch '^[a-zA-Z0-9_]+$') {
     throw "DATABASE_URL user contains unsupported characters: $appUser"
 }
 
-$psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
+$psql = if ($PsqlPath) { $PsqlPath } else { "C:\Program Files\PostgreSQL\18\bin\psql.exe" }
 if (-not (Test-Path $psql)) { throw "Не найден psql: $psql" }
 
 $env:PGPASSWORD = $PostgresSuperUserPassword

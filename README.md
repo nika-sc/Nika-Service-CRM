@@ -70,6 +70,7 @@ cd Nika-Service-CRM
 - [Возможности](#возможности)
 - [Технологии](#технологии)
 - [Установка](#установка)
+  - [Windows SETUP (полный офлайн-установщик)](#windows-setup-offline)
   - [Требования](#требования)
   - [Шаги установки](#шаги-установки)
   - [Быстрый старт с PostgreSQL](#быстрый-старт-с-postgresql-и-демо-дампом)
@@ -352,6 +353,60 @@ cd Nika-Service-CRM
 - **Jinja2** - шаблонизатор
 
 ## Установка
+
+<a id="windows-setup-offline"></a>
+### Windows SETUP (полный офлайн-установщик)
+
+Для Windows 10/11 x64 доступен единый `NikaCRM-Offline-Setup-1.0.4-x64.exe`.
+Он не требует интернета и автоматически устанавливает встроенные Python 3.12
+и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
+миграции и регистрирует Nika CRM как службу Windows с автозапуском.
+
+1. Скачайте EXE из раздела Releases публичного репозитория.
+2. Запустите установщик от имени администратора.
+3. Откройте ярлык **Nika CRM — Открыть** на рабочем столе.
+4. Войдите демо-учёткой из [`database/bootstrap/README.md`](database/bootstrap/README.md)
+   и смените пароль.
+
+Демо-учётки после установки (пароль для всех — `111111`):
+
+- `admin` — полный доступ;
+- `manager` — менеджер;
+- `master` — мастер;
+- `viewer` — просмотр.
+
+Программа устанавливается в `%ProgramFiles%\NikaCRM`, а база и журналы
+хранятся в `%ProgramData%\NikaCRM`. При удалении приложения каталог с данными
+сохраняется во избежание случайной потери базы.
+
+Диагностика:
+
+- установка: `%ProgramData%\NikaCRM\logs\setup.log`;
+- веб-служба: `%ProgramData%\NikaCRM\logs\web-stdout.log` и `web-stderr.log`;
+- статус: `Get-Service NikaCRM-Web,NikaCRM-PostgreSQL`;
+- перезапуск: ярлык **Nika CRM — Перезапустить сервис**.
+
+Если занят порт `5000`, освободите его до установки. PostgreSQL автоматически
+выбирает первый свободный порт из `5432`, `55432`, `55433`. Подробности,
+сборка SETUP и smoke-тест в Windows Sandbox описаны в
+[`packaging/windows/README.md`](packaging/windows/README.md).
+
+Документация и поддержка:
+
+- [Руководство пользователя](docs/USER_GUIDE.md) — полное руководство по работе;
+- [API документация](docs/API.md) — endpoints и интеграции;
+- [Обзор системы](docs/SYSTEM_OVERVIEW.md) — архитектура и ключевые модули;
+- [Политика данных OSS](docs/OSS_DATA_POLICY.md);
+- [Workflow OSS-релизов](docs/OSS_RELEASE_WORKFLOW.md);
+- [Деплой](docs/DEPLOY.md);
+- модули: [сервисы](app/services/README.md), [модели](app/models/README.md),
+  [Query-классы](app/database/queries/README.md), [маршруты](app/routes/README.md),
+  [утилиты](app/utils/README.md), [middleware](app/middleware/README.md),
+  [шаблоны](templates/README.md);
+- [онлайн-демо](https://demo.nika-sc.ru/);
+- сайт сервисного центра [nika-sc.ru](https://nika-sc.ru/);
+- связь с разработчиком: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
+  [Telegram-канал](https://t.me/nikaserviceadler).
 
 ### Требования
 

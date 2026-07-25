@@ -232,6 +232,68 @@ body.ml-body {
   display: inline-block;
 }
 
+.ml-docs-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(43, 184, 166, 0.35);
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(135deg, rgba(43, 184, 166, 0.11), rgba(255, 255, 255, 0.04)),
+    var(--ml-surface);
+}
+.ml-docs-panel h3 {
+  font-family: var(--ml-font-display);
+  font-size: 1.45rem;
+  margin: 0 0 0.65rem;
+}
+.ml-docs-panel p:not(.ml-kicker) {
+  color: var(--ml-muted);
+}
+.ml-system-facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+.ml-system-facts div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.75rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--ml-border);
+}
+.ml-system-facts dt {
+  font-family: var(--ml-font-ui);
+  color: var(--ml-accent);
+  font-weight: 700;
+}
+.ml-system-facts dd {
+  margin: 0;
+  color: var(--ml-muted);
+}
+.ml-doc-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.ml-doc-list a {
+  padding: 0.75rem 0.9rem;
+  color: var(--ml-text);
+  text-decoration: none;
+  font-family: var(--ml-font-ui);
+  font-size: 0.94rem;
+  border: 1px solid var(--ml-border);
+  border-radius: 0.45rem;
+  background: var(--ml-surface);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.ml-doc-list a:hover {
+  color: var(--ml-accent);
+  border-color: var(--ml-accent);
+}
+
 .ml-shot-grid {
   display: grid;
   gap: 1rem;
@@ -245,6 +307,24 @@ body.ml-body {
 @media (min-width: 1024px) {
   .ml-shot-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .ml-docs-panel {
+    grid-template-columns: 1fr;
+    padding: 1.1rem;
+  }
+  .ml-doc-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 460px) {
+  .ml-doc-list {
+    grid-template-columns: 1fr;
+  }
+  .ml-system-facts div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
   }
 }
 .ml-shot-card {

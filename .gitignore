@@ -89,3 +89,9 @@ save/
 # OWASP ZAP отчёты и локальные учётки для security-скриптов
 reports/zap/
 scripts/zap/scan_users.json
+
+# Windows offline installer: downloaded runtimes, wheelhouse and build output
+packaging/windows/assets/
+packaging/windows/output/
+packaging/windows/smoke-results/
+packaging/windows/NikaCRM-Smoke.wsb

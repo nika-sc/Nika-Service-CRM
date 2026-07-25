@@ -4,7 +4,7 @@
 
 ## Что уже внутри
 
-- Схема `public`, согласованная с миграциями PostgreSQL **001–009**:
+- Схема `public`, согласованная с миграциями PostgreSQL **001–010**:
   - `001` enable_extensions  
   - `002` fulltext_indexes  
   - `003` fix_id_defaults  
@@ -14,8 +14,10 @@
   - `007` staff_chat_read_cursors  
   - `008` staff_chat_web_push  
 - `009` order_pins  
-- В **`schema_migrations_pg`** уже записаны версии **001 … 009**. После импорта при старте приложения (`docker compose up` / `python run.py`) **неприменённых Postgres SQL-миграций не останется** (при условии, что вы не меняли набор файлов в `app/database/migrations/postgres_versions/`).
+- `010` redact_smtp_password_logs
+- В **`schema_migrations_pg`** уже записаны версии **001 … 010**. После импорта при старте приложения (`docker compose up` / `python run.py`) **неприменённых Postgres SQL-миграций не останется** (при условии, что вы не меняли набор файлов в `app/database/migrations/postgres_versions/`).
 - Справочники и демо-аккаунты для немедленной работы в интерфейсе.
+- Актуальные печатные формы: квитанция клиенту, техническая форма мастера, товарный чек и акт выполненных работ.
 
 ## Импорт (один раз)
 
@@ -51,10 +53,6 @@ psql -h localhost -p 5432 -U postgres -d nikacrm -f database/bootstrap/nikacrm_p
 | viewer  | 111111 |
 
 Смените пароли после первого входа в своей среде.
-
-## SQLite
-
-Этот дамп только для **PostgreSQL**. Для SQLite создайте пустой файл БД (или укажите путь), задайте `DB_DRIVER=sqlite` и прогоните миграции из `app/database/migrations/versions/` через `scripts/run_migrations.py` (см. раздел «Миграции» в корневом `README.md`).
 
 ## Продакшен
 

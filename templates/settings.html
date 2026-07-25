@@ -468,7 +468,16 @@
                             <div class="col-md-6">
                                 <label class="form-label">Пароль</label>
                                 <input type="password" class="form-control" name="mail_password" value="" placeholder="Оставьте пустым, чтобы не менять" autocomplete="new-password">
-                                <div class="form-text text-muted">Для Gmail/Яндекс используйте пароль приложения.</div>
+                                {% if smtp_password_configured %}
+                                <div class="form-text text-success">
+                                    <i class="fas fa-check-circle me-1"></i>Пароль SMTP сохранён. Оставьте поле пустым, чтобы не менять его.
+                                </div>
+                                {% else %}
+                                <div class="form-text text-danger">
+                                    <i class="fas fa-exclamation-circle me-1"></i>Пароль SMTP не задан. Введите пароль приложения и нажмите «Сохранить».
+                                </div>
+                                {% endif %}
+                                <div class="form-text text-muted">Для Gmail/Яндекс используйте пароль приложения. Значение не отображается и не записывается в журнал действий.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">От кого (имя и адрес)</label>

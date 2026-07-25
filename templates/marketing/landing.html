@@ -50,10 +50,11 @@
           "description": "Бесплатная open-source CRM для сервисных центров: заявки на ремонт, склад, касса, отчёты и клиентский портал.",
           "url": "{{ canonical_url }}/",
           "image": "{{ og_image_url }}",
+          "softwareHelp": "https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md",
           "author": {
             "@type": "Person",
             "name": "Александр Смелков",
-            "email": "nika-sc@bk.ru"
+            "email": "smelkov2008@yandex.ru"
           }
         },
         {
@@ -62,7 +63,9 @@
           "url": "{{ canonical_url }}/",
           "logo": "{{ canonical_url }}{{ url_for('static', filename='favicon.svg') }}",
           "sameAs": [
-            "{{ github_url }}"
+            "{{ github_url }}",
+            "https://nika-sc.ru/",
+            "https://t.me/nikaserviceadler"
           ],
           "contactPoint": {
             "@type": "ContactPoint",
@@ -159,6 +162,9 @@
     <header class="ml-nav">
         <a class="ml-brand" href="{{ canonical_url }}/">Nika CRM</a>
         <div class="ml-nav-actions">
+            <a class="ml-btn ml-btn-ghost" href="#documentation">
+                <i class="fas fa-book-open" aria-hidden="true"></i> Руководство
+            </a>
             <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
                 <i class="fab fa-github" aria-hidden="true"></i> GitHub
             </a>
@@ -246,6 +252,53 @@
                     <h3><i class="fas fa-comments me-2" aria-hidden="true"></i>Чат сотрудников</h3>
                     <p>Внутренний чат с уведомлениями — чтобы смена не теряла контекст по заявкам.</p>
                 </article>
+            </div>
+        </section>
+
+        <section class="ml-section" id="documentation" aria-labelledby="documentation-title">
+            <h2 id="documentation-title">Руководство и полные сведения о системе</h2>
+            <p class="ml-section-lead">
+                Изучите рабочие сценарии, архитектуру, API, правила хранения данных и устройство каждого модуля.
+                Документация открыта вместе с исходным кодом проекта.
+            </p>
+
+            <div class="ml-docs-panel">
+                <div>
+                    <p class="ml-kicker">Начните отсюда</p>
+                    <h3>Руководство пользователя Nika CRM</h3>
+                    <p>
+                        Приёмка и выдача техники, заявки, клиенты, устройства, склад, магазин, финансы,
+                        отчёты, настройки, уведомления, чат, задачи, аналитика, PWA и клиентский портал.
+                    </p>
+                    <a class="ml-btn ml-btn-primary"
+                       href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md"
+                       target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-book-open" aria-hidden="true"></i> Открыть полное руководство
+                    </a>
+                </div>
+                <dl class="ml-system-facts">
+                    <div><dt>Лицензия</dt><dd>MIT, бесплатно и open-source</dd></div>
+                    <div><dt>База данных</dt><dd>PostgreSQL</dd></div>
+                    <div><dt>Стек</dt><dd>Python, Flask, Jinja2</dd></div>
+                    <div><dt>Развёртывание</dt><dd>Windows, Docker, локальная сеть или VPS</dd></div>
+                    <div><dt>Данные</dt><dd>Хранятся на вашей инфраструктуре</dd></div>
+                    <div><dt>Автор</dt><dd>Александр Смелков, СЦ «Ника», Сочи</dd></div>
+                </dl>
+            </div>
+
+            <div class="ml-doc-list" aria-label="Документация проекта">
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">API документация</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/SYSTEM_OVERVIEW.md" target="_blank" rel="noopener noreferrer">Обзор системы</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/OSS_DATA_POLICY.md" target="_blank" rel="noopener noreferrer">Политика данных OSS</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/OSS_RELEASE_WORKFLOW.md" target="_blank" rel="noopener noreferrer">Workflow OSS-релизов</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/DEPLOY.md" target="_blank" rel="noopener noreferrer">Деплой</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/services/README.md" target="_blank" rel="noopener noreferrer">Сервисы</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/models/README.md" target="_blank" rel="noopener noreferrer">Модели</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/database/queries/README.md" target="_blank" rel="noopener noreferrer">Query-классы</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/routes/README.md" target="_blank" rel="noopener noreferrer">Маршруты</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/utils/README.md" target="_blank" rel="noopener noreferrer">Утилиты</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/app/middleware/README.md" target="_blank" rel="noopener noreferrer">Middleware</a>
+                <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/templates/README.md" target="_blank" rel="noopener noreferrer">Шаблоны</a>
             </div>
         </section>
 
@@ -354,7 +407,9 @@
             {% if demo_login and demo_login.vps_url %}
             · <a href="{{ demo_login.vps_url }}" target="_blank" rel="noopener noreferrer">VPS {{ demo_login.vps_label }}</a>
             {% endif %}
-            · <a href="mailto:nika-sc@bk.ru">nika-sc@bk.ru</a>
+            · <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer">Руководство</a>
+            · <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>
+            · <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram</a>
         </p>
         <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
     </footer>
@@ -425,9 +480,13 @@
 
                     {% if demo_login %}
                     <div class="ml-demo-hint" role="region" aria-label="Демо-доступ">
-                        <strong>Демо-доступ:</strong>
-                        логин <code>{{ demo_login.username }}</code>,
-                        пароль <code>{{ demo_login.password }}</code>
+                        <strong>Демо-доступ (пароль для всех: <code>111111</code>):</strong>
+                        <div class="mt-1">
+                            <code>admin</code> — полный доступ ·
+                            <code>manager</code> — менеджер ·
+                            <code>master</code> — мастер ·
+                            <code>viewer</code> — просмотр
+                        </div>
                         {% if demo_login.count_orders is not none %}
                         · заявок в базе: <strong>{{ demo_login.count_orders }}</strong>
                         {% endif %}

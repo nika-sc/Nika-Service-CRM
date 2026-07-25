@@ -798,8 +798,16 @@ def settings():
                 
                 settings = SettingsService.get_general_settings()
                 success = True
+                audit_payload = {
+                    key: value
+                    for key, value in payload.items()
+                    if key != 'mail_password'
+                }
+                audit_payload['mail_password_configured'] = bool(
+                    settings.get('mail_password') or current_app.config.get('MAIL_PASSWORD')
+                )
                 log_main_action('update', 'general_settings', None,
-                    f'Изменены общие настройки организации: {payload.get("org_name", "")}', payload)
+                    f'Изменены общие настройки организации: {payload.get("org_name", "")}', audit_payload)
                 flash('Настройки успешно сохранены!', 'success')
             elif 'automation_settings' in request.form:
                 current_settings = SettingsService.get_general_settings()
@@ -1190,6 +1198,9 @@ def settings():
         director_email_templates=director_email_templates,
         director_test_result=director_test_result,
         payment_method_settings=payment_method_settings,
+        smtp_password_configured=bool(
+            settings.get('mail_password') or current_app.config.get('MAIL_PASSWORD')
+        ),
         success=success,
         usage_counts=usage_counts,
     )
