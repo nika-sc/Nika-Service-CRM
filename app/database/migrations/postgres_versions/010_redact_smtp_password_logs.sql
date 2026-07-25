@@ -3,4 +3,4 @@
 UPDATE action_logs
 SET details = (details::jsonb - 'mail_password')::text
 WHERE details IS NOT NULL
-  AND details::jsonb ? 'mail_password';
+  AND jsonb_exists(details::jsonb, 'mail_password');
