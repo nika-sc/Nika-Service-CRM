@@ -480,16 +480,21 @@
 
                     {% if demo_login %}
                     <div class="ml-demo-hint" role="region" aria-label="Демо-доступ">
-                        <strong>Демо-доступ (пароль для всех: <code>111111</code>):</strong>
+                        <strong>Онлайн-демо:</strong>
+                        логин <code>{{ demo_login.username }}</code>,
+                        пароль <code>{{ demo_login.password }}</code>
+                        {% if demo_login.count_orders is not none %}
+                        · заявок в базе: <strong>{{ demo_login.count_orders }}</strong>
+                        {% endif %}
+                        <div class="mt-2">
+                            <strong>OSS и Windows SETUP (пароль <code>111111</code>):</strong>
+                        </div>
                         <div class="mt-1">
                             <code>admin</code> — полный доступ ·
                             <code>manager</code> — менеджер ·
                             <code>master</code> — мастер ·
                             <code>viewer</code> — просмотр
                         </div>
-                        {% if demo_login.count_orders is not none %}
-                        · заявок в базе: <strong>{{ demo_login.count_orders }}</strong>
-                        {% endif %}
                     </div>
                     {% endif %}
                 </div>

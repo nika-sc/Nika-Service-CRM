@@ -36,10 +36,13 @@ class SettingsService:
         )
     
     @staticmethod
-    @cache_result(timeout=3600, key_prefix='settings')  # Кэш на 1 час
     def get_general_settings() -> Dict:
         """
-        Получает общие настройки организации с кэшированием.
+        Получает актуальные общие настройки организации.
+
+        SMTP-пароль является секретом и не должен попадать в Redis или
+        часовой in-memory cache. Настройки читаются напрямую из PostgreSQL,
+        чтобы сохранённый пароль был доступен тесту отправки сразу.
         
         Returns:
             Словарь с настройками

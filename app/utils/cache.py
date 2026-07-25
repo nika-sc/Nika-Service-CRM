@@ -194,8 +194,18 @@ def clear_cache(key_prefix: Optional[str] = None) -> int:
     keys_to_delete = [k for k in _cache.keys() if k.startswith(f"{key_prefix}:")]
     for key in keys_to_delete:
         _remove_from_cache(key)
-    
-    logger.info(f"Cleared cache with prefix '{key_prefix}' ({len(keys_to_delete)} entries)")
+
+    redis_deleted = 0
+    if _redis_client:
+        try:
+            redis_keys = list(_redis_client.scan_iter(match=f"{key_prefix}:*"))
+            if redis_keys:
+                redis_deleted = int(_redis_client.delete(*redis_keys))
+        except Exception as e:
+            logger.warning(f"Ошибка очистки Redis-кэша с префиксом {key_prefix}: {e}")
+
+    deleted_count = len(keys_to_delete) + redis_deleted
+    logger.info(f"Cleared cache with prefix '{key_prefix}' ({deleted_count} entries)")
 
     # Логируем очистку кэша с префиксом
     try:
@@ -207,14 +217,14 @@ def clear_cache(key_prefix: Optional[str] = None) -> int:
             entity_id=None,
             description=f"Очищен кэш с префиксом '{key_prefix}'",
             details={
-                'entries_cleared': len(keys_to_delete),
+                'entries_cleared': deleted_count,
                 'key_prefix': key_prefix
             }
         )
     except Exception as e:
         logger.warning(f"Не удалось залогировать очистку кэша с префиксом {key_prefix}: {e}")
 
-    return len(keys_to_delete)
+    return deleted_count
 
 
 def get_cache_stats() -> dict:
