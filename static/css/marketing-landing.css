@@ -116,11 +116,11 @@ body.ml-body {
 
 .ml-hero {
   position: relative;
-  /* Variant A: compact hero — content in upper third, not stuck to the bottom */
+  /* Variant B: two levels — brand/copy on top, CTA strip below */
   min-height: calc(100vh - 64px);
-  display: grid;
-  align-items: start;
-  padding: 4.25rem 1.25rem 3rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -128,7 +128,6 @@ body.ml-body {
   content: "";
   position: absolute;
   inset: 0;
-  /* Lift baked-in "Nika CRM" mark (in the photo) toward the top */
   background:
     linear-gradient(
       105deg,
@@ -137,18 +136,39 @@ body.ml-body {
       rgba(15, 28, 36, 0.42) 68%,
       rgba(15, 28, 36, 0.22) 100%
     ),
-    url("../marketing/og-landing.jpg") center 12% / cover no-repeat;
+    url("../marketing/og-landing.jpg") center 10% / cover no-repeat;
   opacity: 0.72;
   z-index: 0;
   animation: ml-hero-fade 1.2s ease both;
 }
 
-.ml-hero-inner {
+.ml-hero-stage {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+  padding: 3.75rem 1.25rem 2rem;
+}
+
+.ml-hero-inner {
   max-width: 720px;
-  margin-top: 0.35rem;
   animation: ml-rise 0.9s ease both;
+}
+
+.ml-brand-mark {
+  font-family: var(--ml-font-display);
+  font-size: clamp(2.6rem, 6vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  margin: 0 0 0.85rem;
+  color: transparent;
+  background: linear-gradient(105deg, #f4fbfa 0%, #6fe8d6 55%, #e8b86d 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 18px rgba(0, 0, 0, 0.35));
 }
 
 .ml-kicker {
@@ -163,18 +183,52 @@ body.ml-body {
 
 .ml-hero h1 {
   font-family: var(--ml-font-display);
-  font-size: clamp(2.2rem, 5vw, 3.25rem);
-  line-height: 1.12;
+  font-size: clamp(1.85rem, 4vw, 2.55rem);
+  line-height: 1.15;
   margin: 0 0 0.85rem;
   font-weight: 800;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
 
 .ml-lead {
-  font-size: 1.12rem;
+  font-size: 1.08rem;
   color: #d5e2e6;
-  margin: 0 0 1.25rem;
+  margin: 0;
   max-width: 38rem;
+}
+
+.ml-hero-actions {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgba(10, 20, 26, 0.55) 0%,
+    rgba(10, 20, 26, 0.82) 100%
+  );
+  backdrop-filter: blur(10px);
+  padding: 1.15rem 1.25rem 1.35rem;
+  animation: ml-rise 1s ease both;
+}
+
+.ml-hero-actions-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+}
+
+.ml-hero-actions .ml-cta-row {
+  margin: 0;
+}
+
+.ml-hero-actions .ml-cta-row--equal {
+  flex: 1 1 34rem;
+  margin-top: 0;
+  max-width: none;
 }
 
 .ml-cta-row {
@@ -201,6 +255,16 @@ body.ml-body {
   flex-shrink: 0;
   width: 1.15em;
   text-align: center;
+}
+@media (max-width: 900px) {
+  .ml-hero-actions-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ml-hero-actions .ml-cta-row--equal {
+    flex-basis: auto;
+    width: 100%;
+  }
 }
 @media (max-width: 640px) {
   .ml-cta-row--equal {
@@ -627,11 +691,18 @@ body.ml-body {
   }
   .ml-hero {
     min-height: auto;
-    align-items: start;
-    padding: 2.25rem 1rem 2.5rem;
   }
   .ml-hero::before {
     background-position: center 8%;
+  }
+  .ml-hero-stage {
+    padding: 2.1rem 1rem 1.35rem;
+  }
+  .ml-brand-mark {
+    font-size: clamp(2.2rem, 10vw, 3rem);
+  }
+  .ml-hero-actions {
+    padding: 1rem 1rem 1.2rem;
   }
   .ml-lead {
     font-size: 1.02rem;

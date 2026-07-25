@@ -188,36 +188,43 @@
     </header>
 
     <main id="content">
-        <section class="ml-hero" aria-labelledby="hero-title">
-            <div class="ml-hero-inner">
-                <p class="ml-kicker">Open-source · свой сервер · без SaaS</p>
-                <h1 id="hero-title">Бесплатная CRM для сервисных центров</h1>
-                <p class="ml-lead">
-                    Nika CRM помогает принимать технику в ремонт, вести склад и кассу, считать зарплату мастеров
-                    и показывать клиенту статус заявки — на вашей инфраструктуре, без ежемесячной подписки.
-                </p>
-                <div class="ml-cta-row">
-                    <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
-                        <i class="fas fa-play" aria-hidden="true"></i> Войти в демо
-                    </button>
+        <section class="ml-hero ml-hero--b" aria-labelledby="hero-title">
+            <div class="ml-hero-stage">
+                <div class="ml-hero-inner">
+                    <p class="ml-brand-mark" aria-hidden="true">Nika CRM</p>
+                    <p class="ml-kicker">Open-source · свой сервер · без SaaS</p>
+                    <h1 id="hero-title">Бесплатная CRM для сервисных центров</h1>
+                    <p class="ml-lead">
+                        Nika CRM помогает принимать технику в ремонт, вести склад и кассу, считать зарплату мастеров
+                        и показывать клиенту статус заявки — на вашей инфраструктуре, без ежемесячной подписки.
+                    </p>
                 </div>
-                <div class="ml-cta-row ml-cta-row--equal" aria-label="Скачать и посмотреть">
-                    <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.github_download_url }}" rel="noopener noreferrer">
-                        <i class="fab fa-windows" aria-hidden="true"></i>
-                        <span>Скачать для Windows</span>
-                    </a>
-                    <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.demo_download_url }}" rel="noopener noreferrer">
-                        <i class="fas fa-download" aria-hidden="true"></i>
-                        <span>Зеркало на демо-сайте</span>
-                    </a>
-                    <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
-                        <i class="fab fa-github" aria-hidden="true"></i>
-                        <span>Исходный код на GitHub</span>
-                    </a>
-                    <a class="ml-btn ml-btn-ghost" href="#screenshots">
-                        <i class="fas fa-images" aria-hidden="true"></i>
-                        <span>Посмотреть скриншоты</span>
-                    </a>
+            </div>
+            <div class="ml-hero-actions" aria-label="Действия">
+                <div class="ml-hero-actions-inner">
+                    <div class="ml-cta-row">
+                        <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
+                            <i class="fas fa-play" aria-hidden="true"></i> Войти в демо
+                        </button>
+                    </div>
+                    <div class="ml-cta-row ml-cta-row--equal" aria-label="Скачать и посмотреть">
+                        <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.github_download_url }}" rel="noopener noreferrer">
+                            <i class="fab fa-windows" aria-hidden="true"></i>
+                            <span>Скачать для Windows</span>
+                        </a>
+                        <a class="ml-btn ml-btn-ghost" href="{{ windows_setup.demo_download_url }}" rel="noopener noreferrer">
+                            <i class="fas fa-download" aria-hidden="true"></i>
+                            <span>Зеркало на демо-сайте</span>
+                        </a>
+                        <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
+                            <i class="fab fa-github" aria-hidden="true"></i>
+                            <span>Исходный код на GitHub</span>
+                        </a>
+                        <a class="ml-btn ml-btn-ghost" href="#screenshots">
+                            <i class="fas fa-images" aria-hidden="true"></i>
+                            <span>Посмотреть скриншоты</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>
