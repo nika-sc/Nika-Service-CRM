@@ -3,13 +3,25 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# PostgreSQL client major должен совпадать с сервером (PostgreSQL 18).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list
+
 # Системные зависимости (reportlab, barcode, pycairo/xhtml2pdf)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     libcairo2-dev \
     libpq-dev \
-    postgresql-client \
+    postgresql-client-18 \
     pkg-config \
     curl \
     && rm -rf /var/lib/apt/lists/*
