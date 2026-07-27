@@ -1,40 +1,49 @@
-# OSS Release Workflow
+# Порядок OSS-релиза
 
-## Repositories
+Как синхронизировать изменения из приватного репозитория в публичный OSS и на серверы.
 
-- Private production repository (current): `master` and `production`
-- Public repository (new): `Nika-Service-CRM` (`main`)
+## Репозитории
 
-## Private Delivery Flow (unchanged)
+| Роль | Репозиторий | Ветка |
+|------|-------------|--------|
+| Приватная разработка | `nika-sc/Nika_Service_CRM` | `master` |
+| Приватный прод-код | тот же | `production` |
+| Публичный OSS | `nika-sc/Nika-Service-CRM` | `main` |
 
-1. Develop and test in `master`
-2. Commit and push to `master`
-3. Merge to `production` only by explicit release command
-4. Deploy `production` to VPS
+## Обязательный порядок (не пропускать шаги)
 
-## Public OSS Flow
+1. **Приватный `master`** — зафиксировать и запушить проверенные изменения.  
+2. **Приватный `production`** — fast-forward от `master`, запушить.  
+3. **WORK VPS** `86.110.194.218` (`/root/nikanewcrm`, ветка `production`) — `git pull` + деплой/рестарт + health-check.  
+4. **Публичный OSS `main`** — перенести нужные файлы **без** `.cursor/**`, секретов и боевых данных; обычный push (без force).  
+5. **DEMO VPS** `155.212.167.2` (`/root/Nika-Service-CRM`, ветка `main`) — `git pull --ff-only` и перезапуск сервиса.
 
-1. Start from private `master` using release branch:
-   - `oss/release-YYYYMMDD`
-2. Run sanitization process (reference-only dataset policy)
-3. Build public export package (exclude secrets, DB dumps, uploads, private infra docs)
-4. Validate package:
-   - secret scan
-   - no sensitive artifacts
-   - startup + migration smoke test
-5. Sync export into local public workspace `../Nika-Service-CRM`
-6. Commit and push to public `main`
+Подробности демо-автообновления: `deploy/demo/README.md`.
 
-## Hard Rules
+## Приватный поток (без OSS)
 
-- Never publish private `production` branch to public repository.
-- Never publish `.env`, backups, dumps, attachment files, or private host data.
-- Public repository history must remain clean of operational data.
+1. Разработка и тест в `master`.  
+2. Push в `master`.  
+3. В `production` — **только** по явной команде на релиз.  
+4. Деплой `production` на WORK VPS — тоже по явной команде.
 
-## Recommended Automation (next step)
+## Публичный OSS-поток
 
-- Add a helper script that:
-  - prepares sanitized export
-  - runs secret scan
-  - updates local `../Nika-Service-CRM`
-  - creates release summary
+1. База — актуальный приватный `master` (или release-ветка `oss/release-YYYYMMDD`).  
+2. Санитизация по [OSS_DATA_POLICY.md](OSS_DATA_POLICY.md).  
+3. Экспорт в локальный клон `../Nika-Service-CRM` (или эквивалент).  
+4. Проверки: secret-scan, нет чувствительных артефактов, старт + миграции.  
+5. Commit + push в публичный `main` (**без force-push**).  
+6. Обновить DEMO VPS с `main`.
+
+## Жёсткие правила
+
+- Не публиковать приватную ветку `production` «как есть» в OSS.  
+- Не коммитить `.env`, бэкапы, дампы с ПДн, вложения, реальные хосты/пароли.  
+- История публичного репо должна оставаться без операционных данных.  
+- **Никогда** не переносить `.cursor/**` в OSS.  
+- При новых миграциях Postgres — обновить bootstrap-дамп и `database/bootstrap/README.md`.
+
+## Миграции БД
+
+Рабочая среда — **только PostgreSQL**. При релизе с новыми миграциями применять их на WORK и DEMO; для OSS обновлять санитизированный дамп.

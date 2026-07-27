@@ -1,82 +1,58 @@
-# OSS Data Policy (Reference Only)
+# Политика данных OSS
 
-## Purpose
+Какие данные можно публиковать в открытом репозитории **[Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM)**, а что нужно удалить перед релизом.
 
-This document defines what data can be published in the public repository and what must be removed before any open-source release.
+## Можно оставлять в публичном датасете
 
-Target public repository: `Nika-Service-CRM`.
+Только схема и справочники (без реальных ПДн и операций):
 
-## Keep In Public Dataset
+- типы/бренды устройств, симптомы, теги внешнего вида;
+- статусы заявок, модели устройств, услуги;
+- товары и категории склада (нейтральные демо-названия);
+- статьи кассы, permissions / role_permissions;
+- `system_settings` и `general_settings` — только нейтральные значения (без реальных реквизитов организации и секретов SMTP).
 
-Only schema and reference/domain dictionaries are allowed:
+Допустимые пользователи:
 
-- `device_types`
-- `device_brands`
-- `symptoms`
-- `appearance_tags`
-- `order_statuses`
-- `order_models`
-- `services`
-- `parts`
-- `part_categories`
-- `transaction_categories`
-- `permissions`
-- `role_permissions`
-- `system_settings` (neutral values only)
-- `general_settings` (sanitized, no real organization data)
+- только демо-учётки (`admin`, `manager`, `master`, `viewer` и т.п.) с **сгенерированными** паролями;
+- синтетические менеджеры и мастера.
 
-Allowed user data:
+Исключение для быстрого старта: санитизированный дамп  
+`database/bootstrap/nikacrm_public_sanitized.sql` (см. `database/bootstrap/README.md`).
 
-- Demo users only (`users`) with generated non-production passwords
-- Synthetic `managers` and `masters` entries only
+## Обязательно удалить или обнулить
 
-## Must Be Deleted Or Fully Reset
+Операционные, финансовые, коммуникационные и аудит-данные, в том числе:
 
-Operational, financial, communication, and audit data:
+- клиенты, устройства, заявки и все связанные таблицы (услуги, товары, оплаты, комментарии, история статусов, pins и т.д.);
+- касса, магазин, закупки, движения склада, инвентаризация;
+- начисления/выплаты/премии/штрафы зарплаты;
+- action logs, уведомления, задачи;
+- сообщения и вложения чата сотрудников, реакции;
+- подписки Web Push, таблицы демо-онлайн посетителей (если попали в дамп);
+- FTS-индексы (пересобрать после очистки).
 
-- `customers`, `customer_tokens`
-- `devices`
-- `orders`
-- `order_comments`, `comment_attachments`
-- `order_visibility_history`, `order_status_history`
-- `order_services`, `order_parts`
-- `payments`, `payment_receipts`
-- `customer_wallet_transactions`
-- `cash_transactions`
-- `shop_sales`, `shop_sale_items`
-- `purchases`, `purchase_items`
-- `stock_movements`
-- `warehouse_logs`
-- `inventory`, `inventory_items`
-- `salary_accruals`, `salary_bonuses`, `salary_fines`, `salary_payments`
-- `action_logs`
-- `notifications`, `notification_preferences`
-- `tasks`, `task_checklists`
-- `order_templates`
-- `user_role_history`
-- `staff_chat_messages`, `staff_chat_attachments`, `staff_chat_reactions`
-- FTS data tables (`orders_fts`, `customers_fts`, `parts_fts`)
+Файлы, которые **никогда** не публикуются:
 
-Filesystem artifacts that must never be published:
+- любые `.env` и секреты;
+- приватные дампы/бэкапы SQLite или Postgres (кроме санитизированного bootstrap);
+- содержимое `uploads/`;
+- приватные runbook’и с реальными IP, паролями, путями бэкапов;
+- каталог `.cursor/` (правила Cursor — только в приватном репо).
 
-- Any `.env` files
-- Any private SQLite/Postgres dumps/backups
-- Exception: sanitized bootstrap dump `database/bootstrap/nikacrm_public_sanitized.sql`
-- `uploads/` content (comment/chat attachments)
-- Infra/private runbooks with real endpoints or server details
+## Правила санитизации
 
-## Sanitization Rules
+1. Убрать реальные контакты, токены, пароли.
+2. Заменить оставшиеся ФИО на синтетические.
+3. Обнулить `mail_password` и похожие секретные поля.
+4. После очистки пересобрать/очистить поисковые индексы.
+5. Сделать отчёт очистки для каждого кандидата в релиз.
 
-- Remove real contacts, credentials, and tokens.
-- Replace any remaining person-related names with synthetic values.
-- Ensure `general_settings.mail_password` and similar secret fields are empty.
-- Rebuild/clear search indexes after destructive cleanup.
-- Generate a cleanup report for every release candidate.
+## Чек-лист перед пушем в `main`
 
-## Validation Checklist
-
-- Secret scan has no findings in tracked files.
-- No `.db`, private `.dump`, or uploads are present in public export.
-- Only sanitized bootstrap SQL is present in `database/bootstrap/`.
-- Public package can start from scratch with migrations.
-- Smoke test passes on clean environment.
+- [ ] Secret-scan по tracked-файлам без находок  
+- [ ] Нет `.db`, приватных `.dump`, `uploads/` в экспорте  
+- [ ] В репо есть только санитизированный bootstrap SQL  
+- [ ] Чистый старт: миграции Postgres + (опционально) bootstrap  
+- [ ] Smoke-тест: логин демо-учёткой, открытие заявок/кассы  
+- [ ] В дереве **нет** `.cursor/**`

@@ -1,164 +1,121 @@
-# NikaNewCrm — Ручной деплой (вариант A)
+# Деплой Nika CRM (Docker + PostgreSQL)
 
-## Подготовка
+Краткая инструкция для VPS. Рабочая БД — **только PostgreSQL** (`DB_DRIVER=postgres`, `DATABASE_URL`).  
+SQLite в новых сценариях не использовать.
 
-### 1. Ветка production
+Подробный пользовательский справочник: [USER_GUIDE.md](USER_GUIDE.md).  
+Политика OSS и порядок релиза: [OSS_RELEASE_WORKFLOW.md](OSS_RELEASE_WORKFLOW.md).
 
-```bash
-git checkout -b production
-git push -u origin production
-```
+## Что должно быть в репозитории
 
-### 2. Файлы для деплоя
+- `docker/Dockerfile`, `docker/docker-compose.yml` (подключение из корня через `docker-compose.yml`)
+- `wsgi.py`, `nginx/nginx.conf`
+- `.env.example` / `docker/env.example`
+- `deploy.sh` (если используете скрипт деплоя)
 
-Убедитесь, что в репозитории есть:
+См. также [`docker/README.md`](../docker/README.md) и корневой [README.md](../README.md) (разделы Docker и Ubuntu 24.04).
 
-- `Dockerfile`
-- `docker-compose.yml`
-- `wsgi.py`
-- `nginx/nginx.conf`
-- `.env.example`
-- `deploy.sh`
+## Требования к серверу
 
----
+- Ubuntu **24.04** LTS (или совместимый)
+- Docker + Docker Compose plugin
+- Git
+- Открытые порты HTTP/HTTPS (и SSH)
 
-## Первый запуск на VPS
+## Первый запуск
 
-### Требования
+1. Клонировать нужный репозиторий и ветку:
+   - рабочий (приватный): ветка `production`;
+   - демо/OSS: публичный репо, ветка `main`.
 
-- Ubuntu 22.04 (или аналог)
-- Docker и Docker Compose
-- Git (если клонируете репозиторий на сервер)
-
-### Установка Docker (если ещё нет)
-
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-# Перелогиньтесь или: newgrp docker
-```
-
-### Шаги
-
-1. **Клонирование репозитория** (или копирование файлов)
+2. Создать `.env` из примера:
 
    ```bash
-   git clone <url-репозитория> nikanewcrm
-   cd nikanewcrm
-   git checkout production
-   ```
-
-2. **Создание .env**
-
-   ```bash
-   cp .env.example .env
-   nano .env   # Заполните SECRET_KEY и при необходимости остальное
-   ```
-
-   Для отправки писем (клиентам и директору) добавьте в `.env` на сервере (не коммитить пароль в репозиторий):
-
-   ```
-   MAIL_SERVER=smtp.example.com
-   MAIL_PORT=587
-   MAIL_USERNAME=your@email.com
-   MAIL_PASSWORD=ваш_пароль_или_пароль_приложения
-   MAIL_DEFAULT_SENDER=your@email.com
-   ```
-
-   После изменения `.env` перезапустите контейнер: `docker compose up -d`.
-
-   Сгенерировать `SECRET_KEY`:
-
-   ```bash
+   cp docker/env.example .env
+   # задайте SECRET_KEY, пароли Postgres, при необходимости SMTP и TRUSTED_HOSTS
    python3 -c "import secrets; print(secrets.token_hex(32))"
    ```
 
-3. **Запуск**
+3. Запуск:
 
    ```bash
-   chmod +x deploy.sh
+   chmod +x deploy.sh   # если есть
    ./deploy.sh
+   # или:
+   docker compose build
+   docker compose up -d
    ```
 
-4. **Проверка**
+4. Проверка:
 
    ```bash
    docker compose ps
    docker compose logs -f web
    ```
 
-   Приложение доступно по `http://IP_СЕРВЕРА`.
+Приложение: `http://IP_СЕРВЕРА` (или домен за nginx/Caddy).
 
----
+Миграции Postgres обычно применяются при старте контейнера (`docker-entrypoint` / `run_migrations.py`).
 
-## Обновление (после merge в production)
+## Обновление кода
 
-1. На VPS:
+На WORK (ветка `production`):
 
-   ```bash
-   cd nikanewcrm
-   ./deploy.sh
-   ```
+```bash
+cd /root/nikanewcrm   # путь может отличаться
+git pull --ff-only origin production
+docker compose build
+docker compose up -d
+docker compose ps
+```
 
-2. Или вручную:
+На DEMO (публичный `main`):
 
-   ```bash
-   git pull origin production
-   docker compose build
-   docker compose up -d
-   ```
+```bash
+cd /root/Nika-Service-CRM
+git pull --ff-only origin main
+# перезапуск по принятому на сервере способу, например:
+systemctl restart nikacrm
+systemctl is-active nikacrm nginx
+```
 
----
+## Почта (опционально)
+
+В `.env` на сервере (пароль **не** коммитить):
+
+```
+MAIL_SERVER=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your@email.com
+MAIL_PASSWORD=...
+MAIL_DEFAULT_SENDER=your@email.com
+```
+
+После правки — `docker compose up -d`.
 
 ## Web Push (чат сотрудников, опционально)
 
-Чтобы кнопка **📡** в чате работала на проде:
+1. Сайт по **HTTPS** (требование браузеров, кроме localhost).  
+2. VAPID-ключи в `.env`: `scripts/generate_staff_chat_vapid_keys.py` / `ensure_staff_chat_vapid_env.py`.  
+3. Пакет `pywebpush` в окружении.  
+4. Миграции с таблицей подписок Push уже в цепочке Postgres.  
+5. Перезапуск приложения.
 
-1. Убедитесь, что сайт открыт по **HTTPS** (требование браузеров для Push, кроме localhost).
-2. В `.env` на сервере задайте ключи VAPID (не коммитить приватный ключ):
-   - сгенерировать локально: `python scripts/generate_staff_chat_vapid_keys.py`;
-   - или одноразово дописать в `.env`: `python scripts/ensure_staff_chat_vapid_env.py` (только на доверенной машине).
-3. В образе/на хосте после обновления кода: `pip install -r requirements.txt` (нужен пакет **pywebpush**).
-4. Примените миграции БД: **061** (SQLite) / **008** Postgres — таблица `staff_chat_web_push_subscriptions` (обычно при старте контейнера, см. `docker-entrypoint.sh` / `run_migrations.py`).
-5. Перезапустите приложение.
+Для пользователей: [USER_GUIDE.md — чат](USER_GUIDE.md#14-чат-сотрудников).
 
-Подробности для пользователей: [USER_GUIDE.md](USER_GUIDE.md#чат-сотрудников). API: [API.md](API.md).
+## HTTPS
 
-## HTTPS (Let's Encrypt)
+Nginx + Certbot или Caddy вместо nginx — по вашей схеме. Пример конфигов смотрите в `nginx/` и `docker/`.
 
-Для SSL можно использовать Caddy или Certbot с nginx.
+## Резервное копирование (PostgreSQL)
 
-### Вариант: Caddy вместо nginx
+Используйте `pg_dump` / `pg_restore` (major-версия клиента = major сервера).  
+Артефакты с ПДн **не** класть в git; хранить вне репозитория.
 
-В `docker-compose.yml` заменить сервис nginx на Caddy — он сам получает сертификаты. Либо настроить nginx + certbot по отдельной инструкции.
+Пример логического дампа:
 
----
-
-## Перенос существующей базы данных
-
-Если у вас уже есть `service_center.db` с локальной разработки:
-
-1. Скопируйте файл на VPS в `data/database/service_center.db`
-2. Миграции применятся автоматически при первом `docker compose up`
-
-## Резервное копирование
-
-**Архивация на S3 (s3.hoztnode.net):** ISPmanager Autobackup отправляет на удалённый сервер:
-- вся папка CRM (`/root/nikanewcrm`) — код, конфиги, `data/database/` (БД и папка `backups/`);
-- ежедневные копии БД (`/root/backups/db_YYYYMMDD.db`).
-
-Расписание на VPS:
-- **01:45** — копирование БД в `/root/backups/db_YYYYMMDD.db`;
-- **01:56** — запуск Autobackup (упаковка и выгрузка на S3).
-
-Конфиг: `/opt/autobackup/config.yml` (в `backup_paths` добавлены `/root/backups` и `/root/nikanewcrm`).
-
-Ручной запуск полного бэкапа на S3:
 ```bash
-ssh root@VPS "cd /opt/autobackup && ./backup"
+docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > backup_$(date +%Y%m%d).dump
 ```
 
-Локальный быстрый бэкап БД:
-```bash
-cp data/database/service_center.db backup_$(date +%Y%m%d).db
-```
+Локальные скрипты экспорта (если есть в приватном репо) — в `scripts/`; на DEMO/OSS сверяйтесь с публичным набором файлов.

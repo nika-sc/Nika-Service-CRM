@@ -1,68 +1,101 @@
-# CRM System - Service Center
+<p align="center">
+  <img src="docs/assets/github-banner.jpg" alt="Nika CRM — бесплатная CRM для сервисных центров" width="920">
+</p>
+
+<h1 align="center">Nika CRM</h1>
+
+<p align="center">
+  <strong>Бесплатная open-source CRM для сервисных центров</strong><br>
+  Заявки на ремонт · склад · касса · зарплата · отчёты · портал клиента
+</p>
+
+<p align="center">
+  <a href="https://demo.nika-sc.ru/"><img src="https://img.shields.io/badge/Demo-online-2bb8a6?style=for-the-badge" alt="Live demo"></a>
+  <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-0f1c24?style=for-the-badge" alt="MIT License"></a>
+  <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
+</p>
+
+<p align="center">
+  <a href="https://demo.nika-sc.ru/"><b>Открыть демо</b></a>
+  ·
+  <a href="#установка"><b>Установка</b></a>
+  ·
+  <a href="docs/USER_GUIDE.md"><b>Руководство</b></a>
+  ·
+  <a href="docs/USER_WALKTHROUGH.md"><b>Сценарий дня</b></a>
+  ·
+  <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM"><b>Связаться</b></a>
+</p>
+
+---
 
 Система управления сервисным центром для работы с заявками, клиентами, устройствами и складом.
 
-Проект создан для реальной эксплуатации в сервисном центре "Ника" (Сочи) и публикуется как практическое open-source решение для сервисных центров.
+Проект создан для реальной эксплуатации в сервисном центре «Ника» (Сочи) и публикуется как практическое open-source решение для СЦ.
 
 CRM может работать:
 - локально в вашей сети;
 - на VPS с вашим доменом;
 - без зависимости от SaaS-платформ.
 
-Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika-CRM`.
-Если нужна помощь по установке и интеграции, пишите на `nika-sc@bk.ru` с темой `Nika-CRM Помощь по установке`.
+Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika-CRM`.  
+Если нужна помощь по установке и интеграции — с темой `Nika-CRM Помощь по установке`.
 
-Автор: Александр Смелков  
-Сервисный центр "Ника", 2026, г. Сочи.
+Автор: **Александр Смелков** · сервисный центр «Ника», Сочи, 2026.
 
 ## Репозиторий
 
-- **Публичная OSS-версия** (клонирование и установка по этому `README`): [github.com/nika-sc/Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM)  
-  Команда: `git clone https://github.com/nika-sc/Nika-Service-CRM.git`
+```bash
+git clone https://github.com/nika-sc/Nika-Service-CRM.git
+cd Nika-Service-CRM
+```
+
+Публичная OSS-версия: [github.com/nika-sc/Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM)
 
 ## Содержание
 
 - [Репозиторий](#репозиторий)
-- [Описание и возможности](#описание)
+- [Описание](#описание)
 - [Основные функции](#основные-функции)
-- [Установка и конфигурация](#установка)
-- [Windows SETUP (полный офлайн-установщик)](#windows-setup-offline)
+- [Установка](#установка)
+- [Windows SETUP](#windows-setup-offline)
 - [После клона: reverse proxy, Docker, PostgreSQL](#post-clone-reverse-proxy-docker-and-postgresql)
 - [Установка на VPS (Ubuntu 24.04)](#vps-ubuntu-2404-lts)
-- [VPS-хостинг FirstVDS (реферал и помощь с запуском)](#firstvds-vps)
+- [VPS-хостинг FirstVDS](#firstvds-vps)
 - [Архитектура](#архитектура)
-- [Руководство пользователя](#руководство-пользователя)
-- [API документация](#api-документация)
-- [План скриптов](#план-скриптов-и-исправлений)
+- [Документация](#документация)
+- [API](#api-документация)
+- [Скрипты](#план-скриптов-и-исправлений)
 - [Маршруты и сервисы](#маршруты-и-сервисы)
-- [Полный справочник системы](#полный-справочник-системы-по-результатам-сканирования-кода)
-- [Безопасность и производительность](#безопасность)
+- [Безопасность](#безопасность)
 - [История изменений](#история-изменений)
 
 ---
 
 ## Описание
 
-Современная CRM система, построенная на Flask, с архитектурой, разделенной на слои:
-- **Routes (Controllers)** - обработка HTTP запросов
-- **Services** - бизнес-логика
-- **Models** - модели данных
-- **Queries** - оптимизированные SQL запросы
-- **Database** - база данных SQLite / PostgreSQL
+Современная CRM на Flask со слоями:
+
+- **Routes** — HTTP-запросы  
+- **Services** — бизнес-логика  
+- **Models** — сущности  
+- **Queries** — SQL без N+1  
+- **Database** — **PostgreSQL** (основной и рекомендуемый режим; см. bootstrap-дамп)
+
+Обучение с нуля: [пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md) (вход → заявка → оплата → ЗП → касса).  
+Полный справочник UI: [руководство пользователя](docs/USER_GUIDE.md).
 
 ## Основные функции
 
-- **Заявки**: создание, редактирование, поиск/фильтры, реестр `/all_orders` (скрытие/показ колонок, перетаскивание, сохранение настроек), Канбан, журнал.
-- **Закрепление заявок (📌)**: закреплённые заявки поднимаются вверх реестра **глобально для всей системы** (видно всем пользователям), pin/unpin без перезагрузки.
-- **Клиенты и устройства**: история клиента и устройства, быстрые создания, автогенерация пароля портала.
-- **Склад**: товары/категории/поставщики, движения, инвентаризация, low-stock.
-- **Финансы и зарплата**: касса, платежи, отчёт по зарплате, прибыльность.
-- **Отчёты владельца**: дашборд, продажи, закупки, маржинальность, остатки, клиенты.
-- **Уведомления (Email)**:
-  - **Директору** (получатель `director_email` в настройках): новая заявка (принята), закрытие заявки (финансовый отчёт), тестовое письмо, отчёт руководителя (дашборд).
-  - **Клиенту** (на email клиента): «заявка принята» (может включать пароль/доступ в портал), уведомления о смене статуса, «готово», «закрыта/спасибо».
-  - **Склад**: low-stock (получатели — сотрудники с правами склада и включёнными email‑уведомлениями).
-  - **Сервисное**: отправка бэкапов на email (скрипт на VPS, при настроенном SMTP).
+- **Заявки**: реестр `/all_orders` (колонки, DnD, сохранение вида), Канбан, журнал, услуги/товары/оплаты.
+- **Закрепление заявок (📌)**: глобальные pins для всей системы, без перезагрузки.
+- **Клиенты и устройства**: история, быстрое создание, пароль портала; у клиента — «Мои устройства».
+- **Склад и закупки**: товары, категории, поставщики, движения, инвентаризация, low-stock.
+- **Магазин**: быстрые продажи с записью в кассу.
+- **Касса и зарплата**: движение денег, начисления при закрытии, выплаты.
+- **Отчёты**: сводный дашборд, сводка дня, касса, продажи, долги, журнал заявок; на демо — онлайн посетителей.
+- **Чат сотрудников**: в левом сайдбаре (Socket.IO, вложения, «прочитали»; опционально Web Push).
+- **Уведомления (Email)**: директору, клиенту, low-stock, сервисные письма при настроенном SMTP.
 
 ## Возможности
 
@@ -297,7 +330,7 @@ CRM может работать:
 - **Flask-Limiter** - rate limiting
 - **Flask-SocketIO** — real-time (чат сотрудников)
 - **pywebpush** — Web Push для чата (опционально)
-- **SQLite** / **PostgreSQL** — база данных
+- **PostgreSQL** — основная БД (`DB_DRIVER=postgres`; legacy SQLite не для новых сценариев)
 - **Jinja2** - шаблонизатор
 
 ## Установка
@@ -353,22 +386,22 @@ SHA256: `0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E`
 
 Документация и поддержка:
 
-- [Руководство пользователя](docs/USER_GUIDE.md) — полное руководство по работе;
-- [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md) — вход → заявка → оплата → ЗП → касса;
-- [API документация](docs/API.md) — endpoints и интеграции;
-- [Обзор системы](docs/SYSTEM_OVERVIEW.md) — архитектура и ключевые модули;
-- [Политика данных OSS](docs/OSS_DATA_POLICY.md);
-- [Workflow OSS-релизов](docs/OSS_RELEASE_WORKFLOW.md);
-- [Деплой](docs/DEPLOY.md);
-- модули: [сервисы](app/services/README.md), [модели](app/models/README.md),
+- [Оглавление docs/](docs/README.md)
+- [Руководство пользователя](docs/USER_GUIDE.md) — полный справочник UI
+- [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md) — вход → заявка → оплата → ЗП → касса
+- [API](docs/API.md) — endpoints и интеграции
+- [Деплой](docs/DEPLOY.md) — Docker + PostgreSQL
+- [Политика данных OSS](docs/OSS_DATA_POLICY.md)
+- [Порядок OSS-релиза](docs/OSS_RELEASE_WORKFLOW.md)
+- модули кода: [сервисы](app/services/README.md), [модели](app/models/README.md),
   [Query-классы](app/database/queries/README.md), [маршруты](app/routes/README.md),
   [утилиты](app/utils/README.md), [middleware](app/middleware/README.md),
-  [шаблоны](templates/README.md);
-- [онлайн-демо](https://demo.nika-sc.ru/);
-- сайт сервисного центра [nika-sc.ru](https://nika-sc.ru/);
-- связь с разработчиком: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
-  проект: [nika-sc@bk.ru](mailto:nika-sc@bk.ru) (тема `Nika-CRM Помощь по установке`),
-  [Telegram-канал](https://t.me/nikaserviceadler).
+  [шаблоны](templates/README.md)
+- [онлайн-демо](https://demo.nika-sc.ru/)
+- сайт СЦ [nika-sc.ru](https://nika-sc.ru/)
+- связь: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
+  [nika-sc@bk.ru](mailto:nika-sc@bk.ru) (тема `Nika-CRM Помощь по установке`),
+  [Telegram](https://t.me/nikaserviceadler)
 
 ### Запуск в Docker (рекомендуется)
 
@@ -650,68 +683,72 @@ NikaNewCrm/
     └───┬────┘
         │
 ┌───────▼────────┐
-│   Database      │  ← SQLite
+│   Database      │  ← PostgreSQL
 └────────────────┘
 ```
 
 ### Слои
 
-1. **Routes (app/routes/)** - обрабатывают HTTP запросы, возвращают HTML или JSON
-2. **Services (app/services/)** - содержат бизнес-логику, валидацию, кэширование
-3. **Models (app/models/)** - представляют бизнес-сущности, работа с БД
-4. **Queries (app/database/queries/)** - оптимизированные SQL запросы, избежание N+1 проблем
-5. **Database** - SQLite база данных
+1. **Routes (app/routes/)** — HTTP, HTML или JSON
+2. **Services (app/services/)** — бизнес-логика, валидация, кэш
+3. **Models (app/models/)** — сущности и доступ к БД
+4. **Queries (app/database/queries/)** — SQL без N+1
+5. **Database** — PostgreSQL (`DB_DRIVER=postgres`, `DATABASE_URL`)
 
-Подробнее об архитектуре: [save/docs/ARCHITECTURE.md](save/docs/ARCHITECTURE.md)
+Пользовательская документация: [docs/USER_GUIDE.md](docs/USER_GUIDE.md), сценарий дня: [docs/USER_WALKTHROUGH.md](docs/USER_WALKTHROUGH.md). Оглавление: [docs/README.md](docs/README.md).
 
 ## Документация
 
-Документация находится в папке `docs/`:
-- [Руководство пользователя](docs/USER_GUIDE.md) - полное руководство по использованию системы
-- [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md) - вход → заявка → оплата → ЗП → касса
-- [API документация](docs/API.md) - описание API endpoints
-- [Обзор системы](docs/SYSTEM_OVERVIEW.md) - архитектура и ключевые модули
-- Политика данных для OSS - какие данные допустимы в публичном репозитории (документ ведется в публичном репозитории `Nika-Service-CRM`)
-- Workflow OSS-релизов - процесс синхронизации публичного репозитория (документ ведется в публичном репозитории `Nika-Service-CRM`)
+Актуальный список: **[docs/README.md](docs/README.md)**.
 
-### Документация модулей
+- [Руководство пользователя](docs/USER_GUIDE.md)
+- [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md)
+- [API](docs/API.md)
+- [Деплой](docs/DEPLOY.md)
+- [Политика данных OSS](docs/OSS_DATA_POLICY.md)
+- [Порядок OSS-релиза](docs/OSS_RELEASE_WORKFLOW.md)
 
-- [Сервисы](app/services/README.md) - описание всех сервисов
-- [Модели](app/models/README.md) - описание моделей данных
-- [Query классы](app/database/queries/README.md) - описание SQL запросов
-- [Маршруты](app/routes/README.md) - описание Blueprint'ов
-- [Утилиты](app/utils/README.md) - описание утилит
-- [Middleware](app/middleware/README.md) - описание middleware
-- [Шаблоны](templates/README.md) - описание шаблонов
+### Документация модулей кода
+
+- [Сервисы](app/services/README.md)
+- [Модели](app/models/README.md)
+- [Query-классы](app/database/queries/README.md)
+- [Маршруты](app/routes/README.md)
+- [Утилиты](app/utils/README.md)
+- [Middleware](app/middleware/README.md)
+- [Шаблоны](templates/README.md)
 
 ---
 
-## Руководство пользователя
+## Руководство пользователя (кратко)
 
-### Работа с заявками
-- **Создание:** Заявки → Новая заявка; заполнить клиента, устройство, неисправность, менеджера
-- **Представления:** Реестр (21 колонка, настройка), Канбан, Журнал
-- **Действия:** услуги, запчасти, оплаты, оплата с депозита, возврат на депозит, комментарии
+Полный текст — в **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.  
+Сценарий «от входа до кассы» со скриншотами — в **[docs/USER_WALKTHROUGH.md](docs/USER_WALKTHROUGH.md)**.
+
+### Заявки
+- **Создание:** Заявки → Новая заявка
+- **Представления:** Реестр, Канбан, Журнал
+- **В карточке:** товары/услуги, платежи, статусы (начисление ЗП при закрытии), печать
 
 ### Клиенты, склад, магазин, финансы
-- **Клиенты:** поиск, сортировка (новые сверху), управление паролем портала, депозит
-- **Склад:** товары, категории, поставщики, инвентаризация, движения
-- **Магазин:** быстрые продажи, корзина, автозапись в кассу
-- **Финансы:** касса, статьи, прибыль, аналитика; ссылки на заявки и чеки
+- Клиенты и устройства, пароль портала, депозит
+- Склад и закупки; магазин с записью в кассу
+- Касса; зарплата (начисления и выплаты)
 
-### Отчёты, уведомления, чат, портал
-- **Отчёты:** Сводный, Продажи, Касса, Зарплата, Долги, Логи; пресеты периода
-- **Уведомления CRM:** In-app, Email, Push (WebSocket); настройки в `/settings`
-- **Чат сотрудников:** панель на всех основных страницах; 🔔 системные уведомления; 📡 Web Push (опционально); «Прочитали»
-- **Портал клиента:** `/portal/login` (телефон + пароль), автогенерация пароля, смена при первом входе
+### Отчёты, чат, портал
+- Сводный отчёт, сводка дня, касса, журнал заявок; на демо — онлайн посетителей
+- Чат сотрудников в левом сайдбаре (Socket.IO; опционально Web Push)
+- Портал клиента: заявки и «Мои устройства»
 
 ### Права доступа
-- Права: `view_finance`, `manage_finance`, `view_shop`, `manage_shop`, `view_action_logs`, `manage_statuses`
-- Кастомным ролям сотрудников запрещено: `manage_users`, `manage_settings`
+- См. матрицу в [docs/USER_GUIDE.md](docs/USER_GUIDE.md) и [docs/API.md](docs/API.md)
+- Кастомным ролям сотрудников нельзя: `manage_users`, `manage_settings`
 
 ---
 
 ## API документация
+
+Полный справочник endpoints: **[docs/API.md](docs/API.md)** (v2.5). Ниже — краткая выборка.
 
 **Базовый URL:** `http://127.0.0.1:5000`  
 **Аутентификация:** Flask-Login (сессия + cookie)
@@ -1469,7 +1506,7 @@ pytest --cov=app
 - Поиск по истории чата **удалён** (упрощение UI).
 - **Локальная разработка:** `run.py` — совместимость **Werkzeug 3** с SocketIO (`allow_unsafe_werkzeug` в dev); в README указаны зависимости Linux (**pycairo** / `pkg-config`, `libcairo2-dev`) для сборки окружения.
 
-**Документация модуля:** обновлены `README.md`, `docs/API.md`, `docs/USER_GUIDE.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/DEPLOY.md`, `app/routes/README.md`, `app/services/README.md`, `templates/README.md`, `.env.example`.
+**Документация модуля:** обновлены `README.md`, `docs/API.md`, `docs/USER_GUIDE.md`, `docs/DEPLOY.md`, `app/routes/README.md`, `app/services/README.md`, `templates/README.md`, `.env.example`.
 
 **Реестр заявок (новое):**
 

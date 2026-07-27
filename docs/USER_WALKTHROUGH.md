@@ -6,8 +6,8 @@
 **Дата:** 2026-07-27  
 **Связанный документ:** [USER_GUIDE.md](USER_GUIDE.md) (справочник по всем разделам)
 
-> **Скриншоты.** В тексте стоят места под реальные снимки экрана (`docs/assets/walkthrough/`).  
-> Их можно снять скриптом [`scripts/capture_walkthrough_screenshots.py`](../scripts/capture_walkthrough_screenshots.py) на работающей CRM (локально или демо) — см. раздел [Скриншоты](#скриншоты) в конце.
+> **Скриншоты.** Реальные снимки лежат в `docs/assets/walkthrough/` и уже вставлены ниже.  
+> При смене UI достаточно заменить PNG с теми же именами (см. [assets/walkthrough/README.md](assets/walkthrough/README.md)).
 
 ---
 
@@ -399,24 +399,7 @@
 
 Рекомендуемый размер: ширина ~1200–1600 px, формат PNG или WebP.
 
-### Автосъёмка (Playwright)
-
-1. Установите зависимости один раз:
-   ```powershell
-   .\venv\Scripts\pip.exe install playwright
-   .\venv\Scripts\playwright.exe install chromium
-   ```
-2. Запустите CRM (`python run.py`) или укажите URL демо.
-3. Выполните:
-   ```powershell
-   .\venv\Scripts\python.exe scripts\capture_walkthrough_screenshots.py --base-url http://127.0.0.1:5000 --user admin --password 111111
-   ```
-4. Скрипт сохранит PNG в `docs/assets/walkthrough/`.  
-   Пример для публичного демо:
-   ```powershell
-   .\.venv-win\Scripts\python.exe scripts\capture_walkthrough_screenshots.py --base-url https://demo.nika-sc.ru --user demo_admin --password Demo2026!
-   ```
-   Модалки «добавить услугу / оплату» при тяжёлой странице заявки могут потребовать досъёмки — см. лог скрипта.
+Пересъёмка: откройте CRM (локально или [демо](https://demo.nika-sc.ru/)), сделайте снимки экранов по шагам выше и замените файлы с теми же именами в `docs/assets/walkthrough/`.
 
 ---
 

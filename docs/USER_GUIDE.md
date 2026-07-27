@@ -704,10 +704,13 @@ Nika CRM — веб-система для сервисного центра: з�
 
 ### 20.3. Связанные документы
 
-- [DEPLOY.md](DEPLOY.md) — развёртывание  
+- [README документации](README.md) — оглавление `docs/`  
+- [USER_WALKTHROUGH.md](USER_WALKTHROUGH.md) — сценарий рабочего дня со скриншотами  
+- [DEPLOY.md](DEPLOY.md) — развёртывание (Docker + PostgreSQL)  
 - [API.md](API.md) — HTTP API  
 - [database/bootstrap/README.md](../database/bootstrap/README.md) — дамп и демо-логины  
 - [OSS_DATA_POLICY.md](OSS_DATA_POLICY.md) — политика данных OSS  
+- [OSS_RELEASE_WORKFLOW.md](OSS_RELEASE_WORKFLOW.md) — порядок релиза  
 
 ### 20.4. История документа
 
@@ -715,6 +718,7 @@ Nika CRM — веб-система для сервисного центра: з�
 |--------|------|-----------|
 | 2.4 | 2026-04-10 | Предыдущая редакция |
 | **2.5** | **2026-07-27** | Актуализация под UI: сайдбар-чат, pins, закупки, сводка дня, журнал заявок, формы печати, портал «Мои устройства», демо-онлайн, термины меню, PostgreSQL 001–010 |
+| **2.5.1** | **2026-07-27** | Ссылки на walkthrough и оглавление docs; устаревшие overview/аудиты вынесены из `docs/` |
 
 ---
 
