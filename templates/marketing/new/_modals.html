@@ -1,0 +1,76 @@
+<div class="modal fade nx-shot-modal" id="shotCarouselModal" tabindex="-1" aria-labelledby="shotCarouselTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-6" id="shotCarouselTitle">Скриншот</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <img id="shotCarouselImage" src="" alt="" loading="eager" decoding="sync">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="shotPrevBtn" aria-label="Предыдущий скриншот">Назад</button>
+                <button type="button" class="btn btn-outline-secondary" id="shotNextBtn" aria-label="Следующий скриншот">Вперёд</button>
+                <button type="button" class="btn btn-dark" data-bs-dismiss="modal" aria-label="Закрыть просмотр скриншотов">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade nx-login-modal" id="demoLoginModal" tabindex="-1" aria-labelledby="demoLoginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="demoLoginModalLabel">Вход в демо Nika CRM</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('main.login') }}" id="demoLoginForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="from_landing" value="1">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username" name="username" required autocomplete="username"
+                               {% if demo_login %}value="{{ demo_login.username }}"{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password"
+                               {% if demo_login %}value="{{ demo_login.password }}"{% endif %}>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" value="1">
+                        <label class="form-check-label" for="remember_me">Запомнить меня</label>
+                    </div>
+                    <button type="submit" class="nx-btn nx-btn-primary w-100 justify-content-center">Войти</button>
+                </form>
+
+                {% if demo_login %}
+                <div class="nx-demo-hint" role="region" aria-label="Демо-доступ">
+                    <strong>Онлайн-демо:</strong>
+                    логин <code>{{ demo_login.username }}</code>,
+                    пароль <code>{{ demo_login.password }}</code>
+                    {% if demo_login.count_orders is not none %}
+                    · заявок в базе: <strong>{{ demo_login.count_orders }}</strong>
+                    {% endif %}
+                    <div class="mt-2">
+                        <strong>OSS и Windows SETUP (пароль <code>111111</code>):</strong>
+                        <code>admin</code> · <code>manager</code> · <code>master</code> · <code>viewer</code>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

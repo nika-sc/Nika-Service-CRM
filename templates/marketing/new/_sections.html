@@ -1,0 +1,177 @@
+{# Общие секции контента (классы nx-* стилизуются в CSS варианта) #}
+<section class="nx-section" id="windows-setup" aria-labelledby="windows-setup-title">
+    <h2 id="windows-setup-title">Автономная версия для Windows</h2>
+    <p class="nx-lead">
+        Можно поставить Nika CRM отдельно на Windows 10/11 x64 без своего Linux-сервера:
+        один EXE-установщик включает Python, PostgreSQL и демо-базу.
+    </p>
+    <div class="nx-windows">
+        <div>
+            <p class="nx-kicker">Offline SETUP {{ windows_setup.version }}</p>
+            <h3>{{ windows_setup.filename }}</h3>
+            <ul class="nx-list">
+                <li>Установка <strong>от имени администратора</strong> (нужны права Admin).</li>
+                <li>Интернет для установки не требуется — полный офлайн-пакет.</li>
+                <li>После установки откройте ярлык <strong>Nika CRM — Открыть</strong> → <code>http://127.0.0.1:5000</code>.</li>
+                <li>Перед реальной работой смените демо-пароли.</li>
+            </ul>
+            <div class="nx-cta-row">
+                <a class="nx-btn nx-btn-primary" href="{{ windows_setup.github_download_url }}" rel="noopener noreferrer">Скачать с GitHub</a>
+                <a class="nx-btn nx-btn-ghost" href="{{ windows_setup.demo_download_url }}" rel="noopener noreferrer">Зеркало (demo.nika-sc.ru)</a>
+                <a class="nx-btn nx-btn-ghost" href="{{ windows_setup.github_release_url }}" target="_blank" rel="noopener noreferrer">Страница релиза <span class="visually-hidden">(откроется в новой вкладке)</span></a>
+            </div>
+            <p class="nx-hash">SHA256: <code>{{ windows_setup.sha256 }}</code></p>
+        </div>
+        <div class="nx-creds" role="region" aria-label="Демо-логины Windows SETUP">
+            <h3>Логины после установки</h3>
+            <p>Пароль для всех тестовых пользователей: <code>111111</code></p>
+            <ul>
+                <li><code>admin</code> — полный доступ</li>
+                <li><code>manager</code> — менеджер</li>
+                <li><code>master</code> — мастер</li>
+                <li><code>viewer</code> — только просмотр</li>
+            </ul>
+            <h3>Вопросы по установке</h3>
+            <p>
+                Александр Смелков, СЦ «Ника», Сочи<br>
+                <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>,
+                <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a><br>
+                <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">t.me/nikaserviceadler <span class="visually-hidden">(откроется в новой вкладке)</span></a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="nx-section" id="for-whom" aria-labelledby="for-whom-title">
+    <h2 id="for-whom-title">Для кого эта CRM</h2>
+    <p class="nx-lead">
+        Если у вас сервисный центр, мастерская по ремонту телефонов, ноутбуков или бытовой техники —
+        вам нужна система именно под приёмку и выдачу, а не «продажи вообще».
+    </p>
+    <div class="nx-cols nx-cols-3">
+        <article class="nx-block">
+            <h3>Сервисные центры</h3>
+            <p>Реестр заявок, канбан, статусы ремонта, история устройства и клиента в одном месте.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Мастерские и точки приёма</h3>
+            <p>Быстрое создание заявки, печать, уведомления клиенту и контроль загрузки мастеров.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Владельцы СЦ</h3>
+            <p>Отчёты по выручке, марже, складу и зарплате — без привязки к чужому облаку.</p>
+        </article>
+    </div>
+</section>
+
+<section class="nx-section" id="features" aria-labelledby="features-title">
+    <h2 id="features-title">Возможности</h2>
+    <p class="nx-lead">Практичный набор модулей, который уже используется в реальном сервисном центре «Ника» (Сочи).</p>
+    <div class="nx-cols nx-cols-2">
+        <article class="nx-block">
+            <h3>Заявки на ремонт</h3>
+            <p>Создание, фильтры, закрепление, журнал и канбан. Динамические статусы с флагами оплаты и зарплаты.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Склад и запчасти</h3>
+            <p>Остатки, категории, поставщики, движения и low-stock уведомления.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Касса и финансы</h3>
+            <p>Оплаты, кошелёк клиента, кассовые проводки и отчёт по прибыльности.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Отчёты владельца</h3>
+            <p>Дашборд дня, продажи, закупки, маржа, остатки и зарплата мастеров.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Портал клиента</h3>
+            <p>Клиент видит свои заявки и устройства; пароль портала можно выдать при создании карточки.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Чат сотрудников</h3>
+            <p>Внутренний чат с уведомлениями — чтобы смена не теряла контекст по заявкам.</p>
+        </article>
+    </div>
+</section>
+
+<section class="nx-section" id="documentation" aria-labelledby="documentation-title">
+    <h2 id="documentation-title">Руководство прямо на демо</h2>
+    <p class="nx-lead">Читайте инструкции и смотрите скриншоты здесь — без перехода в GitHub.</p>
+    <div class="nx-docs">
+        <div>
+            <p class="nx-kicker">Начните отсюда</p>
+            <h3>Сценарий рабочего дня со скриншотами</h3>
+            <p>Вход → заявка → услуги и товары → оплата → закрытие → зарплата → касса.</p>
+            <div class="nx-cta-row">
+                <a class="nx-btn nx-btn-primary" href="{{ url_for('public_docs.docs_walkthrough') }}">Сценарий дня</a>
+                <a class="nx-btn nx-btn-ghost" href="{{ url_for('public_docs.docs_guide') }}">Полное руководство</a>
+                <a class="nx-btn nx-btn-ghost" href="{{ url_for('public_docs.docs_about') }}">Установка</a>
+            </div>
+        </div>
+        <dl class="nx-facts">
+            <div><dt>Лицензия</dt><dd>MIT, бесплатно и open-source</dd></div>
+            <div><dt>База данных</dt><dd>PostgreSQL</dd></div>
+            <div><dt>Стек</dt><dd>Python, Flask, Jinja2</dd></div>
+            <div><dt>Развёртывание</dt><dd>Windows, Docker, локальная сеть или VPS</dd></div>
+            <div><dt>Данные</dt><dd>Хранятся на вашей инфраструктуре</dd></div>
+            <div><dt>Автор</dt><dd>Александр Смелков, СЦ «Ника», Сочи</dd></div>
+        </dl>
+    </div>
+    <div class="nx-doc-links" aria-label="Документация на демо">
+        <a href="{{ url_for('public_docs.docs_hub') }}">Все разделы</a>
+        <a href="{{ url_for('public_docs.docs_walkthrough') }}">Сценарий дня</a>
+        <a href="{{ url_for('public_docs.docs_guide') }}">Руководство</a>
+        <a href="{{ url_for('public_docs.docs_about') }}">О проекте</a>
+        <a href="{{ github_url }}/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">API <span class="visually-hidden">(откроется в новой вкладке)</span></a>
+    </div>
+</section>
+
+<section class="nx-section" id="open-source" aria-labelledby="oss-title">
+    <h2 id="oss-title">Почему бесплатно и open-source</h2>
+    <p class="nx-lead">
+        Код публикуется как практическое решение для СЦ: вы владеете данными и сервером.
+        Нет обязательной SaaS-подписки — платите только за свой хостинг, если выносите CRM в интернет.
+    </p>
+    <div class="nx-cols nx-cols-3">
+        <article class="nx-block">
+            <h3>Свой сервер</h3>
+            <p>Локальная сеть или VPS с доменом. Данные не уходят в чужой мультитенант.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Прозрачный код</h3>
+            <p>Репозиторий на GitHub: можно читать, аудировать и дорабатывать под свой процесс.</p>
+        </article>
+        <article class="nx-block">
+            <h3>Демо без риска</h3>
+            <p>Этот сайт — ознакомительная среда. Для продакшена поднимаете свою копию.</p>
+        </article>
+    </div>
+</section>
+
+<section class="nx-section" id="howto" aria-labelledby="howto-title">
+    <h2 id="howto-title">Как запустить свою копию</h2>
+    <p class="nx-lead">
+        Краткий путь. Подробности — в README
+        <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">nika-sc/Nika-Service-CRM <span class="visually-hidden">(откроется в новой вкладке)</span></a>.
+    </p>
+    <ol class="nx-steps">
+        <li>Клонируйте репозиторий и создайте виртуальное окружение Python.</li>
+        <li>Поднимите PostgreSQL и импортируйте демо-дамп <code>database/bootstrap/nikacrm_public_sanitized.sql</code>.</li>
+        <li>Скопируйте <code>.env.example</code> → <code>.env</code>, укажите <code>DB_DRIVER=postgres</code> и <code>DATABASE_URL</code>.</li>
+        <li>Запустите <code>python run.py</code> или используйте bootstrap-скрипт для Ubuntu 24.04.</li>
+    </ol>
+</section>
+
+<section class="nx-section nx-faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title">Частые вопросы</h2>
+    <p class="nx-lead">Ответы на типовые запросы про бесплатную CRM для сервисных центров.</p>
+    <details><summary>Есть ли бесплатная CRM для сервисного центра?</summary><p>Да. Nika CRM распространяется как open-source: заявки, склад, касса и отчёты без обязательной облачной подписки.</p></details>
+    <details><summary>Подойдёт ли для ремонта телефонов и ноутбуков?</summary><p>Да. Сценарии приёмки, статусов ремонта, учёта устройств и запчастей — основа системы.</p></details>
+    <details><summary>Чем отличается от «облачных» CRM?</summary><p>Вы ставите ПО у себя. Нет ежемесячной платы за SaaS; ответственность за сервер и бэкапы — на вас.</p></details>
+    <details><summary>Как посмотреть демо прямо сейчас?</summary><p>Нажмите «Войти в демо» — откроется окно входа. Учётка и подсказки показаны в модалке.</p></details>
+    <details><summary>Есть ли установщик для Windows?</summary><p>Да — автономный <a href="#windows-setup">Offline SETUP</a> для Windows 10/11 x64. Запускайте <strong>от имени администратора</strong>.</p></details>
+    <details><summary>Какая СУБД нужна?</summary><p>PostgreSQL. Windows SETUP ставит его автоматически.</p></details>
+    <details><summary>Есть ли клиентский портал?</summary><p>Да. Клиент может смотреть свои заявки; доступ выдаётся из карточки клиента.</p></details>
+    <details><summary>Кто автор и куда писать по установке?</summary><p>Александр Смелков, СЦ «Ника», Сочи. <a href="mailto:smelkov2008@yandex.ru">smelkov2008@yandex.ru</a>, <a href="mailto:nika-sc@bk.ru">nika-sc@bk.ru</a>, <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram</a>.</p></details>
+</section>

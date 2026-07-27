@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0f7a72">
+    <title>Nika CRM — эксперимент /new/1 (Мастерская)</title>
+    <meta name="description" content="Черновик лендинга Nika CRM. Не для индексации.">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-new-v1.css') }}">
+</head>
+<body class="n1-body nx-root">
+    <a class="nx-skip" href="#content">К содержимому</a>
+    <div class="nx-exp">
+        Эксперимент <strong>/new/1</strong> · Мастерская ·
+        <a href="{{ url_for('main.landing_new') }}">к сравнению</a>
+    </div>
+    <header class="n1-nav">
+        <a class="n1-brand" href="{{ url_for('main.landing_new', variant=1) }}" aria-label="Nika CRM">Nika CRM</a>
+        <nav class="n1-nav-links" aria-label="Навигация">
+            {% if demo_visitor_stats_enabled %}
+            <span class="n1-online" aria-live="polite">В CRM: <strong data-demo-online-count>{{ demo_online_count }}</strong></span>
+            {% endif %}
+            <a href="#windows-setup">Windows</a>
+            <a href="{{ url_for('public_docs.docs_hub') }}">Руководство</a>
+            <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(откроется в новой вкладке)</span></a>
+            <button type="button" class="nx-btn nx-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">Войти в демо</button>
+        </nav>
+    </header>
+
+    <main id="content" tabindex="-1">
+        <section class="n1-hero" aria-labelledby="hero-title">
+            <p class="n1-brand-hero" aria-hidden="true">Nika CRM</p>
+            <p class="nx-kicker">Open-source · свой сервер · без SaaS</p>
+            <h1 id="hero-title">Бесплатная CRM для сервисных центров</h1>
+            <p class="nx-lead n1-hero-lead">
+                Nika CRM помогает принимать технику в ремонт, вести склад и кассу, считать зарплату мастеров
+                и показывать клиенту статус заявки — на вашей инфраструктуре, без ежемесячной подписки.
+            </p>
+            <div class="nx-cta-row" aria-label="Действия">
+                <button type="button" class="nx-btn nx-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">Войти в демо</button>
+                <a class="nx-btn nx-btn-ghost" href="{{ windows_setup.github_download_url }}">Скачать для Windows</a>
+                <a class="nx-btn nx-btn-ghost" href="#screenshots">Скриншоты</a>
+            </div>
+        </section>
+
+        <figure class="n1-product-bleed">
+            <img
+                src="{{ url_for('static', filename='marketing/screenshots/screenshot-16.jpg') }}"
+                alt="Страница с заявками: закрепление, поиск, фильтры и выставление статуса"
+                loading="eager"
+                decoding="async"
+            >
+            <figcaption>Рабочий экран заявок — якорь продукта</figcaption>
+        </figure>
+
+        {% include 'marketing/new/_sections.html' %}
+
+        <section class="nx-section" id="screenshots" aria-labelledby="screenshots-title">
+            <h2 id="screenshots-title">Скриншоты интерфейса CRM</h2>
+            <p class="nx-lead">Реальные экраны системы: заявки, карточки, отчёты, склад и рабочие сценарии.</p>
+            <div class="n1-shots">
+                {% for shot in screenshot_files %}
+                <button type="button" class="n1-shot" data-shot-index="{{ loop.index0 }}"
+                        data-bs-toggle="modal" data-bs-target="#shotCarouselModal"
+                        aria-label="Открыть скриншот: {{ shot.title }}">
+                    <img src="{{ url_for('static', filename=shot.file) }}" alt="{{ shot.title }}" loading="lazy" decoding="async">
+                    <span aria-hidden="true">{{ shot.title }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <footer class="n1-footer">
+        <div class="n1-footer-brand">Nika CRM</div>
+        <p>
+            Бесплатная CRM для сервисных центров ·
+            <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+            <a href="{{ url_for('public_docs.docs_hub') }}">Руководство</a> ·
+            <a href="{{ windows_setup.github_download_url }}">Windows SETUP</a>
+        </p>
+        <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
+    </footer>
+
+    {% include 'marketing/new/_modals.html' %}
+    {% include 'marketing/new/_scripts.html' %}
+</body>
+</html>

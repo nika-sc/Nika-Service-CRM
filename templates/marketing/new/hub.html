@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#1a1f24">
+    <title>Эксперименты лендинга — Nika CRM /new</title>
+    <meta name="description" content="Черновики дизайна лендинга Nika CRM. Не для индексации.">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-new-hub.css') }}">
+</head>
+<body class="nh-body">
+    <a class="nh-skip" href="#hub-main">К содержимому</a>
+    <header class="nh-top">
+        <a class="nh-brand" href="{{ url_for('main.home') }}">Nika CRM</a>
+        <a class="nh-back" href="{{ url_for('main.home') }}">← Текущий продакшн-лендинг</a>
+    </header>
+    <main id="hub-main" class="nh-main" tabindex="-1">
+        <p class="nh-kicker">Эксперимент · noindex</p>
+        <h1>Новые варианты лендинга</h1>
+        <p class="nh-lead">Один контент, три визуальных направления. Выберите и сравните — потом перенесём победителя на главную.</p>
+        <div class="nh-grid">
+            <a class="nh-card nh-card-1" href="{{ url_for('main.landing_new', variant=1) }}">
+                <span class="nh-swatch" aria-hidden="true"></span>
+                <h2>/new/1 · Мастерская</h2>
+                <p>Светлый холодный фон, бирюза и янтарь, full-bleed скриншот продукта.</p>
+                <span class="nh-open">Открыть →</span>
+            </a>
+            <a class="nh-card nh-card-2" href="{{ url_for('main.landing_new', variant=2) }}">
+                <span class="nh-swatch" aria-hidden="true"></span>
+                <h2>/new/2 · Сочи / берег</h2>
+                <p>Тёмный teal, split-hero и стек скриншотов, полосы секций.</p>
+                <span class="nh-open">Открыть →</span>
+            </a>
+            <a class="nh-card nh-card-3" href="{{ url_for('main.landing_new', variant=3) }}">
+                <span class="nh-swatch" aria-hidden="true"></span>
+                <h2>/new/3 · Editorial</h2>
+                <p>Крупная типографика, воздух, горизонтальная лента скриншотов.</p>
+                <span class="nh-open">Открыть →</span>
+            </a>
+        </div>
+    </main>
+</body>
+</html>

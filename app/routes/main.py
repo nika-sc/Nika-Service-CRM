@@ -1,7 +1,7 @@
 """
 Blueprint для главных страниц и аутентификации.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, g, abort
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -165,6 +165,46 @@ def _landing_canonical_url() -> str:
     if configured:
         return configured
     return (request.url_root or "").rstrip("/")
+
+
+def _public_landing_context() -> dict:
+    """Общий контекст SEO-лендинга и экспериментальных /new/*."""
+    canonical = _landing_canonical_url()
+    screenshot_titles = [
+        "Главная страница с отчетами",
+        "Личный кабинет пользователя 2",
+        "Личный кабинет пользователя 3",
+        "Личный кабинет пользователя 4",
+        "Личный кабинет пользователя 5",
+        "Личный кабинет пользователя",
+        "Магазин с продажами",
+        "Раздел Зарплата по сотрудникам",
+        "Раздел касса с операциями за день",
+        "Раздел касса",
+        "Раздел клиенты с поиском и сортировкой",
+        "Раздел настройки",
+        "Раздел отчеты",
+        "Светлая тема",
+        "Склад с разделами",
+        "Страница с заявками: закрепление, поиск, фильтры и выставление статуса",
+        "Темная тема",
+    ]
+    screenshots = [
+        {
+            "file": f"marketing/screenshots/screenshot-{idx:02d}.jpg",
+            "title": screenshot_titles[idx - 1],
+        }
+        for idx in range(1, 18)
+    ]
+    ctx = {
+        "open_login": (request.args.get("login") == "1"),
+        "canonical_url": canonical,
+        "og_image_url": f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
+        "github_url": "https://github.com/nika-sc/Nika-Service-CRM",
+        "screenshot_files": screenshots,
+    }
+    ctx.update(_login_page_extra())
+    return ctx
 
 
 def _login_error_response():
@@ -437,47 +477,31 @@ def logout():
     return redirect(url_for('main.login'))
 
 
+@bp.route('/new')
+@bp.route('/new/<int:variant>')
+def landing_new(variant=None):
+    """Экспериментальные лендинги (noindex). Только при PUBLIC_LANDING."""
+    if not _public_landing_enabled():
+        abort(404)
+    # Не включаем g.allow_search_indexing — X-Robots-Tag: noindex
+    ctx = _public_landing_context()
+    if variant is None:
+        return render_template('marketing/new/hub.html', **ctx)
+    if variant not in (1, 2, 3):
+        abort(404)
+    ctx['landing_variant'] = variant
+    return render_template(f'marketing/new/v{variant}.html', **ctx)
+
+
 @bp.route('/')
 def home():
     """Главная: SEO-лендинг (аноним + PUBLIC_LANDING) или дашборд."""
     if not current_user.is_authenticated:
         if _public_landing_enabled():
             g.allow_search_indexing = True
-            canonical = _landing_canonical_url()
-            screenshot_titles = [
-                "Главная страница с отчетами",
-                "Личный кабинет пользователя 2",
-                "Личный кабинет пользователя 3",
-                "Личный кабинет пользователя 4",
-                "Личный кабинет пользователя 5",
-                "Личный кабинет пользователя",
-                "Магазин с продажами",
-                "Раздел Зарплата по сотрудникам",
-                "Раздел касса с операциями за день",
-                "Раздел касса",
-                "Раздел клиенты с поиском и сортировкой",
-                "Раздел настройки",
-                "Раздел отчеты",
-                "Светлая тема",
-                "Склад с разделами",
-                "Страница с заявками: закрепление, поиск, фильтры и выставление статуса",
-                "Темная тема",
-            ]
-            screenshots = [
-                {
-                    "file": f"marketing/screenshots/screenshot-{idx:02d}.jpg",
-                    "title": screenshot_titles[idx - 1],
-                }
-                for idx in range(1, 18)
-            ]
             return render_template(
                 'marketing/landing.html',
-                open_login=(request.args.get('login') == '1'),
-                canonical_url=canonical,
-                og_image_url=f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
-                github_url='https://github.com/nika-sc/Nika-Service-CRM',
-                screenshot_files=screenshots,
-                **_login_page_extra(),
+                **_public_landing_context(),
             )
         return redirect(url_for('main.login'))
 

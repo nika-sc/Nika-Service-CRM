@@ -139,6 +139,7 @@ def create_app(config_class=Config):
                 "Allow: /sitemap.xml",
                 "Allow: /sitemap-images.xml",
                 "Allow: /favicon.ico",
+                "Disallow: /new",
                 "Disallow: /login",
                 "Disallow: /logout",
                 "Disallow: /portal",

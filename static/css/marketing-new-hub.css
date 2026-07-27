@@ -1,0 +1,54 @@
+:root {
+  --nh-bg: #f0f2f4;
+  --nh-ink: #1a1f24;
+  --nh-muted: #5a6570;
+  --nh-font: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body.nh-body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--nh-font);
+  color: var(--nh-ink);
+  background:
+    linear-gradient(180deg, #e8ecef 0%, var(--nh-bg) 40%),
+    repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(0,0,0,0.03) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(0,0,0,0.03) 24px);
+}
+.nh-skip {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0);
+}
+.nh-skip:focus {
+  position: fixed; left: 1rem; top: 1rem; width: auto; height: auto; clip: auto;
+  z-index: 99; background: #fff; padding: 0.5rem 0.75rem; color: #111;
+}
+.nh-top {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 10;
+}
+.nh-brand { font-weight: 700; font-size: 1.2rem; color: inherit; text-decoration: none; }
+.nh-back { color: var(--nh-muted); text-decoration: none; font-size: 0.95rem; }
+.nh-back:hover { color: var(--nh-ink); }
+.nh-main { width: min(960px, calc(100% - 2rem)); margin: 2.5rem auto 4rem; }
+.nh-kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--nh-muted); margin: 0 0 0.5rem; }
+.nh-main h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 0.75rem; letter-spacing: -0.02em; }
+.nh-lead { color: var(--nh-muted); font-size: 1.1rem; max-width: 38rem; margin: 0 0 2rem; line-height: 1.55; }
+.nh-grid { display: grid; gap: 1rem; }
+@media (min-width: 720px) { .nh-grid { grid-template-columns: 1fr; } }
+.nh-card {
+  display: block; text-decoration: none; color: inherit;
+  background: #fff; border: 1px solid rgba(0,0,0,0.08);
+  padding: 1.25rem 1.35rem 1.35rem; border-radius: 4px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.nh-card:hover { transform: translateY(-2px); border-color: rgba(0,0,0,0.2); }
+.nh-card:focus-visible { outline: 3px solid #0f7a72; outline-offset: 2px; }
+.nh-swatch { display: block; height: 8px; width: 100%; margin-bottom: 1rem; border-radius: 2px; }
+.nh-card-1 .nh-swatch { background: linear-gradient(90deg, #0f7a72, #c4852a); }
+.nh-card-2 .nh-swatch { background: linear-gradient(90deg, #0f1c24, #2bb8a6 60%, #e8b86d); }
+.nh-card-3 .nh-swatch { background: linear-gradient(90deg, #1a1f24, #1f6f8b); }
+.nh-card h2 { margin: 0 0 0.4rem; font-size: 1.25rem; }
+.nh-card p { margin: 0 0 0.85rem; color: var(--nh-muted); line-height: 1.5; }
+.nh-open { color: #0f7a72; font-weight: 600; }

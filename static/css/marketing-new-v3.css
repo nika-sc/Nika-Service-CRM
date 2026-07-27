@@ -1,0 +1,125 @@
+/* /new/3 — Editorial */
+.n3-body {
+  --nx-bg: #eef1f3;
+  --nx-ink: #1a1f24;
+  --nx-muted: #5a6570;
+  --nx-accent: #1f6f8b;
+  --nx-border: rgba(26, 31, 36, 0.12);
+  --nx-font-display: "Palatino Linotype", Palatino, Georgia, serif;
+  --nx-font-body: Georgia, "Times New Roman", serif;
+  --nx-font-ui: "Segoe UI", sans-serif;
+  margin: 0;
+  color: var(--nx-ink);
+  font-family: var(--nx-font-body);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  background:
+    radial-gradient(900px 420px at 80% -10%, rgba(31,111,139,0.08), transparent 55%),
+    var(--nx-bg);
+}
+.nx-skip { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.nx-skip:focus { position: fixed; left: 1rem; top: 1rem; clip: auto; width: auto; height: auto; z-index: 1000; background: #fff; padding: 0.5rem 0.75rem; outline: 3px solid var(--nx-accent); }
+.nx-exp {
+  font-family: var(--nx-font-ui); font-size: 0.82rem; text-align: center;
+  padding: 0.45rem 1rem; background: var(--nx-ink); color: #dce3e8;
+}
+.nx-exp a { color: #8ec4d8; }
+.n3-nav {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;
+  padding: 1.25rem clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--nx-border);
+}
+.n3-brand { font-family: var(--nx-font-display); font-size: 1.15rem; color: inherit; text-decoration: none; font-weight: 700; }
+.n3-nav-links { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; font-family: var(--nx-font-ui); font-size: 0.95rem; }
+.n3-nav-links a { color: var(--nx-muted); text-decoration: none; }
+.n3-nav-links a:hover { color: var(--nx-accent); }
+.n3-online { color: var(--nx-muted); font-size: 0.85rem; }
+.nx-btn {
+  font-family: var(--nx-font-ui); display: inline-flex; align-items: center;
+  border-radius: 0; padding: 0.75rem 1.35rem; border: 1px solid transparent;
+  text-decoration: none; cursor: pointer; font-size: 0.95rem;
+}
+.nx-btn-primary { background: var(--nx-ink); color: #fff; }
+.nx-btn-primary:hover { background: var(--nx-accent); color: #fff; }
+.nx-btn-ghost { border-color: var(--nx-border); background: transparent; color: var(--nx-ink); }
+.nx-btn-ghost:hover { border-color: var(--nx-accent); color: var(--nx-accent); }
+.nx-cta-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+.n3-hero {
+  width: min(720px, calc(100% - 2.5rem));
+  margin: clamp(3rem, 12vh, 7rem) auto 4rem;
+  text-align: left;
+}
+.n3-brand-huge {
+  font-family: var(--nx-font-display);
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  line-height: 0.95; margin: 0 0 1.25rem; letter-spacing: -0.03em; font-weight: 700;
+}
+.n3-hero h1 {
+  font-family: var(--nx-font-display); font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 400; margin: 0 0 0.85rem; max-width: 18ch;
+}
+.n3-one-line { color: var(--nx-muted); margin: 0 0 1.75rem; max-width: 32rem; font-size: 1.15rem; }
+.n3-hero-cta { margin-bottom: 1rem; }
+.n3-sub-cta { font-family: var(--nx-font-ui); font-size: 0.95rem; color: var(--nx-muted); margin: 0; }
+.n3-sub-cta a { color: var(--nx-accent); }
+.n3-rail-wrap { margin: 0 0 3rem; }
+.n3-rail-head { width: min(720px, calc(100% - 2.5rem)); margin: 0 auto 1rem; }
+.n3-rail-head h2 { font-family: var(--nx-font-display); font-size: 1.4rem; margin: 0 0 0.35rem; font-weight: 400; }
+.nx-lead { color: var(--nx-muted); margin: 0 0 1rem; }
+.n3-rail {
+  display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 0.5rem max(1rem, calc((100% - 1100px) / 2)) 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+.n3-rail-item {
+  flex: 0 0 min(72vw, 420px); scroll-snap-align: start;
+  border: none; background: transparent; padding: 0; cursor: pointer; text-align: left;
+  font-family: var(--nx-font-ui); font-size: 0.8rem; color: var(--nx-muted);
+}
+.n3-rail-item img {
+  width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block;
+  border: 1px solid var(--nx-border); margin-bottom: 0.4rem;
+  transition: transform 0.35s ease;
+}
+.n3-rail-item:hover img { transform: scale(1.015); }
+.nx-section { width: min(720px, calc(100% - 2.5rem)); margin: 3.5rem auto; }
+.nx-section h2 { font-family: var(--nx-font-display); font-size: 1.65rem; font-weight: 400; margin: 0 0 0.65rem; }
+.nx-kicker { font-family: var(--nx-font-ui); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.7rem; color: var(--nx-accent); margin: 0 0 0.4rem; }
+.nx-windows, .nx-docs { display: grid; gap: 1.5rem; margin-top: 1.25rem; }
+@media (min-width: 720px) {
+  .nx-windows, .nx-docs { grid-template-columns: 1fr 1fr; }
+}
+.nx-cols { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+@media (min-width: 700px) {
+  .nx-cols-2 { grid-template-columns: 1fr 1fr; }
+  .nx-cols-3 { grid-template-columns: 1fr; }
+}
+.nx-block { padding: 0; border: none; }
+.nx-block h3 { font-family: var(--nx-font-display); font-size: 1.25rem; font-weight: 400; margin: 0 0 0.35rem; }
+.nx-block p { margin: 0; color: var(--nx-muted); }
+.nx-facts { margin: 0; }
+.nx-facts div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid var(--nx-border); font-size: 0.95rem; }
+.nx-facts dt { font-family: var(--nx-font-ui); color: var(--nx-muted); font-size: 0.85rem; }
+.nx-facts dd { margin: 0; }
+.nx-doc-links { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-top: 1.5rem; font-family: var(--nx-font-ui); }
+.nx-doc-links a { color: var(--nx-accent); }
+.nx-list, .nx-creds ul, .nx-steps { padding-left: 1.15rem; color: var(--nx-muted); }
+.nx-hash { font-size: 0.8rem; color: var(--nx-muted); word-break: break-all; }
+.nx-faq details { border-bottom: 1px solid var(--nx-border); padding: 1.1rem 0; }
+.nx-faq summary {
+  font-family: var(--nx-font-display); font-size: 1.2rem; cursor: pointer; list-style: none;
+}
+.nx-faq summary::-webkit-details-marker { display: none; }
+.nx-faq details p { margin: 0.65rem 0 0; color: var(--nx-muted); max-width: 36rem; }
+.n3-footer {
+  margin-top: 4rem; padding: 2.5rem 1.25rem 3rem; border-top: 1px solid var(--nx-border);
+  text-align: center; font-family: var(--nx-font-ui); font-size: 0.9rem; color: var(--nx-muted);
+}
+.n3-footer-brand { font-family: var(--nx-font-display); font-size: 1.4rem; color: var(--nx-ink); margin: 0 0 0.75rem; }
+.n3-footer a { color: var(--nx-accent); }
+.nx-demo-hint { margin-top: 1rem; font-size: 0.9rem; color: #556; }
+.n3-rail-item:focus-visible, .nx-btn:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--nx-accent); outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .n3-rail-item img { transition: none; }
+}
