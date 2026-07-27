@@ -1,0 +1,13 @@
+{% extends "marketing/docs_base.html" %}
+{% block docs_body %}
+<article class="ml-docs-article">
+    <header class="ml-docs-header">
+        <p class="ml-kicker">Документация</p>
+        <h1>{{ page_heading }}</h1>
+        <p class="ml-docs-note">Текст открывается прямо на демо — без перехода в GitHub.</p>
+    </header>
+    <div class="ml-docs-content">
+        {{ content_html|safe }}
+    </div>
+</article>
+{% endblock %}

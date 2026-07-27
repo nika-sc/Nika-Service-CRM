@@ -389,15 +389,14 @@ SHA256: `0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E`
 - [Оглавление docs/](docs/README.md)
 - [Руководство пользователя](docs/USER_GUIDE.md) — полный справочник UI
 - [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md) — вход → заявка → оплата → ЗП → касса
+- [О проекте и установка](docs/ABOUT.md)
 - [API](docs/API.md) — endpoints и интеграции
 - [Деплой](docs/DEPLOY.md) — Docker + PostgreSQL
-- [Политика данных OSS](docs/OSS_DATA_POLICY.md)
-- [Порядок OSS-релиза](docs/OSS_RELEASE_WORKFLOW.md)
 - модули кода: [сервисы](app/services/README.md), [модели](app/models/README.md),
   [Query-классы](app/database/queries/README.md), [маршруты](app/routes/README.md),
   [утилиты](app/utils/README.md), [middleware](app/middleware/README.md),
   [шаблоны](templates/README.md)
-- [онлайн-демо](https://demo.nika-sc.ru/)
+- [онлайн-демо](https://demo.nika-sc.ru/) · [документация на демо](https://demo.nika-sc.ru/docs)
 - сайт СЦ [nika-sc.ru](https://nika-sc.ru/)
 - связь: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
   [nika-sc@bk.ru](mailto:nika-sc@bk.ru) (тема `Nika-CRM Помощь по установке`),
@@ -703,10 +702,10 @@ NikaNewCrm/
 
 - [Руководство пользователя](docs/USER_GUIDE.md)
 - [Пошаговый сценарий рабочего дня](docs/USER_WALKTHROUGH.md)
+- [О проекте и установка](docs/ABOUT.md)
 - [API](docs/API.md)
 - [Деплой](docs/DEPLOY.md)
-- [Политика данных OSS](docs/OSS_DATA_POLICY.md)
-- [Порядок OSS-релиза](docs/OSS_RELEASE_WORKFLOW.md)
+- На демо без GitHub: [demo.nika-sc.ru/docs](https://demo.nika-sc.ru/docs)
 
 ### Документация модулей кода
 

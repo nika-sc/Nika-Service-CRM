@@ -4,7 +4,7 @@
 SQLite в новых сценариях не использовать.
 
 Подробный пользовательский справочник: [USER_GUIDE.md](USER_GUIDE.md).  
-Политика OSS и порядок релиза: [OSS_RELEASE_WORKFLOW.md](OSS_RELEASE_WORKFLOW.md).
+Публичные страницы на демо: https://demo.nika-sc.ru/docs
 
 ## Что должно быть в репозитории
 

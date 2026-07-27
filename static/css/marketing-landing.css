@@ -822,3 +822,146 @@ body.ml-body {
     scroll-behavior: auto;
   }
 }
+
+/* —— Public docs pages (/docs) —— */
+.ml-docs-body .ml-nav-links a.is-active {
+  color: var(--ml-accent);
+  border-color: rgba(43, 184, 166, 0.45);
+}
+.ml-docs-wrap {
+  width: min(920px, calc(100% - 2rem));
+  margin: 1.5rem auto 3rem;
+}
+.ml-docs-header {
+  margin-bottom: 1.5rem;
+}
+.ml-docs-header h1 {
+  font-family: var(--ml-font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  margin: 0.25rem 0 0.5rem;
+}
+.ml-docs-note {
+  color: var(--ml-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+.ml-docs-article,
+.ml-docs-hub {
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem 2rem;
+}
+.ml-docs-content {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.ml-docs-content h1 {
+  display: none; /* title already in page header */
+}
+.ml-docs-content h2 {
+  font-family: var(--ml-font-display);
+  font-size: 1.35rem;
+  margin: 1.75rem 0 0.65rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--ml-border);
+}
+.ml-docs-content h3 {
+  font-size: 1.12rem;
+  margin: 1.25rem 0 0.5rem;
+}
+.ml-docs-content p,
+.ml-docs-content li {
+  color: var(--ml-text);
+}
+.ml-docs-content a {
+  color: var(--ml-accent);
+}
+.ml-docs-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.85rem 0 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--ml-border);
+  background: #0a1218;
+}
+.ml-docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+.ml-docs-content th,
+.ml-docs-content td {
+  border: 1px solid var(--ml-border);
+  padding: 0.45rem 0.55rem;
+  vertical-align: top;
+}
+.ml-docs-content pre {
+  overflow-x: auto;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ml-border);
+  font-size: 0.88rem;
+}
+.ml-docs-content code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.9em;
+}
+.ml-docs-content blockquote {
+  margin: 1rem 0;
+  padding: 0.5rem 0.9rem;
+  border-left: 3px solid var(--ml-accent);
+  color: var(--ml-muted);
+}
+.ml-docs-cards {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 720px) {
+  .ml-docs-cards {
+    grid-template-columns: 1fr;
+  }
+}
+.ml-docs-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 1.1rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid var(--ml-border);
+  background: rgba(0, 0, 0, 0.18);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.ml-docs-card:hover {
+  border-color: rgba(43, 184, 166, 0.55);
+  transform: translateY(-1px);
+  color: inherit;
+}
+.ml-docs-card h2 {
+  font-family: var(--ml-font-display);
+  font-size: 1.2rem;
+  margin: 0 0 0.45rem;
+}
+.ml-docs-card p {
+  margin: 0 0 0.65rem;
+  color: var(--ml-muted);
+}
+.ml-docs-card-cta {
+  color: var(--ml-accent);
+  font-family: var(--ml-font-ui);
+  font-size: 0.95rem;
+}
+.ml-docs-extra {
+  margin-top: 1.5rem;
+  color: var(--ml-muted);
+  font-size: 0.95rem;
+}
+@media (max-width: 720px) {
+  .ml-docs-body .ml-nav-links {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+}

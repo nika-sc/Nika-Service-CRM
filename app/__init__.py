@@ -133,6 +133,8 @@ def create_app(config_class=Config):
             body = "\n".join([
                 "User-agent: *",
                 "Allow: /$",
+                "Allow: /docs",
+                "Allow: /docs/",
                 "Allow: /static/",
                 "Allow: /sitemap.xml",
                 "Allow: /sitemap-images.xml",
@@ -173,6 +175,16 @@ def create_app(config_class=Config):
             root = (request.url_root or '').rstrip('/')
         lastmod = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         image_url = f"{root}/static/marketing/og-landing.jpg"
+        docs_urls = (
+            f'  <url>\n    <loc>{root}/docs</loc>\n    <lastmod>{lastmod}</lastmod>\n'
+            '    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n'
+            f'  <url>\n    <loc>{root}/docs/walkthrough</loc>\n    <lastmod>{lastmod}</lastmod>\n'
+            '    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n'
+            f'  <url>\n    <loc>{root}/docs/guide</loc>\n    <lastmod>{lastmod}</lastmod>\n'
+            '    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n'
+            f'  <url>\n    <loc>{root}/docs/about</loc>\n    <lastmod>{lastmod}</lastmod>\n'
+            '    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n'
+        )
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
@@ -191,6 +203,7 @@ def create_app(config_class=Config):
             '      <image:title>Nika CRM — бесплатная CRM для сервисных центров</image:title>\n'
             '    </image:image>\n'
             '  </url>\n'
+            f'{docs_urls}'
             '</urlset>\n'
         )
         return Response(xml, mimetype='application/xml')
@@ -613,6 +626,7 @@ def create_app(config_class=Config):
     from app.routes.customer_portal import bp as customer_portal_bp
     from app.routes.staff_chat import bp as staff_chat_bp, init_staff_chat_socketio
     from app.routes.demo_visitors import bp as demo_visitors_bp
+    from app.routes.public_docs import bp as public_docs_bp
     
     # Инициализируем limiter для blueprints
     from app.routes.main import init_limiter as init_main_limiter
@@ -650,6 +664,7 @@ def create_app(config_class=Config):
     app.register_blueprint(customer_portal_bp)
     app.register_blueprint(staff_chat_bp)
     app.register_blueprint(demo_visitors_bp)
+    app.register_blueprint(public_docs_bp)
 
     if socketio is not None:
         try:

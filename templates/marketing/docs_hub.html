@@ -1,0 +1,36 @@
+{% extends "marketing/docs_base.html" %}
+{% block docs_body %}
+<section class="ml-docs-hub">
+    <header class="ml-docs-header">
+        <p class="ml-kicker">Документация</p>
+        <h1>Как работать в Nika CRM</h1>
+        <p class="ml-section-lead">
+            Руководства встроены в демо-сайт: читайте и смотрите скриншоты здесь, без GitHub.
+        </p>
+    </header>
+
+    <div class="ml-docs-cards">
+        <a class="ml-docs-card" href="{{ url_for('public_docs.docs_walkthrough') }}">
+            <h2><i class="fas fa-route me-2" aria-hidden="true"></i>Сценарий рабочего дня</h2>
+            <p>От входа до создания заявки, оплаты, зарплаты и сведения кассы — со скриншотами экранов.</p>
+            <span class="ml-docs-card-cta">Открыть сценарий →</span>
+        </a>
+        <a class="ml-docs-card" href="{{ url_for('public_docs.docs_guide') }}">
+            <h2><i class="fas fa-book-open me-2" aria-hidden="true"></i>Полное руководство</h2>
+            <p>Справочник по всем разделам: заявки, склад, магазин, касса, зарплата, отчёты, портал, чат.</p>
+            <span class="ml-docs-card-cta">Открыть руководство →</span>
+        </a>
+        <a class="ml-docs-card" href="{{ url_for('public_docs.docs_about') }}">
+            <h2><i class="fas fa-download me-2" aria-hidden="true"></i>О проекте и установка</h2>
+            <p>Что умеет CRM, Windows SETUP, Docker и быстрый старт с GitHub.</p>
+            <span class="ml-docs-card-cta">К установке →</span>
+        </a>
+    </div>
+
+    <p class="ml-docs-extra">
+        Для разработчиков на GitHub также есть
+        <a href="{{ github_url }}/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">API.md</a>
+        и исходный код.
+    </p>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Александр Смелков, СЦ Ника, Сочи">
+    <meta name="theme-color" content="#16303a">
+    <title>{{ page_title }}</title>
+    <meta name="description" content="Документация Nika CRM: руководство пользователя, сценарий рабочего дня и установка open-source CRM для сервисных центров.">
+    <link rel="canonical" href="{{ canonical_url }}{{ request.path }}">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:site_name" content="Nika CRM">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:url" content="{{ canonical_url }}{{ request.path }}">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-landing.css') }}">
+</head>
+<body class="ml-body ml-docs-body">
+    <a class="ml-skip" href="#docs-main">К содержанию</a>
+    <header class="ml-nav">
+        <div class="ml-nav-inner">
+            <a class="ml-brand" href="{{ url_for('main.home') }}">Nika CRM</a>
+            <nav class="ml-nav-links" aria-label="Документация">
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'hub' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_hub') }}">Все разделы</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'about' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_about') }}">О проекте</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'guide' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_guide') }}">Руководство</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'walkthrough' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_walkthrough') }}">Сценарий дня</a>
+                <a class="ml-btn ml-btn-primary" href="{{ url_for('main.home', login=1) }}">Войти в демо</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="docs-main" class="ml-docs-wrap">
+        {% block docs_body %}{% endblock %}
+    </main>
+
+    <footer class="ml-footer">
+        <div class="ml-footer-brand">Nika CRM</div>
+        <p>
+            <a href="{{ url_for('main.home') }}">На главную</a>
+            · <a href="{{ url_for('public_docs.docs_hub') }}">Документация</a>
+            · <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+            · <a href="{{ windows_setup.github_download_url }}">Windows SETUP</a>
+        </p>
+        <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>
+    </footer>
+</body>
+</html>
