@@ -3,39 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="author" content="Александр Смелков, СЦ Ника, Сочи">
     <meta name="theme-color" content="#16303a">
     <title>{{ page_title }}</title>
-    <meta name="description" content="Документация Nika CRM: руководство пользователя, сценарий рабочего дня и установка open-source CRM для сервисных центров.">
-    <link rel="canonical" href="{{ canonical_url }}{{ request.path }}">
+    <meta name="description" content="{{ page_description }}">
+    <meta name="keywords" content="Nika CRM, документация CRM, руководство сервисный центр, сценарий рабочего дня, установка CRM">
+    <link rel="canonical" href="{{ page_url }}">
+    <link rel="alternate" hreflang="ru-RU" href="{{ page_url }}">
+    <link rel="alternate" hreflang="ru" href="{{ page_url }}">
+    <link rel="alternate" hreflang="x-default" href="{{ page_url }}">
     <meta property="og:type" content="article">
     <meta property="og:locale" content="ru_RU">
     <meta property="og:site_name" content="Nika CRM">
     <meta property="og:title" content="{{ page_title }}">
-    <meta property="og:url" content="{{ canonical_url }}{{ request.path }}">
+    <meta property="og:description" content="{{ page_description }}">
+    <meta property="og:url" content="{{ page_url }}">
     <meta property="og:image" content="{{ og_image_url }}">
+    <meta property="og:image:secure_url" content="{{ og_image_url }}">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Nika CRM — документация для сервисных центров">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ page_title }}">
+    <meta name="twitter:description" content="{{ page_description }}">
+    <meta name="twitter:image" content="{{ og_image_url }}">
+    <meta name="twitter:image:alt" content="Nika CRM — документация">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-landing.css') }}">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "{{ schema_type }}",
+          "headline": {{ page_heading|tojson }},
+          "name": {{ page_title|tojson }},
+          "description": {{ page_description|tojson }},
+          "url": {{ page_url|tojson }},
+          "inLanguage": "ru-RU",
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "Nika CRM Demo",
+            "url": {{ (canonical_url ~ '/')|tojson }}
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Александр Смелков"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Nika CRM",
+            "url": {{ (canonical_url ~ '/')|tojson }}
+          },
+          "image": {{ og_image_url|tojson }}
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {% for crumb in breadcrumb_items %}
+            {
+              "@type": "ListItem",
+              "position": {{ loop.index }},
+              "name": {{ crumb.name|tojson }},
+              "item": {{ crumb.item|tojson }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 <body class="ml-body ml-docs-body">
     <a class="ml-skip" href="#docs-main">К содержанию</a>
     <header class="ml-nav">
         <div class="ml-nav-inner">
-            <a class="ml-brand" href="{{ url_for('main.home') }}">Nika CRM</a>
-            <nav class="ml-nav-links" aria-label="Документация">
-                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'hub' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_hub') }}">Все разделы</a>
-                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'about' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_about') }}">О проекте</a>
-                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'guide' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_guide') }}">Руководство</a>
-                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'walkthrough' %} is-active{% endif %}" href="{{ url_for('public_docs.docs_walkthrough') }}">Сценарий дня</a>
+            <a class="ml-brand" href="{{ url_for('main.home') }}" aria-label="Nika CRM — на главную демо">Nika CRM</a>
+            <nav class="ml-nav-links" aria-label="Разделы документации">
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'hub' %} is-active{% endif %}"
+                   href="{{ url_for('public_docs.docs_hub') }}"
+                   {% if active_docs_nav == 'hub' %}aria-current="page"{% endif %}>Все разделы</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'about' %} is-active{% endif %}"
+                   href="{{ url_for('public_docs.docs_about') }}"
+                   {% if active_docs_nav == 'about' %}aria-current="page"{% endif %}>О проекте</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'guide' %} is-active{% endif %}"
+                   href="{{ url_for('public_docs.docs_guide') }}"
+                   {% if active_docs_nav == 'guide' %}aria-current="page"{% endif %}>Руководство</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'walkthrough' %} is-active{% endif %}"
+                   href="{{ url_for('public_docs.docs_walkthrough') }}"
+                   {% if active_docs_nav == 'walkthrough' %}aria-current="page"{% endif %}>Сценарий дня</a>
                 <a class="ml-btn ml-btn-primary" href="{{ url_for('main.home', login=1) }}">Войти в демо</a>
             </nav>
         </div>
     </header>
 
-    <main id="docs-main" class="ml-docs-wrap">
+    <nav class="ml-docs-breadcrumbs" aria-label="Хлебные крошки">
+        <ol>
+            {% for crumb in breadcrumb_items %}
+            <li>
+                {% if loop.last %}
+                <span aria-current="page">{{ crumb.name }}</span>
+                {% else %}
+                <a href="{{ crumb.item }}">{{ crumb.name }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+    </nav>
+
+    <main id="docs-main" class="ml-docs-wrap" tabindex="-1">
         {% block docs_body %}{% endblock %}
     </main>
 
@@ -44,7 +124,7 @@
         <p>
             <a href="{{ url_for('main.home') }}">На главную</a>
             · <a href="{{ url_for('public_docs.docs_hub') }}">Документация</a>
-            · <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+            · <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(откроется в новой вкладке)</span></a>
             · <a href="{{ windows_setup.github_download_url }}">Windows SETUP</a>
         </p>
         <p>© 2026 Александр Смелков, сервисный центр «Ника», Сочи</p>

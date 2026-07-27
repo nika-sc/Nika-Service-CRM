@@ -133,7 +133,7 @@ def create_app(config_class=Config):
             body = "\n".join([
                 "User-agent: *",
                 "Allow: /$",
-                "Allow: /docs",
+                "Allow: /docs$",
                 "Allow: /docs/",
                 "Allow: /static/",
                 "Allow: /sitemap.xml",
@@ -175,35 +175,38 @@ def create_app(config_class=Config):
             root = (request.url_root or '').rstrip('/')
         lastmod = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         image_url = f"{root}/static/marketing/og-landing.jpg"
-        docs_urls = (
-            f'  <url>\n    <loc>{root}/docs</loc>\n    <lastmod>{lastmod}</lastmod>\n'
-            '    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n'
-            f'  <url>\n    <loc>{root}/docs/walkthrough</loc>\n    <lastmod>{lastmod}</lastmod>\n'
-            '    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n'
-            f'  <url>\n    <loc>{root}/docs/guide</loc>\n    <lastmod>{lastmod}</lastmod>\n'
-            '    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n'
-            f'  <url>\n    <loc>{root}/docs/about</loc>\n    <lastmod>{lastmod}</lastmod>\n'
-            '    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n'
+
+        def url_entry(path: str, priority: str, changefreq: str = "weekly", extra: str = "") -> str:
+            loc = f"{root}{path}" if path != "/" else f"{root}/"
+            return (
+                "  <url>\n"
+                f"    <loc>{loc}</loc>\n"
+                f"    <lastmod>{lastmod}</lastmod>\n"
+                f"    <changefreq>{changefreq}</changefreq>\n"
+                f"    <priority>{priority}</priority>\n"
+                f'    <xhtml:link rel="alternate" hreflang="ru-RU" href="{loc}" />\n'
+                f'    <xhtml:link rel="alternate" hreflang="ru" href="{loc}" />\n'
+                f'    <xhtml:link rel="alternate" hreflang="x-default" href="{loc}" />\n'
+                f"{extra}"
+                "  </url>\n"
+            )
+
+        home_extra = (
+            "    <image:image>\n"
+            f"      <image:loc>{image_url}</image:loc>\n"
+            "      <image:title>Nika CRM — бесплатная CRM для сервисных центров</image:title>\n"
+            "    </image:image>\n"
         )
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
             '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n'
             '        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
-            '  <url>\n'
-            f'    <loc>{root}/</loc>\n'
-            f'    <lastmod>{lastmod}</lastmod>\n'
-            '    <changefreq>weekly</changefreq>\n'
-            '    <priority>1.0</priority>\n'
-            f'    <xhtml:link rel="alternate" hreflang="ru-RU" href="{root}/" />\n'
-            f'    <xhtml:link rel="alternate" hreflang="ru" href="{root}/" />\n'
-            f'    <xhtml:link rel="alternate" hreflang="x-default" href="{root}/" />\n'
-            '    <image:image>\n'
-            f'      <image:loc>{image_url}</image:loc>\n'
-            '      <image:title>Nika CRM — бесплатная CRM для сервисных центров</image:title>\n'
-            '    </image:image>\n'
-            '  </url>\n'
-            f'{docs_urls}'
+            f'{url_entry("/", "1.0", extra=home_extra)}'
+            f'{url_entry("/docs", "0.9")}'
+            f'{url_entry("/docs/walkthrough", "0.85")}'
+            f'{url_entry("/docs/guide", "0.85")}'
+            f'{url_entry("/docs/about", "0.7", changefreq="monthly")}'
             '</urlset>\n'
         )
         return Response(xml, mimetype='application/xml')
@@ -234,6 +237,31 @@ def create_app(config_class=Config):
             "Страница с заявками: закрепление, поиск, фильтры и выставление статуса",
             "Темная тема",
         ]
+        walkthrough = [
+            ("01-login.png", "Вход в демо Nika CRM"),
+            ("02-dashboard.png", "Дашборд после входа"),
+            ("03-add-order.png", "Форма новой заявки"),
+            ("04-order-detail.png", "Карточка заявки"),
+            ("05-add-service.png", "Добавление услуги"),
+            ("06-add-part.png", "Добавление товара"),
+            ("07-order-items.png", "Товары и услуги на заявке"),
+            ("08-add-payment.png", "Модал добавления оплаты"),
+            ("09-order-payments.png", "Платежи на заявке"),
+            ("10-change-status.png", "Смена статуса"),
+            ("11-close-order.png", "Закрытие заявки"),
+            ("12-print-modal.png", "Печать документов"),
+            ("13-salary-dashboard.png", "Дашборд зарплаты"),
+            ("14-salary-accruals.png", "Начисления сотрудника"),
+            ("15-salary-payout.png", "Регистрация выплаты"),
+            ("16-salary-payments-list.png", "Список выплат"),
+            ("17-finance-cash.png", "Касса"),
+            ("18-cash-manual.png", "Ручной приход"),
+            ("19-report-day.png", "Сводка дня"),
+            ("20-report-cash.png", "Отчёт кассы"),
+            ("21-shop.png", "Магазин"),
+            ("22-purchases.png", "Закупки"),
+            ("23-staff-chat.png", "Чат сотрудников"),
+        ]
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
@@ -244,6 +272,17 @@ def create_app(config_class=Config):
             lines.extend([
                 "  <url>",
                 f"    <loc>{root}/#screenshots</loc>",
+                "    <image:image>",
+                f"      <image:loc>{image_url}</image:loc>",
+                f"      <image:title>{title}</image:title>",
+                "    </image:image>",
+                "  </url>",
+            ])
+        for fname, title in walkthrough:
+            image_url = f"{root}/docs/assets/walkthrough/{fname}"
+            lines.extend([
+                "  <url>",
+                f"    <loc>{root}/docs/walkthrough</loc>",
                 "    <image:image>",
                 f"      <image:loc>{image_url}</image:loc>",
                 f"      <image:title>{title}</image:title>",

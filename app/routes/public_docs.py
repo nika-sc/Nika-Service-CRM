@@ -7,7 +7,6 @@ from pathlib import Path
 from flask import (
     Blueprint,
     abort,
-    current_app,
     g,
     render_template,
     send_from_directory,
@@ -21,23 +20,48 @@ bp = Blueprint("public_docs", __name__)
 logger = logging.getLogger(__name__)
 
 _PAGES = {
+    "hub": {
+        "title": "Документация Nika CRM — руководства без GitHub",
+        "description": (
+            "Документация Nika CRM на демо-сайте: сценарий рабочего дня со скриншотами, "
+            "полное руководство пользователя и инструкция по установке."
+        ),
+        "heading": "Как работать в Nika CRM",
+        "nav": "hub",
+        "path": "/docs",
+    },
     "about": {
         "file": "ABOUT.md",
-        "title": "О проекте и установка — Nika CRM",
-        "nav": "about",
+        "title": "О проекте и установка Nika CRM — Windows, Docker, демо",
+        "description": (
+            "Что умеет бесплатная open-source CRM для сервисных центров: Windows SETUP, "
+            "Docker, быстрый старт и контакты поддержки."
+        ),
         "heading": "О проекте и установка",
+        "nav": "about",
+        "path": "/docs/about",
     },
     "guide": {
         "file": "USER_GUIDE.md",
-        "title": "Руководство пользователя — Nika CRM",
-        "nav": "guide",
+        "title": "Руководство пользователя Nika CRM — заявки, склад, касса",
+        "description": (
+            "Полное руководство по Nika CRM: заявки, клиенты, склад, магазин, касса, "
+            "зарплата, отчёты, портал клиента и чат сотрудников."
+        ),
         "heading": "Руководство пользователя",
+        "nav": "guide",
+        "path": "/docs/guide",
     },
     "walkthrough": {
         "file": "USER_WALKTHROUGH.md",
-        "title": "Сценарий рабочего дня — Nika CRM",
-        "nav": "walkthrough",
+        "title": "Сценарий рабочего дня в Nika CRM — от заявки до кассы",
+        "description": (
+            "Пошаговый сценарий: вход, создание заявки, услуги и товары, оплата, "
+            "закрытие, зарплата и сведение кассы — со скриншотами интерфейса."
+        ),
         "heading": "Пошаговый сценарий рабочего дня",
+        "nav": "walkthrough",
+        "path": "/docs/walkthrough",
     },
 }
 
@@ -47,6 +71,34 @@ def _require_public_landing():
         abort(404)
 
 
+def _common_ctx(slug: str, content_html: str | None = None) -> dict:
+    meta = _PAGES[slug]
+    canonical = _landing_canonical_url()
+    path = meta["path"]
+    page_url = f"{canonical}{path}"
+    crumbs = [
+        {"name": "Главная", "item": f"{canonical}/"},
+        {"name": "Документация", "item": f"{canonical}/docs"},
+    ]
+    if slug != "hub":
+        crumbs.append({"name": meta["heading"], "item": page_url})
+    return {
+        "canonical_url": canonical,
+        "page_url": page_url,
+        "page_path": path,
+        "page_title": meta["title"],
+        "page_description": meta["description"],
+        "page_heading": meta["heading"],
+        "active_docs_nav": meta["nav"],
+        "content_html": content_html,
+        "github_url": "https://github.com/nika-sc/Nika-Service-CRM",
+        "windows_setup": _windows_setup_info(),
+        "og_image_url": f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
+        "breadcrumb_items": crumbs,
+        "schema_type": "WebPage" if slug == "hub" else "TechArticle",
+    }
+
+
 def _page_ctx(slug: str) -> dict:
     meta = _PAGES[slug]
     try:
@@ -54,17 +106,7 @@ def _page_ctx(slug: str) -> dict:
     except FileNotFoundError:
         logger.exception("Public docs file missing: %s", meta["file"])
         abort(404)
-    canonical = _landing_canonical_url()
-    return {
-        "canonical_url": canonical,
-        "page_title": meta["title"],
-        "page_heading": meta["heading"],
-        "active_docs_nav": meta["nav"],
-        "content_html": html,
-        "github_url": "https://github.com/nika-sc/Nika-Service-CRM",
-        "windows_setup": _windows_setup_info(),
-        "og_image_url": f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
-    }
+    return _common_ctx(slug, html)
 
 
 @bp.before_request
@@ -76,16 +118,7 @@ def _mark_indexable():
 @bp.route("/docs")
 def docs_hub():
     _require_public_landing()
-    canonical = _landing_canonical_url()
-    return render_template(
-        "marketing/docs_hub.html",
-        canonical_url=canonical,
-        page_title="Документация — Nika CRM",
-        active_docs_nav="hub",
-        github_url="https://github.com/nika-sc/Nika-Service-CRM",
-        windows_setup=_windows_setup_info(),
-        og_image_url=f"{canonical}{url_for('static', filename='marketing/og-landing.jpg')}",
-    )
+    return render_template("marketing/docs_hub.html", **_common_ctx("hub"))
 
 
 @bp.route("/docs/about")

@@ -75,13 +75,52 @@ def _render_cached(rel_path: str, mtime_ns: int) -> str:
         extensions=["tables", "fenced_code", "toc", "sane_lists"],
         output_format="html5",
     )
-    return bleach.clean(
+    # Один H1 на странице — заголовок уже в шаблоне
+    html = re.sub(r"<h1\b[^>]*>.*?</h1>\s*", "", html, count=1, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = bleach.clean(
         html,
         tags=_ALLOWED_TAGS,
         attributes=_ALLOWED_ATTRS,
         protocols=["http", "https", "mailto"],
         strip=True,
     )
+    return _enhance_html_a11y(cleaned)
+
+
+def _enhance_html_a11y(html: str) -> str:
+    """Добавляет lazy-loading и запасной alt для картинок; помечает внешние ссылки."""
+
+    def img_repl(match: re.Match) -> str:
+        tag = match.group(0)
+        if "loading=" not in tag:
+            tag = tag[:-1] + ' loading="lazy"' + tag[-1]
+        if "decoding=" not in tag:
+            tag = tag[:-1] + ' decoding="async"' + tag[-1]
+        if not re.search(r'\balt\s*=', tag, flags=re.IGNORECASE):
+            src_m = re.search(r'\bsrc="([^"]+)"', tag)
+            name = Path(src_m.group(1)).name if src_m else "Скриншот"
+            tag = tag[:-1] + f' alt="{name}"' + tag[-1]
+        elif re.search(r'\balt=""', tag):
+            src_m = re.search(r'\bsrc="([^"]+)"', tag)
+            name = Path(src_m.group(1)).stem.replace("-", " ") if src_m else "Скриншот"
+            tag = re.sub(r'\balt=""', f'alt="{name}"', tag, count=1)
+        return tag
+
+    html = re.sub(r"<img\b[^>]*>", img_repl, html, flags=re.IGNORECASE)
+
+    def a_repl(match: re.Match) -> str:
+        tag, inner = match.group(1), match.group(2)
+        href_m = re.search(r'\bhref="([^"]+)"', tag)
+        href = href_m.group(1) if href_m else ""
+        if href.startswith("http") and "target=" not in tag:
+            if "rel=" not in tag:
+                tag = tag[:-1] + ' rel="noopener noreferrer"' + tag[-1]
+            tag = tag[:-1] + ' target="_blank"' + tag[-1]
+            if "visually-hidden" not in inner:
+                inner += ' <span class="visually-hidden">(откроется в новой вкладке)</span>'
+        return f"{tag}{inner}</a>"
+
+    return re.sub(r"(<a\b[^>]*>)(.*?)</a>", a_repl, html, flags=re.IGNORECASE | re.DOTALL)
 
 
 def render_docs_markdown(rel_path: str) -> str:

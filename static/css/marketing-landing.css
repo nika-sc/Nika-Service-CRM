@@ -39,15 +39,44 @@ body.ml-body {
 
 .ml-skip {
   position: absolute;
-  left: -9999px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
-.ml-skip:focus {
+.ml-skip:focus,
+.ml-skip:focus-visible {
+  position: fixed;
   left: 1rem;
   top: 1rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  clip: auto;
+  overflow: visible;
   z-index: 1000;
   background: #fff;
   color: #111;
-  padding: 0.5rem 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.35rem;
+  font-family: var(--ml-font-ui);
+  text-decoration: none;
+  outline: 3px solid var(--ml-accent);
+  outline-offset: 2px;
+}
+
+.ml-body a:focus-visible,
+.ml-body button:focus-visible,
+.ml-body summary:focus-visible,
+.ml-body .ml-btn:focus-visible,
+.ml-body .ml-shot-card:focus-visible,
+.ml-body .ml-docs-card:focus-visible {
+  outline: 3px solid var(--ml-accent);
+  outline-offset: 2px;
 }
 
 .ml-nav {
@@ -62,6 +91,22 @@ body.ml-body {
   backdrop-filter: blur(10px);
   background: rgba(15, 28, 36, 0.72);
   border-bottom: 1px solid var(--ml-border);
+}
+
+.ml-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.ml-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
 }
 
 .ml-brand {
@@ -824,6 +869,40 @@ body.ml-body {
 }
 
 /* —— Public docs pages (/docs) —— */
+.ml-docs-breadcrumbs {
+  width: min(920px, calc(100% - 2rem));
+  margin: 1rem auto 0;
+}
+.ml-docs-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--ml-font-ui);
+  font-size: 0.9rem;
+  color: var(--ml-muted);
+}
+.ml-docs-breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ml-docs-breadcrumbs li:not(:last-child)::after {
+  content: "/";
+  color: rgba(168, 187, 194, 0.55);
+}
+.ml-docs-breadcrumbs a {
+  color: var(--ml-accent);
+  text-decoration: none;
+}
+.ml-docs-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+.ml-docs-breadcrumbs [aria-current="page"] {
+  color: var(--ml-text);
+}
 .ml-docs-body .ml-nav-links a.is-active {
   color: var(--ml-accent);
   border-color: rgba(43, 184, 166, 0.45);
@@ -831,6 +910,13 @@ body.ml-body {
 .ml-docs-wrap {
   width: min(920px, calc(100% - 2rem));
   margin: 1.5rem auto 3rem;
+}
+.ml-docs-wrap:focus {
+  outline: none;
+}
+.ml-docs-content img:not([alt]),
+.ml-docs-content img[alt=""] {
+  outline: 2px dashed rgba(232, 184, 109, 0.55);
 }
 .ml-docs-header {
   margin-bottom: 1.5rem;
