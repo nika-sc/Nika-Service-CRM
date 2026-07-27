@@ -565,6 +565,27 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_csrf_token():
         return dict(csrf_token=lambda: generate_csrf())
+
+    @app.context_processor
+    def inject_demo_visitor_stats():
+        """Флаг и счётчик онлайн для демо-баннера/чипа (только при DEMO_VISITOR_STATS)."""
+        enabled = bool(app.config.get("DEMO_VISITOR_STATS"))
+        ctx = {
+            "demo_visitor_stats_enabled": enabled,
+            "demo_online_count": 0,
+        }
+        if not enabled:
+            return ctx
+        try:
+            from flask_login import current_user
+            from app.services.demo_visitor_service import DemoVisitorService
+            ctx["demo_online_count"] = DemoVisitorService.online_count()
+            # Админский чип в шапке
+            role = (getattr(current_user, "role", None) or "").strip().lower() if getattr(current_user, "is_authenticated", False) else ""
+            ctx["demo_visitor_stats_admin"] = role == "admin"
+        except Exception:
+            pass
+        return ctx
     
     # Регистрация Blueprint'ов
     from app.routes.main import bp as main_bp
@@ -591,6 +612,7 @@ def create_app(config_class=Config):
     from app.routes.search import bp as search_bp
     from app.routes.customer_portal import bp as customer_portal_bp
     from app.routes.staff_chat import bp as staff_chat_bp, init_staff_chat_socketio
+    from app.routes.demo_visitors import bp as demo_visitors_bp
     
     # Инициализируем limiter для blueprints
     from app.routes.main import init_limiter as init_main_limiter
@@ -627,6 +649,7 @@ def create_app(config_class=Config):
     app.register_blueprint(search_bp)
     app.register_blueprint(customer_portal_bp)
     app.register_blueprint(staff_chat_bp)
+    app.register_blueprint(demo_visitors_bp)
 
     if socketio is not None:
         try:

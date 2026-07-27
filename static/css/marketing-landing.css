@@ -80,6 +80,37 @@ body.ml-body {
   align-items: center;
 }
 
+.ml-online-badge {
+  font-family: var(--ml-font-ui);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--ml-border);
+  background: rgba(43, 184, 166, 0.12);
+  color: var(--ml-text);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.ml-online-badge strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--ml-accent);
+}
+.ml-online-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #3ddea8;
+  box-shadow: 0 0 0 0 rgba(61, 222, 168, 0.55);
+  animation: ml-online-pulse 1.8s ease-out infinite;
+}
+@keyframes ml-online-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(61, 222, 168, 0.55); }
+  70% { box-shadow: 0 0 0 0.45rem rgba(61, 222, 168, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(61, 222, 168, 0); }
+}
+
 .ml-btn {
   font-family: var(--ml-font-ui);
   display: inline-flex;

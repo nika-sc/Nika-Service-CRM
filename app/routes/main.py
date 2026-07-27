@@ -386,6 +386,17 @@ def login():
                 remember_me = request.form.get('remember_me') in ('1', 'on', 'true', 'True')
                 login_user(user, remember=remember_me)
                 UserService.update_user_last_login(user.id)
+                try:
+                    from app.services.demo_visitor_service import DemoVisitorService
+                    DemoVisitorService.record_event(
+                        event_type="login",
+                        user_id=user.id,
+                        username=username,
+                        path=request.path,
+                        client_instance_id=request.form.get("client_instance_id"),
+                    )
+                except Exception:
+                    pass
                 _reset_login_guard(login_key)
                 flash(f'Добро пожаловать, {username}!', 'success')
                 next_page = request.args.get('next') or request.form.get('next')
@@ -409,6 +420,16 @@ def login():
 @login_required
 def logout():
     """Выход из системы."""
+    try:
+        from app.services.demo_visitor_service import DemoVisitorService
+        DemoVisitorService.record_event(
+            event_type="logout",
+            user_id=getattr(current_user, "id", None),
+            username=getattr(current_user, "username", None),
+            path=request.path,
+        )
+    except Exception:
+        pass
     logout_user()
     flash('Вы вышли из системы', 'info')
     if _public_landing_enabled():

@@ -4,7 +4,7 @@
         <i class="fas fa-tachometer-alt" style="font-size: 1.5rem; display: block; text-align: center;"></i>
         <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Nika CRM</small>
     </a>
-    <ul class="nav nav-pills nav-flush flex-column mb-auto">
+    <ul class="nav nav-pills nav-flush flex-column">
         {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
         <li>
             <a href="{{ url_for('orders.all_orders') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}" 
@@ -77,26 +77,41 @@
             </a>
         </li>
         {% endif %}
+        <li class="dropend">
+            <a href="#" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center link-dark text-decoration-none dropdown-toggle"
+               id="dropdownUser3" data-bs-toggle="dropdown" aria-expanded="false" title="Пользователь">
+                <i class="fas fa-user-circle" style="font-size: 1.5rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Профиль</small>
+            </a>
+            <ul class="dropdown-menu text-small shadow" aria-labelledby="dropdownUser3">
+                {% if has_permission('manage_users') %}
+                <li><a class="dropdown-item" href="{{ url_for('main.settings') }}">Настройки</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="POST" action="{{ url_for('main.logout') }}" class="m-0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="dropdown-item">Выход</button>
+                    </form>
+                </li>
+            </ul>
+        </li>
+        {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders', 'view_finance', 'manage_finance', 'view_warehouse', 'manage_warehouse', 'manage_shop', 'salary.view') %}
+        <li>
+            <button type="button"
+                    class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center staff-chat-sidebar-btn w-100"
+                    id="staffChatFab"
+                    title="Чат сотрудников"
+                    aria-label="Чат сотрудников">
+                <span class="staff-chat-sidebar-icon-wrap">
+                    <i class="fas fa-comments" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                    <span class="staff-chat-fab-badge" id="staffChatFabBadge">0</span>
+                </span>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Чат</small>
+            </button>
+        </li>
+        {% endif %}
     </ul>
-    <div class="dropdown border-top">
-        <a href="#" class="d-flex flex-column align-items-center justify-content-center p-2 link-dark text-decoration-none dropdown-toggle" 
-           id="dropdownUser3" data-bs-toggle="dropdown" aria-expanded="false" title="Пользователь">
-            <i class="fas fa-user-circle" style="font-size: 1.5rem; display: block; text-align: center;"></i>
-            <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Профиль</small>
-        </a>
-        <ul class="dropdown-menu text-small shadow" aria-labelledby="dropdownUser3" style="position: fixed; left: 5.5rem; bottom: 0; margin-bottom: 0; transform: none;">
-            {% if has_permission('manage_users') %}
-            <li><a class="dropdown-item" href="{{ url_for('main.settings') }}">Настройки</a></li>
-            {% endif %}
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form method="POST" action="{{ url_for('main.logout') }}" class="m-0">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="dropdown-item">Выход</button>
-                </form>
-            </li>
-        </ul>
-    </div>
 </div>
 
 <style>

@@ -1,46 +1,82 @@
-.staff-chat-fab {
-    position: fixed;
-    right: 18px;
-    bottom: 18px;
-    z-index: 1205;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
+/* Кнопка чата в левом сайдбаре (под профилем) */
+.staff-chat-sidebar-btn {
+    position: relative;
     border: 0;
-    background: #0d6efd;
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(13, 110, 253, 0.35);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 0;
 }
 
-.staff-chat-fab:hover {
-    filter: brightness(1.04);
+.staff-chat-sidebar-btn:hover {
+    background-color: rgba(13, 110, 253, 0.08);
+    color: #0d6efd;
+}
+
+.staff-chat-sidebar-btn.is-active {
+    background-color: rgba(13, 110, 253, 0.14);
+    color: #0d6efd;
+}
+
+.staff-chat-sidebar-btn.has-unread {
+    color: #dc3545;
+}
+
+.staff-chat-sidebar-btn.has-unread i {
+    color: #dc3545;
+    animation: staff-chat-unread-pulse 1.4s ease-in-out infinite;
+}
+
+.staff-chat-sidebar-btn.has-unread small {
+    color: #dc3545;
+    font-weight: 700;
+}
+
+.staff-chat-sidebar-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    overflow: visible;
 }
 
 .staff-chat-fab-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
+    top: -7px;
+    right: -12px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
     background: #dc3545;
     color: #fff;
-    font-size: 11px;
-    line-height: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
     text-align: center;
     display: none;
+    z-index: 3;
+    box-shadow: 0 0 0 2px #f8f9fa;
+    pointer-events: none;
+}
+
+@keyframes staff-chat-unread-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
 }
 
 .staff-chat-panel {
     position: fixed;
-    right: 18px;
-    bottom: 82px;
+    left: calc(5.5rem + 10px);
+    top: 120px;
+    bottom: auto;
     z-index: 1205;
     width: 360px;
-    max-width: calc(100vw - 24px);
+    max-width: calc(100vw - 5.5rem - 24px);
     height: 564px;
-    max-height: calc(100vh - 110px);
+    max-height: calc(100vh - 140px);
     background: #fff;
     border: 1px solid #dbe1e6;
     border-radius: 14px;
@@ -429,6 +465,14 @@
     padding: 4px 12px 8px;
 }
 
+body.theme-dark .staff-chat-sidebar-btn:hover,
+html.theme-dark .staff-chat-sidebar-btn:hover,
+body.theme-dark .staff-chat-sidebar-btn.is-active,
+html.theme-dark .staff-chat-sidebar-btn.is-active {
+    background-color: rgba(77, 138, 240, 0.2);
+    color: #8bb6ff;
+}
+
 body.theme-dark .staff-chat-panel,
 html.theme-dark .staff-chat-panel {
     background: #23252a;
@@ -588,13 +632,6 @@ html.theme-dark .staff-chat-reaction-menu-btn:hover {
 }
 
 @media (max-width: 768px) {
-    .staff-chat-fab {
-        right: 12px;
-        bottom: max(12px, env(safe-area-inset-bottom));
-        width: 48px;
-        height: 48px;
-    }
-
     .staff-chat-panel {
         right: 0;
         left: 0;

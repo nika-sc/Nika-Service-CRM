@@ -183,6 +183,15 @@
         <div class="mac-mobile-overlay" id="macMobileOverlay"></div>
 
         <div class="mac-menu-actions">
+            {% if demo_visitor_stats_enabled and demo_visitor_stats_admin %}
+            <a href="{{ url_for('demo_visitors.demo_visitors_report') }}"
+               class="mac-action-btn demo-online-chip"
+               title="Статистика заходов демо"
+               style="gap:.35rem; width:auto; padding:0 .65rem; text-decoration:none;">
+                <i class="fas fa-circle" style="font-size:.55rem; color:#22c55e;"></i>
+                <span style="font-size:.8rem; white-space:nowrap;">Онлайн: <strong data-demo-online-count>{{ demo_online_count }}</strong></span>
+            </a>
+            {% endif %}
             <div class="mac-notifications-dropdown">
                 <button class="mac-action-btn" id="notificationsBtn" title="Уведомления">
                     <i class="fas fa-bell"></i>

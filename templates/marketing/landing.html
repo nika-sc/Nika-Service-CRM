@@ -172,6 +172,12 @@
     <header class="ml-nav">
         <a class="ml-brand" href="{{ canonical_url }}/">Nika CRM</a>
         <div class="ml-nav-actions">
+            {% if demo_visitor_stats_enabled %}
+            <span class="ml-online-badge" title="Сейчас работают в демо CRM" aria-live="polite">
+                <span class="ml-online-dot" aria-hidden="true"></span>
+                Сейчас в CRM: <strong data-demo-online-count>{{ demo_online_count }}</strong>
+            </span>
+            {% endif %}
             <a class="ml-btn ml-btn-ghost" href="#windows-setup">
                 <i class="fab fa-windows" aria-hidden="true"></i> Windows
             </a>
@@ -681,5 +687,13 @@
         if (user) user.focus();
     })();
     </script>
+    {% if demo_visitor_stats_enabled %}
+    <script>
+        window.demoVisitorStatsEnabled = true;
+        window.demoVisitorHeartbeat = false;
+        window.demoVisitorPollOnline = true;
+    </script>
+    <script src="{{ url_for('static', filename='js/demo_presence.js') }}"></script>
+    {% endif %}
 </body>
 </html>

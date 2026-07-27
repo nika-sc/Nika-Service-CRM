@@ -2,7 +2,7 @@
     const ROOM_KEY = "global";
     const NS = "/staff-chat";
     const ALWAYS_OPEN = false;
-    const START_OPEN = true;
+    const START_OPEN = false;
     const STORAGE_ACTOR = `staff_chat_actor_${window.currentUserId || "anon"}`;
     const STORAGE_CLIENT = `staff_chat_client_${window.currentUserId || "anon"}`;
     const STORAGE_PANEL_OPEN = `staff_chat_open_${window.currentUserId || "anon"}`;
@@ -166,7 +166,9 @@
             panel.classList.toggle("is-hidden", !state.isOpen);
         }
         if (fab) {
-            fab.style.display = state.isOpen ? "none" : "";
+            // Кнопка в сайдбаре всегда видна; подсвечиваем активное состояние
+            fab.classList.toggle("is-active", state.isOpen);
+            fab.setAttribute("aria-pressed", state.isOpen ? "true" : "false");
         }
         if (state.isOpen) {
             state.unread = 0;
@@ -390,9 +392,8 @@
                 // Звук пытаемся проиграть сразу при входящем событии, даже если вкладка не в фокусе.
                 // Частоту ограничиваем в playIncomingSound(), чтобы не было "залпа".
                 playIncomingSound();
-                if (!state.isOpen) {
-                    setPanelOpen(true);
-                }
+                // Не открываем панель автоматически — иначе счётчик пропущенных
+                // сразу обнуляется и красный бейдж не виден.
                 alertDocumentTitleForIncomingChat(hadPanelOpen);
                 maybeBrowserNotify(message, hadPanelOpen, !attentionOnPage);
             }
@@ -401,7 +402,7 @@
         if (state.isOpen) {
             scrollToBottom();
             scheduleReadCursorPost();
-        } else if (fromSocket) {
+        } else if (fromSocket && !own) {
             state.unread += 1;
             updateUnreadBadge();
         }
@@ -1086,12 +1087,22 @@
 
     function updateUnreadBadge() {
         const badge = el("staffChatFabBadge");
-        if (!badge) return;
-        if (state.unread > 0) {
-            badge.style.display = "inline-block";
-            badge.textContent = state.unread > 99 ? "99+" : String(state.unread);
-        } else {
-            badge.style.display = "none";
+        const fab = el("staffChatFab");
+        const hasUnread = state.unread > 0;
+        if (badge) {
+            if (hasUnread) {
+                badge.style.display = "inline-block";
+                badge.textContent = state.unread > 99 ? "99+" : String(state.unread);
+                badge.setAttribute("aria-label", `Пропущено сообщений: ${state.unread}`);
+            } else {
+                badge.style.display = "none";
+                badge.textContent = "0";
+                badge.removeAttribute("aria-label");
+            }
+        }
+        if (fab) {
+            fab.classList.toggle("has-unread", hasUnread);
+            fab.setAttribute("data-unread", hasUnread ? String(state.unread) : "0");
         }
     }
 

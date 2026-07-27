@@ -79,6 +79,14 @@
                 <span>Логи действий</span>
             </a>
         </li>
+        {% if demo_visitor_stats_enabled and demo_visitor_stats_admin %}
+        <li class="page-menu-item">
+            <a href="{{ url_for('demo_visitors.demo_visitors_report') }}" class="page-menu-link{% if '/reports/demo-visitors' in request.path %} active{% endif %}">
+                <i class="fas fa-user-clock"></i>
+                <span>Демо: онлайн</span>
+            </a>
+        </li>
+        {% endif %}
         <li class="page-menu-item">
             <a href="{{ url_for('reports.salary_report') }}" class="page-menu-link{% if '/reports/salary' in request.path %} active{% endif %}">
                 <i class="fas fa-money-bill-wave"></i>

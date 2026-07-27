@@ -28,20 +28,14 @@ run_pip() {
 }
 
 # nginx отдаёт /static из DEMO_ROOT; каталог не должен быть 750 (www-data потеряет доступ).
+# Владелец — root (как в unit User=root); не переключать на отдельного пользователя.
 fix_static_perms() {
-  if [[ -x /usr/local/sbin/nikacrm-fix-static-perms.sh ]]; then
-    /usr/local/sbin/nikacrm-fix-static-perms.sh || log "fix-static-perms завершился с ошибкой"
-    return 0
-  fi
-  if id nikacrm >/dev/null 2>&1; then
-    chown -R nikacrm:nikacrm "$DEMO_ROOT" || true
-  fi
   chmod 755 "$DEMO_ROOT" || true
   if [[ -d "${DEMO_ROOT}/static" ]]; then
     find "${DEMO_ROOT}/static" -type d -exec chmod 755 {} \;
     find "${DEMO_ROOT}/static" -type f -exec chmod 644 {} \;
   fi
-  chmod 640 "${DEMO_ROOT}/.env" 2>/dev/null || true
+  chmod 600 "${DEMO_ROOT}/.env" 2>/dev/null || true
 }
 
 case "$MODE" in

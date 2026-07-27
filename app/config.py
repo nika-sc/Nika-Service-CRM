@@ -131,6 +131,13 @@ class Config:
     DEMO_LOGIN_PASSWORD_HINT = (os.environ.get("DEMO_LOGIN_PASSWORD_HINT") or "Demo2026!").strip()
     # Многострочный текст: в .env можно писать \n для переносов
     DEMO_SERVER_SPEC = (os.environ.get("DEMO_SERVER_SPEC") or "").strip().replace("\\n", "\n")
+    # Демо-статистика заходов / баннер «онлайн» (только demo-VPS)
+    DEMO_VISITOR_STATS = os.environ.get("DEMO_VISITOR_STATS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     # Реферальная ссылка на VPS (панель демо-входа; можно переопределить в .env)
     REFERRAL_VPS_PROVIDER_LABEL = (os.environ.get("REFERRAL_VPS_PROVIDER_LABEL") or "FirstVDS").strip()
