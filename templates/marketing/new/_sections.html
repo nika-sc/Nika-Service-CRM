@@ -152,8 +152,13 @@
 <section class="nx-section" id="howto" aria-labelledby="howto-title">
     <h2 id="howto-title">Как запустить свою копию</h2>
     <p class="nx-lead">
-        Краткий путь. Подробности — в README
-        <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">nika-sc/Nika-Service-CRM <span class="visually-hidden">(откроется в новой вкладке)</span></a>.
+        Не хотите длинную инструкцию? Три пути:
+        <strong>бесплатная установка</strong> при покупке VPS у
+        <a href="{{ vps_referral.url }}" target="_blank" rel="noopener noreferrer">{{ vps_referral.label }} <span class="visually-hidden">(откроется в новой вкладке)</span></a>
+        (промокод <code>{{ vps_referral.promo }}</code>) — напишите
+        <a href="{{ vps_referral.mailto }}">{{ vps_referral.email }}</a>;
+        <a href="#windows-setup">Windows SETUP</a>;
+        или самостоятельно по README.
     </p>
     <ol class="nx-steps">
         <li>Клонируйте репозиторий и создайте виртуальное окружение Python.</li>

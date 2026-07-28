@@ -21,6 +21,14 @@
 
 Подробно по экранам: [руководство](/docs/guide) и [сценарий рабочего дня](/docs/walkthrough).
 
+## Быстрый старт без длинной инструкции
+
+| Путь | Когда выбирать |
+|------|----------------|
+| **[Бесплатная установка на VPS](#free-install-vps)** | Купили сервер у FirstVDS по рефералу — автор поставит CRM и поддержит |
+| **[Windows SETUP](#windows-setup-offline)** | Нужен свой ПК Windows 10/11, без Linux |
+| **Самостоятельно** | Docker / Ubuntu / локальная разработка — разделы ниже |
+
 ## Быстрый старт
 
 ### 1. Клонирование
@@ -54,8 +62,8 @@ docker compose up -d --build
 
 Санитизированный bootstrap-дамп: [`database/bootstrap/`](https://github.com/nika-sc/Nika-Service-CRM/tree/main/database/bootstrap).
 
-## Помощь
+## Помощь и бесплатная установка
 
 - Баги и идеи: `nika-sc@bk.ru` (тема `Nika-CRM`)
-- Помощь по установке: `nika-sc@bk.ru` (тема `Nika-CRM Помощь по установке`)
+- **Бесплатная установка/поддержка** при покупке VPS у FirstVDS по [рефералу](https://firstvds.ru/?from=528402) и промокоду **`648528402`**: `nika-sc@bk.ru` (тема `Nika-CRM Помощь по установке`)
 - Telegram: [t.me/nikaserviceadler](https://t.me/nikaserviceadler)

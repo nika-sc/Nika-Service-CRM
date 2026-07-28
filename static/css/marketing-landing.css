@@ -180,6 +180,61 @@ body.ml-body {
   background: #3dceb9;
   color: #06241f;
 }
+.ml-btn-help {
+  background: linear-gradient(135deg, #e8b86d, #f0c97a);
+  color: #1a1205;
+  font-weight: 700;
+  border-color: rgba(232, 184, 109, 0.55);
+  box-shadow: 0 0 0 1px rgba(232, 184, 109, 0.25);
+}
+.ml-btn-help:hover {
+  background: linear-gradient(135deg, #f0c97a, #e8b86d);
+  color: #1a1205;
+}
+.ml-btn-help--nav {
+  padding: 0.55rem 0.9rem;
+  font-size: 0.92rem;
+}
+.ml-install-paths {
+  font-family: var(--ml-font-ui);
+  font-size: 0.92rem;
+  color: var(--ml-muted);
+  margin: 0.85rem 0 0.35rem;
+  max-width: 42rem;
+}
+.ml-text-link {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: var(--ml-accent-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  font: inherit;
+}
+.ml-text-link:hover {
+  color: #f5d39a;
+}
+.ml-install-options {
+  padding-left: 1.2rem;
+  margin-bottom: 1.25rem;
+}
+.ml-install-options li {
+  margin-bottom: 0.65rem;
+}
+.ml-vps-offer {
+  border: 1px solid rgba(232, 184, 109, 0.35);
+  background: rgba(232, 184, 109, 0.08);
+  border-radius: 10px;
+  padding: 1rem 1.1rem 1.15rem;
+}
+.ml-promo-code {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 .ml-btn-ghost {
   background: transparent;
   border-color: var(--ml-border);

@@ -25,13 +25,21 @@
             width: 100%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
+        .login-card.login-card-wide {
+            max-width: 560px;
+        }
+        .demo-login-spec {
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
     <main class="container" role="main">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <div class="card login-card">
+                <div class="card login-card{% if demo_login %} login-card-wide{% endif %}">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
                             <i class="fas fa-tools fa-3x text-primary mb-3"></i>
@@ -101,7 +109,7 @@
                                 {% endif %}
                             </p>
                             <p class="mb-0 text-muted">
-                                Автор проекта может помочь с первичной настройкой и запуском CRM на VPS у этого провайдера.
+                                При покупке VPS по реферальной ссылке и промокоду автор <strong>бесплатно</strong> установит CRM и поможет с поддержкой.
                                 Напишите на <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5">nika-sc@bk.ru</a>
                                 с темой <strong>Nika-CRM Помощь по установке</strong>
                                 или в <a href="https://t.me/nikaserviceadler" target="_blank" rel="noopener noreferrer">Telegram-канал</a>

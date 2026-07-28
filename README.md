@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://demo.nika-sc.ru/"><img src="https://img.shields.io/badge/Demo-online-2bb8a6?style=for-the-badge" alt="Live demo"></a>
+  <a href="https://firstvds.ru/?from=528402"><img src="https://img.shields.io/badge/Бесплатная%20установка-FirstVDS%20VPS-e8b86d?style=for-the-badge" alt="Free install via FirstVDS"></a>
   <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-0f1c24?style=for-the-badge" alt="MIT License"></a>
   <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
 </p>
@@ -18,14 +19,21 @@
 <p align="center">
   <a href="https://demo.nika-sc.ru/"><b>Открыть демо</b></a>
   ·
-  <a href="#установка"><b>Установка</b></a>
+  <a href="#free-install-vps"><b>Бесплатная установка на VPS</b></a>
+  ·
+  <a href="#windows-setup-offline"><b>Windows SETUP</b></a>
+  ·
+  <a href="#установка"><b>Установка своими силами</b></a>
   ·
   <a href="docs/USER_GUIDE.md"><b>Руководство</b></a>
   ·
-  <a href="docs/USER_WALKTHROUGH.md"><b>Сценарий дня</b></a>
-  ·
-  <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM"><b>Связаться</b></a>
+  <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5"><b>Связаться</b></a>
 </p>
+
+> **Не хотите читать длинную инструкцию?**  
+> **Бесплатно** установлю и помогу поддерживать CRM, если вы возьмёте VPS у партнёра **FirstVDS** по [реферальной ссылке](https://firstvds.ru/?from=528402) и промокоду **`648528402`**.  
+> Напишите на [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5) с темой **Nika-CRM Помощь по установке**.  
+> Либо поставьте сами: [Windows SETUP](#windows-setup-offline) или [короткий сценарий ниже](#установка).
 
 ---
 
@@ -58,6 +66,7 @@ cd Nika-Service-CRM
 - [Описание](#описание)
 - [Основные функции](#основные-функции)
 - [Установка](#установка)
+- [Бесплатная установка на VPS (FirstVDS)](#free-install-vps)
 - [Windows SETUP](#windows-setup-offline)
 - [После клона: reverse proxy, Docker, PostgreSQL](#post-clone-reverse-proxy-docker-and-postgresql)
 - [Установка на VPS (Ubuntu 24.04)](#vps-ubuntu-2404-lts)
@@ -335,6 +344,8 @@ cd Nika-Service-CRM
 
 ## Установка
 
+> Три пути: **[бесплатная установка на VPS FirstVDS](#free-install-vps)** (реферал + промокод `648528402`) · **[Windows SETUP](#windows-setup-offline)** · самостоятельная установка ниже.
+
 <a id="windows-setup-offline"></a>
 ### Windows SETUP (полный офлайн-установщик)
 
@@ -536,14 +547,18 @@ psql -U postgres -h localhost -d nikacrm -f database/bootstrap/nikacrm_public_sa
 Подробности по bootstrap-дампу: [database/bootstrap/README.md](database/bootstrap/README.md).
 
 <a id="firstvds-vps"></a>
-### VPS-хостинг FirstVDS (реферал и помощь с запуском)
+<a id="free-install-vps"></a>
+### VPS-хостинг FirstVDS (реферал и бесплатная помощь с запуском)
 
 Для развёртывания CRM удобно взять виртуальный сервер (VPS). Можно воспользоваться провайдером **FirstVDS**:
 
 - Реферальная ссылка: [https://firstvds.ru/?from=528402](https://firstvds.ru/?from=528402)
 - Промокод на скидку: **648528402**
 
-Автор проекта (**Александр Смелков**, СЦ «Ника», Сочи) может помочь с первичной настройкой сервера и запуском Nika CRM на VPS, заказанном у **FirstVDS**. Напишите на [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5) с темой письма **Nika-CRM Помощь по установке**.
+**Если купите VPS по этой ссылке и промокоду**, автор проекта (**Александр Смелков**, СЦ «Ника», Сочи) **бесплатно** установит Nika CRM и поможет с запуском и поддержкой.  
+Напишите на [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5) с темой письма **Nika-CRM Помощь по установке** и укажите, что сервер куплен через реферал FirstVDS.
+
+Альтернативы без помощи автора: [Windows Offline SETUP](#windows-setup-offline) или самостоятельная установка по разделам ниже.
 
 ### VPS: Ubuntu 24.04 LTS
 

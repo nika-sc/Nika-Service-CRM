@@ -107,9 +107,30 @@ def _windows_setup_info():
     }
 
 
+def _vps_referral_info():
+    """Реферал FirstVDS + контакты для бесплатной установки/поддержки."""
+    label = (current_app.config.get("REFERRAL_VPS_PROVIDER_LABEL") or "FirstVDS").strip()
+    url = (current_app.config.get("REFERRAL_VPS_URL") or "https://firstvds.ru/?from=528402").strip()
+    promo = (current_app.config.get("REFERRAL_VPS_PROMO_CODE") or "648528402").strip()
+    return {
+        "label": label,
+        "url": url,
+        "promo": promo,
+        "email": "nika-sc@bk.ru",
+        "mailto": (
+            "mailto:nika-sc@bk.ru"
+            "?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5"
+        ),
+        "author": "Александр Смелков",
+    }
+
+
 def _login_page_extra():
     """Контекст шаблонов входа/лендинга: Windows SETUP + опциональный демо-баннер."""
-    extra = {"windows_setup": _windows_setup_info()}
+    extra = {
+        "windows_setup": _windows_setup_info(),
+        "vps_referral": _vps_referral_info(),
+    }
     if not current_app.config.get("DEMO_LOGIN_BANNER"):
         return extra
     spec = (current_app.config.get("DEMO_SERVER_SPEC") or "").strip()
@@ -149,9 +170,10 @@ def _login_page_extra():
     except Exception as e:
         logger.debug("DEMO_LOGIN_BANNER: счётчики недоступны: %s", e)
 
-    panel["vps_label"] = (current_app.config.get("REFERRAL_VPS_PROVIDER_LABEL") or "FirstVDS").strip()
-    panel["vps_url"] = (current_app.config.get("REFERRAL_VPS_URL") or "").strip()
-    panel["vps_promo"] = (current_app.config.get("REFERRAL_VPS_PROMO_CODE") or "").strip()
+    ref = extra["vps_referral"]
+    panel["vps_label"] = ref["label"]
+    panel["vps_url"] = ref["url"]
+    panel["vps_promo"] = ref["promo"]
     extra["demo_login"] = panel
     return extra
 
