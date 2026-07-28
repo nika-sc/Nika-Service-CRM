@@ -59,7 +59,8 @@ class PaymentService:
         comment: Optional[str] = None,
         kind: str = "payment",
         status: str = "captured",
-        idempotency_key: Optional[str] = None
+        idempotency_key: Optional[str] = None,
+        invoice_id: Optional[int] = None,
     ) -> int:
         """
         Добавляет оплату к заявке.
@@ -142,6 +143,7 @@ class PaymentService:
                 has_status = "status" in cols
                 has_idem = "idempotency_key" in cols
                 has_captured_at = "captured_at" in cols
+                has_invoice_id = "invoice_id" in cols
 
                 # Используем московское время (UTC+3), как у заявок и начислений — иначе оплаты на 3 ч раньше
                 now_moscow = get_moscow_now_str()
@@ -163,6 +165,9 @@ class PaymentService:
                 if has_captured_at:
                     insert_cols.append("captured_at")
                     values.append(now_moscow if status == "captured" else None)
+                if has_invoice_id and invoice_id:
+                    insert_cols.append("invoice_id")
+                    values.append(int(invoice_id))
 
                 insert_cols.extend(["payment_date", "created_at"])
                 values.extend([now_moscow, now_moscow])

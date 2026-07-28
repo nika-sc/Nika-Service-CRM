@@ -228,8 +228,44 @@
                                         <strong><i class="fas fa-laptop me-1"></i>Устройств:</strong>
                                         <span class="badge bg-info">{{ customer.devices_count or 0 }}</span>
                                     </div>
+                                    <div class="info-item mt-3">
+                                        <strong><i class="fas fa-id-card me-1"></i>Тип:</strong>
+                                        {% set kind = customer.customer_kind or 'person' %}
+                                        <span class="badge text-bg-{{ 'info' if kind == 'ip' else ('primary' if kind == 'legal' else 'secondary') }}">
+                                            {{ 'ИП' if kind == 'ip' else ('Юрлицо' if kind == 'legal' else 'Физлицо') }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+
+                            {% if (customer.customer_kind or 'person') in ('ip', 'legal') or customer.inn %}
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-building me-2"></i>Реквизиты</h3>
+                                </div>
+                                <div class="card-body">
+                                    {% if customer.legal_name %}
+                                    <div class="info-item mb-2"><strong>Юр. название:</strong><br>{{ customer.legal_name }}</div>
+                                    {% endif %}
+                                    {% if customer.inn %}
+                                    <div class="info-item mb-2"><strong>ИНН:</strong> {{ customer.inn }}{% if customer.kpp %}, КПП {{ customer.kpp }}{% endif %}</div>
+                                    {% endif %}
+                                    {% if customer.ogrn %}
+                                    <div class="info-item mb-2"><strong>ОГРН:</strong> {{ customer.ogrn }}</div>
+                                    {% endif %}
+                                    {% if customer.legal_address %}
+                                    <div class="info-item mb-2"><strong>Адрес:</strong><br>{{ customer.legal_address }}</div>
+                                    {% endif %}
+                                    {% if customer.bank_name or customer.bik or customer.checking_account %}
+                                    <hr>
+                                    <div class="info-item mb-2"><strong>Банк:</strong> {{ customer.bank_name or '—' }}</div>
+                                    <div class="info-item mb-2"><strong>БИК:</strong> {{ customer.bik or '—' }}</div>
+                                    <div class="info-item mb-2"><strong>Р/с:</strong> {{ customer.checking_account or '—' }}</div>
+                                    <div class="info-item mb-0"><strong>К/с:</strong> {{ customer.corr_account or '—' }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
 
                             <!-- Статистика клиента -->
                             <div class="card mt-3">
@@ -761,7 +797,7 @@
 
     <!-- Модальное окно редактирования клиента -->
     <div class="modal fade" id="editCustomerModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-pen-to-square me-2"></i>Редактировать клиента</h5>
@@ -770,7 +806,15 @@
                 <div class="modal-body">
                     <form id="editCustomerForm">
                         <div class="mb-3">
-                            <label for="editCustomerName" class="form-label">Имя <span class="text-danger">*</span></label>
+                            <label class="form-label">Тип клиента</label>
+                            <select class="form-select" id="editCustomerKind" onchange="toggleDetailLegalFields()">
+                                <option value="person" {% if (customer.customer_kind or 'person') == 'person' %}selected{% endif %}>Физлицо</option>
+                                <option value="ip" {% if customer.customer_kind == 'ip' %}selected{% endif %}>ИП</option>
+                                <option value="legal" {% if customer.customer_kind == 'legal' %}selected{% endif %}>Юрлицо</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerName" class="form-label">Имя / название <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editCustomerName" value="{{ customer.name }}" required>
                         </div>
                         <div class="mb-3">
@@ -780,6 +824,50 @@
                         <div class="mb-3">
                             <label for="editCustomerEmail" class="form-label">Email</label>
                             <input type="email" class="form-control" id="editCustomerEmail" value="{{ customer.email or '' }}">
+                        </div>
+                        <div id="detailLegalFields" class="border rounded p-3 bg-light mb-3 {% if (customer.customer_kind or 'person') == 'person' %}d-none{% endif %}">
+                            <h6 class="mb-3">Реквизиты</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">ИНН</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="editCustomerInn" value="{{ customer.inn or '' }}">
+                                        <button type="button" class="btn btn-outline-secondary" id="detailLookupInnBtn">По ИНН</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">КПП</label>
+                                    <input type="text" class="form-control" id="editCustomerKpp" value="{{ customer.kpp or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ОГРН</label>
+                                    <input type="text" class="form-control" id="editCustomerOgrn" value="{{ customer.ogrn or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Юр. название</label>
+                                    <input type="text" class="form-control" id="editCustomerLegalName" value="{{ customer.legal_name or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Юр. адрес</label>
+                                    <textarea class="form-control" id="editCustomerLegalAddress" rows="2">{{ customer.legal_address or '' }}</textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Банк</label>
+                                    <input type="text" class="form-control" id="editCustomerBankName" value="{{ customer.bank_name or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">БИК</label>
+                                    <input type="text" class="form-control" id="editCustomerBik" value="{{ customer.bik or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Р/с</label>
+                                    <input type="text" class="form-control" id="editCustomerCheckingAccount" value="{{ customer.checking_account or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">К/с</label>
+                                    <input type="text" class="form-control" id="editCustomerCorrAccount" value="{{ customer.corr_account or '' }}">
+                                </div>
+                            </div>
                         </div>
                         <hr>
                         <div class="mb-3">
@@ -1028,11 +1116,45 @@
         });
 
         // Редактирование клиента
+        function toggleDetailLegalFields() {
+            const kind = document.getElementById('editCustomerKind')?.value || 'person';
+            const box = document.getElementById('detailLegalFields');
+            if (box) box.classList.toggle('d-none', kind === 'person');
+        }
+        const detailLookupInnBtn = document.getElementById('detailLookupInnBtn');
+        if (detailLookupInnBtn) {
+            detailLookupInnBtn.addEventListener('click', async () => {
+                const inn = (document.getElementById('editCustomerInn')?.value || '').trim();
+                if (!inn) { alert('Укажите ИНН'); return; }
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                try {
+                    const response = await fetch('/api/inn/lookup', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+                        body: JSON.stringify({inn})
+                    });
+                    const result = await response.json();
+                    if (!result.success) { alert(result.error || 'Не удалось заполнить по ИНН'); return; }
+                    document.getElementById('editCustomerKind').value = result.customer_kind || result.type || 'legal';
+                    if (result.name) document.getElementById('editCustomerName').value = result.name;
+                    if (result.inn) document.getElementById('editCustomerInn').value = result.inn;
+                    if (result.kpp != null) document.getElementById('editCustomerKpp').value = result.kpp || '';
+                    if (result.ogrn != null) document.getElementById('editCustomerOgrn').value = result.ogrn || '';
+                    if (result.legal_name || result.name) document.getElementById('editCustomerLegalName').value = result.legal_name || result.name;
+                    if (result.legal_address != null) document.getElementById('editCustomerLegalAddress').value = result.legal_address || '';
+                    toggleDetailLegalFields();
+                } catch (e) {
+                    alert('Ошибка запроса ИНН');
+                }
+            });
+        }
+
         document.getElementById('saveCustomerBtn').addEventListener('click', function() {
             const name = document.getElementById('editCustomerName').value.trim();
             const phone = document.getElementById('editCustomerPhone').value.trim();
             const email = document.getElementById('editCustomerEmail').value.trim();
             const portalPassword = document.getElementById('editCustomerPortalPassword').value.trim();
+            const customerKind = document.getElementById('editCustomerKind')?.value || 'person';
 
             if (!name) {
                 alert('Имя обязательно для заполнения');
@@ -1048,7 +1170,17 @@
                 body: JSON.stringify({
                     name: name,
                     phone: phone || null,
-                    email: email || null
+                    email: email || null,
+                    customer_kind: customerKind,
+                    inn: document.getElementById('editCustomerInn')?.value || '',
+                    kpp: document.getElementById('editCustomerKpp')?.value || '',
+                    ogrn: document.getElementById('editCustomerOgrn')?.value || '',
+                    legal_name: document.getElementById('editCustomerLegalName')?.value || '',
+                    legal_address: document.getElementById('editCustomerLegalAddress')?.value || '',
+                    bank_name: document.getElementById('editCustomerBankName')?.value || '',
+                    bik: document.getElementById('editCustomerBik')?.value || '',
+                    checking_account: document.getElementById('editCustomerCheckingAccount')?.value || '',
+                    corr_account: document.getElementById('editCustomerCorrAccount')?.value || '',
                 })
             })
             .then(res => res.json())

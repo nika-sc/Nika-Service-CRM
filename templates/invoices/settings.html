@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки счетов — Nika CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="mb-3">
+        <a href="{{ url_for('invoices.index') }}" class="text-muted text-decoration-none small"><i class="fas fa-arrow-left me-1"></i>К счетам</a>
+        <h1 class="h3 mb-0"><i class="fas fa-cog me-2"></i>Настройки счетов</h1>
+        <p class="text-muted mb-0">Реквизиты продавца, подпись/печать, шаблоны печати и DaData.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' }} me-1"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post" id="invoiceSettingsForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="settings_section" value="seller">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">Реквизиты продавца (банк и юр.данные)</div>
+            <div class="card-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Юридический адрес</label>
+                    <textarea class="form-control" name="legal_address" rows="2">{{ settings.legal_address or '' }}</textarea>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">КПП</label>
+                    <input class="form-control" name="kpp" value="{{ settings.kpp or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ОГРНИП</label>
+                    <input class="form-control" name="ogrnip" value="{{ settings.ogrnip or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Банк</label>
+                    <input class="form-control" name="bank_name" value="{{ settings.bank_name or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">БИК</label>
+                    <input class="form-control" name="bik" value="{{ settings.bik or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Р/с</label>
+                    <input class="form-control" name="checking_account" value="{{ settings.checking_account or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">К/с</label>
+                    <input class="form-control" name="corr_account" value="{{ settings.corr_account or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Должность руководителя</label>
+                    <input class="form-control" name="director_title" value="{{ settings.director_title or 'Руководитель' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ФИО руководителя</label>
+                    <input class="form-control" name="director_name" value="{{ settings.director_name or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">ФИО бухгалтера</label>
+                    <input class="form-control" name="accountant_name" value="{{ settings.accountant_name or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">Логотип, подпись, печать</div>
+            <div class="card-body row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Логотип (URL)</label>
+                    <div class="input-group">
+                        <input class="form-control" name="logo_url" id="logoUrl" value="{{ settings.logo_url or '' }}">
+                        <button type="button" class="btn btn-outline-secondary" data-upload-kind="logo" data-target="#logoUrl">Загрузить</button>
+                    </div>
+                    {% if settings.logo_url %}<img src="{{ settings.logo_url }}" alt="" class="mt-2" style="max-height:64px">{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Подпись (URL)</label>
+                    <div class="input-group">
+                        <input class="form-control" name="signature_url" id="signatureUrl" value="{{ settings.signature_url or '' }}">
+                        <button type="button" class="btn btn-outline-secondary" data-upload-kind="signature" data-target="#signatureUrl">Загрузить</button>
+                    </div>
+                    {% if settings.signature_url %}<img src="{{ settings.signature_url }}" alt="" class="mt-2" style="max-height:48px">{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Печать (URL)</label>
+                    <div class="input-group">
+                        <input class="form-control" name="stamp_url" id="stampUrl" value="{{ settings.stamp_url or '' }}">
+                        <button type="button" class="btn btn-outline-secondary" data-upload-kind="stamp" data-target="#stampUrl">Загрузить</button>
+                    </div>
+                    {% if settings.stamp_url %}<img src="{{ settings.stamp_url }}" alt="" class="mt-2" style="max-height:64px">{% endif %}
+                </div>
+                <div class="col-12"><hr class="my-1"></div>
+                <div class="col-md-4">
+                    <label class="form-label">Логотип: макс. ширина / высота (px)</label>
+                    <div class="input-group">
+                        <input class="form-control" type="number" name="logo_max_width" min="40" max="600" value="{{ settings.logo_max_width if settings.logo_max_width is not none else 220 }}">
+                        <span class="input-group-text">×</span>
+                        <input class="form-control" type="number" name="logo_max_height" min="20" max="300" value="{{ settings.logo_max_height if settings.logo_max_height is not none else 64 }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Подпись: макс. ширина / высота (px)</label>
+                    <div class="input-group">
+                        <input class="form-control" type="number" name="signature_max_width" min="40" max="400" value="{{ settings.signature_max_width if settings.signature_max_width is not none else 160 }}">
+                        <span class="input-group-text">×</span>
+                        <input class="form-control" type="number" name="signature_max_height" min="20" max="200" value="{{ settings.signature_max_height if settings.signature_max_height is not none else 48 }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Печать: макс. ширина / высота (px)</label>
+                    <div class="input-group">
+                        <input class="form-control" type="number" name="stamp_max_width" min="40" max="300" value="{{ settings.stamp_max_width if settings.stamp_max_width is not none else 110 }}">
+                        <span class="input-group-text">×</span>
+                        <input class="form-control" type="number" name="stamp_max_height" min="20" max="300" value="{{ settings.stamp_max_height if settings.stamp_max_height is not none else 110 }}">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-text">Размеры применяются при печати счёта, акта и накладной. Рекомендуемо: подпись ~160×48, печать ~110×110.</div>
+                </div>
+                <input type="file" id="uploadFileInput" accept="image/*" class="d-none">
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">DaData (автозаполнение по ИНН)</div>
+            <div class="card-body">
+                <label class="form-label">API-токен DaData</label>
+                <input class="form-control" type="password" name="dadata_api_token" value="{{ dadata_token or '' }}" autocomplete="off" placeholder="Оставьте пустым для ручного ввода">
+                <div class="form-text">
+                    {% if dadata_configured %}Токен сохранён. {% endif %}
+                    Без ключа реквизиты покупателя вводятся вручную. Ключ хранится в system_settings, не в git.
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mb-4"><i class="fas fa-save me-1"></i>Сохранить реквизиты</button>
+    </form>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header">
+            <h3 class="h5 mb-0"><i class="fas fa-print me-2"></i>Формы для печати счетов</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-4">
+                Визуальный редактор как в «Настройки → Формы для печати». Теги: <code>##ТЕГ##</code> или
+                <code>&lt;var-inline data-var="ТЕГ"&gt;...&lt;/var-inline&gt;</code>.
+                Строки таблицы — цикл <code>data-for="ITEMS"</code>.
+            </p>
+
+            {# —— Счёт —— #}
+            <div class="mb-2">
+                <h5 class="mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Счёт на оплату</h5>
+            </div>
+            <form method="POST" action="{{ url_for('invoices.settings_page') }}" class="mb-4 invoice-print-template-form" data-doc-label="счёта">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="settings_section" value="print_template">
+                <input type="hidden" name="print_template_type" value="invoice_bill">
+                <div class="mb-2 small text-muted">
+                    <strong>Теги документа:</strong>
+                    <code>##DOC_NUMBER##</code> <code>##DOC_DATE##</code> <code>##DUE_HTML##</code>
+                    <code>##BASIS##</code> <code>##BASIS_HTML##</code> <code>##COMMENT##</code>
+                    <code>##SELLER_NAME##</code> <code>##SELLER_INN##</code> <code>##SELLER_KPP##</code> <code>##SELLER_FULL##</code>
+                    <code>##SELLER_BANK_NAME##</code> <code>##SELLER_BIK##</code> <code>##SELLER_CHECKING_ACCOUNT##</code> <code>##SELLER_CORR_ACCOUNT##</code>
+                    <code>##SELLER_DIRECTOR##</code> <code>##SELLER_ACCOUNTANT##</code>
+                    <code>##BUYER_FULL##</code> <code>##TOTAL##</code> <code>##TOTAL_WORDS##</code> <code>##ITEMS_COUNT##</code>
+                    <code>##LOGO_HTML##</code> <code>##SIGNATURE_HTML##</code> <code>##STAMP_HTML##</code><br>
+                    <strong>Строки:</strong> <code>&lt;tr data-for="ITEMS"&gt;</code> →
+                    <code>##N##</code> <code>##TITLE##</code> <code>##QTY##</code> <code>##UNIT##</code>
+                    <code>##VAT##</code> <code>##PRICE##</code> <code>##SUM##</code>
+                </div>
+                <div class="mb-3">
+                    <textarea class="form-control font-monospace invoice-print-template-html" name="print_template_html" id="invoiceTplBill" rows="16" style="font-size: 11px; font-family: 'Courier New', monospace;">{{ (templates.invoice_bill.html_content if templates.invoice_bill else '') }}</textarea>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 template-actions">
+                    <button type="button" class="btn btn-outline-info btn-invoice-tags"><i class="fas fa-list me-1"></i>Теги</button>
+                    <button type="button" class="btn btn-outline-success btn-invoice-preview"><i class="fas fa-eye me-1"></i>Предпросмотр</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Сохранить шаблон</button>
+                </div>
+            </form>
+
+            <hr class="my-4">
+
+            {# —— Акт —— #}
+            <div class="mb-2">
+                <h5 class="mb-3"><i class="fas fa-file-signature me-2"></i>Акт выполненных работ</h5>
+            </div>
+            <form method="POST" action="{{ url_for('invoices.settings_page') }}" class="mb-4 invoice-print-template-form" data-doc-label="акта">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="settings_section" value="print_template">
+                <input type="hidden" name="print_template_type" value="invoice_act">
+                <div class="mb-2 small text-muted">
+                    <strong>Теги</strong> — как у счёта. В печати акта по возможности берутся только строки-услуги.
+                    <code>##BASIS##</code> обычно ссылается на номер счёта.
+                </div>
+                <div class="mb-3">
+                    <textarea class="form-control font-monospace invoice-print-template-html" name="print_template_html" id="invoiceTplAct" rows="16" style="font-size: 11px; font-family: 'Courier New', monospace;">{{ (templates.invoice_act.html_content if templates.invoice_act else '') }}</textarea>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 template-actions">
+                    <button type="button" class="btn btn-outline-info btn-invoice-tags"><i class="fas fa-list me-1"></i>Теги</button>
+                    <button type="button" class="btn btn-outline-success btn-invoice-preview"><i class="fas fa-eye me-1"></i>Предпросмотр</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Сохранить шаблон</button>
+                </div>
+            </form>
+
+            <hr class="my-4">
+
+            {# —— Накладная —— #}
+            <div class="mb-2">
+                <h5 class="mb-3"><i class="fas fa-truck me-2"></i>Товарная накладная</h5>
+            </div>
+            <form method="POST" action="{{ url_for('invoices.settings_page') }}" class="mb-2 invoice-print-template-form" data-doc-label="накладной">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="settings_section" value="print_template">
+                <input type="hidden" name="print_template_type" value="invoice_waybill">
+                <div class="mb-2 small text-muted">
+                    <strong>Теги</strong> — как у счёта. В печать попадают <b>только товарные строки</b> (<code>line_type=part</code>), услуги не включаются.
+                    <code>##BASIS##</code> — основание (обычно номер счёта).
+                </div>
+                <div class="mb-3">
+                    <textarea class="form-control font-monospace invoice-print-template-html" name="print_template_html" id="invoiceTplWaybill" rows="16" style="font-size: 11px; font-family: 'Courier New', monospace;">{{ (templates.invoice_waybill.html_content if templates.invoice_waybill else '') }}</textarea>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 template-actions">
+                    <button type="button" class="btn btn-outline-info btn-invoice-tags"><i class="fas fa-list me-1"></i>Теги</button>
+                    <button type="button" class="btn btn-outline-success btn-invoice-preview"><i class="fas fa-eye me-1"></i>Предпросмотр</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Сохранить шаблон</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="invoiceTemplateTagsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-list me-2"></i>Теги шаблонов счетов</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body small" id="invoiceTemplateTagsBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='cdn/tinymce/latest/tinymce.min.js') }}"></script>
+<script>
+(function() {
+    const csrf = document.querySelector('input[name="csrf_token"]')?.value || '';
+    const fileInput = document.getElementById('uploadFileInput');
+    let targetSelector = null;
+    let kind = 'asset';
+    document.querySelectorAll('[data-upload-kind]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            kind = btn.getAttribute('data-upload-kind');
+            targetSelector = btn.getAttribute('data-target');
+            fileInput.click();
+        });
+    });
+    if (fileInput) {
+        fileInput.addEventListener('change', async () => {
+            if (!fileInput.files || !fileInput.files[0] || !targetSelector) return;
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            fd.append('kind', kind);
+            fd.append('csrf_token', csrf);
+            try {
+                const r = await fetch('{{ url_for("invoices.api_upload_asset") }}', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrf},
+                    body: fd
+                });
+                const res = await r.json();
+                if (res.success && res.url) {
+                    document.querySelector(targetSelector).value = res.url;
+                } else {
+                    alert(res.error || 'Ошибка загрузки');
+                }
+            } catch (e) {
+                alert('Ошибка загрузки');
+            }
+            fileInput.value = '';
+        });
+    }
+
+    const TEMPLATE_PAGE_SIZE = {{ (settings.print_page_size or 'A4')|tojson }};
+    const TEMPLATE_MARGIN_MM = Number({{ settings.print_margin_mm if settings.print_margin_mm is not none else 3 }}) || 3;
+
+    const TAGS_HELP_HTML = `
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="text-primary mb-1"><i class="fas fa-file-invoice me-1"></i>Документ</h6>
+                <ul class="list-unstyled mb-0">
+                    <li><code>##DOC_NUMBER##</code> — номер документа</li>
+                    <li><code>##DOC_DATE##</code> — дата</li>
+                    <li><code>##DUE_HTML##</code> — блок срока оплаты</li>
+                    <li><code>##BASIS##</code> — основание (напр. «Счёт №…»)</li>
+                    <li><code>##TOTAL##</code> — сумма</li>
+                    <li><code>##TOTAL_WORDS##</code> — сумма прописью</li>
+                    <li><code>##ITEMS_COUNT##</code> — число строк</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary mb-1"><i class="fas fa-building me-1"></i>Продавец / покупатель</h6>
+                <ul class="list-unstyled mb-0">
+                    <li><code>##SELLER_NAME##</code> — название</li>
+                    <li><code>##SELLER_INN##</code> — ИНН</li>
+                    <li><code>##SELLER_KPP##</code> — КПП</li>
+                    <li><code>##SELLER_FULL##</code> — полный блок реквизитов</li>
+                    <li><code>##SELLER_BANK_NAME##</code> <code>##SELLER_BIK##</code></li>
+                    <li><code>##SELLER_CHECKING_ACCOUNT##</code> <code>##SELLER_CORR_ACCOUNT##</code></li>
+                    <li><code>##SELLER_DIRECTOR##</code> <code>##SELLER_ACCOUNTANT##</code></li>
+                    <li><code>##BUYER_FULL##</code> — покупатель</li>
+                    <li><code>##LOGO_HTML##</code> <code>##SIGNATURE_HTML##</code> <code>##STAMP_HTML##</code></li>
+                    <li><code>##BASIS##</code> / <code>##BASIS_HTML##</code> — основание (комментарий счёта / ссылка на счёт)</li>
+                    <li><code>##COMMENT##</code> — комментарий счёта</li>
+                </ul>
+            </div>
+            <div class="col-md-12">
+                <h6 class="text-primary mb-1"><i class="fas fa-list me-1"></i>Строки (цикл ITEMS)</h6>
+                <p class="mb-1">Оберните строку: <code>&lt;tr data-for="ITEMS"&gt;...&lt;/tr&gt;</code></p>
+                <ul class="list-unstyled mb-0">
+                    <li><code>##N##</code> — № п/п</li>
+                    <li><code>##TITLE##</code> — наименование</li>
+                    <li><code>##QTY##</code> — количество</li>
+                    <li><code>##UNIT##</code> — ед. изм.</li>
+                    <li><code>##VAT##</code> — НДС</li>
+                    <li><code>##PRICE##</code> — цена</li>
+                    <li><code>##SUM##</code> — сумма строки</li>
+                </ul>
+            </div>
+        </div>`;
+
+    const mockDataBill = {
+        DOC_NUMBER: '823209828',
+        DOC_DATE: '29.06.2026',
+        DUE_HTML: '<div class="due">Оплату необходимо произвести до <b>06.07.2026</b></div>',
+        BASIS: 'Договор Б132-оу/25 от 01.09.2025',
+        BASIS_HTML: '<div class="basis">Договор Б132-оу/25 от 01.09.2025</div>',
+        COMMENT: 'Договор Б132-оу/25 от 01.09.2025',
+        SELLER_NAME: 'ИП СМЕЛКОВ АЛЕКСАНДР АЛЕКСАНДРОВИЧ',
+        SELLER_INN: '231710446702',
+        SELLER_KPP: '',
+        SELLER_BANK_NAME: 'АО «ТБанк»',
+        SELLER_BIK: '044525974',
+        SELLER_CHECKING_ACCOUNT: '40802810400003818795',
+        SELLER_CORR_ACCOUNT: '30101810145250000974',
+        SELLER_FULL: 'ИП СМЕЛКОВ АЛЕКСАНДР АЛЕКСАНДРОВИЧ, ИНН 231710446702, 354340, РОССИЯ, КРАСНОДАРСКИЙ КРАЙ, Г СОЧИ, УЛ САДОВАЯ, Д 5, КВ 14',
+        SELLER_DIRECTOR: 'Смелков А.А.',
+        SELLER_ACCOUNTANT: '',
+        BUYER_FULL: 'ГУП "Медицинский центр", ИНН 7729071411, КПП 770101001',
+        TOTAL: '77 510,54 ₽',
+        TOTAL_WORDS: 'Семьдесят семь тысяч пятьсот десять рублей 54 копейки',
+        ITEMS_COUNT: '2',
+        LOGO_HTML: '',
+        SIGNATURE_HTML: '',
+        STAMP_HTML: '',
+        N: '1',
+        TITLE: 'Замена фотобарабана HP MFC-5750DW',
+        QTY: '1',
+        UNIT: 'усл. ед.',
+        VAT: 'Без НДС',
+        PRICE: '620,21 ₽',
+        SUM: '620,21 ₽'
+    };
+
+    const mockDataAct = {
+        DOC_NUMBER: '407',
+        DOC_DATE: '07.07.2026',
+        SELLER_FULL: 'ИП СМЕЛКОВ АЛЕКСАНДР АЛЕКСАНДРОВИЧ, ИНН 231702503668, 354340, РОССИЯ, КРАСНОДАРСКИЙ КРАЙ, Г СОЧИ, Р-Н АДЛЕРСКИЙ, УЛ САДОВАЯ, Д 5, КВ 14',
+        SELLER_DIRECTOR: 'Смелков А.А.',
+        BUYER_FULL: 'ГБУЗ "СП № 2 Г. СОЧИ" МЗ КК, ИНН 2317001494, КПП 231701001, Краснодарский край, г Сочи, р-н Адлерский, пер Революции, д 7',
+        TOTAL: '34 000,00 ₽',
+        TOTAL_WORDS: 'Тридцать четыре тысячи рублей',
+        LOGO_HTML: '',
+        SIGNATURE_HTML: '',
+        STAMP_HTML: '',
+        N: '1',
+        TITLE: 'Заправка картриджа ТК-1170',
+        QTY: '12',
+        UNIT: 'шт',
+        VAT: 'Без НДС',
+        PRICE: '1 000,00 ₽',
+        SUM: '12 000,00 ₽'
+    };
+
+    const demoRowsBill = [
+        { N: '1', TITLE: 'Замена фотобарабана HP MFC-5750DW', QTY: '1', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '620,21 ₽', SUM: '620,21 ₽' },
+        { N: '2', TITLE: 'Заправка картриджа MLT-D203U', QTY: '10', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '1 353,20 ₽', SUM: '13 532,00 ₽' }
+    ];
+
+    const mockDataWaybill = {
+        DOC_NUMBER: '22',
+        DOC_DATE: '07.05.2026',
+        BASIS: '-',
+        SELLER_FULL: 'ИП СМЕЛКОВ АЛЕКСАНДР АЛЕКСАНДРОВИЧ, ИНН 231702503668, 354340, РОССИЯ, КРАСНОДАРСКИЙ КРАЙ, Г СОЧИ, Р-Н АДЛЕРСКИЙ, УЛ САДОВАЯ, Д 5, КВ 14',
+        SELLER_DIRECTOR: 'Смелков А.А.',
+        SELLER_ACCOUNTANT: '',
+        BUYER_FULL: 'АО "МЕЖДУНАРОДНЫЙ АЭРОПОРТ СОЧИ" АО "МАС", ИНН 2317044843, КПП 231701001, Краснодарский край, г Сочи, тер Аэропорт',
+        TOTAL: '12 000,00 ₽',
+        TOTAL_WORDS: 'Двенадцать тысяч рублей',
+        LOGO_HTML: '',
+        SIGNATURE_HTML: '',
+        STAMP_HTML: '',
+        N: '1',
+        TITLE: 'Штамп',
+        QTY: '6',
+        UNIT: 'шт',
+        VAT: 'Без НДС',
+        PRICE: '2 000,00 ₽',
+        SUM: '12 000,00 ₽'
+    };
+
+    const demoRowsWaybill = [
+        { N: '1', TITLE: 'Штамп', QTY: '6', UNIT: 'шт', VAT: 'Без НДС', PRICE: '2 000,00 ₽', SUM: '12 000,00 ₽' }
+    ];
+
+    const demoRowsAct = [
+        { N: '1', TITLE: 'Заправка картриджа ТК-1170', QTY: '12', UNIT: 'шт', VAT: 'Без НДС', PRICE: '1 000,00 ₽', SUM: '12 000,00 ₽' },
+        { N: '2', TITLE: 'Заправка картриджа 283/285', QTY: '5', UNIT: 'шт', VAT: 'Без НДС', PRICE: '800,00 ₽', SUM: '4 000,00 ₽' },
+        { N: '3', TITLE: 'Заправка картриджа CF259A', QTY: '15', UNIT: '-', VAT: 'Без НДС', PRICE: '1 200,00 ₽', SUM: '18 000,00 ₽' }
+    ];
+
+    function getPreviewData(docLabel) {
+        if (docLabel === 'акта') {
+            return { mock: mockDataAct, rows: demoRowsAct, note: 'тестовые данные демо-акта' };
+        }
+        if (docLabel === 'накладной') {
+            return { mock: mockDataWaybill, rows: demoRowsWaybill, note: 'тестовые данные демо-накладной' };
+        }
+        return { mock: mockDataBill, rows: demoRowsBill, note: 'тестовые данные демо-счёта' };
+    }
+
+    function syncTinyMce(textarea) {
+        if (!window.tinymce || !textarea || !textarea.id) return;
+        const ed = window.tinymce.get(textarea.id);
+        if (ed) ed.save();
+    }
+
+    function applySimpleTags(raw, mockData) {
+        let result = raw;
+        result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*"([^"]+)"[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
+        result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*'([^']+)'[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
+        result = result.replace(/##([A-Za-z_][A-Za-z0-9_.-]*)##/g, (_, key) => (mockData[key] !== undefined ? mockData[key] : `##${key}##`));
+        return result;
+    }
+
+    function previewInvoiceTemplate(textarea, docLabel) {
+        syncTinyMce(textarea);
+        const templateHtml = textarea.value || '';
+        if (!templateHtml.trim()) {
+            alert('Шаблон пуст. Добавьте содержимое перед предпросмотром.');
+            return;
+        }
+
+        const { mock, rows, note } = getPreviewData(docLabel);
+        let previewHtml = templateHtml;
+        const loopMatch = previewHtml.match(/<(\w+)[^>]*\s+data-for\s*=\s*["']ITEMS["'][^>]*>([\s\S]*?)<\/\1>/i);
+        if (loopMatch) {
+            const rowTag = loopMatch[1];
+            const rowInner = loopMatch[2];
+            const rowsHtml = rows.map((row) => {
+                let line = rowInner;
+                Object.keys(row).forEach((k) => {
+                    line = line.replace(new RegExp(`##${k}##`, 'g'), row[k]);
+                });
+                line = line.replace(/<var-inline[^>]*\s+data-var\s*=\s*"([^"]+)"[^>]*>.*?<\/var-inline>/gis, (_, key) => row[key] || mock[key] || '');
+                line = line.replace(/<var-inline[^>]*\s+data-var\s*=\s*'([^']+)'[^>]*>.*?<\/var-inline>/gis, (_, key) => row[key] || mock[key] || '');
+                return `<${rowTag}>${line}</${rowTag}>`;
+            }).join('');
+            previewHtml = previewHtml.replace(loopMatch[0], rowsHtml);
+        }
+        previewHtml = applySimpleTags(previewHtml, mock);
+        previewHtml = previewHtml.replace(/@page\s*\{[^}]*\}\s*/gi, '');
+
+        const previewWindow = window.open('', '_blank', 'width=920,height=800');
+        if (!previewWindow) {
+            alert('Не удалось открыть окно предпросмотра. Разрешите всплывающие окна.');
+            return;
+        }
+        const SIG_MW = Number({{ settings.signature_max_width if settings.signature_max_width is not none else 160 }}) || 160;
+        const SIG_MH = Number({{ settings.signature_max_height if settings.signature_max_height is not none else 48 }}) || 48;
+        const STAMP_MW = Number({{ settings.stamp_max_width if settings.stamp_max_width is not none else 110 }}) || 110;
+        const STAMP_MH = Number({{ settings.stamp_max_height if settings.stamp_max_height is not none else 110 }}) || 110;
+        const LOGO_MW = Number({{ settings.logo_max_width if settings.logo_max_width is not none else 220 }}) || 220;
+        const LOGO_MH = Number({{ settings.logo_max_height if settings.logo_max_height is not none else 64 }}) || 64;
+
+        const INVOICE_PRINT_CSS = `
+            .print-content table { border-collapse: collapse; width: 100%; }
+            .print-content .bank td, .print-content .items th, .print-content .items td,
+            .print-content .parties td, .print-content .form-head td, .print-content .doc-box td {
+                border: 1px solid #000 !important; padding: 3px 5px; vertical-align: top;
+            }
+            .print-content .items th { background: #f0f0f0; font-weight: 700; text-align: center; }
+            .print-content .totals td, .print-content .sign td { border: none !important; padding: 2px 0; vertical-align: bottom; }
+            .print-content .c, .print-content .center { text-align: center; }
+            .print-content .r, .print-content .right { text-align: right; }
+            .print-content h1 { font-size: 15px; font-weight: 700; margin: 12px 0 10px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+            .print-content .party { margin: 6px 0; }
+            .print-content .party b, .print-content .parties .lbl { display: inline-block; min-width: 95px; font-weight: 700; }
+            .print-content .lbl { font-size: 10px; color: #333; }
+            .print-content .words, .print-content .total-line { font-weight: 700; }
+            .print-content .sign .line { display: inline-block; min-width: 140px; border-bottom: 1px solid #000; margin: 0 6px; height: 16px; }
+            .print-content .sign .box { position: relative; min-height: 56px; }
+            .print-content img.logo, .print-content img[alt="logo"] {
+                max-width: ${LOGO_MW}px !important; max-height: ${LOGO_MH}px !important; width: auto !important; height: auto !important;
+            }
+            .print-content img.sig, .print-content img[alt="подпись"] {
+                max-width: ${SIG_MW}px !important; max-height: ${SIG_MH}px !important; width: auto !important; height: auto !important;
+            }
+            .print-content img.stamp, .print-content img[alt="печать"] {
+                max-width: ${STAMP_MW}px !important; max-height: ${STAMP_MH}px !important; width: auto !important; height: auto !important; opacity: .9;
+            }
+            .print-content .sign img.sig { position: absolute; left: 110px; top: -4px; }
+            .print-content .sign img.stamp { position: absolute; left: 170px; top: -18px; }
+            .print-content .waybill { font-size: 10px; }
+            .print-content .waybill h1 { text-align: center; border-bottom: none; }
+        `;
+
+        previewWindow.document.write(`<!DOCTYPE html><html><head><title>Предпросмотр ${docLabel || 'шаблона'}</title>
+            <style>
+                @page { size: ${TEMPLATE_PAGE_SIZE}; margin: ${TEMPLATE_MARGIN_MM}mm; }
+                html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; font-size: 12px; }
+                body { padding: ${TEMPLATE_MARGIN_MM}mm; box-sizing: border-box; max-width: 210mm; min-height: 297mm; margin: 0 auto; }
+                .preview-note { background: #fff3cd; padding: 10px; margin-bottom: 12px; border-left: 4px solid #ffc107; font-size: 12px; }
+                ${INVOICE_PRINT_CSS}
+            </style></head><body>
+                <div class="preview-note"><strong>Предпросмотр A4:</strong> ${note}. Поля и формат — как в «Настройки → Формат печати» (${TEMPLATE_PAGE_SIZE}, ${TEMPLATE_MARGIN_MM} мм).</div>
+                <div class="print-content">${previewHtml}</div>
+            </body></html>`);
+        previewWindow.document.close();
+    }
+
+    function openTagsModal() {
+        const body = document.getElementById('invoiceTemplateTagsBody');
+        const modal = document.getElementById('invoiceTemplateTagsModal');
+        if (!body || !modal) return;
+        body.innerHTML = TAGS_HELP_HTML;
+        if (window.bootstrap && window.bootstrap.Modal) {
+            new bootstrap.Modal(modal).show();
+        }
+    }
+
+    document.querySelectorAll('.invoice-print-template-form').forEach((form) => {
+        const textarea = form.querySelector('textarea.invoice-print-template-html');
+        const label = form.getAttribute('data-doc-label') || 'шаблона';
+        form.querySelector('.btn-invoice-tags')?.addEventListener('click', openTagsModal);
+        form.querySelector('.btn-invoice-preview')?.addEventListener('click', () => previewInvoiceTemplate(textarea, label));
+        form.addEventListener('submit', () => {
+            if (window.tinymce && typeof window.tinymce.triggerSave === 'function') {
+                window.tinymce.triggerSave();
+            }
+        });
+    });
+
+    function initTinyMce() {
+        const rte = window.tinymce;
+        if (!rte) return;
+        const nodes = document.querySelectorAll('textarea.invoice-print-template-html');
+        if (!nodes.length) return;
+        nodes.forEach((n, i) => {
+            if (!n.id) n.id = `invoiceHtmlEditor_${i + 1}`;
+        });
+        rte.init({
+            selector: 'textarea.invoice-print-template-html',
+            license_key: 'gpl',
+            menubar: true,
+            height: 420,
+            plugins: 'link lists table code fullscreen preview',
+            toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | table link | code preview fullscreen',
+            branding: false,
+            promotion: false,
+            // TinyMCE по умолчанию вырезает <style> — из‑за этого пропадали рамки таблиц
+            valid_elements: '*[*]',
+            extended_valid_elements: 'style[*],var-inline[*]',
+            custom_elements: 'style,var-inline',
+            valid_children: '+body[style],+div[style]',
+            protect: [
+                /<\s*style[\s\S]*?<\/style>/gi,
+                /##[A-Za-z0-9_.-]+##/g,
+            ],
+            content_style: 'table{border-collapse:collapse;width:100%} td,th{border:1px solid #333;padding:3px 5px} img.sig,img[alt="подпись"]{max-height:48px;width:auto} img.stamp,img[alt="печать"]{max-height:110px;width:auto} img.logo{max-height:64px;width:auto}',
+            setup: function (editor) {
+                editor.on('change keyup', function () {
+                    editor.save();
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initTinyMce);
+})();
+</script>
+{% endblock %}

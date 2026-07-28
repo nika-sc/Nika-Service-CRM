@@ -16,7 +16,7 @@
         {% endif %}
         {% if has_permission('view_customers') %}
         <li>
-            <a href="{{ url_for('customers.clients') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/clients' or '/clients/' in request.path %} active{% endif %}" 
+            <a href="{{ url_for('customers.clients') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/clients' or '/clients/' in request.path or request.path == '/organizations' %} active{% endif %}" 
                title="Клиенты">
                 <i class="fas fa-users" style="font-size: 1.25rem; display: block; text-align: center;"></i>
                 <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Клиенты</small>
@@ -47,6 +47,15 @@
                title="Касса">
                 <i class="fas fa-cash-register" style="font-size: 1.25rem; display: block; text-align: center;"></i>
                 <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Касса</small>
+            </a>
+        </li>
+        {% endif %}
+        {% if has_any_permission('view_invoices', 'manage_invoices', 'mark_invoice_paid') %}
+        <li>
+            <a href="{{ url_for('invoices.index') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if '/invoices' in request.path %} active{% endif %}"
+               title="Счета">
+                <i class="fas fa-file-invoice-dollar" style="font-size: 1.25rem; display: block; text-align: center;"></i>
+                <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Счета</small>
             </a>
         </li>
         {% endif %}

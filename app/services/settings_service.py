@@ -80,8 +80,24 @@ class SettingsService:
             'auto_email_director_order_closed': True,
             'logo_max_width': 320,
             'logo_max_height': 120,
+            'signature_max_width': 160,
+            'signature_max_height': 48,
+            'stamp_max_width': 110,
+            'stamp_max_height': 110,
             'print_page_size': 'A4',
             'print_margin_mm': 3,
+            'bank_name': '',
+            'bik': '',
+            'checking_account': '',
+            'corr_account': '',
+            'kpp': '',
+            'ogrnip': '',
+            'legal_address': '',
+            'director_title': '',
+            'director_name': '',
+            'accountant_name': '',
+            'signature_url': '',
+            'stamp_url': '',
         }
         
         try:
@@ -99,13 +115,23 @@ class SettingsService:
                             """
                             SELECT key, value
                             FROM system_settings
-                            WHERE key IN ('logo_max_width', 'logo_max_height', 'print_page_size', 'print_margin_mm')
+                            WHERE key IN (
+                                'logo_max_width', 'logo_max_height',
+                                'signature_max_width', 'signature_max_height',
+                                'stamp_max_width', 'stamp_max_height',
+                                'print_page_size', 'print_margin_mm'
+                            )
                             """
                         )
                         for row in (cursor.fetchall() or []):
                             k = row['key']
                             v = row['value']
-                            if k in ('logo_max_width', 'logo_max_height', 'print_margin_mm'):
+                            if k in (
+                                'logo_max_width', 'logo_max_height',
+                                'signature_max_width', 'signature_max_height',
+                                'stamp_max_width', 'stamp_max_height',
+                                'print_margin_mm',
+                            ):
                                 try:
                                     d[k] = int(v)
                                 except (TypeError, ValueError):
@@ -351,10 +377,30 @@ class SettingsService:
                             )
                         )
 
+                # B2B реквизиты продавца (счета)
+                b2b_cols = [
+                    "bank_name", "bik", "checking_account", "corr_account",
+                    "kpp", "ogrnip", "legal_address",
+                    "director_title", "director_name", "accountant_name",
+                    "signature_url", "stamp_url",
+                ]
+                present_b2b = [c for c in b2b_cols if c in cols]
+                if present_b2b and count > 0:
+                    sets = ", ".join(f"{c} = ?" for c in present_b2b)
+                    vals = [payload.get(c, "") for c in present_b2b]
+                    cursor.execute(
+                        f"UPDATE general_settings SET {sets} WHERE id = 1",
+                        vals,
+                    )
+
                 # Всегда сохраняем параметры печати/логотипа в system_settings:
                 # это работает и для старых схем без колонок в general_settings.
                 logo_max_width = int(payload.get('logo_max_width') or 320)
                 logo_max_height = int(payload.get('logo_max_height') or 120)
+                signature_max_width = int(payload.get('signature_max_width') or 160)
+                signature_max_height = int(payload.get('signature_max_height') or 48)
+                stamp_max_width = int(payload.get('stamp_max_width') or 110)
+                stamp_max_height = int(payload.get('stamp_max_height') or 110)
                 print_page_size = str(payload.get('print_page_size') or 'A4').strip() or 'A4'
                 print_margin_mm = int(payload.get('print_margin_mm') or 3)
                 SettingsService._upsert_system_settings(
@@ -362,6 +408,10 @@ class SettingsService:
                     [
                         ('logo_max_width', str(logo_max_width), 'Максимальная ширина логотипа в печати (px)'),
                         ('logo_max_height', str(logo_max_height), 'Максимальная высота логотипа в печати (px)'),
+                        ('signature_max_width', str(signature_max_width), 'Максимальная ширина подписи в печати (px)'),
+                        ('signature_max_height', str(signature_max_height), 'Максимальная высота подписи в печати (px)'),
+                        ('stamp_max_width', str(stamp_max_width), 'Максимальная ширина печати в печати (px)'),
+                        ('stamp_max_height', str(stamp_max_height), 'Максимальная высота печати в печати (px)'),
                         ('print_page_size', print_page_size, 'Формат печати'),
                         ('print_margin_mm', str(print_margin_mm), 'Поля печати (мм)'),
                     ],
@@ -633,11 +683,22 @@ class SettingsService:
                 from bleach import clean
                 cleaned_content = clean(
                     html_content,
-                    tags=['p', 'table', 'tbody', 'tr', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                          'strong', 'em', 'u', 'ol', 'ul', 'li', 'br', 'img', 'span', 'div', 'var-inline'],
-                    attributes={'*': ['style', 'class', 'width', 'height', 'border', 'colspan', 'rowspan',
-                                     'data-var', 'data-for', 'src', 'alt', 'data-file-id']},
-                    strip=False
+                    tags=[
+                        'html', 'head', 'body', 'meta', 'title', 'style',
+                        'p', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
+                        'colgroup', 'col', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                        'strong', 'b', 'em', 'i', 'u', 'ol', 'ul', 'li', 'br', 'hr',
+                        'img', 'span', 'div', 'a', 'var-inline',
+                    ],
+                    attributes={
+                        '*': [
+                            'style', 'class', 'width', 'height', 'border', 'cellpadding',
+                            'cellspacing', 'colspan', 'rowspan', 'valign', 'align',
+                            'data-var', 'data-for', 'src', 'alt', 'data-file-id',
+                            'charset', 'name', 'content', 'href', 'target', 'rel',
+                        ]
+                    },
+                    strip=False,
                 )
             except ImportError:
                 # Если bleach не установлен, используем оригинальный контент
@@ -656,6 +717,9 @@ class SettingsService:
                         'sales_receipt': 'Товарный чек',
                         'work_act': 'Акт выполненных работ',
                         'master': 'Техническая информация для мастера',
+                        'invoice_bill': 'Счёт на оплату',
+                        'invoice_act': 'Акт выполненных работ (счёт)',
+                        'invoice_waybill': 'Товарная накладная',
                     }
                     name = default_names.get(template_type, f'Шаблон печати ({template_type})')
                 

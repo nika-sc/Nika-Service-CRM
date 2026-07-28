@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Печать{% if doc_type %} — {{ doc_type }}{% endif %}</title>
+    <style>
+        @page {
+            size: {{ print_page_size or 'A4' }};
+            margin: {{ print_margin_mm if print_margin_mm is not none else 3 }}mm;
+        }
+        html, body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #000;
+            background: #fff;
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        body {
+            padding: {{ print_margin_mm if print_margin_mm is not none else 3 }}mm;
+            box-sizing: border-box;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            html, body { margin: 0; padding: 0; }
+            body { padding: 0; }
+            img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        @media screen {
+            body {
+                max-width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                background: #fff;
+                box-shadow: 0 0 0 1px #ddd;
+            }
+        }
+
+        /* Общие таблицы документов (рамки не зависят от TinyMCE) */
+        .print-content table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .print-content .bank td,
+        .print-content .items th,
+        .print-content .items td,
+        .print-content .parties td,
+        .print-content .form-head td,
+        .print-content .doc-box td {
+            border: 1px solid #000 !important;
+            padding: 3px 5px;
+            vertical-align: top;
+        }
+        .print-content .items th {
+            background: #f0f0f0;
+            font-weight: 700;
+            text-align: center;
+        }
+        .print-content .totals td,
+        .print-content .sign td {
+            border: none !important;
+            padding: 2px 0;
+            vertical-align: bottom;
+        }
+        .print-content .c,
+        .print-content .center { text-align: center; }
+        .print-content .r,
+        .print-content .right { text-align: right; }
+        .print-content h1 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 12px 0 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+        }
+        .print-content .party,
+        .print-content .meta { margin: 6px 0; }
+        .print-content .party b,
+        .print-content .parties .lbl {
+            display: inline-block;
+            min-width: 95px;
+            font-weight: 700;
+        }
+        .print-content .lbl { font-size: 10px; color: #333; }
+        .print-content .due,
+        .print-content .basis { margin: 0 0 8px; }
+        .print-content .words { margin: 8px 0 16px; font-weight: 700; }
+        .print-content .total-line { margin: 10px 0 4px; text-align: right; font-weight: 700; }
+        .print-content .disclaimer { margin: 12px 0 20px; text-align: justify; }
+        .print-content .note { font-size: 9px; color: #444; margin-top: 4px; }
+        .print-content .sign { margin-top: 20px; }
+        .print-content .sign .line {
+            display: inline-block;
+            min-width: 140px;
+            border-bottom: 1px solid #000;
+            margin: 0 6px;
+            height: 16px;
+        }
+        .print-content .sign .box { position: relative; min-height: 56px; }
+        .print-content .sign .name { margin-top: 4px; padding-left: 100px; }
+
+        /* Размеры логотипа / подписи / печати (настройки) */
+        .print-content img.logo,
+        .print-content img[alt="logo"] {
+            max-width: {{ logo_max_width or 220 }}px !important;
+            max-height: {{ logo_max_height or 64 }}px !important;
+            width: auto !important;
+            height: auto !important;
+            margin-bottom: 8px;
+        }
+        .print-content img.sig,
+        .print-content img[alt="подпись"] {
+            max-width: {{ signature_max_width or 160 }}px !important;
+            max-height: {{ signature_max_height or 48 }}px !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        .print-content img.stamp,
+        .print-content img[alt="печать"] {
+            max-width: {{ stamp_max_width or 110 }}px !important;
+            max-height: {{ stamp_max_height or 110 }}px !important;
+            width: auto !important;
+            height: auto !important;
+            opacity: 0.9;
+        }
+        .print-content .sign img.sig {
+            position: absolute;
+            left: 110px;
+            top: -4px;
+        }
+        .print-content .sign img.stamp {
+            position: absolute;
+            left: 170px;
+            top: -18px;
+        }
+
+        /* Счёт */
+        .print-content .bill .bank .lbl { font-size: 10px; }
+        .print-content .bill .items { margin-top: 10px; }
+
+        /* Акт */
+        .print-content .act .items { margin: 12px 0; }
+
+        /* Накладная */
+        .print-content .waybill { font-size: 10px; }
+        .print-content .waybill h1 {
+            text-align: center;
+            letter-spacing: 1px;
+            border-bottom: none;
+        }
+        .print-content .waybill .items { font-size: 9px; margin-top: 8px; }
+        .print-content .waybill .items tfoot td { font-weight: 700; background: #fafafa; }
+        .print-content .waybill .doc-box { width: 220px; margin: 6px 0 6px auto; }
+        .print-content .waybill .doc-box .lbl { background: #f5f5f5; text-align: center; }
+        .print-content .waybill .parties .lbl { width: 110px; background: #fafafa; }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .toolbar button {
+            padding: 6px 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .toolbar button:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+<div class="toolbar no-print">
+    <button type="button" onclick="window.print()">Печать / PDF</button>
+    <button type="button" onclick="window.close()">Закрыть</button>
+</div>
+<div class="print-content">
+{{ content|safe }}
+</div>
+</body>
+</html>

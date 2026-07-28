@@ -302,18 +302,19 @@ class CustomerService:
         )
     
     @staticmethod
-    def search_customers(query: str, limit: int = 10) -> List[Dict]:
+    def search_customers(query: str, limit: int = 10, kind_filter: Optional[str] = None) -> List[Dict]:
         """
         Быстрый поиск клиентов по имени, телефону или email.
         
         Args:
             query: Поисковый запрос
             limit: Максимальное количество результатов
+            kind_filter: person | ip | legal | orgs | None
             
         Returns:
             Список клиентов
         """
-        return CustomerQueries.search_customers(query, limit)
+        return CustomerQueries.search_customers(query, limit, kind_filter=kind_filter)
     
     @staticmethod
     def get_customer_statistics(customer_id: int) -> Dict:
@@ -355,14 +356,27 @@ class CustomerService:
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO customers (name, phone, email, created_at)
-                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (
+                cursor.execute("PRAGMA table_info(customers)")
+                cols = {r[1] for r in cursor.fetchall()}
+                legal_fields = [
+                    "customer_kind", "inn", "kpp", "ogrn", "legal_name", "legal_address",
+                    "bank_name", "bik", "checking_account", "corr_account",
+                ]
+                present_legal = [f for f in legal_fields if f in cols]
+                insert_cols = ["name", "phone", "email"] + present_legal
+                insert_vals = [
                     validated_data['name'],
                     validated_data['phone'],
-                    validated_data.get('email', '')
-                ))
+                    validated_data.get('email', ''),
+                ] + [
+                    (data.get(f) or ('person' if f == 'customer_kind' else ''))
+                    for f in present_legal
+                ]
+                ph = ", ".join(["?"] * len(insert_cols))
+                cursor.execute(
+                    f"INSERT INTO customers ({', '.join(insert_cols)}, created_at) VALUES ({ph}, CURRENT_TIMESTAMP)",
+                    tuple(insert_vals),
+                )
                 conn.commit()
                 
                 customer_id = cursor.lastrowid
@@ -496,16 +510,34 @@ class CustomerService:
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE customers
-                    SET name = ?, phone = ?, email = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                ''', (
+                cursor.execute("PRAGMA table_info(customers)")
+                cols = {r[1] for r in cursor.fetchall()}
+                legal_fields = [
+                    "customer_kind", "inn", "kpp", "ogrn", "legal_name", "legal_address",
+                    "bank_name", "bik", "checking_account", "corr_account",
+                ]
+                present_legal = [f for f in legal_fields if f in cols]
+                set_parts = ["name = ?", "phone = ?", "email = ?", "updated_at = CURRENT_TIMESTAMP"]
+                vals = [
                     validated_data['name'],
                     validated_data['phone'],
                     validated_data.get('email', ''),
-                    customer_id
-                ))
+                ]
+                # Не затирать реквизиты, если фронт прислал только name/phone/email
+                for f in present_legal:
+                    if f not in data:
+                        continue
+                    set_parts.insert(-1, f"{f} = ?")
+                    raw = data.get(f)
+                    if f == "customer_kind":
+                        vals.append((raw or "person").strip() or "person")
+                    else:
+                        vals.append("" if raw is None else str(raw).strip())
+                vals.append(customer_id)
+                cursor.execute(
+                    f"UPDATE customers SET {', '.join(set_parts)} WHERE id = ?",
+                    tuple(vals),
+                )
                 conn.commit()
                 
                 if cursor.rowcount == 0:

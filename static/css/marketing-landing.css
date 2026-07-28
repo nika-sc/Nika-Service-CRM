@@ -91,6 +91,8 @@ body.ml-body {
   backdrop-filter: blur(10px);
   background: rgba(15, 28, 36, 0.72);
   border-bottom: 1px solid var(--ml-border);
+  /* Одна полоса сверху — без «съезда» из‑за переноса кнопок */
+  min-height: 3.5rem;
 }
 
 .ml-nav-inner {
@@ -99,14 +101,19 @@ body.ml-body {
   justify-content: space-between;
   gap: 1rem;
   width: 100%;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .ml-nav-links {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.6rem;
   align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .ml-brand {
@@ -116,13 +123,25 @@ body.ml-body {
   letter-spacing: 0.02em;
   color: var(--ml-text);
   text-decoration: none;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ml-nav-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.6rem;
   align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.ml-nav-actions .ml-btn,
+.ml-nav-links .ml-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ml-online-badge {
@@ -809,7 +828,7 @@ body.ml-body {
   }
   .ml-nav {
     padding: 0.75rem 0.9rem;
-    align-items: flex-start;
+    align-items: center;
   }
   .ml-brand {
     font-size: 1.12rem;
@@ -841,21 +860,28 @@ body.ml-body {
 }
 
 @media (max-width: 640px) {
+  /* Компактный горизонтальный ряд + scroll — без колонки, которая опускает бар */
   .ml-nav {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+  }
+  .ml-nav-inner {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
   }
   .ml-nav-actions {
-    width: 100%;
-    justify-content: stretch;
-  }
-  .ml-nav-actions .ml-btn {
+    width: auto;
     flex: 1 1 auto;
+    justify-content: flex-start;
+  }
+  .ml-nav-actions .ml-btn,
+  .ml-nav-links .ml-btn {
+    flex: 0 0 auto;
     justify-content: center;
-    min-width: 0;
-    padding: 0.62rem 0.75rem;
-    font-size: 0.92rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.85rem;
   }
   .ml-kicker {
     font-size: 0.72rem;
@@ -1102,7 +1128,8 @@ body.ml-body {
 }
 @media (max-width: 720px) {
   .ml-docs-body .ml-nav-links {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.35rem;
+    overflow-x: auto;
   }
 }

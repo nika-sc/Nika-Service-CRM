@@ -59,17 +59,19 @@ class CustomerQueries:
         page: int = 1,
         per_page: int = 50,
         sort_by: str = 'name',
-        sort_order: str = 'ASC'
+        sort_order: str = 'ASC',
+        kind_filter: Optional[str] = None,
     ) -> Dict:
         """
         Получает список клиентов с устройствами и заявками (оптимизация N+1).
         
         Args:
-            search_query: Поисковый запрос (имя, телефон, email)
+            search_query: Поисковый запрос (имя, телефон, email, ИНН, юр. название)
             page: Номер страницы
             per_page: Количество элементов на странице
             sort_by: Поле для сортировки (name, phone, email, created_at)
             sort_order: Направление сортировки (ASC, DESC)
+            kind_filter: person | ip | legal | orgs (ИП+юрлица) | None
             
         Returns:
             Словарь с данными: items, total, page, per_page, pages
@@ -77,8 +79,15 @@ class CustomerQueries:
         offset = (page - 1) * per_page
         where_clauses = []
         params = []
+
+        kind_filter = (kind_filter or "").strip().lower() or None
+        if kind_filter == "orgs":
+            where_clauses.append("COALESCE(c.customer_kind, 'person') IN ('ip', 'legal')")
+        elif kind_filter in ("person", "ip", "legal"):
+            where_clauses.append("COALESCE(c.customer_kind, 'person') = ?")
+            params.append(kind_filter)
         
-        # Поиск: по ФИО — полнотекстовый (каждое слово в имени); телефон/email — подстрока.
+        # Поиск: по ФИО — полнотекстовый (каждое слово в имени); телефон/email/ИНН — подстрока.
         # Без учёта регистра: SQLite LOWER() не работает для кириллицы, поэтому по имени и email
         # подставляем два варианта паттерна (как введено и в нижнем регистре).
         if search_query:
@@ -88,26 +97,39 @@ class CustomerQueries:
             if words:
                 # По имени: все слова должны встречаться; для каждого слова — два варианта (нижний и с заглавной)
                 name_conditions = ' AND '.join(
-                    ["(COALESCE(c.name, '') LIKE ? OR COALESCE(c.name, '') LIKE ?)" for _ in words]
+                    ["(COALESCE(c.name, '') LIKE ? OR COALESCE(c.name, '') LIKE ?"
+                     " OR COALESCE(c.legal_name, '') LIKE ? OR COALESCE(c.legal_name, '') LIKE ?)" for _ in words]
                 )
-                name_params = [p for w in words for p in (f'%{w}%', f'%{w.capitalize()}%')]
+                name_params = [
+                    p for w in words
+                    for p in (f'%{w}%', f'%{w.capitalize()}%', f'%{w}%', f'%{w.capitalize()}%')
+                ]
                 phone_like_list = _phone_search_like_params(search_stripped)
                 phone_or = " OR ".join(["c.phone LIKE ?"] * len(phone_like_list)) if phone_like_list else "FALSE"
-                # Email: два паттерна для нечувствительности к регистру
+                # Email / ИНН
                 where_clauses.append(
-                    f"(({name_conditions}) OR ({phone_or}) OR COALESCE(c.email, '') LIKE ? OR COALESCE(c.email, '') LIKE ?)"
+                    f"(({name_conditions}) OR ({phone_or}) OR COALESCE(c.email, '') LIKE ? OR COALESCE(c.email, '') LIKE ?"
+                    f" OR COALESCE(c.inn, '') LIKE ? OR COALESCE(c.inn, '') LIKE ?)"
                 )
-                params.extend(name_params + phone_like_list + [f'%{search_stripped}%', f'%{search_lower}%'])
+                params.extend(
+                    name_params + phone_like_list
+                    + [f'%{search_stripped}%', f'%{search_lower}%', f'%{search_stripped}%', f'%{search_lower}%']
+                )
             else:
                 phone_like_list = _phone_search_like_params(search_stripped)
                 phone_or = " OR ".join(["c.phone LIKE ?"] * len(phone_like_list)) if phone_like_list else "FALSE"
                 where_clauses.append(
-                    f"(COALESCE(c.name, '') LIKE ? OR COALESCE(c.name, '') LIKE ? OR ({phone_or}) OR COALESCE(c.email, '') LIKE ? OR COALESCE(c.email, '') LIKE ?)"
+                    f"(COALESCE(c.name, '') LIKE ? OR COALESCE(c.name, '') LIKE ?"
+                    f" OR COALESCE(c.legal_name, '') LIKE ? OR COALESCE(c.legal_name, '') LIKE ?"
+                    f" OR ({phone_or}) OR COALESCE(c.email, '') LIKE ? OR COALESCE(c.email, '') LIKE ?"
+                    f" OR COALESCE(c.inn, '') LIKE ? OR COALESCE(c.inn, '') LIKE ?)"
                 )
                 params.extend([
                     f'%{search_stripped}%', f'%{search_lower}%',
+                    f'%{search_stripped}%', f'%{search_lower}%',
                     *phone_like_list,
-                    f'%{search_stripped}%', f'%{search_lower}%'
+                    f'%{search_stripped}%', f'%{search_lower}%',
+                    f'%{search_stripped}%', f'%{search_lower}%',
                 ])
         
         where_sql = 'WHERE ' + ' AND '.join(where_clauses) if where_clauses else ''
@@ -148,6 +170,9 @@ class CustomerQueries:
                         c.email,
                         c.created_at,
                         c.updated_at,
+                        COALESCE(c.customer_kind, 'person') AS customer_kind,
+                        c.inn,
+                        c.legal_name,
                         COUNT(DISTINCT d.id) AS devices_count,
                         COUNT(DISTINCT o.id) AS orders_count,
                         MAX(o.created_at) AS last_order_date
@@ -172,6 +197,9 @@ class CustomerQueries:
                         'email': row['email'],
                         'created_at': row['created_at'],
                         'updated_at': row['updated_at'],
+                        'customer_kind': row['customer_kind'] or 'person',
+                        'inn': row['inn'],
+                        'legal_name': row['legal_name'],
                         'devices_count': row['devices_count'] or 0,
                         'orders_count': row['orders_count'] or 0,
                         'last_order_date': row['last_order_date']
@@ -370,13 +398,14 @@ class CustomerQueries:
             raise
     
     @staticmethod
-    def search_customers(query: str, limit: int = 10) -> List[Dict]:
+    def search_customers(query: str, limit: int = 10, kind_filter: Optional[str] = None) -> List[Dict]:
         """
-        Быстрый поиск клиентов по имени, телефону или email.
+        Быстрый поиск клиентов по имени, юр. названию, ИНН, телефону или email.
         
         Args:
             query: Поисковый запрос
             limit: Максимальное количество результатов
+            kind_filter: person | ip | legal | orgs (ИП+юрлица) | None
             
         Returns:
             Список клиентов
@@ -386,11 +415,30 @@ class CustomerQueries:
         
         query_stripped = query.strip()
         query_lower = query_stripped.lower()
-        # Без LOWER() в SQL: SQLite не переводит кириллицу, поэтому два паттерна (как введено и нижний регистр)
+        # Без LOWER() в SQL: SQLite не переводит кириллицу — as-typed, lower, capitalize
         search_pattern = f'%{query_stripped}%'
         search_lower = f'%{query_lower}%'
+        search_cap = f'%{query_lower.capitalize()}%'
         phone_like_list = _phone_search_like_params(query_stripped)
         phone_or = " OR ".join(["phone LIKE ?"] * len(phone_like_list)) if phone_like_list else "FALSE"
+
+        kind_filter = (kind_filter or "").strip().lower() or None
+        kind_sql = ""
+        kind_params: List[str] = []
+        if kind_filter == "orgs":
+            kind_sql = " AND COALESCE(customer_kind, 'person') IN ('ip', 'legal')"
+        elif kind_filter in ("person", "ip", "legal"):
+            kind_sql = " AND COALESCE(customer_kind, 'person') = ?"
+            kind_params.append(kind_filter)
+
+        name_like = (
+            "(COALESCE(name, '') LIKE ? OR COALESCE(name, '') LIKE ? OR COALESCE(name, '') LIKE ?"
+            " OR COALESCE(legal_name, '') LIKE ? OR COALESCE(legal_name, '') LIKE ? OR COALESCE(legal_name, '') LIKE ?)"
+        )
+        text_patterns = (
+            search_pattern, search_lower, search_cap,
+            search_pattern, search_lower, search_cap,
+        )
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
@@ -399,14 +447,34 @@ class CustomerQueries:
                         id,
                         name,
                         phone,
-                        email
+                        email,
+                        COALESCE(customer_kind, 'person') AS customer_kind,
+                        inn,
+                        kpp,
+                        ogrn,
+                        legal_name,
+                        legal_address,
+                        bank_name,
+                        bik,
+                        checking_account,
+                        corr_account
                     FROM customers
-                    WHERE (COALESCE(name, '') LIKE ? OR COALESCE(name, '') LIKE ?)
+                    WHERE (
+                        {name_like}
+                       OR (COALESCE(inn, '') LIKE ? OR COALESCE(inn, '') LIKE ? OR COALESCE(inn, '') LIKE ?)
                        OR ({phone_or})
-                       OR (COALESCE(email, '') LIKE ? OR COALESCE(email, '') LIKE ?)
+                       OR (COALESCE(email, '') LIKE ? OR COALESCE(email, '') LIKE ? OR COALESCE(email, '') LIKE ?)
+                    ){kind_sql}
                     ORDER BY name
                     LIMIT ?
-                ''', (search_pattern, search_lower, *phone_like_list, search_pattern, search_lower, limit))
+                ''', (
+                    *text_patterns,
+                    search_pattern, search_lower, search_cap,
+                    *phone_like_list,
+                    search_pattern, search_lower, search_cap,
+                    *kind_params,
+                    limit,
+                ))
                 
                 rows = cursor.fetchall()
                 return [dict(row) for row in rows]

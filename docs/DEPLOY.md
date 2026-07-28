@@ -57,7 +57,29 @@ SQLite в новых сценариях не использовать.
 
 Миграции Postgres обычно применяются при старте контейнера (`docker-entrypoint` / `run_migrations.py`).
 
-## Обновление кода
+## Обновление существующей установки (без потери БД)
+
+Рекомендуемый способ на Linux (venv/systemd или Docker Compose):
+
+```bash
+cd /path/to/crm
+sudo bash scripts/linux_upgrade.sh
+# ветка:
+#   REF=main sudo bash scripts/linux_upgrade.sh          # OSS / DEMO
+#   REF=production sudo bash scripts/linux_upgrade.sh    # WORK
+# из архива кода:
+#   BUNDLE=/tmp/nika.tar.gz sudo bash scripts/linux_upgrade.sh
+```
+
+Скрипт:
+1. полный архив в `data/database/backups/upgrade_YYYYmmdd_HHMMSS/` (`pg_dump -Fc` + `files.tar.xz` + копия `.env`);
+2. обновляет код (`git merge --ff-only` или распаковка BUNDLE);
+3. **не** перезаписывает `.env` и **не** заливает bootstrap SQL поверх живых данных;
+4. ставит зависимости, применяет миграции (`scripts/run_migrations.py`), перезапускает сервис.
+
+**Не** используйте `ubuntu_2404_bootstrap.sh` / `linux_setup.sh` для апгрейда — bootstrap перезаписывает `.env`.
+
+Ручное обновление (если скрипт недоступен):
 
 На WORK (ветка `production`):
 

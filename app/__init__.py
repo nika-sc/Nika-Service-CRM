@@ -135,6 +135,8 @@ def create_app(config_class=Config):
                 "Allow: /$",
                 "Allow: /docs$",
                 "Allow: /docs/",
+                "Allow: /blog$",
+                "Allow: /blog/",
                 "Allow: /static/",
                 "Allow: /sitemap.xml",
                 "Allow: /sitemap-images.xml",
@@ -198,6 +200,16 @@ def create_app(config_class=Config):
             "      <image:title>Nika CRM — бесплатная CRM для сервисных центров</image:title>\n"
             "    </image:image>\n"
         )
+        blog_xml = ""
+        try:
+            from app.routes.public_blog import blog_sitemap_paths as _blog_paths
+            for path in _blog_paths():
+                pri = "0.8" if path == "/blog" else "0.65"
+                cf = "weekly" if path == "/blog" else "monthly"
+                blog_xml += url_entry(path, pri, changefreq=cf)
+        except Exception:
+            blog_xml = ""
+
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
@@ -208,6 +220,7 @@ def create_app(config_class=Config):
             f'{url_entry("/docs/walkthrough", "0.85")}'
             f'{url_entry("/docs/guide", "0.85")}'
             f'{url_entry("/docs/about", "0.7", changefreq="monthly")}'
+            f'{blog_xml}'
             '</urlset>\n'
         )
         return Response(xml, mimetype='application/xml')
@@ -667,6 +680,8 @@ def create_app(config_class=Config):
     from app.routes.staff_chat import bp as staff_chat_bp, init_staff_chat_socketio
     from app.routes.demo_visitors import bp as demo_visitors_bp
     from app.routes.public_docs import bp as public_docs_bp
+    from app.routes.public_blog import bp as public_blog_bp
+    from app.routes.invoices import bp as invoices_bp, inn_bp as inn_lookup_bp
     
     # Инициализируем limiter для blueprints
     from app.routes.main import init_limiter as init_main_limiter
@@ -705,6 +720,9 @@ def create_app(config_class=Config):
     app.register_blueprint(staff_chat_bp)
     app.register_blueprint(demo_visitors_bp)
     app.register_blueprint(public_docs_bp)
+    app.register_blueprint(public_blog_bp)
+    app.register_blueprint(invoices_bp)
+    app.register_blueprint(inn_lookup_bp)
 
     if socketio is not None:
         try:

@@ -13,6 +13,16 @@ from app.services.demo_visitor_service import DemoVisitorService
 bp = Blueprint("demo_visitors", __name__)
 logger = logging.getLogger(__name__)
 
+PERIOD_CHOICES = [
+    ("today", "Сегодня"),
+    ("yesterday", "Вчера"),
+    ("day_before_yesterday", "Позавчера"),
+    ("days_3", "3 дня назад"),
+    ("week", "7 дней"),
+    ("month", "30 дней"),
+    ("custom", "Произвольный"),
+]
+
 
 def _require_demo_stats_enabled():
     if not DemoVisitorService.is_enabled():
@@ -52,12 +62,25 @@ def demo_visitors_report():
     role = (getattr(current_user, "role", None) or "").strip().lower()
     if role != "admin":
         abort(403)
-    stats = DemoVisitorService.stats_today()
-    recent = DemoVisitorService.recent_sessions(80)
+
+    period = (request.args.get("period") or "today").strip().lower()
+    date_from = (request.args.get("from") or "").strip() or None
+    date_to = (request.args.get("to") or "").strip() or None
+    if period != "custom":
+        date_from = None
+        date_to = None
+
+    stats = DemoVisitorService.stats_for_range(period, date_from, date_to)
+    recent = DemoVisitorService.recent_sessions(
+        80,
+        range_start=stats.get("start"),
+        range_end=stats.get("end"),
+    )
     online_users = DemoVisitorService.online_users(50)
     return render_template(
         "reports/demo_visitors.html",
         stats=stats,
         recent=recent,
         online_users=online_users,
+        period_choices=PERIOD_CHOICES,
     )

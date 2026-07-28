@@ -357,6 +357,13 @@
                                 <label class="form-label">ОГРН</label>
                                 <input type="text" class="form-control" name="ogrn" value="{{ settings.ogrn or '' }}">
                             </div>
+                            <div class="col-12">
+                                <div class="alert alert-light border mb-0 py-2 small">
+                                    Банковские реквизиты, подпись/печать и шаблоны счетов/актов/накладных —
+                                    в разделе <a href="{{ url_for('invoices.settings_page') }}">Счета → Настройки</a>
+                                    (для юрлиц и ИП).
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">Логотип (URL)</label>
                                 <input type="text" class="form-control" name="logo_url" value="{{ settings.logo_url or '' }}" placeholder="https://example.com/logo.png">

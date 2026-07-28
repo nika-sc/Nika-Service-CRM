@@ -1,0 +1,17 @@
+{% extends "marketing/docs_base.html" %}
+{% block docs_body %}
+<article class="ml-docs-article">
+    <header class="ml-docs-header">
+        <p class="ml-kicker"><a href="{{ url_for('public_blog.blog_index') }}">Блог</a> · {{ post.date }}</p>
+        <h1>{{ page_heading }}</h1>
+        <p class="ml-section-lead">{{ page_description }}</p>
+    </header>
+    <div class="ml-docs-content">
+        {{ content_html|safe }}
+    </div>
+    <p class="mt-4">
+        <a href="{{ url_for('public_blog.blog_index') }}">← Все записи блога</a>
+        · <a href="{{ url_for('public_docs.docs_hub') }}">Документация</a>
+    </p>
+</article>
+{% endblock %}

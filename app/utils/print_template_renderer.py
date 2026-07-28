@@ -6,6 +6,13 @@ import re
 from typing import Dict, List
 
 
+def strip_page_at_rules(html: str) -> str:
+    """Убирает @page из HTML шаблона — формат задаёт обёртка печати (A4, поля из настроек)."""
+    if not html:
+        return html
+    return re.sub(r"@page\s*\{[^}]*\}\s*", "", html, flags=re.IGNORECASE)
+
+
 def render_print_template(
     template_html: str,
     values: Dict[str, str],
@@ -125,15 +132,19 @@ def render_print_template(
         rendered_html = clean(
             rendered_html,
             tags=[
-                "p", "table", "tbody", "tr", "td", "th",
+                "html", "head", "body", "meta", "title", "style",
+                "p", "table", "thead", "tbody", "tfoot", "tr", "td", "th",
+                "colgroup", "col",
                 "h1", "h2", "h3", "h4", "h5", "h6",
-                "strong", "em", "u", "ol", "ul", "li", "br",
-                "img", "span", "div", "var-inline",
+                "strong", "b", "em", "i", "u", "ol", "ul", "li", "br", "hr",
+                "img", "span", "div", "a", "var-inline",
             ],
             attributes={
                 "*": [
-                    "style", "class", "width", "height", "border",
-                    "colspan", "rowspan", "data-var", "data-for", "src", "alt",
+                    "style", "class", "width", "height", "border", "cellpadding",
+                    "cellspacing", "colspan", "rowspan", "valign", "align",
+                    "data-var", "data-for", "src", "alt", "data-file-id",
+                    "charset", "name", "content", "href", "target", "rel",
                 ]
             },
             strip=False,

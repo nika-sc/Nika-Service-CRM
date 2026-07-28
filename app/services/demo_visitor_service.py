@@ -217,7 +217,109 @@ class DemoVisitorService:
         return start.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S")
 
     @staticmethod
-    def stats_today() -> Dict[str, Any]:
+    def resolve_period_bounds(
+        period: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Пресеты MSK: today | yesterday | day_before_yesterday | days_3 | week | month | custom.
+        Диапазон clamp к RETENTION_DAYS. Возвращает start/end строки и метаданные для UI.
+        """
+        from datetime import datetime
+
+        now = get_moscow_now()
+        if getattr(now, "tzinfo", None) is not None:
+            now = now.replace(tzinfo=None)
+        today0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        retention_start = today0 - timedelta(days=RETENTION_DAYS - 1)
+        period = (period or "today").strip().lower()
+        labels = {
+            "today": "Сегодня",
+            "yesterday": "Вчера",
+            "day_before_yesterday": "Позавчера",
+            "days_3": "3 дня назад",
+            "week": "7 дней",
+            "month": "30 дней",
+            "custom": "Произвольный период",
+        }
+        if period not in labels:
+            period = "today"
+
+        end = now
+        if period == "today":
+            start = today0
+        elif period == "yesterday":
+            start = today0 - timedelta(days=1)
+            end = today0 - timedelta(microseconds=1)
+        elif period == "day_before_yesterday":
+            start = today0 - timedelta(days=2)
+            end = today0 - timedelta(days=1, microseconds=1)
+        elif period == "days_3":
+            start = today0 - timedelta(days=3)
+            end = today0 - timedelta(days=2, microseconds=1)
+        elif period == "week":
+            start = now - timedelta(days=7)
+        elif period == "month":
+            start = max(now - timedelta(days=30), retention_start)
+        elif period == "custom":
+            def _parse_day(s: Optional[str]):
+                if not s:
+                    return None
+                try:
+                    d = datetime.strptime(s.strip()[:10], "%Y-%m-%d")
+                    return d
+                except ValueError:
+                    return None
+
+            start_p = _parse_day(date_from)
+            end_p = _parse_day(date_to)
+            if start_p is None and end_p is None:
+                period = "today"
+                start = today0
+                end = now
+            else:
+                start = start_p if start_p else retention_start
+                end = (
+                    end_p.replace(hour=23, minute=59, second=59)
+                    if end_p
+                    else now
+                )
+                if start > end:
+                    start, end = (
+                        end.replace(hour=0, minute=0, second=0, microsecond=0),
+                        start.replace(hour=23, minute=59, second=59),
+                    )
+        else:
+            start = today0
+
+        if start < retention_start:
+            start = retention_start
+        if end > now:
+            end = now
+        if start > end:
+            start = end.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        multi_day = (end.date() - start.date()).days >= 1
+
+        return {
+            "period": period,
+            "period_label": labels.get(period, period),
+            "start": start.strftime("%Y-%m-%d %H:%M:%S"),
+            "end": end.strftime("%Y-%m-%d %H:%M:%S"),
+            "date_from": start.strftime("%Y-%m-%d"),
+            "date_to": end.strftime("%Y-%m-%d"),
+            "multi_day": multi_day,
+            "retention_days": RETENTION_DAYS,
+        }
+
+    @staticmethod
+    def stats_for_range(
+        period: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        bounds = DemoVisitorService.resolve_period_bounds(period, date_from, date_to)
         empty = {
             "online": 0,
             "logins_today": 0,
@@ -228,12 +330,17 @@ class DemoVisitorService:
             "top_users": [],
             "top_ips": [],
             "by_hour": [],
+            "by_day": [],
+            "chart_mode": "hour",
             "online_window_minutes": ONLINE_WINDOW_MINUTES,
+            **bounds,
         }
         if not DemoVisitorService.is_enabled():
             return empty
 
-        day_start, now_str = DemoVisitorService._today_bounds()
+        range_start = bounds["start"]
+        range_end = bounds["end"]
+        multi_day = bool(bounds["multi_day"])
         online = DemoVisitorService.online_count()
         try:
             with get_db_connection() as conn:
@@ -249,9 +356,10 @@ class DemoVisitorService:
                 cur.execute(
                     """
                     SELECT COUNT(*) AS c FROM demo_visitor_events
-                    WHERE event_type = 'login' AND created_at >= ?
+                    WHERE event_type = 'login'
+                      AND created_at >= ? AND created_at <= ?
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 logins = _count(cur.fetchone())
 
@@ -260,9 +368,9 @@ class DemoVisitorService:
                     SELECT COUNT(DISTINCT user_id) AS c FROM demo_visitor_events
                     WHERE user_id IS NOT NULL
                       AND event_type IN ('login', 'heartbeat')
-                      AND created_at >= ?
+                      AND created_at >= ? AND created_at <= ?
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 unique_users = _count(cur.fetchone())
 
@@ -271,29 +379,30 @@ class DemoVisitorService:
                     SELECT COUNT(DISTINCT {_SESSION_KEY_SQL}) AS c
                     FROM demo_visitor_events
                     WHERE event_type IN ('login', 'heartbeat')
-                      AND created_at >= ?
+                      AND created_at >= ? AND created_at <= ?
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 unique_sessions = _count(cur.fetchone())
 
                 cur.execute(
                     """
                     SELECT COUNT(DISTINCT ip) AS c FROM demo_visitor_events
-                    WHERE ip IS NOT NULL AND ip != '' AND created_at >= ?
+                    WHERE ip IS NOT NULL AND ip != ''
+                      AND created_at >= ? AND created_at <= ?
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 unique_ips = _count(cur.fetchone())
 
                 cur.execute(
                     """
                     SELECT COUNT(*) AS c FROM demo_visitor_events
-                    WHERE created_at >= ?
+                    WHERE created_at >= ? AND created_at <= ?
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
-                events_today = _count(cur.fetchone())
+                events_count = _count(cur.fetchone())
 
                 cur.execute(
                     """
@@ -301,12 +410,12 @@ class DemoVisitorService:
                            COUNT(*) AS cnt
                     FROM demo_visitor_events
                     WHERE event_type IN ('login', 'heartbeat')
-                      AND created_at >= ?
+                      AND created_at >= ? AND created_at <= ?
                     GROUP BY COALESCE(username, '(unknown)')
                     ORDER BY cnt DESC
                     LIMIT 15
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 top_users = [
                     {
@@ -321,12 +430,12 @@ class DemoVisitorService:
                     SELECT COALESCE(ip, '(unknown)') AS ip,
                            COUNT(*) AS cnt
                     FROM demo_visitor_events
-                    WHERE created_at >= ?
+                    WHERE created_at >= ? AND created_at <= ?
                     GROUP BY COALESCE(ip, '(unknown)')
                     ORDER BY cnt DESC
                     LIMIT 15
                     """,
-                    (day_start,),
+                    (range_start, range_end),
                 )
                 top_ips = [
                     {
@@ -336,28 +445,60 @@ class DemoVisitorService:
                     for r in cur.fetchall()
                 ]
 
-                cur.execute(
-                    """
-                    SELECT to_char(created_at, 'HH24') AS hour,
-                           COUNT(*) AS cnt
-                    FROM demo_visitor_events
-                    WHERE event_type IN ('login', 'heartbeat')
-                      AND created_at >= ?
-                    GROUP BY to_char(created_at, 'HH24')
-                    ORDER BY hour
-                    """,
-                    (day_start,),
-                )
-                hour_map = {
-                    (r[0] if not hasattr(r, "keys") else r["hour"]): int(
-                        r[1] if not hasattr(r, "keys") else r["cnt"]
+                by_hour: List[Dict[str, Any]] = []
+                by_day: List[Dict[str, Any]] = []
+                chart_mode = "day" if multi_day else "hour"
+                if multi_day:
+                    cur.execute(
+                        """
+                        SELECT to_char(created_at, 'YYYY-MM-DD') AS day,
+                               COUNT(*) AS cnt
+                        FROM demo_visitor_events
+                        WHERE event_type IN ('login', 'heartbeat')
+                          AND created_at >= ? AND created_at <= ?
+                        GROUP BY to_char(created_at, 'YYYY-MM-DD')
+                        ORDER BY day
+                        """,
+                        (range_start, range_end),
                     )
-                    for r in cur.fetchall()
-                }
-                by_hour = [
-                    {"hour": f"{h:02d}", "count": int(hour_map.get(f"{h:02d}", 0))}
-                    for h in range(24)
-                ]
+                    day_map = {
+                        (r[0] if not hasattr(r, "keys") else r["day"]): int(
+                            r[1] if not hasattr(r, "keys") else r["cnt"]
+                        )
+                        for r in cur.fetchall()
+                    }
+                    from datetime import datetime as _dt
+
+                    d0 = _dt.strptime(bounds["date_from"], "%Y-%m-%d").date()
+                    d1 = _dt.strptime(bounds["date_to"], "%Y-%m-%d").date()
+                    cur_d = d0
+                    while cur_d <= d1:
+                        key = cur_d.strftime("%Y-%m-%d")
+                        by_day.append({"day": key, "count": int(day_map.get(key, 0))})
+                        cur_d = cur_d + timedelta(days=1)
+                else:
+                    cur.execute(
+                        """
+                        SELECT to_char(created_at, 'HH24') AS hour,
+                               COUNT(*) AS cnt
+                        FROM demo_visitor_events
+                        WHERE event_type IN ('login', 'heartbeat')
+                          AND created_at >= ? AND created_at <= ?
+                        GROUP BY to_char(created_at, 'HH24')
+                        ORDER BY hour
+                        """,
+                        (range_start, range_end),
+                    )
+                    hour_map = {
+                        (r[0] if not hasattr(r, "keys") else r["hour"]): int(
+                            r[1] if not hasattr(r, "keys") else r["cnt"]
+                        )
+                        for r in cur.fetchall()
+                    }
+                    by_hour = [
+                        {"hour": f"{h:02d}", "count": int(hour_map.get(f"{h:02d}", 0))}
+                        for h in range(24)
+                    ]
 
             return {
                 "online": online,
@@ -365,36 +506,60 @@ class DemoVisitorService:
                 "unique_users_today": unique_users,
                 "unique_sessions_today": unique_sessions,
                 "unique_ips_today": unique_ips,
-                "events_today": events_today,
+                "events_today": events_count,
                 "top_users": top_users,
                 "top_ips": top_ips,
                 "by_hour": by_hour,
+                "by_day": by_day,
+                "chart_mode": chart_mode,
                 "online_window_minutes": ONLINE_WINDOW_MINUTES,
-                "as_of": now_str,
+                "as_of": get_moscow_now_str(),
+                **bounds,
             }
         except Exception as exc:
-            logger.warning("demo_visitor stats_today failed: %s", exc)
+            logger.warning("demo_visitor stats_for_range failed: %s", exc)
             empty["online"] = online
             return empty
 
     @staticmethod
-    def recent_sessions(limit: int = 50) -> List[Dict[str, Any]]:
+    def stats_today() -> Dict[str, Any]:
+        return DemoVisitorService.stats_for_range("today")
+
+    @staticmethod
+    def recent_sessions(
+        limit: int = 50,
+        range_start: Optional[str] = None,
+        range_end: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         if not DemoVisitorService.is_enabled():
             return []
         limit = max(1, min(int(limit or 50), 200))
         try:
             with get_db_connection() as conn:
                 cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT id, user_id, username, ip, user_agent, path, event_type,
-                           created_at, client_instance_id
-                    FROM demo_visitor_events
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT ?
-                    """,
-                    (limit,),
-                )
+                if range_start and range_end:
+                    cur.execute(
+                        """
+                        SELECT id, user_id, username, ip, user_agent, path, event_type,
+                               created_at, client_instance_id
+                        FROM demo_visitor_events
+                        WHERE created_at >= ? AND created_at <= ?
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT ?
+                        """,
+                        (range_start, range_end, limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT id, user_id, username, ip, user_agent, path, event_type,
+                               created_at, client_instance_id
+                        FROM demo_visitor_events
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT ?
+                        """,
+                        (limit,),
+                    )
                 rows = cur.fetchall()
                 result = []
                 for r in rows:

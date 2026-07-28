@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Счета — Nika CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Счета</h1>
+        <div class="d-flex gap-2">
+            {% if has_permission('manage_invoices') %}
+            <a href="{{ url_for('invoices.settings_page') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-cog me-1"></i>Настройки
+            </a>
+            <a href="{{ url_for('invoices.create_manual') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>Новый счёт
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form class="row g-2 mb-3" method="get">
+        <div class="col-md-3">
+            <select name="status" class="form-select form-select-sm">
+                <option value="">Все статусы</option>
+                {% for key, label in status_labels.items() %}
+                <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <input type="search" name="q" class="form-control form-control-sm" placeholder="Поиск: номер, ИНН, название…" value="{{ search }}">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-sm btn-outline-primary w-100" type="submit"><i class="fas fa-search me-1"></i>Найти</button>
+        </div>
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>№</th>
+                        <th>Дата</th>
+                        <th>Покупатель</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                        <th>Заявка</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if invoices %}
+                    {% for inv in invoices %}
+                    <tr>
+                        <td><a href="{{ url_for('invoices.detail', invoice_id=inv.id) }}">{{ inv.number }}</a></td>
+                        <td>{{ (inv.issued_at or '')|string|truncate(16, True, '') }}</td>
+                        <td>
+                            <div>{{ inv.buyer_name or inv.customer_name or '—' }}</div>
+                            {% if inv.buyer_inn %}<small class="text-muted">ИНН {{ inv.buyer_inn }}</small>{% endif %}
+                        </td>
+                        <td class="fw-semibold">{{ inv.total_fmt }} ₽</td>
+                        <td><span class="badge text-bg-{{ inv.status_badge }}">{{ inv.status_label }}</span></td>
+                        <td>
+                            {% if inv.order_id %}
+                            <a href="{{ url_for('orders.order_detail', order_id=inv.order_id) }}">#{{ inv.order_id }}</a>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('invoices.detail', invoice_id=inv.id) }}">Открыть</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">Счетов пока нет</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination pagination-sm">
+            {% for p in range(1, pagination.pages + 1) %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}&status={{ status_filter }}&q={{ search }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

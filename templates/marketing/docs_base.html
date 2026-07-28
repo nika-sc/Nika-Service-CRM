@@ -96,6 +96,9 @@
                 <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'walkthrough' %} is-active{% endif %}"
                    href="{{ url_for('public_docs.docs_walkthrough') }}"
                    {% if active_docs_nav == 'walkthrough' %}aria-current="page"{% endif %}>Сценарий дня</a>
+                <a class="ml-btn ml-btn-ghost{% if active_docs_nav == 'blog' %} is-active{% endif %}"
+                   href="{{ url_for('public_blog.blog_index') }}"
+                   {% if active_docs_nav == 'blog' %}aria-current="page"{% endif %}>Блог</a>
                 <a class="ml-btn ml-btn-primary" href="{{ url_for('main.home', login=1) }}">Войти в демо</a>
             </nav>
         </div>
@@ -124,6 +127,7 @@
         <p>
             <a href="{{ url_for('main.home') }}">На главную</a>
             · <a href="{{ url_for('public_docs.docs_hub') }}">Документация</a>
+            · <a href="{{ url_for('public_blog.blog_index') }}">Блог</a>
             · <a href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(откроется в новой вкладке)</span></a>
             · <a href="{{ windows_setup.github_download_url }}">Windows SETUP</a>
         </p>

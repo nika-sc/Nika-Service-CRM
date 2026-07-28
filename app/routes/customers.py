@@ -36,10 +36,32 @@ def format_phone_display(phone: str) -> str:
 def clients():
     """Список всех клиентов."""
     search_query = request.args.get('q', '').strip()
+    kind_filter = (request.args.get('kind') or '').strip().lower() or ''
+    if kind_filter not in ('', 'person', 'ip', 'legal', 'orgs'):
+        kind_filter = ''
     # Страница использует server-side DataTables, данные подгружаются через AJAX.
     return render_template('clients.html',
         customers=[],
         search_query=search_query,
+        kind_filter=kind_filter,
+        page_mode='clients',
+        page=1,
+        pages=1,
+        total=0
+    )
+
+
+@bp.route('/organizations')
+@login_required
+@permission_required('view_customers')
+def organizations():
+    """Реестр организаций (ИП и юрлица) — те же клиенты с фильтром реквизитов."""
+    search_query = request.args.get('q', '').strip()
+    return render_template('clients.html',
+        customers=[],
+        search_query=search_query,
+        kind_filter='orgs',
+        page_mode='organizations',
         page=1,
         pages=1,
         total=0
@@ -76,6 +98,9 @@ def api_datatables_clients():
     page = (start // length) + 1
 
     search_value = (request.args.get('search[value]', '') or '').strip()
+    kind_filter = (request.args.get('kind') or '').strip().lower() or None
+    if kind_filter not in ('person', 'ip', 'legal', 'orgs'):
+        kind_filter = None
 
     # Сортировка (поддерживаем только базовые поля, остальное — по имени)
     order_col = int(request.args.get('order[0][column]', 0) or 0)
@@ -97,17 +122,29 @@ def api_datatables_clients():
         page=page,
         per_page=length,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
+        kind_filter=kind_filter,
     )
 
-    # recordsTotal: без search
+    # recordsTotal: без search (с учётом kind)
     with get_db_connection(row_factory=sqlite3.Row) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) AS cnt FROM customers")
+        if kind_filter == 'orgs':
+            cursor.execute(
+                "SELECT COUNT(*) AS cnt FROM customers WHERE COALESCE(customer_kind, 'person') IN ('ip', 'legal')"
+            )
+        elif kind_filter in ('person', 'ip', 'legal'):
+            cursor.execute(
+                "SELECT COUNT(*) AS cnt FROM customers WHERE COALESCE(customer_kind, 'person') = ?",
+                (kind_filter,),
+            )
+        else:
+            cursor.execute("SELECT COUNT(*) AS cnt FROM customers")
         records_total = int(cursor.fetchone()['cnt'])
 
     records_filtered = int(result['total'])
 
+    kind_labels = {'person': 'Физлицо', 'ip': 'ИП', 'legal': 'Юрлицо'}
     data = []
     for c in result['items']:
         cid = c.get('id')
@@ -117,11 +154,27 @@ def api_datatables_clients():
         devices_count = int(c.get('devices_count') or 0)
         orders_count = int(c.get('orders_count') or 0)
         last_order_date = c.get('last_order_date')
+        ckind = c.get('customer_kind') or 'person'
+        inn = (c.get('inn') or '').strip()
 
         name_html = (
             f'<a href="/clients/{cid}" class="text-primary fw-bold text-decoration-none" '
             f'onclick="event.stopPropagation();">{_html.escape(str(name))}</a>'
         )
+        if c.get('legal_name') and str(c.get('legal_name')) != str(name):
+            name_html += (
+                f'<div class="small text-muted">{_html.escape(str(c.get("legal_name")))}</div>'
+            )
+
+        kind_badge = {
+            'person': 'secondary',
+            'ip': 'info',
+            'legal': 'primary',
+        }.get(ckind, 'secondary')
+        kind_html = (
+            f'<span class="badge text-bg-{kind_badge}">{_html.escape(kind_labels.get(ckind, ckind))}</span>'
+        )
+        inn_html = _html.escape(inn) if inn else '<span class="text-muted">—</span>'
 
         # Телефон + меню
         phone_digits = _phone_digits(phone)
@@ -189,6 +242,8 @@ def api_datatables_clients():
 
         data.append({
             "client": name_html,
+            "kind": kind_html,
+            "inn": inn_html,
             "phone": phone_html,
             "email": email_html,
             "devices": devices_html,
@@ -272,6 +327,60 @@ def create_order_from_client(client_id):
     return redirect(url_for('orders.add_order', customer_id=client_id))
 
 # API endpoints для клиентов
+@bp.route('/api/customers/suggest')
+@login_required
+def api_suggest_customers():
+    """Поиск клиентов по имени / юр. названию / ИНН / телефону (для счетов и форм)."""
+    from app.services.user_service import UserService
+    from flask_login import current_user
+
+    if not (
+        UserService.check_permission(current_user.id, 'view_customers')
+        or UserService.check_permission(current_user.id, 'manage_invoices')
+        or UserService.check_permission(current_user.id, 'view_invoices')
+    ):
+        return jsonify({'success': False, 'error': 'forbidden'}), 403
+
+    query = (request.args.get('q') or '').strip()
+    kind = (request.args.get('kind') or '').strip().lower() or None
+    if kind not in ('person', 'ip', 'legal', 'orgs'):
+        kind = None
+    limit = min(30, max(1, request.args.get('limit', 15, type=int) or 15))
+    if len(query) < 2:
+        return jsonify({'success': True, 'customers': []})
+
+    # kind_filter в SQL до LIMIT — иначе частые ФИО забивают выборку физлицами
+    rows = CustomerService.search_customers(query, limit=limit, kind_filter=kind)
+
+    customers = []
+    for r in rows:
+        label_parts = [r.get('name') or '']
+        if r.get('legal_name') and r.get('legal_name') != r.get('name'):
+            label_parts.append(r.get('legal_name'))
+        if r.get('inn'):
+            label_parts.append(f"ИНН {r.get('inn')}")
+        if r.get('phone'):
+            label_parts.append(r.get('phone'))
+        customers.append({
+            'id': r.get('id'),
+            'name': r.get('name') or '',
+            'phone': r.get('phone') or '',
+            'email': r.get('email') or '',
+            'customer_kind': r.get('customer_kind') or 'person',
+            'inn': r.get('inn') or '',
+            'kpp': r.get('kpp') or '',
+            'ogrn': r.get('ogrn') or '',
+            'legal_name': r.get('legal_name') or '',
+            'legal_address': r.get('legal_address') or '',
+            'bank_name': r.get('bank_name') or '',
+            'bik': r.get('bik') or '',
+            'checking_account': r.get('checking_account') or '',
+            'corr_account': r.get('corr_account') or '',
+            'label': ' · '.join(p for p in label_parts if p),
+        })
+    return jsonify({'success': True, 'customers': customers})
+
+
 @bp.route('/api/customers/lookup')
 @login_required
 @permission_required('view_customers')

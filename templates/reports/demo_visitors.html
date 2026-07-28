@@ -3,14 +3,42 @@
 {% block title %}Демо: посещения — Nika CRM{% endblock %}
 
 {% block report_content %}
-<div class="mb-3">
-    <h2 class="h4 mb-1"><i class="fas fa-users me-2"></i>Статистика заходов (демо)</h2>
-    <p class="text-muted small mb-0">
-        Только для admin на демо-сервере. «Онлайн» — уникальные пользователи с login/heartbeat за последние
-        {{ stats.online_window_minutes }} мин.
-        {% if stats.as_of %}<span class="ms-1">Обновлено: {{ stats.as_of }}</span>{% endif %}
-    </p>
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-start gap-2">
+    <div>
+        <h2 class="h4 mb-1"><i class="fas fa-users me-2"></i>Статистика заходов (демо)</h2>
+        <p class="text-muted small mb-0">
+            Только для admin на демо-сервере. «Онлайн» — сейчас ({{ stats.online_window_minutes }} мин),
+            KPI и график — за период <strong>{{ stats.period_label }}</strong>
+            ({{ stats.date_from }}{% if stats.date_from != stats.date_to %} — {{ stats.date_to }}{% endif %}).
+            {% if stats.as_of %}<span class="ms-1">Обновлено: {{ stats.as_of }}</span>{% endif %}
+        </p>
+    </div>
 </div>
+
+<form class="card card-body mb-4" method="get" action="{{ url_for('demo_visitors.demo_visitors_report') }}">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small mb-1">Период</label>
+            <select name="period" id="demoPeriod" class="form-select form-select-sm" onchange="toggleCustomDates()">
+                {% for value, label in period_choices %}
+                <option value="{{ value }}" {% if stats.period == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 demo-custom-dates" {% if stats.period != 'custom' %}style="display:none"{% endif %}>
+            <label class="form-label small mb-1">С</label>
+            <input type="date" name="from" class="form-control form-control-sm" value="{{ stats.date_from }}">
+        </div>
+        <div class="col-md-3 demo-custom-dates" {% if stats.period != 'custom' %}style="display:none"{% endif %}>
+            <label class="form-label small mb-1">По</label>
+            <input type="date" name="to" class="form-control form-control-sm" value="{{ stats.date_to }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-sm btn-primary w-100">Показать</button>
+        </div>
+    </div>
+    <div class="form-text mt-2">Данные хранятся {{ stats.retention_days }} дней; произвольный период ограничен этим окном.</div>
+</form>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
@@ -24,7 +52,7 @@
     <div class="col-6 col-md-3">
         <div class="card h-100">
             <div class="card-body">
-                <div class="text-muted small">Логинов сегодня</div>
+                <div class="text-muted small">Логинов за период</div>
                 <div class="fs-3 fw-semibold">{{ stats.logins_today }}</div>
             </div>
         </div>
@@ -40,7 +68,7 @@
     <div class="col-6 col-md-3">
         <div class="card h-100">
             <div class="card-body">
-                <div class="text-muted small">Уник. IP сегодня</div>
+                <div class="text-muted small">Уник. IP за период</div>
                 <div class="fs-3 fw-semibold">{{ stats.unique_ips_today }}</div>
             </div>
         </div>
@@ -87,21 +115,40 @@
     </div>
     <div class="col-lg-6">
         <div class="card h-100">
-            <div class="card-header"><strong>Активность по часам (сегодня)</strong></div>
+            <div class="card-header">
+                <strong>
+                    {% if stats.chart_mode == 'day' %}Активность по дням{% else %}Активность по часам{% endif %}
+                    ({{ stats.period_label }})
+                </strong>
+            </div>
             <div class="card-body">
                 <div class="d-flex align-items-end gap-1" style="height:140px">
-                    {% set counts = stats.by_hour|map(attribute='count')|list %}
-                    {% set max_h = (counts|max) if counts else 1 %}
-                    {% if max_h < 1 %}{% set max_h = 1 %}{% endif %}
-                    {% for h in stats.by_hour %}
-                    <div class="flex-fill text-center" title="{{ h.hour }}:00 — {{ h.count }}">
-                        <div class="bg-primary rounded-top mx-auto"
-                             style="height: {{ ((h.count / max_h) * 120)|int }}px; min-height: {% if h.count %}2px{% else %}0{% endif %}; width: 70%; opacity: .85;"></div>
-                        <div class="small text-muted" style="font-size:.65rem">{{ h.hour }}</div>
-                    </div>
-                    {% endfor %}
+                    {% if stats.chart_mode == 'day' %}
+                        {% set bars = stats.by_day %}
+                        {% set counts = bars|map(attribute='count')|list %}
+                        {% set max_h = (counts|max) if counts else 1 %}
+                        {% if max_h < 1 %}{% set max_h = 1 %}{% endif %}
+                        {% for h in bars %}
+                        <div class="flex-fill text-center" title="{{ h.day }} — {{ h.count }}">
+                            <div class="bg-primary rounded-top mx-auto"
+                                 style="height: {{ ((h.count / max_h) * 120)|int }}px; min-height: {% if h.count %}2px{% else %}0{% endif %}; width: 70%; opacity: .85;"></div>
+                            <div class="small text-muted" style="font-size:.6rem">{{ h.day[5:] }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        {% set counts = stats.by_hour|map(attribute='count')|list %}
+                        {% set max_h = (counts|max) if counts else 1 %}
+                        {% if max_h < 1 %}{% set max_h = 1 %}{% endif %}
+                        {% for h in stats.by_hour %}
+                        <div class="flex-fill text-center" title="{{ h.hour }}:00 — {{ h.count }}">
+                            <div class="bg-primary rounded-top mx-auto"
+                                 style="height: {{ ((h.count / max_h) * 120)|int }}px; min-height: {% if h.count %}2px{% else %}0{% endif %}; width: 70%; opacity: .85;"></div>
+                            <div class="small text-muted" style="font-size:.65rem">{{ h.hour }}</div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
                 </div>
-                <p class="small text-muted mb-0 mt-2">События login + heartbeat за день: {{ stats.events_today }}</p>
+                <p class="small text-muted mb-0 mt-2">События за период: {{ stats.events_today }}</p>
             </div>
         </div>
     </div>
@@ -110,7 +157,7 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><strong>Топ логинов сегодня</strong></div>
+            <div class="card-header"><strong>Топ логинов за период</strong></div>
             <ul class="list-group list-group-flush">
                 {% for row in stats.top_users %}
                 <li class="list-group-item d-flex justify-content-between">
@@ -125,7 +172,7 @@
     </div>
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><strong>Топ IP сегодня</strong></div>
+            <div class="card-header"><strong>Топ IP за период</strong></div>
             <ul class="list-group list-group-flush">
                 {% for row in stats.top_ips %}
                 <li class="list-group-item d-flex justify-content-between">
@@ -142,7 +189,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Последние события</strong>
+        <strong>События за период</strong>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
             <i class="fas fa-sync-alt"></i> Обновить
         </button>
@@ -171,11 +218,19 @@
                         <td class="small text-truncate" style="max-width:16rem" title="{{ e.user_agent or '' }}">{{ e.user_agent or '—' }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="text-muted text-center py-3">Событий пока нет — зайдите в CRM с демо-учётки</td></tr>
+                    <tr><td colspan="6" class="text-muted text-center py-3">Нет событий за выбранный период</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+<script>
+function toggleCustomDates() {
+    const period = document.getElementById('demoPeriod').value;
+    document.querySelectorAll('.demo-custom-dates').forEach(el => {
+        el.style.display = period === 'custom' ? '' : 'none';
+    });
+}
+</script>
 {% endblock %}

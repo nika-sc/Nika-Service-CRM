@@ -41,6 +41,16 @@ class Customer(BaseModel):
         self.portal_enabled = kwargs.get('portal_enabled', 0) or 0
         self.portal_password_hash = kwargs.get('portal_password_hash')
         self.portal_password_changed = kwargs.get('portal_password_changed', 0) or 0
+        self.customer_kind = kwargs.get('customer_kind') or 'person'
+        self.inn = kwargs.get('inn')
+        self.kpp = kwargs.get('kpp')
+        self.ogrn = kwargs.get('ogrn')
+        self.legal_name = kwargs.get('legal_name')
+        self.legal_address = kwargs.get('legal_address')
+        self.bank_name = kwargs.get('bank_name')
+        self.bik = kwargs.get('bik')
+        self.checking_account = kwargs.get('checking_account')
+        self.corr_account = kwargs.get('corr_account')
     
     def validate(self) -> None:
         """
@@ -304,6 +314,16 @@ class Customer(BaseModel):
             'orders_count': self.orders_count,
             'portal_enabled': self.portal_enabled,
             'portal_password_hash': bool(self.portal_password_hash),  # Только флаг наличия, не сам хеш
-            'portal_password_changed': self.portal_password_changed
+            'portal_password_changed': self.portal_password_changed,
+            'customer_kind': self.customer_kind or 'person',
+            'inn': self.inn,
+            'kpp': self.kpp,
+            'ogrn': self.ogrn,
+            'legal_name': self.legal_name,
+            'legal_address': self.legal_address,
+            'bank_name': self.bank_name,
+            'bik': self.bik,
+            'checking_account': self.checking_account,
+            'corr_account': self.corr_account,
         }
 

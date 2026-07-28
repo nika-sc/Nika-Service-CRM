@@ -3066,6 +3066,23 @@
                                                 <button type="button" id="addPaymentBtn" class="btn btn-success w-100" {% if blocks_edit or is_final %}style="border-radius: 8px; font-weight: 500; padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;" title="Сначала откройте заявку" data-blocked="1"{% else %}data-bs-toggle="modal" data-bs-target="#addPaymentModal" style="border-radius: 8px; font-weight: 500; padding: 0.5rem 1rem;"{% endif %}>
                                                     <i class="fas fa-plus me-2"></i>Добавить оплату
                                                 </button>
+                                                {% if has_permission('manage_invoices') and not blocks_edit and not is_final %}
+                                                <button type="button" class="btn btn-outline-primary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createInvoiceModal" style="border-radius: 8px; font-weight: 500; padding: 0.5rem 1rem;">
+                                                    <i class="fas fa-file-invoice-dollar me-2"></i>Выставить счёт
+                                                </button>
+                                                {% endif %}
+                                                {% if order_invoices %}
+                                                <div class="mt-3 small">
+                                                    <div class="text-muted mb-1">Счета по заявке</div>
+                                                    {% for inv in order_invoices %}
+                                                    <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">
+                                                        <a href="{{ url_for('invoices.detail', invoice_id=inv.id) }}">№{{ inv.number }}</a>
+                                                        <span>{{ inv.total_fmt }} ₽</span>
+                                                        <span class="badge text-bg-{% if inv.status == 'paid' %}success{% elif inv.status == 'unpaid' %}warning{% else %}secondary{% endif %}">{{ inv.status_label }}</span>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -4129,6 +4146,60 @@
         </div>
     </div>
     
+    <!-- Modal: выставить счёт B2B -->
+    <div class="modal fade" id="createInvoiceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i>Выставить счёт</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Выберите позиции. Счёт создаётся со статусом «Не оплачен» и не уменьшает долг до отметки «Оплачен».</p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Срок оплаты</label>
+                            <input type="date" class="form-control" id="invoiceDueDate">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Комментарий</label>
+                            <input type="text" class="form-control" id="invoiceComment">
+                        </div>
+                    </div>
+                    <div class="fw-semibold mb-1">Услуги</div>
+                    <div class="border rounded p-2 mb-3" style="max-height:180px;overflow:auto;">
+                        {% for s in order_services %}
+                        <label class="d-flex gap-2 align-items-center mb-1">
+                            <input type="checkbox" class="form-check-input invoice-svc" value="{{ s.id }}" checked>
+                            <span class="flex-grow-1">{{ s.name or s.service_name }}</span>
+                            <span class="text-muted">{{ "%.2f"|format(s.price or s.service_price or 0) }} ₽ × {{ s.quantity or 1 }}</span>
+                        </label>
+                        {% else %}
+                        <div class="text-muted small">Нет услуг</div>
+                        {% endfor %}
+                    </div>
+                    <div class="fw-semibold mb-1">Товары</div>
+                    <div class="border rounded p-2" style="max-height:180px;overflow:auto;">
+                        {% for p in order_parts %}
+                        <label class="d-flex gap-2 align-items-center mb-1">
+                            <input type="checkbox" class="form-check-input invoice-part" value="{{ p.id }}" checked>
+                            <span class="flex-grow-1">{{ p.name or p.part_name }}</span>
+                            <span class="text-muted">{{ "%.2f"|format(p.price or p.sale_price or 0) }} ₽ × {{ p.quantity or 1 }}</span>
+                        </label>
+                        {% else %}
+                        <div class="text-muted small">Нет товаров</div>
+                        {% endfor %}
+                    </div>
+                    <div id="createInvoiceError" class="text-danger small mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="createInvoiceSubmit">Создать счёт</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal добавления оплаты (старое, оставляем для совместимости) -->
     <div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -6623,6 +6694,43 @@
 
         // Обработка оплат (инициализация при загрузке DOM)
         whenDOMReady(function() {
+            const createInvoiceSubmit = document.getElementById('createInvoiceSubmit');
+            if (createInvoiceSubmit) {
+                createInvoiceSubmit.addEventListener('click', async function() {
+                    const errEl = document.getElementById('createInvoiceError');
+                    if (errEl) errEl.textContent = '';
+                    const serviceIds = [...document.querySelectorAll('.invoice-svc:checked')].map(el => parseInt(el.value, 10));
+                    const partIds = [...document.querySelectorAll('.invoice-part:checked')].map(el => parseInt(el.value, 10));
+                    const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+                        || document.querySelector('input[name="csrf_token"]')?.value || '';
+                    createInvoiceSubmit.disabled = true;
+                    try {
+                        const resp = await fetch(`/invoices/api/from-order/{{ order.id }}`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+                            body: JSON.stringify({
+                                service_ids: serviceIds,
+                                part_ids: partIds,
+                                due_date: document.getElementById('invoiceDueDate')?.value || null,
+                                comment: document.getElementById('invoiceComment')?.value || null
+                            })
+                        });
+                        const data = await resp.json();
+                        if (!data.success) {
+                            if (errEl) errEl.textContent = data.error || 'Ошибка создания счёта';
+                            else showToast(data.error || 'Ошибка создания счёта', 'error');
+                            createInvoiceSubmit.disabled = false;
+                            return;
+                        }
+                        if (data.url) window.location.href = data.url;
+                        else window.location.reload();
+                    } catch (e) {
+                        if (errEl) errEl.textContent = 'Ошибка сети';
+                        createInvoiceSubmit.disabled = false;
+                    }
+                });
+            }
+
             const addPaymentModal = document.getElementById('addPaymentModal');
             const addPaymentForm = document.getElementById('addPaymentForm');
             const savePaymentBtn = document.getElementById('savePaymentBtn');

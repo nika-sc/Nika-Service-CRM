@@ -5851,6 +5851,9 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 008	staff_chat_web_push	2026-04-10 00:00:00
 009	order_pins	2026-04-15 00:00:00
 010	redact_smtp_password_logs	2026-07-25 00:00:00
+011	demo_visitor_events	2026-07-27 00:00:00
+012	demo_visitor_client_instance	2026-07-27 00:00:00
+013	invoices_b2b	2026-07-28 00:00:00
 \.
 
 
@@ -10250,3 +10253,317 @@ ALTER TABLE ONLY public.order_pins
 -- PostgreSQL database dump complete
 --
 
+-- =====================================================================
+-- Post-bootstrap schema: postgres migrations 011-013 (idempotent)
+-- =====================================================================
+
+-- Demo-only visitor / presence events (enabled via DEMO_VISITOR_STATS=1)
+CREATE TABLE IF NOT EXISTS demo_visitor_events (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NULL,
+    username TEXT NULL,
+    ip TEXT NULL,
+    user_agent TEXT NULL,
+    path TEXT NULL,
+    event_type TEXT NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_demo_visitor_events_created
+    ON demo_visitor_events(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_demo_visitor_events_user_created
+    ON demo_visitor_events(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_demo_visitor_events_type_created
+    ON demo_visitor_events(event_type, created_at DESC);
+
+-- Distinguish browser sessions for demo online stats (same login, different browsers)
+ALTER TABLE demo_visitor_events
+    ADD COLUMN IF NOT EXISTS client_instance_id TEXT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_demo_visitor_events_client_created
+    ON demo_visitor_events(client_instance_id, created_at DESC);
+
+-- 013: B2B invoices (юрлица/ИП)
+
+
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS bank_name TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS bik TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS checking_account TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS corr_account TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS kpp TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS ogrnip TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS legal_address TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS director_title TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS director_name TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS accountant_name TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS signature_url TEXT;
+
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS stamp_url TEXT;
+
+
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_kind TEXT DEFAULT 'person';
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS inn TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS kpp TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS ogrn TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS legal_name TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS legal_address TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS bank_name TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS bik TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS checking_account TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS corr_account TEXT;
+
+CREATE TABLE IF NOT EXISTS invoice_sequences (
+    id BIGSERIAL PRIMARY KEY,
+    doc_type TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    last_number INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(doc_type, year)
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id BIGSERIAL PRIMARY KEY,
+    number INTEGER NOT NULL,
+    act_number INTEGER,
+    waybill_number INTEGER,
+    issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    due_date DATE,
+    status TEXT NOT NULL DEFAULT 'unpaid',
+    order_id BIGINT REFERENCES orders(id),
+    customer_id BIGINT NOT NULL REFERENCES customers(id),
+    buyer_kind TEXT,
+    buyer_name TEXT,
+    buyer_inn TEXT,
+    buyer_kpp TEXT,
+    buyer_ogrn TEXT,
+    buyer_address TEXT,
+    buyer_bank_name TEXT,
+    buyer_bik TEXT,
+    buyer_checking_account TEXT,
+    buyer_corr_account TEXT,
+    seller_snapshot TEXT,
+    subtotal_cents INTEGER NOT NULL DEFAULT 0,
+    vat_mode TEXT NOT NULL DEFAULT 'none',
+    total_cents INTEGER NOT NULL DEFAULT 0,
+    comment TEXT,
+    paid_at TIMESTAMP,
+    paid_by_user_id BIGINT REFERENCES users(id),
+    payment_id BIGINT REFERENCES payments(id),
+    created_by BIGINT REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_deleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_order ON invoices(order_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_issued ON invoices(issued_at DESC);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id BIGSERIAL PRIMARY KEY,
+    invoice_id BIGINT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    line_type TEXT NOT NULL DEFAULT 'service',
+    title TEXT NOT NULL,
+    qty DOUBLE PRECISION NOT NULL DEFAULT 1,
+    unit TEXT NOT NULL DEFAULT 'шт',
+    price_cents INTEGER NOT NULL DEFAULT 0,
+    sum_cents INTEGER NOT NULL DEFAULT 0,
+    vat_label TEXT NOT NULL DEFAULT 'Без НДС',
+    source_order_service_id BIGINT,
+    source_order_part_id BIGINT,
+    position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_id BIGINT;
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
+
+INSERT INTO print_templates (name, template_type, html_content)
+SELECT $tpl$Счёт на оплату (B2B)$tpl$, 'invoice_bill', $tpl$<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Счёт ##DOC_NUMBER##</title>
+<style>
+@page{size:A4;margin:12mm}
+body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0}
+table{border-collapse:collapse;width:100%}
+.bank td{border:1px solid #333;padding:4px 6px;vertical-align:top}
+h1{font-size:16px;margin:16px 0 8px}
+.meta{margin:8px 0;line-height:1.4}
+.items th,.items td{border:1px solid #333;padding:4px 6px}
+.items th{background:#f3f3f3}
+.right{text-align:right}.center{text-align:center}
+.sign{margin-top:28px;display:flex;justify-content:space-between;gap:24px}
+.sign .box{width:45%;position:relative;min-height:70px}
+.sign img.sig{max-height:48px;position:absolute;left:80px;top:0}
+.sign img.stamp{max-height:90px;position:absolute;left:120px;top:-10px;opacity:.85}
+.logo{max-height:56px;margin-bottom:8px}
+.muted{color:#555}
+</style></head><body>
+##LOGO_HTML##
+<table class="bank">
+<tr>
+<td width="55%"><div class="muted">Банк получателя</div><b>##SELLER_BANK_NAME##</b><br>БИК ##SELLER_BIK##<br>К/с ##SELLER_CORR_ACCOUNT##</td>
+<td width="45%"><div class="muted">Сч. №</div><b>##SELLER_CHECKING_ACCOUNT##</b><br><div class="muted">Получатель</div>##SELLER_NAME##<br>ИНН ##SELLER_INN##</td>
+</tr>
+</table>
+<h1>Счет на оплату № ##DOC_NUMBER## от ##DOC_DATE##</h1>
+<div class="meta"><b>Поставщик:</b> ##SELLER_FULL##</div>
+<div class="meta"><b>Покупатель:</b> ##BUYER_FULL##</div>
+##DUE_HTML##
+<table class="items">
+<thead><tr>
+<th>№</th><th>Товары (работы, услуги)</th><th>Кол-во</th><th>Ед.</th><th>НДС</th><th>Цена</th><th>Сумма</th>
+</tr></thead>
+<tbody>
+<tr data-for="ITEMS">
+<td class="center">##N##</td><td>##TITLE##</td><td class="right">##QTY##</td><td class="center">##UNIT##</td>
+<td class="center">##VAT##</td><td class="right">##PRICE##</td><td class="right">##SUM##</td>
+</tr>
+</tbody>
+</table>
+<p class="right"><b>Итого к оплате: ##TOTAL##</b></p>
+<p>Всего наименований ##ITEMS_COUNT## на сумму ##TOTAL## руб.<br><b>##TOTAL_WORDS##</b></p>
+<div class="sign">
+<div class="box">Руководитель _________________<br>##SELLER_DIRECTOR##
+##SIGNATURE_HTML####STAMP_HTML##
+</div>
+<div class="box">Бухгалтер _________________<br>##SELLER_ACCOUNTANT##</div>
+</div>
+</body></html>
+$tpl$
+WHERE NOT EXISTS (SELECT 1 FROM print_templates WHERE template_type = 'invoice_bill');
+
+INSERT INTO print_templates (name, template_type, html_content)
+SELECT $tpl$Акт выполненных работ (B2B)$tpl$, 'invoice_act', $tpl$<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Акт ##DOC_NUMBER##</title>
+<style>
+@page{size:A4;margin:12mm}
+body{font-family:Arial,sans-serif;font-size:12px;color:#111}
+table{border-collapse:collapse;width:100%}
+h1{font-size:16px;margin:12px 0}
+.items th,.items td{border:1px solid #333;padding:4px 6px}
+.items th{background:#f3f3f3}
+.right{text-align:right}.center{text-align:center}
+.meta{margin:6px 0;line-height:1.4}
+.sign{margin-top:28px;display:flex;justify-content:space-between}
+.sign .box{width:45%;position:relative;min-height:70px}
+.sign img.sig{max-height:48px;position:absolute;left:90px;top:0}
+.sign img.stamp{max-height:90px;position:absolute;left:130px;top:-10px;opacity:.85}
+.logo{max-height:56px}
+</style></head><body>
+##LOGO_HTML##
+<h1>Акт № ##DOC_NUMBER## от ##DOC_DATE##</h1>
+<div class="meta"><b>Исполнитель:</b> ##SELLER_FULL##</div>
+<div class="meta"><b>Заказчик:</b> ##BUYER_FULL##</div>
+<table class="items">
+<thead><tr><th>№</th><th>Услуга</th><th>Кол-во</th><th>Ед.</th><th>НДС</th><th>Цена</th><th>Сумма</th></tr></thead>
+<tbody>
+<tr data-for="ITEMS">
+<td class="center">##N##</td><td>##TITLE##</td><td class="right">##QTY##</td><td class="center">##UNIT##</td>
+<td class="center">##VAT##</td><td class="right">##PRICE##</td><td class="right">##SUM##</td>
+</tr>
+</tbody>
+</table>
+<p class="right"><b>Итого к оплате: ##TOTAL##</b></p>
+<p>Всего оказано услуг на сумму ##TOTAL## руб.<br><b>##TOTAL_WORDS##</b></p>
+<p>Вышеперечисленные услуги оказаны в полном объеме и в установленный срок. Заказчик не имеет претензий по качеству, срокам и объемам оказанных услуг.</p>
+<div class="sign">
+<div class="box">Исполнитель _________________<br>##SELLER_DIRECTOR##
+##SIGNATURE_HTML####STAMP_HTML##
+</div>
+<div class="box">Заказчик _________________</div>
+</div>
+</body></html>
+$tpl$
+WHERE NOT EXISTS (SELECT 1 FROM print_templates WHERE template_type = 'invoice_act');
+
+INSERT INTO print_templates (name, template_type, html_content)
+SELECT $tpl$Товарная накладная (B2B)$tpl$, 'invoice_waybill', $tpl$<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Накладная ##DOC_NUMBER##</title>
+<style>
+@page{size:A4;margin:10mm}
+body{font-family:Arial,sans-serif;font-size:11px;color:#111}
+table{border-collapse:collapse;width:100%}
+h1{font-size:15px;text-align:center;margin:10px 0}
+.meta td{padding:2px 4px;vertical-align:top}
+.items th,.items td{border:1px solid #333;padding:3px 4px}
+.items th{background:#f3f3f3;font-size:10px}
+.right{text-align:right}.center{text-align:center}
+.sign{margin-top:20px}
+.sign img.sig{max-height:40px;vertical-align:middle}
+.sign img.stamp{max-height:80px;vertical-align:middle;opacity:.85}
+.logo{max-height:48px}
+</style></head><body>
+##LOGO_HTML##
+<table class="meta" style="width:100%;margin-bottom:8px">
+<tr><td width="50%"><b>Номер документа</b> ##DOC_NUMBER##</td><td><b>Дата</b> ##DOC_DATE##</td></tr>
+</table>
+<h1>ТОВАРНАЯ НАКЛАДНАЯ</h1>
+<table class="meta">
+<tr><td width="160">Грузополучатель</td><td>##BUYER_FULL##</td></tr>
+<tr><td>Поставщик</td><td>##SELLER_FULL##</td></tr>
+<tr><td>Плательщик</td><td>##BUYER_FULL##</td></tr>
+<tr><td>Основание</td><td>##BASIS##</td></tr>
+</table>
+<table class="items" style="margin-top:10px">
+<thead><tr>
+<th>№</th><th>Товар</th><th>Ед.</th><th>Кол-во</th><th>Цена</th><th>Сумма без НДС</th><th>НДС</th><th>Сумма с НДС</th>
+</tr></thead>
+<tbody>
+<tr data-for="ITEMS">
+<td class="center">##N##</td><td>##TITLE##</td><td class="center">##UNIT##</td><td class="right">##QTY##</td>
+<td class="right">##PRICE##</td><td class="right">##SUM##</td><td class="center">##VAT##</td><td class="right">##SUM##</td>
+</tr>
+</tbody>
+</table>
+<p class="right"><b>Всего отпущено на сумму ##TOTAL_WORDS##</b> (##TOTAL##)</p>
+<div class="sign">
+<p>Отпуск груза разрешил _________________ ##SELLER_DIRECTOR## ##SIGNATURE_HTML## ##STAMP_HTML##</p>
+<p>Главный (старший) бухгалтер _________________ ##SELLER_ACCOUNTANT##</p>
+<p>Груз получил грузополучатель _________________</p>
+</div>
+</body></html>
+$tpl$
+WHERE NOT EXISTS (SELECT 1 FROM print_templates WHERE template_type = 'invoice_waybill');
+
+INSERT INTO permissions (name, description)
+VALUES
+ ('view_invoices', 'Просмотр раздела Счета'),
+ ('manage_invoices', 'Создание и редактирование счетов'),
+ ('mark_invoice_paid', 'Отметка счетов оплаченными')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO role_permissions (role, permission_id)
+SELECT r.role, p.id
+FROM (VALUES ('admin'), ('manager')) AS r(role)
+CROSS JOIN permissions p
+WHERE p.name IN ('view_invoices', 'manage_invoices', 'mark_invoice_paid')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO role_permissions (role, permission_id)
+SELECT 'viewer', p.id FROM permissions p
+WHERE p.name = 'view_invoices'
+ON CONFLICT DO NOTHING;

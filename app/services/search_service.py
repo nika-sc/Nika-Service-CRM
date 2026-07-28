@@ -3,8 +3,10 @@
 """
 from typing import Dict, List, Optional
 from app.database.connection import get_db_connection, _get_db_driver
+from app.database.queries.customer_queries import _phone_search_like_params
 import sqlite3
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -66,12 +68,21 @@ class SearchService:
         return len(s) >= 4 and all(c in '0123456789abcdefABCDEF' for c in s)
 
     @staticmethod
+    def _looks_like_phone(q: str) -> bool:
+        """Запрос похож на телефон (+7/8/7/без кода) — от 6 цифр."""
+        digits = re.sub(r'\D', '', q or '')
+        return len(digits) >= 6
+
+    @staticmethod
     def _search_orders(query: str, limit: int) -> List[Dict]:
         """Поиск по заявкам через FTS. При вводе только цифр или UUID — сразу fallback (id или order_id)."""
         query_stripped = query.strip()
-        if query_stripped.isdigit():
-            return SearchService._search_orders_fallback(query_stripped, limit)
-        if SearchService._looks_like_uuid(query_stripped):
+        # Телефон / номер заявки / UUID — через LIKE с вариантами телефона
+        if (
+            query_stripped.isdigit()
+            or SearchService._looks_like_phone(query_stripped)
+            or SearchService._looks_like_uuid(query_stripped)
+        ):
             return SearchService._search_orders_fallback(query_stripped, limit)
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
@@ -138,19 +149,32 @@ class SearchService:
     
     @staticmethod
     def _search_orders_fallback(query: str, limit: int) -> List[Dict]:
-        """Fallback поиск по заявкам без FTS. Поддерживает поиск по номеру заявки (id) и по order_id (#4782)."""
+        """Fallback: номер заявки, ФИО, email, телефон с вариантами 8/7/+7."""
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
                 search_pattern = f'%{query}%'
-                params = [search_pattern, search_pattern, search_pattern, search_pattern, search_pattern]
+                phone_patterns = _phone_search_like_params(query)
+                phone_or = (
+                    " OR ".join(["c.phone LIKE ?" for _ in phone_patterns])
+                    if phone_patterns
+                    else "FALSE"
+                )
+                params: list = [
+                    search_pattern,  # order_id
+                    search_pattern,  # name
+                    search_pattern,  # email
+                    search_pattern,  # comment
+                    *phone_patterns,
+                ]
                 id_condition = ' OR o.id = ?'
-                if query.isdigit():
+                # id заявки только для коротких чисел (не путать с телефоном 11 цифр)
+                if query.isdigit() and len(query) <= 9:
                     params.append(int(query))
                 else:
                     params.append(-1)
                 params.append(limit)
-                cursor.execute('''
+                cursor.execute(f'''
                     SELECT DISTINCT
                         o.id,
                         o.order_id,
@@ -166,10 +190,10 @@ class SearchService:
                     AND (
                         o.order_id LIKE ? OR
                         c.name LIKE ? OR
-                        c.phone LIKE ? OR
                         c.email LIKE ? OR
-                        o.comment LIKE ?
-                        ''' + id_condition + '''
+                        o.comment LIKE ? OR
+                        ({phone_or})
+                        {id_condition}
                     )
                     ORDER BY o.created_at DESC
                     LIMIT ?
@@ -182,7 +206,9 @@ class SearchService:
     
     @staticmethod
     def _search_customers(query: str, limit: int) -> List[Dict]:
-        """Поиск по клиентам через FTS."""
+        """Поиск по клиентам через FTS; телефоны (+7/8/7) — через LIKE с вариантами."""
+        if SearchService._looks_like_phone(query):
+            return SearchService._search_customers_fallback(query, limit)
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
@@ -219,23 +245,28 @@ class SearchService:
                 return [dict(row) for row in rows]
         except Exception as e:
             logger.error(f"Ошибка FTS поиска по клиентам: {e}")
-            # Fallback
             return SearchService._search_customers_fallback(query, limit)
     
     @staticmethod
     def _search_customers_fallback(query: str, limit: int) -> List[Dict]:
-        """Fallback поиск по клиентам."""
+        """Fallback поиск по клиентам (имя/email + телефон с вариантами 8/7/+7)."""
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
                 search_pattern = f'%{query}%'
-                cursor.execute('''
+                phone_patterns = _phone_search_like_params(query)
+                phone_or = (
+                    " OR ".join(["phone LIKE ?" for _ in phone_patterns])
+                    if phone_patterns
+                    else "FALSE"
+                )
+                cursor.execute(f'''
                     SELECT id, name, phone, email, created_at
                     FROM customers
-                    WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?
+                    WHERE name LIKE ? OR email LIKE ? OR ({phone_or})
                     ORDER BY created_at DESC
                     LIMIT ?
-                ''', (search_pattern, search_pattern, search_pattern, limit))
+                ''', (search_pattern, search_pattern, *phone_patterns, limit))
                 
                 rows = cursor.fetchall()
                 return [dict(row) for row in rows]
@@ -286,7 +317,6 @@ class SearchService:
                 return [dict(row) for row in rows]
         except Exception as e:
             logger.error(f"Ошибка FTS поиска по товарам: {e}")
-            # Fallback
             return SearchService._search_parts_fallback(query, limit)
     
     @staticmethod

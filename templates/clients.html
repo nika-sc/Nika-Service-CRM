@@ -127,28 +127,35 @@
                     <!-- Панель действий -->
                     <div class="card mb-3">
                         <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
+                            <div class="row align-items-center g-2">
+                                <div class="col-lg-7">
                                     <div class="d-flex gap-2">
                                         <div class="flex-grow-1">
                                             <input type="text" 
                                                    id="searchInput"
                                                    class="form-control form-control-lg" 
                                                    value="{{ search_query }}" 
-                                                   placeholder="Поиск по имени, телефону или email...">
+                                                   placeholder="Поиск по имени, юр. названию, ИНН, телефону или email...">
                                         </div>
                                         {% if search_query %}
-                                        <a href="/clients" class="btn btn-secondary btn-lg">
+                                        <a href="{{ url_for('customers.organizations') if page_mode == 'organizations' else url_for('customers.clients') }}" class="btn btn-secondary btn-lg">
                                             <i class="fas fa-times me-1"></i>Сбросить
                                         </a>
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="col-md-4 text-end">
+                                <div class="col-lg-5 text-lg-end">
                                     <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
-                                        <i class="fas fa-plus me-1"></i>Добавить клиента
+                                        <i class="fas fa-plus me-1"></i>{% if page_mode == 'organizations' %}Добавить организацию{% else %}Добавить клиента{% endif %}
                                     </button>
                                 </div>
+                            </div>
+                            <div class="btn-group mt-3 flex-wrap" role="group" aria-label="Фильтр типа">
+                                <a href="{{ url_for('customers.clients') }}" class="btn btn-sm {% if not kind_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">Все</a>
+                                <a href="{{ url_for('customers.clients', kind='person') }}" class="btn btn-sm {% if kind_filter == 'person' %}btn-primary{% else %}btn-outline-primary{% endif %}">Физлица</a>
+                                <a href="{{ url_for('customers.clients', kind='ip') }}" class="btn btn-sm {% if kind_filter == 'ip' %}btn-primary{% else %}btn-outline-primary{% endif %}">ИП</a>
+                                <a href="{{ url_for('customers.clients', kind='legal') }}" class="btn btn-sm {% if kind_filter == 'legal' %}btn-primary{% else %}btn-outline-primary{% endif %}">Юрлица</a>
+                                <a href="{{ url_for('customers.organizations') }}" class="btn btn-sm {% if kind_filter == 'orgs' %}btn-primary{% else %}btn-outline-primary{% endif %}">Организации</a>
                             </div>
                         </div>
                     </div>
@@ -157,7 +164,11 @@
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">
+                                {% if page_mode == 'organizations' %}
+                                <i class="fas fa-building me-2"></i>Реестр организаций (ИП / юрлица)
+                                {% else %}
                                 <i class="fas fa-users me-2"></i>Список клиентов
+                                {% endif %}
                             </h3>
                             <div class="card-tools">
                                 <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -171,6 +182,8 @@
                                     <thead>
                                         <tr>
                                             <th><i class="fas fa-user me-1"></i>Клиент</th>
+                                            <th>Тип</th>
+                                            <th>ИНН</th>
                                             <th><i class="fas fa-phone me-1"></i>Телефон</th>
                                             <th><i class="fas fa-envelope me-1"></i>Email</th>
                                             <th><i class="fas fa-laptop me-1"></i>Устройств</th>
@@ -188,7 +201,7 @@
 
     <!-- Модальное окно добавления клиента -->
     <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCustomerModalLabel">
@@ -199,18 +212,73 @@
                 <form id="addCustomerForm" onsubmit="addCustomer(event)">
                     <div class="modal-body">
                         <div class="mb-3">
+                            <label class="form-label">Тип клиента</label>
+                            <select class="form-select" id="customerKind" name="customer_kind" onchange="toggleLegalFields('add')">
+                                <option value="person">Физлицо</option>
+                                <option value="ip">ИП</option>
+                                <option value="legal">Юрлицо</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="customerName" class="form-label">ФИО / Название компании <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="customerName" name="name" required>
                         </div>
                         <div class="mb-3">
                             <label for="customerPhone" class="form-label">Телефон <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="customerPhone" name="phone" 
+                            <input type="tel" class="form-control" id="customerPhone" name="phone"
                                    placeholder="+7 (999) 123-45-67" required>
                         </div>
                         <div class="mb-3">
                             <label for="customerEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="customerEmail" name="email" 
+                            <input type="email" class="form-control" id="customerEmail" name="email"
                                    placeholder="email@example.com">
+                        </div>
+                        <div id="addLegalFields" class="border rounded p-3 bg-light d-none">
+                            <h6 class="mb-3">Реквизиты</h6>
+                            <div class="mb-2">
+                                <label class="form-label">ИНН</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="customerInn" name="inn">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="lookupInn('add')">По ИНН</button>
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">КПП</label>
+                                    <input type="text" class="form-control" id="customerKpp" name="kpp">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">ОГРН / ОГРНИП</label>
+                                    <input type="text" class="form-control" id="customerOgrn" name="ogrn">
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Юр. название</label>
+                                <input type="text" class="form-control" id="customerLegalName" name="legal_name">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Юр. адрес</label>
+                                <textarea class="form-control" id="customerLegalAddress" name="legal_address" rows="2"></textarea>
+                            </div>
+                            <hr>
+                            <div class="mb-2">
+                                <label class="form-label">Банк</label>
+                                <input type="text" class="form-control" id="customerBankName" name="bank_name">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">БИК</label>
+                                    <input type="text" class="form-control" id="customerBik" name="bik">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Р/с</label>
+                                    <input type="text" class="form-control" id="customerCheckingAccount" name="checking_account">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">К/с</label>
+                                    <input type="text" class="form-control" id="customerCorrAccount" name="corr_account">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -226,7 +294,7 @@
 
     <!-- Модальное окно редактирования клиента -->
     <div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editCustomerModalLabel">
@@ -238,6 +306,14 @@
                     <input type="hidden" id="editCustomerId" name="customer_id">
                     <div class="modal-body">
                         <div class="mb-3">
+                            <label class="form-label">Тип клиента</label>
+                            <select class="form-select" id="editCustomerKind" name="customer_kind" onchange="toggleLegalFields('edit')">
+                                <option value="person">Физлицо</option>
+                                <option value="ip">ИП</option>
+                                <option value="legal">Юрлицо</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="editCustomerName" class="form-label">ФИО / Название компании <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editCustomerName" name="name" required>
                         </div>
@@ -248,6 +324,51 @@
                         <div class="mb-3">
                             <label for="editCustomerEmail" class="form-label">Email</label>
                             <input type="email" class="form-control" id="editCustomerEmail" name="email">
+                        </div>
+                        <div id="editLegalFields" class="border rounded p-3 bg-light d-none">
+                            <h6 class="mb-3">Реквизиты</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">ИНН</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="editCustomerInn" name="inn">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="lookupInn('edit')">По ИНН</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">КПП</label>
+                                    <input type="text" class="form-control" id="editCustomerKpp" name="kpp">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ОГРН</label>
+                                    <input type="text" class="form-control" id="editCustomerOgrn" name="ogrn">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Юр. название</label>
+                                    <input type="text" class="form-control" id="editCustomerLegalName" name="legal_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Юр. адрес</label>
+                                    <textarea class="form-control" id="editCustomerLegalAddress" name="legal_address" rows="2"></textarea>
+                                </div>
+                                <div class="col-12"><hr class="my-1"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Банк</label>
+                                    <input type="text" class="form-control" id="editCustomerBankName" name="bank_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">БИК</label>
+                                    <input type="text" class="form-control" id="editCustomerBik" name="bik">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Расчётный счёт</label>
+                                    <input type="text" class="form-control" id="editCustomerCheckingAccount" name="checking_account">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Корр. счёт</label>
+                                    <input type="text" class="form-control" id="editCustomerCorrAccount" name="corr_account">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -325,6 +446,7 @@
             };
 
             // Инициализация DataTables
+            const kindFilter = {{ (kind_filter or '')|tojson }};
             var table = $('#clientsTable').DataTable({
                 "language": {
                     "url": "{{ url_for('static', filename='cdn/datatables/plug-ins/1.13.7/i18n/ru.json') }}",
@@ -350,10 +472,15 @@
                 "order": [], // сортировку отключаем (или делаем на сервере при необходимости)
                 "ajax": {
                     "url": "/api/datatables/clients",
-                    "type": "GET"
+                    "type": "GET",
+                    "data": function(d) {
+                        if (kindFilter) d.kind = kindFilter;
+                    }
                 },
                 "columns": [
                     { "data": "client" },
+                    { "data": "kind" },
+                    { "data": "inn" },
                     { "data": "phone" },
                     { "data": "email" },
                     { "data": "devices" },
@@ -369,21 +496,25 @@
                     },
                     {
                         "targets": [1, 2],
-                        "orderable": true,
-                        "type": "string"
+                        "orderable": false
                     },
                     {
                         "targets": [3, 4],
                         "orderable": true,
+                        "type": "string"
+                    },
+                    {
+                        "targets": [5, 6],
+                        "orderable": true,
                         "type": "data-order-num"
                     },
                     {
-                        "targets": [5],
+                        "targets": [7],
                         "orderable": true,
                         "type": "data-order-date"
                     },
                     {
-                        "targets": [6],
+                        "targets": [8],
                         "orderable": false,
                         "searchable": false
                     }
@@ -417,6 +548,18 @@
                     table.search(searchValue).draw();
                 }, 300);
             });
+
+            {% if page_mode == 'organizations' %}
+            (function() {
+                const kindEl = document.getElementById('customerKind');
+                if (kindEl) {
+                    kindEl.value = 'legal';
+                    toggleLegalFields('add');
+                }
+                const title = document.getElementById('addCustomerModalLabel');
+                if (title) title.innerHTML = '<i class="fas fa-building me-2"></i>Добавить организацию';
+            })();
+            {% endif %}
 
             // Функция нормализации поискового запроса для телефонов
             function normalizeSearchQuery(query) {
@@ -537,6 +680,17 @@
                     document.getElementById('editCustomerName').value = customer.name || '';
                     document.getElementById('editCustomerPhone').value = customer.phone || '';
                     document.getElementById('editCustomerEmail').value = customer.email || '';
+                    document.getElementById('editCustomerKind').value = customer.customer_kind || 'person';
+                    document.getElementById('editCustomerInn').value = customer.inn || '';
+                    document.getElementById('editCustomerKpp').value = customer.kpp || '';
+                    document.getElementById('editCustomerOgrn').value = customer.ogrn || '';
+                    document.getElementById('editCustomerLegalName').value = customer.legal_name || '';
+                    document.getElementById('editCustomerLegalAddress').value = customer.legal_address || '';
+                    document.getElementById('editCustomerBankName').value = customer.bank_name || '';
+                    document.getElementById('editCustomerBik').value = customer.bik || '';
+                    document.getElementById('editCustomerCheckingAccount').value = customer.checking_account || '';
+                    document.getElementById('editCustomerCorrAccount').value = customer.corr_account || '';
+                    toggleLegalFields('edit');
                     
                     const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
                     modal.show();
@@ -554,11 +708,8 @@
             const form = event.target;
             const formData = new FormData(form);
             const customerId = formData.get('customer_id');
-            const data = {
-                name: formData.get('name'),
-                phone: formData.get('phone'),
-                email: formData.get('email')
-            };
+            const data = Object.fromEntries(formData.entries());
+            delete data.customer_id;
 
             try {
                 const response = await fetch(`/api/customers/${customerId}`, {
@@ -584,6 +735,57 @@
             } catch (error) {
                 console.error('Ошибка:', error);
                 showNotification('Ошибка при обновлении клиента', 'error');
+            }
+        }
+
+        function toggleLegalFields(mode) {
+            const kindEl = document.getElementById(mode === 'edit' ? 'editCustomerKind' : 'customerKind');
+            const box = document.getElementById(mode === 'edit' ? 'editLegalFields' : 'addLegalFields');
+            if (!kindEl || !box) return;
+            const kind = kindEl.value || 'person';
+            box.classList.toggle('d-none', kind === 'person');
+        }
+
+        async function lookupInn(mode) {
+            const innEl = document.getElementById(mode === 'edit' ? 'editCustomerInn' : 'customerInn');
+            const inn = (innEl && innEl.value || '').trim();
+            if (!inn) {
+                showNotification('Укажите ИНН', 'error');
+                return;
+            }
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+                || document.querySelector('input[name="csrf_token"]')?.value || '';
+            try {
+                const response = await fetch('/api/inn/lookup', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+                    body: JSON.stringify({inn})
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    showNotification(result.error || 'Не удалось заполнить по ИНН', 'error');
+                    return;
+                }
+                const prefix = mode === 'edit' ? 'editCustomer' : 'customer';
+                const kindEl = document.getElementById(mode === 'edit' ? 'editCustomerKind' : 'customerKind');
+                if (kindEl) kindEl.value = result.customer_kind || result.type || 'legal';
+                const nameEl = document.getElementById(mode === 'edit' ? 'editCustomerName' : 'customerName');
+                if (nameEl && result.name) nameEl.value = result.name;
+                const map = {
+                    Inn: result.inn,
+                    Kpp: result.kpp,
+                    Ogrn: result.ogrn,
+                    LegalName: result.legal_name || result.name,
+                    LegalAddress: result.legal_address
+                };
+                Object.keys(map).forEach(k => {
+                    const el = document.getElementById(prefix + k);
+                    if (el && map[k] != null) el.value = map[k];
+                });
+                toggleLegalFields(mode);
+                showNotification('Реквизиты заполнены по ИНН', 'success');
+            } catch (e) {
+                showNotification('Ошибка запроса ИНН', 'error');
             }
         }
 

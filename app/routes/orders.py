@@ -2674,6 +2674,24 @@ def order_detail(order_id):
                 logger.debug(f"Шаблон печати пуст или отсутствует для заявки #{order.id}")
         except Exception as e:
             logger.error(f"Не удалось отрендерить шаблон печати клиента для заявки #{order.id}: {e}", exc_info=True)
+
+        order_invoices = []
+        try:
+            from app.services.invoice_service import InvoiceService
+            from app.utils.money_words import format_money_rub
+            inv_data = InvoiceService.list_invoices(order_id=order.id, per_page=50)
+            status_labels = {
+                "draft": "Черновик",
+                "unpaid": "Не оплачен",
+                "paid": "Оплачен",
+                "cancelled": "Отменён",
+            }
+            for inv in inv_data.get("items") or []:
+                inv["status_label"] = status_labels.get(inv.get("status"), inv.get("status"))
+                inv["total_fmt"] = format_money_rub(int(inv.get("total_cents") or 0))
+                order_invoices.append(inv)
+        except Exception as e:
+            logger.debug("order invoices load skipped: %s", e)
         
         return render_template(
             'order_detail.html',
@@ -2715,6 +2733,7 @@ def order_detail(order_id):
             customer_template_rendered=customer_template_rendered,
             sales_receipt_template_rendered=sales_receipt_template_rendered,
             work_act_template_rendered=work_act_template_rendered,
+            order_invoices=order_invoices,
         )
     except NotFoundError:
         flash('Заявка не найдена', 'error')
