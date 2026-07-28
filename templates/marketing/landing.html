@@ -192,8 +192,14 @@
             <button type="button" class="ml-btn ml-btn-help ml-btn-help--nav" data-bs-toggle="modal" data-bs-target="#freeInstallModal">
                 <i class="fas fa-headset" aria-hidden="true"></i> Бесплатная установка
             </button>
+            <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_docs.docs_about') }}">
+                <i class="fas fa-info-circle" aria-hidden="true"></i> О проекте
+            </a>
             <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_docs.docs_hub') }}">
                 <i class="fas fa-book-open" aria-hidden="true"></i> Руководство
+            </a>
+            <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_blog.blog_index') }}">
+                <i class="fas fa-newspaper" aria-hidden="true"></i> Блог
             </a>
                 <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
                     <i class="fab fa-github" aria-hidden="true"></i> GitHub

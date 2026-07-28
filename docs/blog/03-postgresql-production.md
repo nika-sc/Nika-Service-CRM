@@ -9,4 +9,6 @@ CRM переведена на **PostgreSQL** как единственную р�
 - Автобэкапы на VPS с сжатием; согласование major-версии клиента `pg_dump` с сервером.
 - Docker Compose: web + nginx + postgres (образ 18+).
 
+![Дашборд после входа — рабочая CRM на PostgreSQL](assets/walkthrough/02-dashboard.png)
+
 SQLite остаётся только как наследие в старых сценариях и не используется для новых установок.

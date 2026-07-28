@@ -7,6 +7,7 @@ from pathlib import Path
 
 import bleach
 import markdown as md_lib
+from markdown.extensions.toc import slugify_unicode
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DOCS_ROOT = _PROJECT_ROOT / "docs"
@@ -22,13 +23,20 @@ _ALLOWED_TAGS = bleach.sanitizer.ALLOWED_TAGS.union(
 _ALLOWED_ATTRS = {
     **bleach.sanitizer.ALLOWED_ATTRIBUTES,
     "img": ["src", "alt", "title", "loading", "decoding", "class"],
-    "a": ["href", "title", "rel", "target", "class"],
+    "a": ["href", "title", "rel", "target", "class", "id"],
     "code": ["class"],
     "th": ["align"],
     "td": ["align"],
-    "div": ["class"],
-    "span": ["class"],
+    "div": ["class", "id"],
+    "span": ["class", "id"],
     "table": ["class"],
+    # Якоря оглавления (#18-мобильный-доступ-и-pwa и т.п.) — id должен переживать bleach
+    "h1": ["id"],
+    "h2": ["id"],
+    "h3": ["id"],
+    "h4": ["id"],
+    "h5": ["id"],
+    "h6": ["id"],
 }
 
 _MD_LINK_MAP = {
@@ -73,6 +81,10 @@ def _render_cached(rel_path: str, mtime_ns: int) -> str:
     html = md_lib.markdown(
         raw,
         extensions=["tables", "fenced_code", "toc", "sane_lists"],
+        extension_configs={
+            # Кириллица в id, как в ручных ссылках оглавления (#9-касса-движение-денег)
+            "toc": {"slugify": slugify_unicode},
+        },
         output_format="html5",
     )
     # Один H1 на странице — заголовок уже в шаблоне

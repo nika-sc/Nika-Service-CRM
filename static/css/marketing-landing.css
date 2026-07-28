@@ -1026,6 +1026,11 @@ body.ml-body {
 .ml-docs-content h1 {
   display: none; /* title already in page header */
 }
+.ml-docs-content h2,
+.ml-docs-content h3,
+.ml-docs-content h4 {
+  scroll-margin-top: 5rem;
+}
 .ml-docs-content h2 {
   font-family: var(--ml-font-display);
   font-size: 1.35rem;

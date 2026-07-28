@@ -8,13 +8,19 @@
 - Текст, вложения, реакции, курсор «прочитано».
 - Уведомления браузера и Web Push при закрытой вкладке (VAPID).
 
+![Чат сотрудников в сайдбаре](assets/walkthrough/23-staff-chat.png)
+
 ## Реестр заявок
 
 - Глобальное закрепление заявок (pins) в списке.
 - DataTables через POST + CSRF.
+
+![Карточка заявки в реестре](assets/walkthrough/04-order-detail.png)
 
 ## Безопасность
 
 - XSS-защита в шаблонах, усиление auth/API, раздельный lockout.
 - `TRUSTED_HOSTS`, аккуратные CORS для Socket.IO в Docker.
 - Nginx: блокировка типовых путей сканеров.
+
+![Экран входа](assets/walkthrough/01-login.png)
