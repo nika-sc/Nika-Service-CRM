@@ -46,6 +46,7 @@ services:
     volumes:
       - ./data/database:/app/database
       - ./data/logs:/app/logs
+      - ./data/uploads:/app/static/uploads
     expose:
       - "5000"
     healthcheck:
