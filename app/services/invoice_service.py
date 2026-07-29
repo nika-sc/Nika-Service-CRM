@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
+from urllib.parse import unquote
 
 from app.database.queries.invoice_queries import InvoiceQueries
 from app.database.queries.order_queries import OrderQueries
@@ -76,15 +78,45 @@ def _format_party(name, inn=None, kpp=None, address=None, ogrn=None) -> str:
     return ", ".join(p for p in parts if p)
 
 
+def _local_static_file_exists(url: str) -> bool:
+    """True, если путь /static/... есть на диске. При отсутствии app-контекста — True (не блокируем)."""
+    path_part = unquote((url or "").strip())
+    if not path_part.startswith("/static/"):
+        return True
+    try:
+        from flask import current_app
+
+        static_folder = current_app.static_folder
+    except Exception:
+        return True
+    if not static_folder:
+        return True
+    rel = path_part[len("/static/") :].lstrip("/").replace("/", os.sep)
+    full = os.path.normpath(os.path.join(static_folder, rel))
+    static_root = os.path.normpath(static_folder)
+    if not (full == static_root or full.startswith(static_root + os.sep)):
+        return False
+    return os.path.isfile(full)
+
+
 def _print_asset_url(*candidates) -> str:
-    """URL логотипа/подписи/печати: валидный путь/http, иначе следующий кандидат."""
+    """URL логотипа/подписи/печати: валидный путь/http; битый локальный файл → следующий кандидат."""
     for raw in candidates:
         url = (raw or "").strip()
         if not url:
             continue
         # отсекаем мусор вроде "admin" из старых снимков
-        if url.startswith("/") or url.startswith("http://") or url.startswith("https://"):
-            return url
+        if not (
+            url.startswith("/")
+            or url.startswith("http://")
+            or url.startswith("https://")
+        ):
+            continue
+        # снимок счёта может ссылаться на уже удалённый upload — тогда берём актуальные настройки
+        if url.startswith("/static/") and not _local_static_file_exists(url):
+            logger.info("Print asset missing on disk, skip: %s", url)
+            continue
+        return url
     return ""
 
 
