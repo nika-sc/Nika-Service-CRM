@@ -5854,6 +5854,7 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 011	demo_visitor_events	2026-07-27 00:00:00
 012	demo_visitor_client_instance	2026-07-27 00:00:00
 013	invoices_b2b	2026-07-28 00:00:00
+014	invoice_catalog_links	2026-07-28 00:00:00
 \.
 
 
@@ -10254,7 +10255,7 @@ ALTER TABLE ONLY public.order_pins
 --
 
 -- =====================================================================
--- Post-bootstrap schema: postgres migrations 011-013 (idempotent)
+-- Post-bootstrap schema: postgres migrations 011-014 (idempotent)
 -- =====================================================================
 
 -- Demo-only visitor / presence events (enabled via DEMO_VISITOR_STATS=1)
@@ -10567,3 +10568,9 @@ INSERT INTO role_permissions (role, permission_id)
 SELECT 'viewer', p.id FROM permissions p
 WHERE p.name = 'view_invoices'
 ON CONFLICT DO NOTHING;
+
+-- 014: привязка позиций счёта к каталогу + shop_sale при оплате без заявки
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS catalog_part_id BIGINT;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS catalog_service_id BIGINT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS shop_sale_id BIGINT;
+CREATE INDEX IF NOT EXISTS idx_invoices_shop_sale_id ON invoices(shop_sale_id);
