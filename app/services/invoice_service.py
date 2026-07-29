@@ -489,7 +489,7 @@ class InvoiceService:
         return InvoiceService.get_invoice(invoice_id)
 
     @staticmethod
-    def render_document(invoice_id: int, doc_type: str) -> str:
+    def render_document(invoice_id: int, doc_type: str, *, blank_signs: bool = False) -> str:
         inv = InvoiceService.get_invoice(invoice_id)
         mapping = {
             "bill": ("invoice_bill", inv.get("number")),
@@ -524,8 +524,6 @@ class InvoiceService:
         gs = SettingsService.get_general_settings() or {}
         # Снимок счёта может быть без/с битым URL — берём актуальные из настроек
         logo = _print_asset_url(seller.get("logo_url"), gs.get("logo_url"))
-        sig = _print_asset_url(seller.get("signature_url"), gs.get("signature_url"))
-        stamp = _print_asset_url(seller.get("stamp_url"), gs.get("stamp_url"))
         logo_mw = int(gs.get("logo_max_width") or 220)
         logo_mh = int(gs.get("logo_max_height") or 64)
         sig_mw = int(gs.get("signature_max_width") or 160)
@@ -537,16 +535,23 @@ class InvoiceService:
             f'style="max-width:{logo_mw}px;max-height:{logo_mh}px;width:auto;height:auto;">'
             if logo else ""
         )
-        sig_html = (
-            f'<img class="sig" src="{sig}" alt="подпись" '
-            f'style="max-width:{sig_mw}px;max-height:{sig_mh}px;width:auto;height:auto;">'
-            if sig else ""
-        )
-        stamp_html = (
-            f'<img class="stamp" src="{stamp}" alt="печать" '
-            f'style="max-width:{stamp_mw}px;max-height:{stamp_mh}px;width:auto;height:auto;opacity:.9;">'
-            if stamp else ""
-        )
+        # blank_signs=True — бланк под живую подпись и печать (картинки не выводим)
+        if blank_signs:
+            sig_html = ""
+            stamp_html = ""
+        else:
+            sig = _print_asset_url(seller.get("signature_url"), gs.get("signature_url"))
+            stamp = _print_asset_url(seller.get("stamp_url"), gs.get("stamp_url"))
+            sig_html = (
+                f'<img class="sig" src="{sig}" alt="подпись" '
+                f'style="max-width:{sig_mw}px;max-height:{sig_mh}px;width:auto;height:auto;">'
+                if sig else ""
+            )
+            stamp_html = (
+                f'<img class="stamp" src="{stamp}" alt="печать" '
+                f'style="max-width:{stamp_mw}px;max-height:{stamp_mh}px;width:auto;height:auto;opacity:.9;">'
+                if stamp else ""
+            )
         due = inv.get("due_date")
         due_html = f'<div class="due">Оплату необходимо произвести до <b>{due}</b></div>' if due else ""
         comment = (inv.get("comment") or "").strip()

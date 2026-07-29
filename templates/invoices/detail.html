@@ -13,19 +13,34 @@
             <a class="ms-2" href="{{ url_for('orders.order_detail', order_id=invoice.order_id) }}">Заявка #{{ invoice.order_id }}</a>
             {% endif %}
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='bill') }}">
-                <i class="fas fa-print me-1"></i>Счёт
-            </a>
+        <div class="d-flex flex-wrap gap-2 align-items-start">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Печать счёта">
+                <a class="btn btn-outline-primary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='bill') }}" title="С электронной подписью и печатью">
+                    <i class="fas fa-print me-1"></i>Счёт
+                </a>
+                <a class="btn btn-outline-secondary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='bill', blank_signs=1) }}" title="Без картинок подписи и печати — для живого проставления">
+                    <i class="fas fa-stamp me-1"></i>жив.
+                </a>
+            </div>
             {% if invoice.act_number %}
-            <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='act') }}">
-                <i class="fas fa-file-alt me-1"></i>Акт
-            </a>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Печать акта">
+                <a class="btn btn-outline-primary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='act') }}">
+                    <i class="fas fa-file-alt me-1"></i>Акт
+                </a>
+                <a class="btn btn-outline-secondary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='act', blank_signs=1) }}" title="Без подписи и печати">
+                    <i class="fas fa-stamp me-1"></i>жив.
+                </a>
+            </div>
             {% endif %}
             {% if invoice.waybill_number %}
-            <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='waybill') }}">
-                <i class="fas fa-truck me-1"></i>Накладная
-            </a>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Печать накладной">
+                <a class="btn btn-outline-primary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='waybill') }}">
+                    <i class="fas fa-truck me-1"></i>Накладная
+                </a>
+                <a class="btn btn-outline-secondary" target="_blank" href="{{ url_for('invoices.print_document', invoice_id=invoice.id, doc_type='waybill', blank_signs=1) }}" title="Без подписи и печати">
+                    <i class="fas fa-stamp me-1"></i>жив.
+                </a>
+            </div>
             {% endif %}
             {% if can_mark_paid and invoice.status == 'unpaid' %}
             <button type="button" class="btn btn-success btn-sm" id="btnMarkPaid">

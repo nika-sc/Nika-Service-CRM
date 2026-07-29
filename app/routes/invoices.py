@@ -275,8 +275,11 @@ def api_upload_asset():
 @login_required
 @permission_required("view_invoices")
 def print_document(invoice_id: int, doc_type: str):
+    # ?blank_signs=1 — бланк без картинок подписи/печати (для живого проставления)
+    blank_raw = (request.args.get("blank_signs") or request.args.get("wet") or "").strip().lower()
+    blank_signs = blank_raw in ("1", "true", "yes", "on")
     try:
-        html = InvoiceService.render_document(invoice_id, doc_type)
+        html = InvoiceService.render_document(invoice_id, doc_type, blank_signs=blank_signs)
     except (ValidationError, NotFoundError) as e:
         flash(str(e), "danger")
         return redirect(url_for("invoices.detail", invoice_id=invoice_id))
@@ -289,6 +292,8 @@ def print_document(invoice_id: int, doc_type: str):
         "invoices/print.html",
         content=html,
         doc_type=doc_type,
+        invoice_id=invoice_id,
+        blank_signs=blank_signs,
         print_page_size=settings.get("print_page_size") or "A4",
         print_margin_mm=settings.get("print_margin_mm") if settings.get("print_margin_mm") is not None else 3,
         logo_max_width=settings.get("logo_max_width") or 220,

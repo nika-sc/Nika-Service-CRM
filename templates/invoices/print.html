@@ -166,22 +166,44 @@
             gap: 8px;
             align-items: center;
         }
-        .toolbar button {
+        .toolbar button,
+        .toolbar a.toolbar-link {
             padding: 6px 14px;
             border: 1px solid #ccc;
             border-radius: 4px;
             background: #fff;
             cursor: pointer;
+            text-decoration: none;
+            color: #222;
+            display: inline-block;
+            font: inherit;
         }
-        .toolbar button:hover { background: #f0f0f0; }
+        .toolbar button:hover,
+        .toolbar a.toolbar-link:hover { background: #f0f0f0; }
+        .toolbar a.toolbar-link.is-active {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+        .toolbar .mode-hint {
+            font-size: 13px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
 <div class="toolbar no-print">
     <button type="button" onclick="window.print()">Печать / PDF</button>
+    {% if blank_signs %}
+    <a class="toolbar-link" href="{{ url_for('invoices.print_document', invoice_id=invoice_id, doc_type=doc_type) }}">С подписью и печатью</a>
+    <a class="toolbar-link is-active" href="{{ url_for('invoices.print_document', invoice_id=invoice_id, doc_type=doc_type, blank_signs=1) }}">Для живой печати</a>
+    <span class="mode-hint">Бланк без картинок подписи и печати</span>
+    {% else %}
+    <a class="toolbar-link is-active" href="{{ url_for('invoices.print_document', invoice_id=invoice_id, doc_type=doc_type) }}">С подписью и печатью</a>
+    <a class="toolbar-link" href="{{ url_for('invoices.print_document', invoice_id=invoice_id, doc_type=doc_type, blank_signs=1) }}">Для живой печати</a>
+    {% endif %}
     <button type="button" onclick="window.close()">Закрыть</button>
 </div>
-<div class="print-content">
+<div class="print-content{% if blank_signs %} blank-signs{% endif %}">
 {{ content|safe }}
 </div>
 </body>
