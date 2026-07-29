@@ -46,7 +46,13 @@ cd Nika-Service-CRM
 
 После установки демо-логины (пароль `111111`): `admin`, `manager`, `master`, `viewer`.
 
-### 3. Docker
+### 3. Linux / VPS (Ubuntu)
+
+One-shot установка: [`scripts/linux_setup.sh`](https://github.com/nika-sc/Nika-Service-CRM/blob/main/scripts/linux_setup.sh) (клон → PostgreSQL → bootstrap-дамп → systemd `nikacrm`).  
+Обновление без потери данных: [`scripts/linux_upgrade.sh`](https://github.com/nika-sc/Nika-Service-CRM/blob/main/scripts/linux_upgrade.sh) — **не** используйте `linux_setup` для апгрейда.  
+Подробности: корневой [README](https://github.com/nika-sc/Nika-Service-CRM/blob/main/README.md) (раздел VPS) и [docs/DEPLOY.md](DEPLOY.md).
+
+### 4. Docker
 
 ```bash
 cp docker/env.example .env
@@ -56,7 +62,7 @@ docker compose up -d --build
 
 Подробности: каталог [`docker/`](https://github.com/nika-sc/Nika-Service-CRM/tree/main/docker) в репозитории.
 
-### 4. Локально (разработчикам)
+### 5. Локально (разработчикам)
 
 Нужны Python 3.10+, PostgreSQL, зависимости из `requirements.txt`, файл `.env` с `DB_DRIVER=postgres` и `DATABASE_URL`.  
 Запуск: `python run.py` → обычно `http://127.0.0.1:5000`.
