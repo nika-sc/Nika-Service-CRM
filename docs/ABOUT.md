@@ -72,5 +72,5 @@ docker compose up -d --build
 ## Помощь и бесплатная установка
 
 - Баги и идеи: `nika-sc@bk.ru` (тема `Nika-CRM`)
-- **Бесплатная установка/поддержка** при покупке VPS у FirstVDS по [рефералу](https://firstvds.ru/?from=528402) и промокоду **`648528402`**: `nika-sc@bk.ru` (тема `Nika-CRM Помощь по установке`)
+- **Бесплатная установка/поддержка** при покупке VPS у FirstVDS по [рефералу](https://firstvds.ru/?from=528402) и промокоду **`648528402`**: `nika-sc@bk.ru` (тема `Nika-CRM Помощь по установке`). По запросу — помощь с **переносом данных из другой CRM**.
 - Telegram: [t.me/nikaserviceadler](https://t.me/nikaserviceadler)
