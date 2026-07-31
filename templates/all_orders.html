@@ -1303,6 +1303,12 @@
             window.closeAllStatusMenusGlobal();
             if (isOpen) return false;
 
+            const currentStatusId = String(buttonEl.getAttribute('data-status-id') || '');
+            menu.find('.status-dropdown-item').removeClass('active');
+            if (currentStatusId) {
+                menu.find('.status-dropdown-item[data-status-id="' + currentStatusId + '"]').addClass('active');
+            }
+
             row.addClass('dropdown-open');
             menu.addClass('show');
             window.positionStatusMenuGlobal(buttonEl, menu[0]);

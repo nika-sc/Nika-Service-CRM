@@ -97,6 +97,8 @@ class Config:
         'SOCKETIO_CORS_ALLOWED_ORIGINS',
         'http://localhost:5000,http://127.0.0.1:5000'
     )
+    # Redis: общий кэш и message_queue Socket.IO между gunicorn-воркерами
+    REDIS_URL = (os.environ.get('REDIS_URL') or '').strip() or None
 
     # Web Push (чат сотрудников, VAPID). Пустые ключи — функция отключена.
     STAFF_CHAT_VAPID_PUBLIC_KEY = os.environ.get("STAFF_CHAT_VAPID_PUBLIC_KEY", "").strip()

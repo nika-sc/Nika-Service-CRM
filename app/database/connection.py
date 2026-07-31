@@ -63,9 +63,9 @@ def _get_pg_pool_minconn() -> int:
 
 def _get_pg_pool_maxconn() -> int:
     try:
-        return max(_get_pg_pool_minconn(), int(os.environ.get("PG_POOL_MAXCONN", "20")))
+        return max(_get_pg_pool_minconn(), int(os.environ.get("PG_POOL_MAXCONN", "8")))
     except Exception:
-        return 20
+        return 8
 
 
 def _get_pg_pool(database_url: str):

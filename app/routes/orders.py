@@ -27,7 +27,7 @@ from app.services.action_log_service import ActionLogService
 from app.utils.validators import normalize_phone
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str, get_moscow_now_naive, convert_to_moscow
-from app.utils.cache import clear_cache
+from app.utils.cache import clear_cache, cache_result
 from app.database.connection import get_db_connection
 from app.database.queries.order_queries import OrderQueries
 from app.database.queries.warehouse_queries import WarehouseQueries
@@ -156,6 +156,81 @@ def _hide_status_from_all_orders_header_badges(counter: dict) -> bool:
     ):
         return True
     return False
+
+
+@cache_result(timeout=45, key_prefix='all_orders_header_counters')
+def _get_all_orders_header_counters() -> dict:
+    """Счётчики бейджей /all_orders (кэш 45с — снимает нагрузку при частых F5)."""
+    with get_db_connection(row_factory=sqlite3.Row) as conn:
+        cursor = conn.cursor()
+        not_deleted_clause = _orders_not_deleted_clause(cursor, 'o')
+        cursor.execute('''
+            SELECT
+                os.id,
+                os.code,
+                os.name,
+                os.color,
+                COALESCE(os.sort_order, 999) AS sort_order,
+                (os.is_archived = 1) AS is_archived,
+                COALESCE(COUNT(o.id), 0) AS cnt
+            FROM order_statuses AS os
+            LEFT JOIN orders AS o
+                ON o.status_id = os.id
+                AND (o.hidden = 0 OR o.hidden IS NULL)
+        ''' + not_deleted_clause + '''
+            GROUP BY os.id, os.code, os.name, os.color, os.sort_order, os.is_archived
+            ORDER BY (os.is_archived = 1), COALESCE(os.sort_order, 999), os.name, os.id
+        ''')
+        status_counts = cursor.fetchall()
+        status_dict = {row['code']: row['cnt'] for row in status_counts if row['code']}
+        status_counters = [dict(row) for row in status_counts]
+        active_status_counters = [
+            s for s in status_counters
+            if not s.get('is_archived') and not _hide_status_from_all_orders_header_badges(s)
+        ]
+        archived_status_counters = [
+            s for s in status_counters
+            if s.get('is_archived') and not _hide_status_from_all_orders_header_badges(s)
+        ]
+
+        cursor.execute('''
+            SELECT COUNT(o.id)
+            FROM orders AS o
+            LEFT JOIN order_statuses AS os ON os.id = o.status_id
+            WHERE (o.hidden = 0 OR o.hidden IS NULL)''' + not_deleted_clause + '''
+            AND (os.is_final = 0 OR os.is_final IS NULL)
+            AND (LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')
+        ''')
+        in_progress_orders_count = (cursor.fetchone() or [0])[0] or 0
+
+        cursor.execute('''
+            SELECT
+                m.id,
+                m.name,
+                COALESCE(cnt.cnt, 0) AS cnt
+            FROM masters m
+            LEFT JOIN (
+                SELECT o.master_id AS mid, COUNT(*) AS cnt
+                FROM orders o
+                JOIN order_statuses os ON os.id = o.status_id
+                WHERE (o.hidden = 0 OR o.hidden IS NULL)
+        ''' + not_deleted_clause + '''
+                  AND (os.is_final = 0 OR os.is_final IS NULL)
+                  AND (LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')
+                GROUP BY o.master_id
+            ) cnt ON cnt.mid = m.id
+            ORDER BY m.name
+        ''')
+        master_in_progress_counters = [dict(row) for row in cursor.fetchall()]
+
+    return {
+        'status_dict': status_dict,
+        'status_counters': status_counters,
+        'active_status_counters': active_status_counters,
+        'archived_status_counters': archived_status_counters,
+        'in_progress_orders_count': in_progress_orders_count,
+        'master_in_progress_counters': master_in_progress_counters,
+    }
 
 
 def _amount_to_words_ru(amount: float) -> str:
@@ -652,9 +727,8 @@ def all_orders():
             orders = []
             paginator = None
         elif view == 'kanban':
-            # Канбан: нужны все подходящие заявки, иначе колонки только для статусов,
-            # попавших на первую страницу пагинации (раньше было per_page=50).
-            _kanban_max_orders = 10000
+            # Канбан: slim-лимит (полный 10k раздувает TTFB/RAM на DEMO)
+            _kanban_max_orders = 500
             count_pg = OrderService.get_orders_with_details(filters, 1, 1)
             if count_pg.total <= 0:
                 paginator = count_pg
@@ -672,8 +746,8 @@ def all_orders():
             if 'phone' in order:
                 order['phone_display'] = format_phone_display(order['phone'])
         
-        # Получаем справочники
-        refs = ReferenceService.get_all_references()
+        # Справочники списка без parts/services (кэшированные get_*)
+        refs = ReferenceService.get_orders_list_references()
         # По умолчанию в формах — только неархивные; канбан дополняется статусами из фактических заявок
         order_statuses = [s for s in refs['order_statuses'] if not s.get('is_archived')]
         if view == 'kanban':
@@ -704,79 +778,14 @@ def all_orders():
         status_map = {s['id']: s for s in order_statuses}
         status_map_by_code = {str(s['code']): s for s in order_statuses}
         
-        # Подсчет статистики по статусам - БЕЗ ВСЕХ ФИЛЬТРОВ (только hidden = 0)
-        # Показываем ВСЕ статусы (включая архивные) с сортировкой по sort_order и имени
-        from app.database.connection import get_db_connection
-        import sqlite3
-
         try:
-            with get_db_connection(row_factory=sqlite3.Row) as conn:
-                cursor = conn.cursor()
-
-                not_deleted_clause = _orders_not_deleted_clause(cursor, 'o')
-                master_in_progress_counters = []
-                # Все статусы (в т.ч. архивные), как в «Управление статусами»: sort_order, name, is_archived для группировки
-                cursor.execute('''
-                    SELECT
-                        os.id,
-                        os.code,
-                        os.name,
-                        os.color,
-                        COALESCE(os.sort_order, 999) AS sort_order,
-                        (os.is_archived = 1) AS is_archived,
-                        COALESCE(COUNT(o.id), 0) AS cnt
-                    FROM order_statuses AS os
-                    LEFT JOIN orders AS o
-                        ON o.status_id = os.id
-                        AND (o.hidden = 0 OR o.hidden IS NULL)
-                ''' + not_deleted_clause + '''
-                    GROUP BY os.id, os.code, os.name, os.color, os.sort_order, os.is_archived
-                    ORDER BY (os.is_archived = 1), COALESCE(os.sort_order, 999), os.name, os.id
-                ''')
-                
-                status_counts = cursor.fetchall()
-                status_dict = {row['code']: row['cnt'] for row in status_counts if row['code']}
-                status_counters = [dict(row) for row in status_counts]
-                # Как в «Управление статусами»: активные и архивные отдельно для отображения в card-title
-                active_status_counters = [s for s in status_counters if not s.get('is_archived')]
-                archived_status_counters = [s for s in status_counters if s.get('is_archived')]
-                active_status_counters = [
-                    s for s in active_status_counters if not _hide_status_from_all_orders_header_badges(s)
-                ]
-                archived_status_counters = [
-                    s for s in archived_status_counters if not _hide_status_from_all_orders_header_badges(s)
-                ]
-                
-                # Количество заявок «в работе» (все статусы кроме финальных и кроме «Незабирашка»)
-                cursor.execute('''
-                    SELECT COUNT(o.id)
-                    FROM orders AS o
-                    LEFT JOIN order_statuses AS os ON os.id = o.status_id
-                    WHERE (o.hidden = 0 OR o.hidden IS NULL)''' + not_deleted_clause + '''
-                    AND (os.is_final = 0 OR os.is_final IS NULL)
-                    AND (LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')
-                ''')
-                in_progress_orders_count = (cursor.fetchone() or [0])[0] or 0
-
-                # «В работе у [мастер]: N» — количество заявок в работе по каждому мастеру (без финальных и без Незабирашка)
-                cursor.execute('''
-                    SELECT
-                        m.id,
-                        m.name,
-                        (SELECT COUNT(*) FROM orders o
-                         JOIN order_statuses os ON os.id = o.status_id
-                         WHERE o.master_id = m.id
-                           AND (o.hidden = 0 OR o.hidden IS NULL)
-                ''' + not_deleted_clause + '''
-                           AND (os.is_final = 0 OR os.is_final IS NULL)
-                           AND (LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')
-                        ) AS cnt
-                    FROM masters m
-                    ORDER BY m.name
-                ''')
-                master_in_progress_rows = cursor.fetchall()
-                master_in_progress_counters = [dict(row) for row in master_in_progress_rows]
-                
+            counters = _get_all_orders_header_counters()
+            status_dict = counters['status_dict']
+            status_counters = counters['status_counters']
+            active_status_counters = counters['active_status_counters']
+            archived_status_counters = counters['archived_status_counters']
+            in_progress_orders_count = counters['in_progress_orders_count']
+            master_in_progress_counters = counters['master_in_progress_counters']
         except Exception as e:
             logger.error(f"Ошибка при подсчете статистики по статусам: {e}")
             status_dict = {}
@@ -966,16 +975,6 @@ def api_datatables_orders():
         except (ValueError, TypeError):
             pass
 
-    # recordsTotal: без глобального поиска (но с фиксированными фильтрами)
-    total_result = OrderQueries.get_orders_with_all_details(
-        filters=base_filters if base_filters else None,
-        page=1,
-        per_page=1,
-        sort_by=sort_by,
-        sort_order=sort_order
-    )
-    records_total = int(total_result['total'])
-
     result = OrderQueries.get_orders_with_all_details(
         filters=filters if filters else None,
         page=page,
@@ -985,20 +984,37 @@ def api_datatables_orders():
         pinned_user_id=current_user.id,
         pins_first=True,
     )
-    records_filtered = int(result['total'])
+    # Без DT-поиска total страницы = recordsTotal = recordsFiltered (один COUNT внутри get).
+    # С поиском: лёгкий COUNT для filtered + отдельный COUNT для total без search.
+    if search_value:
+        records_filtered = OrderQueries.count_orders(filters if filters else None)
+        records_total = OrderQueries.count_orders(base_filters if base_filters else None)
+    else:
+        records_filtered = int(result['total'])
+        records_total = records_filtered
 
-    # Список статусов для дропдауна
-    with get_db_connection(row_factory=sqlite3.Row) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, code, name, color
-            FROM order_statuses
-            WHERE is_archived = 0 OR is_archived IS NULL
-            ORDER BY id
-            """
+    # Статусы один раз; меню HTML общее для всех строк (active — на клиенте при открытии)
+    statuses = [
+        s for s in ReferenceService.get_order_statuses(include_archived=False)
+        if s
+    ]
+    shared_dropdown_items = []
+    for st in statuses:
+        st_id = st.get('id')
+        st_code = st.get('code') or ''
+        st_name = st.get('name') or '—'
+        st_color = st.get('color') or '#6c757d'
+        shared_dropdown_items.append(
+            '<li>'
+            f'<a class="dropdown-item status-dropdown-item" href="#" '
+            f'data-status-id="{st_id}" data-status-code="{_html.escape(str(st_code))}" '
+            f'data-status-name="{_html.escape(str(st_name))}" data-status-color="{_html.escape(str(st_color))}" '
+            'onclick="return window.selectQuickStatus ? window.selectQuickStatus(this, event) : false;">'
+            f'<span class="status-indicator" style="background-color: {_html.escape(str(st_color))};"></span>'
+            f'{_html.escape(str(st_name))}'
+            '</a></li>'
         )
-        statuses = [dict(r) for r in cursor.fetchall()]
+    shared_menu_html = ''.join(shared_dropdown_items)
 
     order_ids = [o.get('id') for o in result['items'] if o.get('id')]
     totals_batch = OrderQueries.get_orders_totals_batch(order_ids) if order_ids else {}
@@ -1049,24 +1065,7 @@ def api_datatables_orders():
             + '</div>'
         )
 
-        # col 1: статус с dropdown
-        dropdown_items = []
-        for st in statuses:
-            st_id = st.get('id')
-            st_code = st.get('code') or ''
-            st_name = st.get('name') or '—'
-            st_color = st.get('color') or '#6c757d'
-            active = 'active' if str(status_id) == str(st_id) else ''
-            dropdown_items.append(
-                '<li>'
-                f'<a class="dropdown-item status-dropdown-item {active}" href="#" '
-                f'data-status-id="{st_id}" data-status-code="{_html.escape(str(st_code))}" '
-                f'data-status-name="{_html.escape(str(st_name))}" data-status-color="{_html.escape(str(st_color))}" '
-                'onclick="return window.selectQuickStatus ? window.selectQuickStatus(this, event) : false;">'
-                f'<span class="status-indicator" style="background-color: {_html.escape(str(st_color))};"></span>'
-                f'{_html.escape(str(st_name))}'
-                '</a></li>'
-            )
+        # col 1: статус — общее меню статусов (не пересобираем на каждую строку)
         col_status = (
             '<div class="dropdown" onclick="event.stopPropagation();">'
             f'<button class="btn btn-sm dropdown-toggle quick-status-btn" type="button" '
@@ -1079,7 +1078,7 @@ def api_datatables_orders():
             f'{_html.escape(str(status_name))}'
             '</button>'
             '<ul class="dropdown-menu status-dropdown-menu">'
-            + ''.join(dropdown_items) +
+            + shared_menu_html +
             '</ul></div>'
         )
 

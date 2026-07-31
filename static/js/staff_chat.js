@@ -11,7 +11,9 @@
     /** Иконка в системном уведомлении (как на вкладке). */
     const STAFF_CHAT_NOTIFY_ICON = "/static/favicon.svg";
     const MAX_HISTORY_LIMIT = 40;
+    /** Fallback-синк, когда websocket недоступен. При живом socket — реже. */
     const SYNC_INTERVAL_MS = 12000;
+    const SYNC_INTERVAL_SOCKET_OK_MS = 60000;
     const REACTION_SET = ["👍", "❤️", "😂", "😮", "😢", "🔥", "✅", "👀"];
 
     const state = {
@@ -214,9 +216,9 @@
             return;
         }
         const socket = window.io(NS, {
-            // Для встроенного dev-сервера websocket может шуметь 500 в логах.
-            // Polling-transport стабильнее в текущем окружении.
-            transports: ["polling"],
+            // Websocket первым; polling — fallback (nginx /socket.io/ Upgrade на WORK/DEMO).
+            transports: ["websocket", "polling"],
+            upgrade: true,
             reconnection: true,
             reconnectionDelayMax: 7000,
         });
@@ -227,11 +229,13 @@
             state.hasSocketStream = true;
             socket.emit("join_room", { room_key: ROOM_KEY });
             showStatus("Подключено");
+            restartPeriodicSync();
         });
         socket.on("disconnect", () => {
             state.connected = false;
             state.hasSocketStream = false;
             showStatus("Realtime отключен, работает авто-синхронизация...");
+            restartPeriodicSync();
         });
         socket.on("chat_error", (payload) => {
             showStatus((payload && payload.error) || "Ошибка чата");
@@ -276,12 +280,28 @@
         });
     }
 
+    function currentSyncIntervalMs() {
+        return state.hasSocketStream ? SYNC_INTERVAL_SOCKET_OK_MS : SYNC_INTERVAL_MS;
+    }
+
     function startPeriodicSync() {
         if (state.syncTimer) return;
-        state.syncTimer = setInterval(syncLatestMessages, SYNC_INTERVAL_MS);
+        state.syncTimer = setInterval(syncLatestMessages, currentSyncIntervalMs());
+    }
+
+    function restartPeriodicSync() {
+        if (state.syncTimer) {
+            clearInterval(state.syncTimer);
+            state.syncTimer = null;
+        }
+        startPeriodicSync();
     }
 
     async function syncLatestMessages() {
+        // Живой websocket уже пушит сообщения — HTTP-синк только страховка
+        if (state.hasSocketStream && state.connected && !state.isOpen) {
+            return;
+        }
         if (state.syncInFlight) return;
         state.syncInFlight = true;
         try {

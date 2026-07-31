@@ -231,6 +231,20 @@ class ReferenceService:
             - order_statuses: List[ReferenceDict] - статусы заявок
         """
         return ReferenceQueries.get_all_references()
+
+    @staticmethod
+    def get_orders_list_references() -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Справочники для /all_orders без parts/services (тяжёлые и не нужны на странице списка).
+        Использует уже закэшированные get_* методы.
+        """
+        return {
+            'device_types': ReferenceService.get_device_types(),
+            'device_brands': ReferenceService.get_device_brands(),
+            'managers': ReferenceService.get_managers(),
+            'masters': ReferenceService.get_masters(),
+            'order_statuses': ReferenceService.get_order_statuses(include_archived=True),
+        }
     
     @staticmethod
     def clear_all_cache():

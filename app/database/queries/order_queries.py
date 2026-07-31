@@ -57,6 +57,207 @@ class OrderQueries:
             return cursor.fetchone() is not None
         except Exception:
             return False
+
+    @staticmethod
+    def _append_orders_search_clause(where_clauses: List[str], params: list, search_query: str) -> None:
+        """Добавляет условие поиска: FTS (Postgres/текст) или LIKE (id/телефон/fallback)."""
+        search_query = (search_query or '').strip()
+        if not search_query:
+            return
+
+        is_numeric = False
+        order_id = None
+        try:
+            numeric_candidate = search_query.replace('№', '').replace('#', '').strip()
+            order_id = int(numeric_candidate)
+            if order_id > 0:
+                is_numeric = True
+        except (ValueError, TypeError):
+            pass
+
+        def _esc(s: str) -> str:
+            return s.replace('%', '\\%').replace('_', '\\_')
+
+        like_q = f'%{_esc(search_query)}%'
+        digits_only = ''.join(ch for ch in search_query if ch.isdigit())
+        has_alpha = any(ch.isalpha() for ch in search_query)
+        phone_like = (not has_alpha) and len(digits_only) >= 6
+
+        phone_variants = [like_q]
+        if 10 <= len(digits_only) <= 11:
+            if digits_only.startswith('8') and len(digits_only) == 11:
+                phone_variants.append(f'%{_esc("7" + digits_only[1:])}%')
+            elif digits_only.startswith('7') and len(digits_only) == 11:
+                phone_variants.append(f'%{_esc("8" + digits_only[1:])}%')
+            tail10 = f'%{_esc(digits_only[-10:])}%'
+            if tail10 not in phone_variants:
+                phone_variants.append(tail10)
+        phone_variants = list(dict.fromkeys(phone_variants))
+
+        search_conditions: List[str] = []
+        search_params: list = []
+
+        if is_numeric:
+            search_conditions.append('o.id = ?')
+            search_params.append(order_id)
+
+        # Телефон / только цифры — компактный LIKE; текст на Postgres — FTS
+        use_fts = (
+            _get_db_driver() == 'postgres'
+            and has_alpha
+            and not phone_like
+        )
+        if use_fts:
+            search_conditions.append(
+                """(
+                    to_tsvector(
+                        'simple',
+                        concat_ws(
+                            ' ',
+                            COALESCE(o.order_id, ''),
+                            COALESCE(c.name, ''),
+                            COALESCE(c.phone, ''),
+                            COALESCE(c.email, ''),
+                            COALESCE(d.serial_number, ''),
+                            COALESCE(dt.name, ''),
+                            COALESCE(db.name, ''),
+                            COALESCE(o.comment, ''),
+                            COALESCE(o.symptom_tags, ''),
+                            COALESCE(o.appearance, ''),
+                            COALESCE(os.name, ''),
+                            COALESCE(mgr.name, ''),
+                            COALESCE(ms.name, ''),
+                            COALESCE(om.name, '')
+                        )
+                    ) @@ websearch_to_tsquery('simple', ?)
+                    OR c.name ILIKE ?
+                    OR o.order_id ILIKE ?
+                )"""
+            )
+            search_params.extend([search_query, like_q, like_q])
+            if len(digits_only) >= 6:
+                phone_or = ' OR '.join(['c.phone LIKE ?' for _ in phone_variants])
+                search_conditions.append(f'({phone_or})')
+                search_params.extend(phone_variants)
+        else:
+            phone_or = ' OR '.join(['c.phone LIKE ?' for _ in phone_variants])
+            like_conditions = [
+                'c.name LIKE ?',
+                f'({phone_or})',
+                'c.email LIKE ?',
+                'o.order_id LIKE ?',
+                'd.serial_number LIKE ?',
+                'o.comment LIKE ?',
+                'o.symptom_tags LIKE ?',
+                'EXISTS(SELECT 1 FROM order_symptoms osymp JOIN symptoms s ON s.id = osymp.symptom_id WHERE osymp.order_id = o.id AND s.name LIKE ?)',
+                'o.appearance LIKE ?',
+                'EXISTS(SELECT 1 FROM order_appearance_tags oat JOIN appearance_tags at ON at.id = oat.appearance_tag_id WHERE oat.order_id = o.id AND at.name LIKE ?)',
+                'os.name LIKE ?',
+                'os.code LIKE ?',
+                'dt.name LIKE ?',
+                'db.name LIKE ?',
+                'om.name LIKE ?',
+                'mgr.name LIKE ?',
+                'ms.name LIKE ?',
+            ]
+            if phone_like and not is_numeric:
+                # Только телефонные варианты + order_id — без EXISTS по тегам
+                like_conditions = [
+                    f'({phone_or})',
+                    'o.order_id LIKE ?',
+                    'c.name LIKE ?',
+                ]
+                search_conditions.extend(like_conditions)
+                search_params.extend(phone_variants)
+                search_params.append(like_q)
+                search_params.append(like_q)
+            else:
+                search_conditions.extend(like_conditions)
+                for cond in like_conditions:
+                    if 'c.phone' in cond:
+                        search_params.extend(phone_variants)
+                    else:
+                        search_params.append(like_q)
+
+        where_clauses.append('(' + ' OR '.join(search_conditions) + ')')
+        params.extend(search_params)
+
+    @staticmethod
+    def count_orders(filters: Dict = None) -> int:
+        """
+        Лёгкий COUNT(*) для DataTables recordsTotal / recordsFiltered.
+        Те же фильтры, что у get_orders_with_all_details, без тяжёлого SELECT.
+        """
+        params: list = []
+        where_clauses = ['(o.hidden = 0 OR o.hidden IS NULL)']
+        if filters:
+            if 'status' in filters:
+                status_val = filters['status']
+                if status_val == 'in_progress':
+                    where_clauses.append('(os.is_final = 0 OR os.is_final IS NULL)')
+                    where_clauses.append("(LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')")
+                else:
+                    where_clauses.append('os.code = ?')
+                    params.append(status_val)
+            if 'status_id' in filters:
+                where_clauses.append('o.status_id = ?')
+                params.append(filters['status_id'])
+            if 'customer_id' in filters:
+                where_clauses.append('o.customer_id = ?')
+                params.append(filters['customer_id'])
+            if 'device_id' in filters:
+                where_clauses.append('o.device_id = ?')
+                params.append(filters['device_id'])
+            if 'manager_id' in filters:
+                where_clauses.append('o.manager_id = ?')
+                params.append(filters['manager_id'])
+            if 'master_id' in filters:
+                where_clauses.append('o.master_id = ?')
+                params.append(filters['master_id'])
+            if 'search' in filters and filters['search']:
+                OrderQueries._append_orders_search_clause(
+                    where_clauses, params, str(filters['search'])
+                )
+            if 'date_from' in filters and filters['date_from']:
+                where_clauses.append('o.created_at >= ?')
+                params.append(filters['date_from'])
+            if 'date_to' in filters and filters['date_to']:
+                if _get_db_driver() == 'postgres':
+                    where_clauses.append("o.created_at < (?::date + INTERVAL '1 day')")
+                else:
+                    where_clauses.append("o.created_at < date(?, '+1 day')")
+                params.append(filters['date_to'])
+
+        needs_search_joins = bool(filters and filters.get('search'))
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                where_clauses.append(OrderQueries._orders_not_deleted_clause(cursor, 'o'))
+                where_sql = 'WHERE ' + ' AND '.join(where_clauses)
+                if needs_search_joins:
+                    from_sql = '''
+                        FROM orders AS o
+                        JOIN customers AS c ON c.id = o.customer_id
+                        LEFT JOIN devices AS d ON d.id = o.device_id
+                        LEFT JOIN device_types AS dt ON dt.id = d.device_type_id
+                        LEFT JOIN device_brands AS db ON db.id = d.device_brand_id
+                        LEFT JOIN order_statuses AS os ON os.id = o.status_id
+                        LEFT JOIN managers AS mgr ON mgr.id = o.manager_id
+                        LEFT JOIN masters AS ms ON ms.id = o.master_id
+                        LEFT JOIN order_models AS om ON om.id = o.model_id
+                    '''
+                else:
+                    # Без поиска достаточно orders + status (фильтры status/master/manager)
+                    from_sql = '''
+                        FROM orders AS o
+                        LEFT JOIN order_statuses AS os ON os.id = o.status_id
+                    '''
+                cursor.execute(f'SELECT COUNT(*) {from_sql} {where_sql}', params)
+                row = cursor.fetchone()
+                return int((row[0] if row else 0) or 0)
+        except Exception as e:
+            logger.error('Ошибка count_orders: %s', e)
+            return 0
     
     @staticmethod
     def get_orders_with_all_details(
@@ -151,87 +352,19 @@ class OrderQueries:
                 where_clauses.append('o.master_id = ?')
                 params.append(filters['master_id'])
             
-            # Поиск по нескольким полям
+            # Поиск по нескольким полям (FTS на Postgres для текста; LIKE — id/телефон)
             if 'search' in filters and filters['search']:
-                search_query = filters['search'].strip()
-                if search_query:
-                    # Проверяем, является ли поисковый запрос числом (для поиска по ID заявки)
-                    is_numeric = False
-                    order_id = None
-                    try:
-                        numeric_candidate = search_query.strip().replace('№', '').replace('#', '').strip()
-                        order_id = int(numeric_candidate)
-                        if order_id > 0:
-                            is_numeric = True
-                    except (ValueError, TypeError):
-                        pass
-                    
-                    # Экранируем специальные символы для LIKE
-                    def _esc(s: str) -> str:
-                        return s.replace("%", "\\%").replace("_", "\\_")
-                    like_q = f'%{_esc(search_query)}%'
-                    
-                    # Варианты телефона для поиска (8/7, последние 10 цифр) — чтобы 89881463231 находил 79881463231
-                    phone_variants = [like_q]
-                    digits_only = ''.join(ch for ch in search_query if ch.isdigit())
-                    if len(digits_only) >= 10 and len(digits_only) <= 11:
-                        if digits_only.startswith('8') and len(digits_only) == 11:
-                            phone_variants.append(f'%{_esc("7" + digits_only[1:])}%')
-                        elif digits_only.startswith('7') and len(digits_only) == 11:
-                            phone_variants.append(f'%{_esc("8" + digits_only[1:])}%')
-                        if len(digits_only) >= 10:
-                            tail10 = f'%{_esc(digits_only[-10:])}%'
-                            if tail10 not in phone_variants:
-                                phone_variants.append(tail10)
-                    phone_variants = list(dict.fromkeys(phone_variants))
-                    phone_conditions = [f'c.phone LIKE ?' for _ in phone_variants]
-                    
-                    # Формируем условие поиска
-                    search_conditions = []
-                    search_params = []
-                    
-                    # Если это число, добавляем точный поиск по ID заявки
-                    if is_numeric:
-                        search_conditions.append('o.id = ?')
-                        search_params.append(order_id)
-                    
-                    # Добавляем LIKE поиск по остальным полям
-                    like_conditions = [
-                        'c.name LIKE ?',
-                        '(' + ' OR '.join(phone_conditions) + ')',
-                        'c.email LIKE ?',
-                        'o.order_id LIKE ?',
-                        'd.serial_number LIKE ?',
-                        'o.comment LIKE ?',
-                        'o.symptom_tags LIKE ?',
-                        'EXISTS(SELECT 1 FROM order_symptoms osymp JOIN symptoms s ON s.id = osymp.symptom_id WHERE osymp.order_id = o.id AND s.name LIKE ?)',
-                        'o.appearance LIKE ?',
-                        'EXISTS(SELECT 1 FROM order_appearance_tags oat JOIN appearance_tags at ON at.id = oat.appearance_tag_id WHERE oat.order_id = o.id AND at.name LIKE ?)',
-                        'os.name LIKE ?',
-                        'os.code LIKE ?',
-                        'dt.name LIKE ?',
-                        'db.name LIKE ?',
-                        'om.name LIKE ?',
-                        'mgr.name LIKE ?',
-                        'ms.name LIKE ?'
-                    ]
-                    search_conditions.extend(like_conditions)
-                    for i, cond in enumerate(like_conditions):
-                        if 'c.phone' in cond:
-                            search_params.extend(phone_variants)
-                        else:
-                            search_params.append(like_q)
-                    
-                    where_clauses.append('(' + ' OR '.join(search_conditions) + ')')
-                    params.extend(search_params)
+                OrderQueries._append_orders_search_clause(
+                    where_clauses, params, str(filters['search'])
+                )
             
-            # Фильтр по датам
+            # Фильтр по датам (полуинтервалы — дружелюбны к индексам)
             if 'date_from' in filters and filters['date_from']:
-                where_clauses.append("DATE(o.created_at) >= DATE(?)")
+                where_clauses.append("o.created_at >= ?")
                 params.append(filters['date_from'])
             
             if 'date_to' in filters and filters['date_to']:
-                where_clauses.append("DATE(o.created_at) <= DATE(?)")
+                where_clauses.append("o.created_at < (?::date + INTERVAL '1 day')" if _get_db_driver() == "postgres" else "o.created_at < date(?, '+1 day')")
                 params.append(filters['date_to'])
         
         try:
@@ -240,20 +373,18 @@ class OrderQueries:
                 where_clauses.append(OrderQueries._orders_not_deleted_clause(cursor, 'o'))
                 where_sql = 'WHERE ' + ' AND '.join(where_clauses)
                 
-                # Глобальные закрепления заявок (общие для всех пользователей)
+                # Глобальные закрепления: один LEFT JOIN вместо EXISTS в SELECT и ORDER BY
                 pins_select = "0 AS is_pinned"
                 pins_join = ""
                 pins_order_prefix = ""
                 query_params = list(params)
                 if OrderQueries._table_exists(cursor, "order_pins"):
                     pins_select = (
-                        "CASE WHEN EXISTS("
-                        "SELECT 1 FROM order_pins AS op WHERE op.order_id = o.id"
-                        ") THEN 1 ELSE 0 END AS is_pinned"
+                        "CASE WHEN op_pin.order_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned"
                     )
+                    pins_join = "LEFT JOIN order_pins AS op_pin ON op_pin.order_id = o.id"
                     pins_order_prefix = (
-                        "CASE WHEN EXISTS(SELECT 1 FROM order_pins AS op WHERE op.order_id = o.id) "
-                        "THEN 1 ELSE 0 END DESC, "
+                        "CASE WHEN op_pin.order_id IS NOT NULL THEN 1 ELSE 0 END DESC, "
                         if pins_first else ""
                     )
 
@@ -307,8 +438,7 @@ class OrderQueries:
                         COALESCE(ms.name, '—') AS master,
                         {pins_select},
                         o.hidden,
-                        (SELECT COUNT(*) FROM order_comments WHERE order_id = o.id) AS comments_count,
-                        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE order_id = o.id) AS total_paid
+                        (SELECT COUNT(*) FROM order_comments WHERE order_id = o.id) AS comments_count
                     FROM orders AS o
                     JOIN customers AS c ON c.id = o.customer_id
                     LEFT JOIN devices AS d ON d.id = o.device_id
@@ -328,7 +458,7 @@ class OrderQueries:
                 cursor.execute(query, query_params)
                 rows = cursor.fetchall()
                 
-                # Подсчет общего количества (нужны те же JOIN'ы, что и в основном запросе)
+                # Подсчет: те же JOIN, что нужны WHERE (без SELECT-сабквери)
                 count_query = f'''
                     SELECT COUNT(*) 
                     FROM orders AS o

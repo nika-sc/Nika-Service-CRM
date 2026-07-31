@@ -387,11 +387,16 @@ def create_app(config_class=Config):
             cors_origins = '*'
         else:
             cors_origins = [item.strip() for item in raw_origins.split(',') if item.strip()]
-        socketio.init_app(
-            app,
-            async_mode=app.config.get('SOCKETIO_ASYNC_MODE', 'threading'),
-            cors_allowed_origins=cors_origins,
-        )
+        socketio_kwargs = {
+            'async_mode': app.config.get('SOCKETIO_ASYNC_MODE', 'threading'),
+            'cors_allowed_origins': cors_origins,
+        }
+        redis_url = (app.config.get('REDIS_URL') or '').strip()
+        if redis_url:
+            # Общая шина событий между несколькими gunicorn workers
+            socketio_kwargs['message_queue'] = redis_url
+            socketio_kwargs['channel'] = 'nikacrm-socketio'
+        socketio.init_app(app, **socketio_kwargs)
     
     # Настройка аутентификации
     setup_auth(login_manager)
