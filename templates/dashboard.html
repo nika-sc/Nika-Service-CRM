@@ -578,9 +578,9 @@
                                         </span>
                                     </a>
                                 </td>
-                                <td class="text-end"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(o.total_sum or 0) }} ₽</a></td>
-                                <td class="text-end text-success"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-success text-decoration-none">{{ "%.0f"|format(o.paid or 0) }} ₽</a></td>
-                                <td class="text-end text-danger fw-bold"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-danger text-decoration-none">{{ "%.0f"|format(o.debt or 0) }} ₽</a></td>
+                                <td class="text-end"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format((o.total_sum or 0)|float) }} ₽</a></td>
+                                <td class="text-end text-success"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-success text-decoration-none">{{ "%.0f"|format((o.paid or 0)|float) }} ₽</a></td>
+                                <td class="text-end text-danger fw-bold"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-danger text-decoration-none">{{ "%.0f"|format((o.debt or 0)|float) }} ₽</a></td>
                                 <td><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ o.created_at|format_date(true) if o.created_at else '—' }}</a></td>
                             </tr>
                             {% endfor %}
@@ -702,7 +702,7 @@
                                 </td>
                                 <td>{{ c.phone }}</td>
                                 <td class="text-end">{{ c.orders_count }}</td>
-                                <td class="text-end fw-bold">{{ "%.0f"|format(c.total_sum or 0) }} ₽</td>
+                                <td class="text-end fw-bold">{{ "%.0f"|format((c.total_sum or 0)|float) }} ₽</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -882,7 +882,7 @@
                                         </span>
                                     </td>
                                     <td class="text-end"><strong>{{ status.count }}</strong></td>
-                                    <td class="text-end text-muted">{{ "%.0f"|format(status.sum) }} ₽</td>
+                                    <td class="text-end text-muted">{{ "%.0f"|format(status.sum|float) }} ₽</td>
                                 </tr>
                                 {% endif %}
                                 {% endfor %}
@@ -917,8 +917,8 @@
                             </div>
                             <div class="master-stats">
                                 <span><i class="fas fa-clipboard-list"></i> {{ master.orders_count }}</span>
-                                <span><i class="fas fa-ruble-sign"></i> {{ "%.0f"|format(master.total_sum) }}</span>
-                                <span><i class="fas fa-chart-line"></i> ср. {{ "%.0f"|format((master.total_sum / master.orders_count) if master.orders_count else 0) }}</span>
+                                <span><i class="fas fa-ruble-sign"></i> {{ "%.0f"|format(master.total_sum|float) }}</span>
+                                <span><i class="fas fa-chart-line"></i> ср. {{ "%.0f"|format(((master.total_sum|float) / master.orders_count) if master.orders_count else 0) }}</span>
                             </div>
                         </div>
                         {% endif %}
@@ -948,7 +948,7 @@
                         <div class="text-muted">просроченных заказов</div>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <div class="h4 text-danger">{{ "%.0f"|format(dashboard.overdue_orders.total_sum) }} ₽</div>
+                        <div class="h4 text-danger">{{ "%.0f"|format(dashboard.overdue_orders.total_sum|float) }} ₽</div>
                         <div class="text-muted">общая сумма</div>
                     </div>
                 </div>
@@ -1011,7 +1011,7 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum) }} ₽</a>
+                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum|float) }} ₽</a>
                                 </td>
                                 <td>{{ order.created_at|format_date(true) if order.created_at else '—' }}</td>
                             </tr>

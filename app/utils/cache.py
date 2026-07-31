@@ -1,6 +1,8 @@
 """
 Утилиты для кэширования.
 """
+from datetime import date, datetime
+from decimal import Decimal
 from functools import wraps
 from typing import Callable, Any, Optional
 import hashlib
@@ -9,6 +11,17 @@ import logging
 from app.services.action_log_service import ActionLogService
 
 logger = logging.getLogger(__name__)
+
+
+def _json_default(obj: Any) -> Any:
+    """JSON encoder for cache: keep numbers numeric (Decimal→float), dates as ISO."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat(sep=" ", timespec="seconds")
+    if isinstance(obj, date):
+        return obj.isoformat()
+    return str(obj)
 
 # Простое in-memory кэширование (можно заменить на Redis, Memcached и т.д.)
 _cache = {}
@@ -140,7 +153,11 @@ def cache_result(timeout: int = 300, key_prefix: str = 'cache') -> Callable:
             if _redis_client:
                 try:
                     import json
-                    _redis_client.setex(cache_key, timeout, json.dumps(result, default=str))
+                    _redis_client.setex(
+                        cache_key,
+                        timeout,
+                        json.dumps(result, default=_json_default, ensure_ascii=False),
+                    )
                     logger.debug(f"Cached in Redis: {cache_key}")
                 except Exception as e:
                     logger.warning(f"Ошибка записи в Redis: {e}")
