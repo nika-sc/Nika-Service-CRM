@@ -54,11 +54,14 @@
         // Полгода: последние ~6 месяцев по сегодня
         from.setDate(from.getDate() - 182);
         break;
-      case "last-month":
-        from.setMonth(from.getMonth() - 1);
-        from.setDate(1);
-        to.setDate(0); // Последний день прошлого месяца
+      case "last-month": {
+        // Нельзя setMonth(m-1) при дне 31: «31 июня» переполняется в 1 июля.
+        const y = today.getFullYear();
+        const m = today.getMonth(); // 0-based текущий месяц
+        from = new Date(y, m - 1, 1);
+        to = new Date(y, m, 0); // последний день прошлого месяца
         break;
+      }
       case "year":
       case "year-to-date":
         // Год / с начала года: 1 января — сегодня

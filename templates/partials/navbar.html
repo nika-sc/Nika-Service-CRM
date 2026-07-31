@@ -1,6 +1,9 @@
-<!-- Шапка: бренд + поиск на всю ширину + уведомления. Разделы — в левом сайдбаре. -->
+<!-- Шапка: бренд + поиск на всю ширину + уведомления. Разделы — в левом сайдбаре (desktop) / drawer (mobile). -->
 <nav class="mac-menu-bar no-print">
     <div class="mac-menu-container">
+        <button type="button" class="mac-mobile-toggle" id="macMobileToggle" aria-label="Открыть меню" aria-controls="macMobileDrawer" aria-expanded="false">
+            <i class="fas fa-bars"></i>
+        </button>
         <a href="{{ url_for('main.home') }}" class="mac-menu-brand text-decoration-none" title="На главную">
             <i class="fas fa-tachometer-alt"></i>
             <span>Nika CRM</span>

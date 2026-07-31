@@ -25,6 +25,10 @@ def normalize_date_range(
     if date_to and not date_from:
         date_from = date_to
 
+    # Если границы перепутаны (баг пресетов / ручной ввод) — меняем местами
+    if date_from and date_to and str(date_from) > str(date_to):
+        date_from, date_to = date_to, date_from
+
     if not date_from and not date_to:
         now = get_moscow_now()
         today = now.date()

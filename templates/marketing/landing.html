@@ -161,6 +161,14 @@
             },
             {
               "@type": "Question",
+              "name": "Нужен ли Redis?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "В Docker Compose Redis поднимается по умолчанию для кэша, rate limit и Socket.IO между gunicorn-воркерами. На слабом VPS Redis можно не ставить — оставьте REDIS_URL пустым, CRM стартует с in-memory кэшем."
+              }
+            },
+            {
+              "@type": "Question",
               "name": "Есть ли портал для клиентов?",
               "acceptedAnswer": {
                 "@type": "Answer",
@@ -411,8 +419,9 @@
                 <dl class="ml-system-facts">
                     <div><dt>Лицензия</dt><dd>MIT, бесплатно и open-source</dd></div>
                     <div><dt>База данных</dt><dd>PostgreSQL</dd></div>
-                    <div><dt>Стек</dt><dd>Python, Flask, Jinja2</dd></div>
-                    <div><dt>Развёртывание</dt><dd>Windows, Docker, локальная сеть или VPS</dd></div>
+                    <div><dt>Кэш и realtime</dt><dd>Redis (кэш, rate limit, Socket.IO между воркерами)</dd></div>
+                    <div><dt>Стек</dt><dd>Python, Flask, Jinja2, gunicorn, nginx</dd></div>
+                    <div><dt>Развёртывание</dt><dd>Windows, Docker Compose, локальная сеть или VPS</dd></div>
                     <div><dt>Данные</dt><dd>Хранятся на вашей инфраструктуре</dd></div>
                     <div><dt>Автор</dt><dd>Александр Смелков, СЦ «Ника», Сочи</dd></div>
                 </dl>
@@ -491,7 +500,8 @@
                 <li>Клонируйте репозиторий и создайте виртуальное окружение Python.</li>
                 <li>Поднимите PostgreSQL и импортируйте демо-дамп <code>database/bootstrap/nikacrm_public_sanitized.sql</code>.</li>
                 <li>Скопируйте <code>.env.example</code> → <code>.env</code>, укажите <code>DB_DRIVER=postgres</code> и <code>DATABASE_URL</code>.</li>
-                <li>Запустите <code>python run.py</code> или используйте bootstrap-скрипт для Ubuntu 24.04.</li>
+                <li>Для Docker: <code>docker compose up -d</code> — web, nginx, Postgres и Redis; статика отдаётся nginx. Без Redis (малый VPS) задайте пустой <code>REDIS_URL</code> — CRM стартует на in-memory кэше.</li>
+                <li>Либо <code>python run.py</code> / bootstrap-скрипт Ubuntu 24.04 (<code>scripts/linux_setup.sh</code>).</li>
             </ol>
         </section>
 
@@ -529,6 +539,14 @@
             <details>
                 <summary>Какая СУБД нужна?</summary>
                 <p>PostgreSQL. В репозитории есть готовый sanitised-дамп для быстрого старта и скрипт установки на Ubuntu 24.04. Windows SETUP ставит PostgreSQL автоматически.</p>
+            </details>
+            <details>
+                <summary>Нужен ли Redis?</summary>
+                <p>
+                    В Docker Compose Redis поднимается по умолчанию: общий кэш, лимиты API и события Socket.IO между несколькими gunicorn-воркерами.
+                    На слабом VPS (~1&nbsp;ГБ) Redis можно не ставить — оставьте <code>REDIS_URL</code> пустым, приложение работает с in-memory кэшем.
+                    Подробности — в README и <a href="{{ url_for('public_blog.blog_post', slug='perf-cash-mobile') }}">посте про производительность</a>.
+                </p>
             </details>
             <details>
                 <summary>Есть ли клиентский портал?</summary>

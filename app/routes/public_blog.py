@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "perf-cash-mobile",
+        "file": "blog/11-perf-cash-mobile.md",
+        "date": "2026-07",
+        "title": "Производительность, касса по статьям и мобильное меню — Nika CRM",
+        "description": (
+            "Redis и gunicorn multi-worker, исправление периода «Прошлый месяц», "
+            "итоги кассы по статьям и выезжающее меню на телефоне."
+        ),
+        "heading": "Скорость, касса, мобильное меню",
+        "teaser": "Быстрее реестр, Обед за месяц в кассе, гамбургер-меню на мобиле.",
+    },
+    {
         "slug": "invoices-blank-signs",
         "file": "blog/10-invoices-blank-signs.md",
         "date": "2026-07",

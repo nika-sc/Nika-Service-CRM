@@ -183,6 +183,26 @@ def cash():
     income_categories = FinanceService.get_income_categories()
     expense_categories = FinanceService.get_expense_categories()
     payment_method_settings = SettingsService.get_payment_method_settings()
+
+    selected_category = None
+    if category_id and summary.get('by_category'):
+        for cat in summary['by_category']:
+            if int(cat.get('id') or 0) == int(category_id):
+                selected_category = cat
+                break
+    if category_id and not selected_category:
+        # Статья выбрана, но за период операций нет — покажем имя из справочника
+        for cat in list(income_categories or []) + list(expense_categories or []):
+            if int(cat.get('id') or 0) == int(category_id):
+                selected_category = {
+                    'id': cat.get('id'),
+                    'name': cat.get('name'),
+                    'type': cat.get('type'),
+                    'color': cat.get('color') or '#6c757d',
+                    'total': 0,
+                    'count': 0,
+                }
+                break
     
     return render_template(
         'finance/cash.html',
@@ -194,6 +214,7 @@ def cash():
         date_from=date_from,
         date_to=date_to,
         selected_category_id=category_id,
+        selected_category=selected_category,
         selected_type=transaction_type
     )
 

@@ -426,6 +426,21 @@ docker compose up -d
 
 Веб-интерфейс через nginx: **http://localhost:8080**. Подробности, импорт демо-дампа в контейнер и обновление — в [`docker/README.md`](docker/README.md).
 
+Compose поднимает сервисы **web** (gunicorn), **nginx**, **postgres**, **redis**. Статика `/static/` отдаётся nginx с диска (кэш 7 дней), загрузки — из `data/uploads`.
+
+#### Производительность и Redis (Docker / VPS)
+
+| Параметр | Типичное значение | Назначение |
+|----------|-------------------|------------|
+| `WEB_CONCURRENCY` × `WEB_THREADS` | WORK **3×4**, малый VPS/DEMO **2×4** | Параллельные HTTP-запросы |
+| `PG_POOL_MINCONN` / `PG_POOL_MAXCONN` | **2** / **8** на процесс gunicorn | Пул Postgres (не раздувать сверх `max_connections`) |
+| `REDIS_URL` | `redis://redis:6379/0` | Общий кэш + Socket.IO `message_queue` между воркерами |
+| `RATELIMIT_STORAGE_URI` | `redis://redis:6379/1` | Общий лимит API при нескольких воркерах |
+
+Без Redis приложение **стартует**: кэш и rate limit остаются in-memory (на DEMO с 1 ГБ Redis-сервис можно не ставить). Клиентская библиотека `redis` в `requirements.txt` нужна для режима с Redis; отсутствие `REDIS_URL` не ломает запуск.
+
+Ориентир переменных: [`.env.example`](.env.example), [`docker/env.example`](docker/env.example).
+
 ### Post-clone: reverse proxy, Docker, and PostgreSQL
 
 После **`git clone`** чаще всего сталкиваются с двумя проблемами: ответ **`400`** с телом вроде **`invalid_host`** за nginx и ошибки **`InsufficientPrivilege` / «нет доступа к таблице …»** в PostgreSQL после восстановления дампа.

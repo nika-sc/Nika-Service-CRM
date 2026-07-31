@@ -932,6 +932,69 @@
             display: block;
             opacity: 1;
         }
+
+        .mac-mobile-drawer {
+            display: none;
+            position: fixed;
+            top: 44px;
+            left: 0;
+            width: min(320px, 88vw);
+            max-height: calc(100vh - 44px);
+            overflow-y: auto;
+            background: #fff;
+            z-index: 1030;
+            box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
+            transform: translateX(-105%);
+            transition: transform 0.2s ease;
+        }
+        .mac-mobile-drawer.open {
+            display: block;
+            transform: translateX(0);
+        }
+        .mac-mobile-drawer[hidden] {
+            display: none !important;
+        }
+        .mac-mobile-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .mac-mobile-drawer-nav {
+            padding: 0.5rem 0;
+        }
+        .mac-mobile-drawer-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1rem;
+            color: inherit;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .mac-mobile-drawer-link i {
+            width: 1.25rem;
+            text-align: center;
+            opacity: 0.85;
+        }
+        .mac-mobile-drawer-link:hover,
+        .mac-mobile-drawer-link.active {
+            background: rgba(13, 110, 253, 0.08);
+            color: #0d6efd;
+        }
+        .theme-dark .mac-mobile-drawer {
+            background: #2d2d2d;
+            color: #e8e8e8;
+        }
+        .theme-dark .mac-mobile-drawer-header {
+            border-bottom-color: rgba(255,255,255,0.1);
+        }
+        .theme-dark .mac-mobile-drawer-link:hover,
+        .theme-dark .mac-mobile-drawer-link.active {
+            background: rgba(255,255,255,0.08);
+            color: #9ec5fe;
+        }
         
         body.mobile-menu-open {
             overflow: hidden;
@@ -1529,6 +1592,10 @@
             {% include 'partials/navbar.html' %}
         </header>
 
+        {% if current_user.is_authenticated %}
+        {% include 'partials/mobile_nav_drawer.html' %}
+        {% endif %}
+
         <!-- Боковая панель Bootstrap 5 -->
         {% include 'partials/bootstrap_sidebar.html' %}
 
@@ -1738,28 +1805,44 @@
             });
             
             function closeMobileMenu() {
-                $('.mac-menu').removeClass('mobile-open');
-                $('#macMobileOverlay').removeClass('show');
+                const $drawer = $('#macMobileDrawer');
+                $drawer.removeClass('open').attr('hidden', true);
+                $('#macMobileOverlay').removeClass('show').attr('aria-hidden', 'true');
                 $('body').removeClass('mobile-menu-open');
+                $('#macMobileToggle').attr('aria-expanded', 'false');
+                $('.mac-menu').removeClass('mobile-open');
                 $('.mac-menu-item.dropdown').removeClass('show');
             }
 
-            // Гамбургер: открыть/закрыть мобильное меню
-            $('#macMobileToggle').on('click', function() {
-                $('.mac-menu').toggleClass('mobile-open');
-                $('#macMobileOverlay').toggleClass('show');
-                $('body').toggleClass('mobile-menu-open', $('.mac-menu').hasClass('mobile-open'));
-            });
-            
-            $('#macMobileOverlay').on('click', function() {
-                closeMobileMenu();
-            });
+            function openMobileMenu() {
+                const $drawer = $('#macMobileDrawer');
+                if (!$drawer.length) return;
+                $drawer.removeAttr('hidden').addClass('open');
+                $('#macMobileOverlay').addClass('show').attr('aria-hidden', 'false');
+                $('body').addClass('mobile-menu-open');
+                $('#macMobileToggle').attr('aria-expanded', 'true');
+            }
 
-            // На мобильном: при выборе пункта закрываем меню сразу.
-            $(document).on('click', '.mac-menu .mac-menu-link, .mac-menu .mac-dropdown-item', function() {
+            // Гамбургер: мобильный drawer с разделами CRM
+            $('#macMobileToggle').on('click', function() {
+                if ($('#macMobileDrawer').hasClass('open')) {
+                    closeMobileMenu();
+                } else {
+                    openMobileMenu();
+                }
+            });
+            $('#macMobileDrawerClose, #macMobileOverlay').on('click', closeMobileMenu);
+
+            $(document).on('click', '.mac-mobile-drawer-link', function() {
                 if (window.innerWidth <= 768) {
                     closeMobileMenu();
                 }
+            });
+
+            $('#staffChatMobileOpen').on('click', function() {
+                closeMobileMenu();
+                const fab = document.getElementById('staffChatFab');
+                if (fab) fab.click();
             });
 
             // Если экран увеличили до desktop, сбрасываем mobile-состояние меню

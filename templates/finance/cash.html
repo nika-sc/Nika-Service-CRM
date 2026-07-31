@@ -89,14 +89,61 @@
         </div>
     </div>
     
-    <!-- Фильтр периода -->
+    <!-- Фильтр периода + статья -->
     <div class="card shadow-sm mb-4">
         <div class="card-body py-3">
             <form method="GET" class="row g-3 align-items-end">
+                {% if selected_type %}
+                <input type="hidden" name="transaction_type" value="{{ selected_type }}">
+                {% endif %}
                 {% include 'partials/period_filter.html' %}
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label small text-muted mb-1" for="cashCategoryFilter">Статья</label>
+                    <select class="form-select form-select-sm" name="category_id" id="cashCategoryFilter" onchange="this.form.submit()">
+                        <option value="">Все статьи</option>
+                        {% if expense_categories %}
+                        <optgroup label="Расход">
+                            {% for cat in expense_categories %}
+                            <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                        {% if income_categories %}
+                        <optgroup label="Приход">
+                            {% for cat in income_categories %}
+                            <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                    </select>
+                </div>
             </form>
         </div>
     </div>
+
+    {% if selected_category %}
+    <div class="alert alert-light border shadow-sm mb-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <strong>
+                <span class="category-dot d-inline-block me-1" style="background: {{ selected_category.color or '#6c757d' }};"></span>
+                {{ selected_category.name }}
+            </strong>
+            <span class="text-muted small ms-2">
+                {% if selected_category.type == 'expense' %}расход{% elif selected_category.type == 'income' %}приход{% endif %}
+                за период
+                {% if date_from or date_to %}({{ date_from or '…' }} — {{ date_to or '…' }}){% endif %}
+            </span>
+        </div>
+        <div class="text-end">
+            <div class="fs-4 fw-bold {% if selected_category.type == 'expense' %}text-danger{% else %}text-success{% endif %}">
+                {{ "%.2f"|format(selected_category.total or 0) }} ₽
+            </div>
+            <div class="small text-muted">{{ selected_category.count or 0 }} операций</div>
+        </div>
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}{% if selected_type %}&transaction_type={{ selected_type }}{% endif %}"
+           class="btn btn-sm btn-outline-secondary">Сбросить статью</a>
+    </div>
+    {% endif %}
     
     <!-- Статистика: порядок — Итоговый баланс, Остаток на начало, Приход, Расход -->
     <div class="row g-3 mb-4">
@@ -218,21 +265,66 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Итого по статьям за период -->
+    {% if summary.by_category %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-tags me-2"></i>Итого по статьям за период</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Статья</th>
+                        <th style="width: 100px;">Тип</th>
+                        <th class="text-end" style="width: 90px;">Операций</th>
+                        <th class="text-end" style="width: 140px;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in summary.by_category %}
+                    <tr class="{% if selected_category_id == cat.id %}table-active{% endif %}" style="cursor: pointer;"
+                        onclick="window.location.href='?date_from={{ date_from }}&date_to={{ date_to }}&category_id={{ cat.id }}{% if selected_type %}&transaction_type={{ selected_type }}{% endif %}'">
+                        <td>
+                            <span class="category-badge" style="background: {{ cat.color }}20;">
+                                <span class="category-dot" style="background: {{ cat.color }};"></span>
+                                {{ cat.name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if cat.type == 'expense' %}
+                            <span class="badge bg-danger-subtle text-danger">Расход</span>
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success">Приход</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ cat.count }}</td>
+                        <td class="text-end fw-semibold {% if cat.type == 'expense' %}text-danger{% else %}text-success{% endif %}">
+                            {{ "%.2f"|format(cat.total or 0) }} ₽
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Таблица транзакций -->
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="fas fa-list me-2"></i>Операции</h6>
             <div class="d-flex gap-2">
-                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=income" 
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=income{% if selected_category_id %}&category_id={{ selected_category_id }}{% endif %}" 
                    class="btn btn-sm {% if selected_type == 'income' %}btn-success{% else %}btn-outline-success{% endif %} quick-filter-btn">
                     Приходы
                 </a>
-                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=expense"
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&transaction_type=expense{% if selected_category_id %}&category_id={{ selected_category_id }}{% endif %}"
                    class="btn btn-sm {% if selected_type == 'expense' %}btn-danger{% else %}btn-outline-danger{% endif %} quick-filter-btn">
                     Расходы
                 </a>
-                <a href="?date_from={{ date_from }}&date_to={{ date_to }}"
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}{% if selected_category_id %}&category_id={{ selected_category_id }}{% endif %}"
                    class="btn btn-sm {% if not selected_type %}btn-secondary{% else %}btn-outline-secondary{% endif %} quick-filter-btn">
                     Все
                 </a>
