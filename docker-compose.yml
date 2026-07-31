@@ -43,6 +43,10 @@ services:
       - PORTAL_LOGIN_LOCKOUT_THRESHOLD=${PORTAL_LOGIN_LOCKOUT_THRESHOLD:-8}
       - PORTAL_LOGIN_LOCKOUT_WINDOW_SEC=${PORTAL_LOGIN_LOCKOUT_WINDOW_SEC:-600}
       - PORTAL_LOGIN_LOCKOUT_DURATION_SEC=${PORTAL_LOGIN_LOCKOUT_DURATION_SEC:-1800}
+      # Gunicorn: параллельные HTTP-запросы (на WORK обычно 3×4; на слабом VPS — 2×4)
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-3}
+      - WEB_THREADS=${WEB_THREADS:-4}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
     volumes:
       - ./data/database:/app/database
       - ./data/logs:/app/logs

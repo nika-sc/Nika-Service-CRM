@@ -6,6 +6,8 @@
 #
 # --limit-request-line 8190: запас для редких длинных GET (по умолчанию gunicorn — 4094).
 # Реестр заявок в приложении использует POST для DataTables; флаг оставлен для совместимости.
+# WORK (~2 CPU / 4 ГБ): --workers 3 --threads 4
+# DEMO / VPS ~1 ГБ / 1 CPU: --workers 2 --threads 4 (3–4 воркера на 1 ГБ — риск OOM)
 
 [Unit]
 Description=Nika CRM Gunicorn Service
