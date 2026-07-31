@@ -9,7 +9,7 @@ from app.routes.main import permission_required
 from typing import Optional
 import logging
 import html as _html
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Импорты сервисов
 from app.services.order_service import OrderService
@@ -727,7 +727,15 @@ def all_orders():
             orders = []
             paginator = None
         elif view == 'kanban':
-            # Канбан: slim-лимит (полный 10k раздувает TTFB/RAM на DEMO)
+            # Канбан: по умолчанию только последние 7 дней (иначе HTML/TTFB раздуваются).
+            # Явные date_from/date_to из формы сохраняются.
+            today = get_moscow_now().date()
+            if not date_from:
+                date_from = (today - timedelta(days=6)).isoformat()
+                filters['date_from'] = date_from
+            if not date_to:
+                date_to = today.isoformat()
+                filters['date_to'] = date_to
             _kanban_max_orders = 500
             count_pg = OrderService.get_orders_with_details(filters, 1, 1)
             if count_pg.total <= 0:

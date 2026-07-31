@@ -900,18 +900,21 @@
                         <div class="card-header">
                             <h3 class="card-title mb-2">
                                 <i class="fas fa-columns me-2"></i>Канбан доска
-                                <a href="{{ url_for('orders.all_orders', view='kanban', status='in_progress') }}" class="ms-2">
+                                <span class="badge text-bg-light text-dark border ms-1" title="По умолчанию — заявки за последние 7 дней">
+                                    {{ date_from or '—' }} — {{ date_to or '—' }}
+                                </span>
+                                <a href="{{ url_for('orders.all_orders', view='kanban', status='in_progress', date_from=date_from, date_to=date_to) }}" class="ms-2">
                                     <span class="badge text-bg-secondary {% if status_filter == 'in_progress' and not master_filter %}text-bg-dark{% endif %}">
                                         Все в работе: {{ in_progress_orders_count }}
                                     </span>
                                 </a>
-                                <a href="{{ url_for('orders.all_orders', view='kanban') }}" class="ms-2">
+                                <a href="{{ url_for('orders.all_orders', view='kanban', date_from=date_from, date_to=date_to) }}" class="ms-2">
                                     <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
-                                        Все: {{ total_orders }}
+                                        За период: {{ total }}
                                     </span>
                                 </a>
                                 {% for status_counter in active_status_counters %}
-                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id, date_from=date_from, date_to=date_to) }}" class="ms-1">
                                         <span
                                             class="badge"
                                             style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
@@ -923,7 +926,7 @@
                                 <span class="ms-2 small text-muted">|</span>
                                 <span class="ms-1 small text-muted"><i class="fas fa-archive me-1"></i>Архивные:</span>
                                 {% for status_counter in archived_status_counters %}
-                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id) }}" class="ms-1">
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id, date_from=date_from, date_to=date_to) }}" class="ms-1">
                                         <span
                                             class="badge"
                                             style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; opacity: 0.85; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
@@ -1035,14 +1038,16 @@
                                                 </div>
 
                                                 <div class="d-flex flex-wrap gap-1 mt-1">
-                                                    {% if order.prepayment is not none and order.prepayment and order.prepayment not in ['0', '0.0', 'None', 'null', '—'] %}
+                                                    {% set prepayment_val = order.get('prepayment') if order is mapping else order.prepayment %}
+                                                    {% if prepayment_val is not none and prepayment_val and prepayment_val not in ['0', '0.0', 'None', 'null', '—'] %}
                                                         <span class="badge text-bg-success">
-                                                            <i class="fas fa-ruble-sign me-1"></i>{{ order.prepayment }} ₽
+                                                            <i class="fas fa-ruble-sign me-1"></i>{{ prepayment_val }} ₽
                                                         </span>
                                                     {% endif %}
-                                                    {% if order.total_paid is not none and order.total_paid|int > 0 %}
+                                                    {% set total_paid_val = order.get('total_paid', 0) if order is mapping else (order.total_paid|default(0)) %}
+                                                    {% if total_paid_val|float > 0 %}
                                                         <span class="badge text-bg-primary">
-                                                            <i class="fas fa-coins me-1"></i>{{ order.total_paid }} ₽
+                                                            <i class="fas fa-coins me-1"></i>{{ total_paid_val }} ₽
                                                         </span>
                                                     {% endif %}
                                                 </div>
