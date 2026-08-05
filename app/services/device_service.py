@@ -4,7 +4,7 @@
 from typing import Optional, List, Dict
 from app.models.device import Device
 from app.database.queries.device_queries import DeviceQueries
-from app.utils.cache import cache_result, clear_cache
+from app.utils.cache import clear_cache
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.services.action_log_service import ActionLogService
 import logging
@@ -16,10 +16,11 @@ class DeviceService:
     """Сервис для работы с устройствами."""
     
     @staticmethod
-    @cache_result(timeout=300, key_prefix='device')
     def get_device(device_id: int) -> Optional[Device]:
         """
-        Получает устройство по ID с кэшированием.
+        Получает устройство по ID.
+        
+        Не кэшируем модель в Redis (JSON default=str ломает attribute-access).
         
         Args:
             device_id: ID устройства

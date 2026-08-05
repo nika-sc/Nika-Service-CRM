@@ -14,13 +14,23 @@ logger = logging.getLogger(__name__)
 
 
 def _json_default(obj: Any) -> Any:
-    """JSON encoder for cache: keep numbers numeric (Decimal→float), dates as ISO."""
+    """JSON encoder for cache: keep numbers numeric (Decimal→float), dates as ISO.
+
+    Models with to_dict() are stored as dicts — never str(Model), which broke
+    attribute access after Redis round-trip (e.g. Order.status_id).
+    """
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, datetime):
         return obj.isoformat(sep=" ", timespec="seconds")
     if isinstance(obj, date):
         return obj.isoformat()
+    to_dict = getattr(obj, "to_dict", None)
+    if callable(to_dict):
+        try:
+            return to_dict()
+        except Exception:
+            pass
     return str(obj)
 
 # Простое in-memory кэширование (можно заменить на Redis, Memcached и т.д.)

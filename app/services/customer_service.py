@@ -4,7 +4,7 @@
 from typing import Optional, Dict, List
 from app.models.customer import Customer
 from app.database.queries.customer_queries import CustomerQueries
-from app.utils.cache import cache_result, clear_cache
+from app.utils.cache import clear_cache
 from app.utils.validators import validate_customer_data
 from app.utils.pagination import Paginator
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
@@ -18,10 +18,11 @@ class CustomerService:
     """Сервис для работы с клиентами."""
     
     @staticmethod
-    @cache_result(timeout=300, key_prefix='customer')
     def get_customer(customer_id: int) -> Optional[Customer]:
         """
-        Получает клиента по ID с кэшированием.
+        Получает клиента по ID.
+        
+        Не кэшируем модель в Redis (JSON default=str ломает attribute-access).
         
         Args:
             customer_id: ID клиента
@@ -32,10 +33,9 @@ class CustomerService:
         return Customer.get_by_id(customer_id)
     
     @staticmethod
-    @cache_result(timeout=300, key_prefix='customer_phone')
     def get_customer_by_phone(phone: str) -> Optional[Customer]:
         """
-        Получает клиента по телефону с кэшированием.
+        Получает клиента по телефону.
         
         Args:
             phone: Номер телефона

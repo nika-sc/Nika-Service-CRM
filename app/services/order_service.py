@@ -7,7 +7,6 @@
 from typing import Optional, Dict, List, Any
 from app.models.order import Order
 from app.database.queries.order_queries import OrderQueries
-from app.utils.cache import cache_result
 from app.utils.validators import validate_order_data
 from app.utils.pagination import Paginator
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
@@ -25,10 +24,12 @@ class OrderService:
     """Сервис для работы с заявками."""
     
     @staticmethod
-    @cache_result(timeout=60, key_prefix='order')
     def get_order(order_id: int) -> Optional[Order]:
         """
-        Получает заявку по ID с кэшированием.
+        Получает заявку по ID.
+        
+        Не кэшируем в Redis: модель Order не JSON-serializable, default=str
+        ломал check_order_edit_allowed (AttributeError на status_id).
         
         Args:
             order_id: ID заявки
@@ -279,28 +280,30 @@ class OrderService:
             NotFoundError: Если заявка не найдена
         """
         from app.database.connection import get_db_connection
-        import sqlite3
         
-        order = OrderService.get_order(order_id)
-        if not order:
-            raise NotFoundError(f"Заявка с ID {order_id} не найдена")
+        if not order_id or order_id <= 0:
+            raise ValidationError("Неверный ID заявки")
         
-        # Проверяем флаги статуса
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                SELECT blocks_edit, is_final
-                FROM order_statuses
-                WHERE id = ?
-            ''', (order.status_id,))
+            not_deleted = Order._not_deleted_clause(cursor, 'o')
+            cursor.execute(
+                '''
+                SELECT os.blocks_edit, os.is_final
+                FROM orders AS o
+                LEFT JOIN order_statuses AS os ON os.id = o.status_id
+                WHERE o.id = ?
+                ''' + not_deleted,
+                (order_id,),
+            )
             status_row = cursor.fetchone()
+            if not status_row:
+                raise NotFoundError(f"Заявка с ID {order_id} не найдена")
             
-            if status_row:
-                blocks_edit = bool(status_row[0])
-                is_final = bool(status_row[1])
-                # Если хотя бы один флаг установлен, редактирование заблокировано
-                if blocks_edit or is_final:
-                    return False
+            blocks_edit = bool(status_row[0]) if status_row[0] is not None else False
+            is_final = bool(status_row[1]) if status_row[1] is not None else False
+            if blocks_edit or is_final:
+                return False
         
         return True
     
