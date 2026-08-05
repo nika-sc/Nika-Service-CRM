@@ -4,7 +4,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from functools import wraps
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, Tuple
 import hashlib
 import json
 import logging
@@ -14,24 +14,70 @@ logger = logging.getLogger(__name__)
 
 
 def _json_default(obj: Any) -> Any:
-    """JSON encoder for cache: keep numbers numeric (Decimal→float), dates as ISO.
+    """Fallback encoder (prefer _to_json_safe before dumps)."""
+    return _to_json_safe(obj)
 
-    Models with to_dict() are stored as dicts — never str(Model), which broke
-    attribute access after Redis round-trip (e.g. Order.status_id).
+
+def _to_json_safe(value: Any, *, _depth: int = 0) -> Any:
     """
-    if isinstance(obj, Decimal):
-        return float(obj)
-    if isinstance(obj, datetime):
-        return obj.isoformat(sep=" ", timespec="seconds")
-    if isinstance(obj, date):
-        return obj.isoformat()
-    to_dict = getattr(obj, "to_dict", None)
+    Рекурсивно приводит значение к JSON-совместимому виду.
+
+    Один и тот же shape для Redis и in-memory: datetime/date → ISO str,
+    Decimal → float, dict keys → str, модели с to_dict() → dict.
+    """
+    if _depth > 64:
+        raise TypeError("cache value nesting too deep")
+
+    if value is None or isinstance(value, (bool, str)):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return value
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, datetime):
+        return value.isoformat(sep=" ", timespec="seconds")
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, dict):
+        return {
+            str(k): _to_json_safe(v, _depth=_depth + 1)
+            for k, v in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_to_json_safe(v, _depth=_depth + 1) for v in value]
+    if isinstance(value, set):
+        return [_to_json_safe(v, _depth=_depth + 1) for v in value]
+
+    to_dict = getattr(value, "to_dict", None)
     if callable(to_dict):
         try:
-            return to_dict()
-        except Exception:
-            pass
-    return str(obj)
+            return _to_json_safe(to_dict(), _depth=_depth + 1)
+        except Exception as exc:
+            raise TypeError(
+                f"to_dict() failed for {type(value).__name__}: {exc}"
+            ) from exc
+
+    raise TypeError(
+        f"value of type {type(value).__name__} is not JSON-safe for cache "
+        f"(do not cache model instances without to_dict)"
+    )
+
+
+def _prepare_cache_value(result: Any) -> Tuple[Optional[Any], bool]:
+    """
+    Returns (safe_value, ok). If ok is False, result must not be written to Redis
+    (and should not be stored in memory as a divergent raw object).
+    """
+    try:
+        return _to_json_safe(result), True
+    except TypeError as exc:
+        logger.warning("Skip Redis/memory cache normalize: %s", exc)
+        return None, False
+
 
 # Простое in-memory кэширование (можно заменить на Redis, Memcached и т.д.)
 _cache = {}
@@ -135,7 +181,6 @@ def cache_result(timeout: int = 300, key_prefix: str = 'cache') -> Callable:
                     cached_data = _redis_client.get(cache_key)
                     if cached_data:
                         logger.debug(f"Cache hit (Redis): {cache_key}")
-                        import json
                         return json.loads(cached_data)
                 except Exception as e:
                     logger.warning(f"Ошибка чтения из Redis: {e}")
@@ -158,25 +203,28 @@ def cache_result(timeout: int = 300, key_prefix: str = 'cache') -> Callable:
             # Выполняем функцию
             logger.debug(f"Cache miss: {cache_key}")
             result = func(*args, **kwargs)
-            
-            # Сохраняем в кэш (Redis или in-memory)
+
+            safe, ok = _prepare_cache_value(result)
+            if not ok:
+                # Не кэшируем «сырые» модели — иначе Redis/memory разъедутся по типам
+                return result
+
             if _redis_client:
                 try:
-                    import json
                     _redis_client.setex(
                         cache_key,
                         timeout,
-                        json.dumps(result, default=_json_default, ensure_ascii=False),
+                        json.dumps(safe, ensure_ascii=False),
                     )
                     logger.debug(f"Cached in Redis: {cache_key}")
                 except Exception as e:
                     logger.warning(f"Ошибка записи в Redis: {e}")
-            
-            _cache[cache_key] = result
+
+            _cache[cache_key] = safe
             _cache_timestamps[cache_key] = current_time
             _cache_access_times[cache_key] = current_time
-            
-            return result
+
+            return safe
         return wrapper
     return decorator
 
@@ -197,6 +245,9 @@ def clear_cache(key_prefix: Optional[str] = None) -> int:
         _cache_timestamps.clear()
         _cache_access_times.clear()
         logger.info(f"Cleared entire cache ({count} entries)")
+
+        # Не трогаем весь Redis DB0: там же Socket.IO message_queue.
+        # Префиксы приложения чистятся через clear_cache('dashboard_full') и т.п.
 
         # Логируем очистку всего кэша
         try:

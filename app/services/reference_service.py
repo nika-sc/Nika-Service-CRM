@@ -126,18 +126,18 @@ class ReferenceService:
     
     @staticmethod
     @cache_result(timeout=300, key_prefix='ref_usage_counts')  # Кэш на 5 минут
-    def get_all_usage_counts() -> Dict[str, Dict[int, int]]:
+    def get_all_usage_counts() -> Dict[str, Dict[str, int]]:
         """
         Получает все usage counts для всех справочников одним запросом.
         
         Returns:
-            Словарь с usage counts:
+            Словарь с usage counts (ключи id — строки, стабильно для Redis JSON):
             {
-                'device_types': {type_id: count, ...},
-                'device_brands': {brand_id: count, ...},
-                'symptoms': {symptom_id: count, ...},
-                'appearance_tags': {tag_id: count, ...},
-                'services': {service_id: count, ...}
+                'device_types': {'1': count, ...},
+                'device_brands': {'1': count, ...},
+                'symptoms': {'1': count, ...},
+                'appearance_tags': {'1': count, ...},
+                'services': {'1': count, ...}
             }
         """
         result = {
@@ -163,7 +163,7 @@ class ReferenceService:
                     GROUP BY dt.id
                 ''')
                 for row in cursor.fetchall():
-                    result['device_types'][row['id']] = row['devices_count'] + row['orders_count']
+                    result['device_types'][str(row['id'])] = row['devices_count'] + row['orders_count']
                 
                 # Device brands usage (devices + orders)
                 cursor.execute('''
@@ -176,7 +176,7 @@ class ReferenceService:
                     GROUP BY db.id
                 ''')
                 for row in cursor.fetchall():
-                    result['device_brands'][row['id']] = row['devices_count'] + row['orders_count']
+                    result['device_brands'][str(row['id'])] = row['devices_count'] + row['orders_count']
                 
                 # Symptoms usage (orders)
                 cursor.execute('''
@@ -186,7 +186,7 @@ class ReferenceService:
                     GROUP BY s.id
                 ''')
                 for row in cursor.fetchall():
-                    result['symptoms'][row['id']] = row['count']
+                    result['symptoms'][str(row['id'])] = row['count']
                 
                 # Appearance tags usage (orders)
                 cursor.execute('''
@@ -196,7 +196,7 @@ class ReferenceService:
                     GROUP BY at.id
                 ''')
                 for row in cursor.fetchall():
-                    result['appearance_tags'][row['id']] = row['count']
+                    result['appearance_tags'][str(row['id'])] = row['count']
                 
                 # Services usage (orders)
                 cursor.execute('''
@@ -206,7 +206,7 @@ class ReferenceService:
                     GROUP BY s.id
                 ''')
                 for row in cursor.fetchall():
-                    result['services'][row['id']] = row['count']
+                    result['services'][str(row['id'])] = row['count']
                 
         except Exception as e:
             logger.error(f"Ошибка при получении usage counts: {e}")

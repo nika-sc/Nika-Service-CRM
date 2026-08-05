@@ -46,11 +46,12 @@ class OrderService:
         return Order.get_by_id(order_id)
     
     @staticmethod
-    # Временно отключен кэш для отладки
-    # @cache_result(timeout=30, key_prefix='order_uuid')
+    # Не кэшировать Order в Redis: JSON default=str / to_dict ломает attribute-access
+    # у вызывающего кода (см. check_order_edit_allowed / POST services). Не включать обратно.
+    # # @cache_result(timeout=30, key_prefix='order_uuid')
     def get_order_by_uuid(order_uuid: str) -> Optional[Order]:
         """
-        Получает заявку по UUID с кэшированием.
+        Получает заявку по UUID (без Redis-кэша модели).
         
         Args:
             order_uuid: UUID заявки

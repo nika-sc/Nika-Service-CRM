@@ -51,25 +51,25 @@
     <div class="row g-4 mb-4">
         <div class="col-md-3">
             <div class="stat-box bg-success text-white">
-                <div class="value">{{ "%.0f"|format(report.total_income) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.total_income|float) }} ₽</div>
                 <div class="label">Общий доход</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box bg-danger text-white">
-                <div class="value">{{ "%.0f"|format(report.total_expense) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.total_expense|float) }} ₽</div>
                 <div class="label">Общий расход</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box bg-warning text-dark">
-                <div class="value">{{ "%.0f"|format(report.cogs) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.cogs|float) }} ₽</div>
                 <div class="label">Себестоимость</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box {% if report.net_profit >= 0 %}bg-primary{% else %}bg-dark{% endif %} text-white">
-                <div class="value">{{ "%.0f"|format(report.net_profit) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.net_profit|float) }} ₽</div>
                 <div class="label">Чистая прибыль</div>
             </div>
         </div>
