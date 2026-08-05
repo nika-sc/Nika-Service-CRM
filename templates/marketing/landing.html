@@ -546,8 +546,9 @@
                     В Docker Compose Redis поднимается по умолчанию: общий кэш, лимиты API и события Socket.IO между несколькими gunicorn-воркерами.
                     На слабом VPS (~1&nbsp;ГБ) Redis можно не ставить — оставьте <code>REDIS_URL</code> пустым, приложение работает с in-memory кэшем.
                     Подробности — в README,
-                    <a href="{{ url_for('public_blog.blog_post', slug='perf-cash-mobile') }}">посте про производительность</a>
-                    и в <a href="{{ url_for('public_blog.blog_post', slug='bugfixes-cache-salary') }}">багфиксах Redis и зарплаты</a>.
+                    <a href="{{ url_for('public_blog.blog_post', slug='perf-cash-mobile') }}">посте про производительность</a>,
+                    в <a href="{{ url_for('public_blog.blog_post', slug='bugfixes-cache-salary') }}">багфиксах Redis и зарплаты</a>
+                    и в заметке про <a href="{{ url_for('public_blog.blog_post', slug='salary-refund-split') }}">ЗП и возвраты оплат</a>.
                 </p>
             </details>
             <details>

@@ -331,6 +331,16 @@ body.ml-body {
   text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
 }
 
+/* Дата карточки в /blog — тот же зелёный акцент, что у слова «Блог» */
+.ml-blog-date {
+  font-family: var(--ml-font-ui);
+  font-size: 0.85rem;
+  color: #6fe8d6;
+  margin: 0;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+}
+
+
 .ml-hero h1 {
   font-family: var(--ml-font-display);
   font-size: clamp(1.85rem, 4vw, 2.55rem);

@@ -742,6 +742,47 @@ class SalaryDashboardService:
                                 continue
                             payments_by_order.setdefault(p_order_id, []).append(p_dict)
 
+                        # Netting: исходная оплата после полного/частичного refund не должна
+                        # раздувать разбивку начислений (иначе «двойные» строки при net=0).
+                        has_refunded_of = 'refunded_of_id' in pay_cols
+                        _refund_links: Dict[int, float] = {}
+                        if has_kind and has_refunded_of and order_ids:
+                            _ph = ",".join("?" for _ in order_ids)
+                            cursor.execute(
+                                f"""
+                                SELECT refunded_of_id, COALESCE(SUM(amount), 0) AS refunded_sum
+                                FROM payments
+                                WHERE order_id IN ({_ph})
+                                  AND kind = 'refund'
+                                  AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                                  AND ({"status = 'captured'" if has_status else "1=1"})
+                                  AND refunded_of_id IS NOT NULL
+                                GROUP BY refunded_of_id
+                                """,
+                                list(order_ids),
+                            )
+                            for _rr in cursor.fetchall():
+                                _rd = dict(_rr)
+                                _rid = int(_rd.get("refunded_of_id") or 0)
+                                if _rid > 0:
+                                    _refund_links[_rid] = float(_rd.get("refunded_sum") or 0)
+
+                            for _oid, _plist in list(payments_by_order.items()):
+                                _netted: List[Dict[str, Any]] = []
+                                for _p in _plist:
+                                    _pid = int(_p.get("id") or 0)
+                                    _gross = float(_p.get("amount") or 0)
+                                    _ref = float(_refund_links.get(_pid) or 0)
+                                    _net = _gross - _ref
+                                    if _net <= 0.009:
+                                        continue
+                                    _row = dict(_p)
+                                    _row["amount"] = _net
+                                    _row["gross_amount"] = _gross
+                                    _row["refunded_amount"] = _ref
+                                    _netted.append(_row)
+                                payments_by_order[_oid] = _netted
+
                     split_accruals: List[Dict[str, Any]] = []
                     for accrual in accruals:
                         try:

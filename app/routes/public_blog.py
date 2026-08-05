@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "salary-refund-split",
+        "file": "blog/13-salary-refund-split.md",
+        "date": "2026-08",
+        "title": "Зарплата и возвраты: без двойных строк в карточке сотрудника — Nika CRM",
+        "description": (
+            "5 августа 2026: разбивка начислений по оплатам больше не учитывает "
+            "полностью возвращённые платежи — без «двойных» строк в /salary."
+        ),
+        "heading": "Зарплата и возвраты оплат",
+        "teaser": "Полный возврат оплаты больше не дробит начисление на лишние строки.",
+    },
+    {
         "slug": "bugfixes-cache-salary",
         "file": "blog/12-bugfixes-cache-salary.md",
         "date": "2026-08",
