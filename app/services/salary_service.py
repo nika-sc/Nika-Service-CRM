@@ -949,8 +949,21 @@ class SalaryService:
                     order_id, 'master'
                 )
             elif master_users != {new_master_id}:
+                rk = {}
+                try:
+                    with get_db_connection() as conn2:
+                        rule = SalaryService._get_salary_rule(
+                            conn2.cursor(), 'master', new_master_id, item_type='service'
+                        )
+                        if rule and rule.get('rule_type') and rule.get('rule_value') is not None:
+                            rk = {
+                                'rule_type': rule['rule_type'],
+                                'rule_value': float(rule['rule_value']),
+                            }
+                except Exception:
+                    pass
                 result['master_updated'] = SalaryQueries.reassign_accruals_user(
-                    order_id, 'master', new_master_id, old_user_id=None
+                    order_id, 'master', new_master_id, old_user_id=None, **rk
                 )
 
         if manager_users:
@@ -959,8 +972,21 @@ class SalaryService:
                     order_id, 'manager'
                 )
             elif manager_users != {new_manager_id}:
+                rk = {}
+                try:
+                    with get_db_connection() as conn2:
+                        rule = SalaryService._get_salary_rule(
+                            conn2.cursor(), 'manager', new_manager_id, item_type='service'
+                        )
+                        if rule and rule.get('rule_type') and rule.get('rule_value') is not None:
+                            rk = {
+                                'rule_type': rule['rule_type'],
+                                'rule_value': float(rule['rule_value']),
+                            }
+                except Exception:
+                    pass
                 result['manager_updated'] = SalaryQueries.reassign_accruals_user(
-                    order_id, 'manager', new_manager_id, old_user_id=None
+                    order_id, 'manager', new_manager_id, old_user_id=None, **rk
                 )
 
         touched = sum(result.values())
@@ -1002,23 +1028,48 @@ class SalaryService:
         old_manager_id = int(old_manager_id) if old_manager_id is not None else None
         new_manager_id = int(new_manager_id) if new_manager_id is not None else None
 
+        def _rule_kwargs(role: str, employee_id: int) -> dict:
+            """Актуальный % исполнителя для отображения (сумму не пересчитываем)."""
+            try:
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    item_type = 'service' if role == 'master' else None
+                    rule = SalaryService._get_salary_rule(
+                        cursor, role, employee_id, item_type=item_type or 'service'
+                    )
+                    if rule and rule.get('rule_type') and rule.get('rule_value') is not None:
+                        return {
+                            'rule_type': rule['rule_type'],
+                            'rule_value': float(rule['rule_value']),
+                        }
+            except Exception as e:
+                logger.warning(
+                    "Не удалось прочитать правило %s id=%s при переносе ЗП: %s",
+                    role,
+                    employee_id,
+                    e,
+                )
+            return {}
+
         if old_master_id != new_master_id:
             if new_master_id is None:
                 result['master_deleted'] = SalaryQueries.delete_accruals_for_order_role(
                     order_id, 'master'
                 )
             else:
+                rk = _rule_kwargs('master', new_master_id)
                 updated = SalaryQueries.reassign_accruals_user(
                     order_id,
                     'master',
                     new_master_id,
                     old_user_id=old_master_id,
+                    **rk,
                 )
                 # Если начисления ещё на старом исполнителе (после прошлых сбоев) —
                 # переносим все строки роли.
                 if updated == 0:
                     updated = SalaryQueries.reassign_accruals_user(
-                        order_id, 'master', new_master_id, old_user_id=None
+                        order_id, 'master', new_master_id, old_user_id=None, **rk
                     )
                 result['master_updated'] = updated
 
@@ -1028,15 +1079,17 @@ class SalaryService:
                     order_id, 'manager'
                 )
             else:
+                rk = _rule_kwargs('manager', new_manager_id)
                 updated = SalaryQueries.reassign_accruals_user(
                     order_id,
                     'manager',
                     new_manager_id,
                     old_user_id=old_manager_id,
+                    **rk,
                 )
                 if updated == 0:
                     updated = SalaryQueries.reassign_accruals_user(
-                        order_id, 'manager', new_manager_id, old_user_id=None
+                        order_id, 'manager', new_manager_id, old_user_id=None, **rk
                     )
                 result['manager_updated'] = updated
 

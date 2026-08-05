@@ -118,43 +118,85 @@ class SalaryQueries:
         role: str,
         new_user_id: int,
         old_user_id: Optional[int] = None,
+        *,
+        rule_type: Optional[str] = None,
+        rule_value: Optional[float] = None,
     ) -> int:
         """
         Переносит начисления заявки на другого сотрудника (суммы и даты сохраняются).
 
         Если old_user_id задан — обновляет только его строки; иначе все строки роли.
+        rule_type/rule_value — опционально обновить отображаемый %/правило под нового исполнителя.
         """
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
+                set_rule = rule_type is not None and rule_value is not None
                 if old_user_id is not None:
-                    cursor.execute(
-                        '''
-                        UPDATE salary_accruals
-                        SET user_id = ?,
-                            calculated_from_id = CASE
-                                WHEN calculated_from IN ('master', 'manager')
-                                     AND calculated_from_id = ? THEN ?
-                                ELSE calculated_from_id
-                            END
-                        WHERE order_id = ? AND role = ? AND user_id = ?
-                        ''',
-                        (new_user_id, old_user_id, new_user_id, order_id, role, old_user_id),
-                    )
+                    if set_rule:
+                        cursor.execute(
+                            '''
+                            UPDATE salary_accruals
+                            SET user_id = ?,
+                                rule_type = ?,
+                                rule_value = ?,
+                                calculated_from_id = CASE
+                                    WHEN calculated_from IN ('master', 'manager')
+                                         AND calculated_from_id = ? THEN ?
+                                    ELSE calculated_from_id
+                                END
+                            WHERE order_id = ? AND role = ? AND user_id = ?
+                            ''',
+                            (
+                                new_user_id, rule_type, rule_value,
+                                old_user_id, new_user_id, order_id, role, old_user_id,
+                            ),
+                        )
+                    else:
+                        cursor.execute(
+                            '''
+                            UPDATE salary_accruals
+                            SET user_id = ?,
+                                calculated_from_id = CASE
+                                    WHEN calculated_from IN ('master', 'manager')
+                                         AND calculated_from_id = ? THEN ?
+                                    ELSE calculated_from_id
+                                END
+                            WHERE order_id = ? AND role = ? AND user_id = ?
+                            ''',
+                            (new_user_id, old_user_id, new_user_id, order_id, role, old_user_id),
+                        )
                 else:
-                    cursor.execute(
-                        '''
-                        UPDATE salary_accruals
-                        SET user_id = ?,
-                            calculated_from_id = CASE
-                                WHEN calculated_from IN ('master', 'manager')
-                                     THEN ?
-                                ELSE calculated_from_id
-                            END
-                        WHERE order_id = ? AND role = ?
-                        ''',
-                        (new_user_id, new_user_id, order_id, role),
-                    )
+                    if set_rule:
+                        cursor.execute(
+                            '''
+                            UPDATE salary_accruals
+                            SET user_id = ?,
+                                rule_type = ?,
+                                rule_value = ?,
+                                calculated_from_id = CASE
+                                    WHEN calculated_from IN ('master', 'manager')
+                                         THEN ?
+                                    ELSE calculated_from_id
+                                END
+                            WHERE order_id = ? AND role = ?
+                            ''',
+                            (new_user_id, rule_type, rule_value, new_user_id, order_id, role),
+                        )
+                    else:
+                        cursor.execute(
+                            '''
+                            UPDATE salary_accruals
+                            SET user_id = ?,
+                                calculated_from_id = CASE
+                                    WHEN calculated_from IN ('master', 'manager')
+                                         THEN ?
+                                    ELSE calculated_from_id
+                                END
+                            WHERE order_id = ? AND role = ?
+                            ''',
+                            (new_user_id, new_user_id, order_id, role),
+                        )
                 conn.commit()
                 return cursor.rowcount
         except Exception as e:
