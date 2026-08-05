@@ -326,14 +326,20 @@ class ReportsService:
                 total_payments += shop_sale.get('paid', 0)
         
         # Сортируем все продажи по дате
-        orders_with_sales.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        orders_with_sales.sort(key=lambda x: x.get('created_at', '') or '', reverse=True)
         
         total_revenue = total_services + total_parts
         total_debt = total_revenue - total_payments
+        total_count = len(orders_with_sales)
+        # Не SSR тысячи строк за год — итоги полные, таблица ограничена
+        display_limit = 300
+        truncated = total_count > display_limit
         
         return {
-            'orders': orders_with_sales,
-            'total_orders': len(orders_with_sales),
+            'orders': orders_with_sales[:display_limit],
+            'total_orders': total_count,
+            'orders_shown': min(display_limit, total_count),
+            'orders_truncated': truncated,
             'total_services': total_services,
             'total_parts': total_parts,
             'total_payments': total_payments,
@@ -546,7 +552,7 @@ class ReportsService:
     def get_customer_statistics_report(
         date_from: Optional[str] = None,
         date_to: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Генерирует отчет по статистике клиентов.
         
@@ -555,7 +561,7 @@ class ReportsService:
             date_to: Дата окончания
             
         Returns:
-            Список клиентов со статистикой
+            Словарь: customers (топ для таблицы), итоги и флаги обрезки
         """
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
@@ -609,8 +615,18 @@ class ReportsService:
                     ORDER BY total_spent DESC
                 """, params)
                 rows = cursor.fetchall()
-                
-                return [dict(row) for row in rows]
+                items = [dict(row) for row in rows]
+                display_limit = 500
+                summary_orders = sum(int(i.get('orders_count') or 0) for i in items)
+                summary_spent = sum(float(i.get('total_spent') or 0) for i in items)
+                return {
+                    'customers': items[:display_limit],
+                    'total_customers': len(items),
+                    'customers_shown': min(display_limit, len(items)),
+                    'customers_truncated': len(items) > display_limit,
+                    'summary_orders': summary_orders,
+                    'summary_spent': summary_spent,
+                }
         except Exception as e:
             logger.error(f"Ошибка при генерации отчета по клиентам: {e}")
             raise DatabaseError(f"Ошибка при генерации отчета: {e}")

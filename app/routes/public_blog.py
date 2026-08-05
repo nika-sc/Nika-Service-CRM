@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "client-detail-reports-size",
+        "file": "blog/16-client-detail-reports-size.md",
+        "date": "2026-08",
+        "title": "Багфикс: лёгкая карточка клиента и отчёты без мегабайт HTML — Nika CRM",
+        "description": (
+            "5 августа 2026: карточка клиента без SSR тысяч option справочников; "
+            "отчёты продаж/клиентов ограничивают таблицу, сохраняя полные итоги."
+        ),
+        "heading": "Клиенты и отчёты без тяжёлого HTML",
+        "teaser": "Карточка клиента ~1.5 МБ → лёгкая; продажи/клиенты в отчётах — лимит строк.",
+    },
+    {
         "slug": "nav-hang-settings",
         "file": "blog/15-nav-hang-settings.md",
         "date": "2026-08",

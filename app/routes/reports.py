@@ -191,12 +191,18 @@ def customers_report():
         default="today",
     )
 
-    customers = ReportsService.get_customer_statistics_report(
+    report = ReportsService.get_customer_statistics_report(
         date_from=date_from,
         date_to=date_to
     )
 
-    return render_template('reports/customers.html', customers=customers, date_from=date_from, date_to=date_to)
+    return render_template(
+        'reports/customers.html',
+        customers=report.get('customers', []),
+        report=report,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @bp.route('/cash')

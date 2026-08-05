@@ -158,6 +158,12 @@
                         </tbody>
                     </table>
                 </div>
+                {% if report.orders_truncated %}
+                <div class="alert alert-warning m-3 mb-3">
+                    В таблице показаны последние {{ report.orders_shown }} продаж; всего за период: {{ report.total_orders }}.
+                    Итоги сверху посчитаны по всем продажам.
+                </div>
+                {% endif %}
             </div>
     </div>
 {% endblock %}

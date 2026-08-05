@@ -271,10 +271,11 @@ def client_detail(client_id):
     devices = DeviceService.get_customer_devices(client_id)
     orders = CustomerService.get_customer_orders(client_id)
     all_sales = CustomerService.get_customer_all_sales(client_id)
-    device_types = ReferenceService.get_device_types()
-    device_brands = ReferenceService.get_device_brands()
-    symptoms = ReferenceService.get_symptoms()
-    appearance_tags = ReferenceService.get_appearance_tags()
+    # Справочники устройств (тысячи option) — не SSR: грузятся AJAX при открытии модалки
+    device_types = []
+    device_brands = []
+    symptoms = []
+    appearance_tags = []
     stats = CustomerService.get_customer_statistics(client_id)
     
     customer_dict = customer.to_dict()

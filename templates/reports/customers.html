@@ -33,18 +33,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
-                        <p><strong>Всего клиентов:</strong> <span class="h5">{{ customers|length }}</span></p>
+                        <p><strong>Всего клиентов:</strong> <span class="h5">{{ report.total_customers if report else customers|length }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Всего заявок:</strong> <span class="h5 text-primary">{{ customers|sum(attribute='orders_count') or 0 }}</span></p>
+                        <p><strong>Всего заявок:</strong> <span class="h5 text-primary">{{ report.summary_orders if report else (customers|sum(attribute='orders_count') or 0) }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая сумма:</strong> <span class="h5 text-success">{{ (customers|sum(attribute='total_spent') or 0)|round(2) }} ₽</span></p>
+                        <p><strong>Общая сумма:</strong> <span class="h5 text-success">{{ ((report.summary_spent if report else (customers|sum(attribute='total_spent') or 0))|round(2)) }} ₽</span></p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Средний чек:</strong> <span class="h5 text-info">
-                            {% set total_orders = customers|sum(attribute='orders_count') or 0 %}
-                            {% set total_spent = customers|sum(attribute='total_spent') or 0 %}
+                            {% set total_orders = report.summary_orders if report else (customers|sum(attribute='orders_count') or 0) %}
+                            {% set total_spent = report.summary_spent if report else (customers|sum(attribute='total_spent') or 0) %}
                             {% if total_orders > 0 %}
                                 {{ (total_spent / total_orders)|round(2) }} ₽
                             {% else %}
@@ -53,6 +53,11 @@
                         </span></p>
                     </div>
                 </div>
+                {% if report and report.customers_truncated %}
+                <div class="alert alert-warning mb-0 mt-2 py-2">
+                    В таблице показаны топ-{{ report.customers_shown }} клиентов по сумме; всего за период: {{ report.total_customers }}.
+                </div>
+                {% endif %}
             </div>
     </div>
 
