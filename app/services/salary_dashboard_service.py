@@ -115,24 +115,108 @@ class SalaryDashboardService:
         Считает итоговую выручку и прибыль за период по заявкам (без дублирования).
         Одна заявка учитывается один раз: выручка = сумма платежей по заявке, прибыль = прибыль заявки.
 
+        Без полного get_salary_report / разбивки по позициям — только refs + агрегаты.
+
         Returns:
             - total_revenue_cents: сумма платежей по всем заявкам с начислениями в периоде
             - total_profit_cents: сумма прибыли по этим заявкам
             - total_orders_count: количество уникальных заявок
         """
-        # Важно: для сверки с /finance/cash "Выручка в /salary" должна учитывать
-        # не только начисления по заявкам (order_id), но и продажи магазина (shop_sale_id).
+        from app.database.queries.salary_queries import SalaryQueries
+
         try:
-            report = SalaryService.get_salary_report(date_from=date_from, date_to=date_to, user_id=None, role=None)
-            summary = (report or {}).get("summary") or {}
-            accruals = (report or {}).get("accruals") or []
+            date_from = _normalize_date_iso(date_from)
+            date_to = _normalize_date_iso(date_to)
+            if not date_from and not date_to:
+                return {"total_revenue_cents": 0, "total_profit_cents": 0, "total_orders_count": 0}
 
-            # Одна "заявка" здесь = unique order_id (shop_sale_id не считается заявкой).
-            order_ids = {a.get("order_id") for a in accruals if a.get("order_id")}
+            d_from = date_from or "1900-01-01"
+            d_to = date_to or "2099-12-31"
+            order_ids: List[int] = []
+            shop_sale_ids: List[int] = []
+            shop_sale_profit: Dict[int, int] = {}
 
+            with get_db_connection(row_factory=sqlite3.Row) as conn:
+                cursor = conn.cursor()
+                try:
+                    pay_cols = [r[1] for r in cursor.execute("PRAGMA table_info(payments)").fetchall()]
+                except Exception:
+                    pay_cols = []
+                kind_filter = " AND (p.kind IS NULL OR p.kind != 'refund')" if "kind" in pay_cols else ""
+                status_filter = (
+                    " AND p.status = 'captured'"
+                    if "status" in pay_cols
+                    else " AND (p.status IS NULL OR p.status != 'cancelled')"
+                )
+                orders_in_period_sql = f"""
+                    SELECT DISTINCT p.order_id FROM payments p
+                    WHERE (p.is_cancelled = 0 OR p.is_cancelled IS NULL) {status_filter} {kind_filter}
+                      AND DATE(COALESCE(p.payment_date, p.created_at)) >= DATE(?)
+                      AND DATE(COALESCE(p.payment_date, p.created_at)) <= DATE(?)
+                """
+                period_condition = f"sa.order_id IN ({orders_in_period_sql})"
+                params: List[Any] = [d_from, d_to]
+
+                has_shop = False
+                has_shop_sale_id = False
+                try:
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_sales'")
+                    has_shop = cursor.fetchone() is not None
+                    cursor.execute("PRAGMA table_info(salary_accruals)")
+                    sa_cols = [r[1] for r in cursor.fetchall()]
+                    has_shop_sale_id = "shop_sale_id" in sa_cols
+                except Exception:
+                    pass
+
+                if has_shop and has_shop_sale_id:
+                    period_condition += """
+                      OR sa.shop_sale_id IN (
+                          SELECT id FROM shop_sales
+                          WHERE DATE(sale_date) >= DATE(?) AND DATE(sale_date) <= DATE(?)
+                      )
+                    """
+                    params.extend([d_from, d_to])
+
+                cursor.execute(
+                    f"""
+                    SELECT sa.order_id, sa.shop_sale_id, sa.profit_cents
+                    FROM salary_accruals sa
+                    WHERE ({period_condition})
+                    """,
+                    params,
+                )
+                for row in cursor.fetchall():
+                    oid = row["order_id"] if row["order_id"] is not None else None
+                    sid = row["shop_sale_id"] if "shop_sale_id" in row.keys() else None
+                    if oid is not None:
+                        order_ids.append(int(oid))
+                    if sid is not None:
+                        sid_i = int(sid)
+                        shop_sale_ids.append(sid_i)
+                        if sid_i not in shop_sale_profit:
+                            shop_sale_profit[sid_i] = int(row["profit_cents"] or 0)
+
+            order_ids = list(dict.fromkeys(order_ids))
+            shop_sale_ids = list(dict.fromkeys(shop_sale_ids))
+
+            orders_meta = SalaryQueries.get_orders_revenue_and_costs(order_ids) if order_ids else {}
+            orders_revenue_in_period = (
+                SalaryQueries.get_orders_revenue_in_period(order_ids, date_from, date_to)
+                if order_ids
+                else {}
+            )
+            shop_sales_revenue = (
+                SalaryQueries.get_shop_sales_revenue(shop_sale_ids) if shop_sale_ids else {}
+            )
+
+            total_revenue_cents = int(sum(orders_revenue_in_period.values()) + sum(shop_sales_revenue.values()))
+            total_profit_cents = int(
+                sum(int(m.get("order_profit_cents") or 0) for m in orders_meta.values())
+                + sum(shop_sale_profit.values())
+            )
             return {
-                "total_revenue_cents": int(summary.get("total_revenue_cents") or 0),
-                "total_profit_cents": int(summary.get("total_profit_cents") or 0),
+                "total_revenue_cents": total_revenue_cents,
+                "total_profit_cents": total_profit_cents,
                 "total_orders_count": len(order_ids),
             }
         except Exception as e:
@@ -1949,6 +2033,7 @@ class SalaryDashboardService:
     def get_not_in_salary_items(
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
+        limit: int = 200,
     ) -> List[Dict[str, Any]]:
         """
         Платежи за период, которые попали в кассу, но не попали в salary-выручку.
@@ -1956,6 +2041,7 @@ class SalaryDashboardService:
 
         Учитываются возвраты (kind='refund') со знаком минус, как в calculate_order_profit,
         иначе после полного возврата заявка ошибочно попадала сюда как «предоплата».
+        В ответ — не больше `limit` строк (UI-таблица), без полного скана тысяч заявок в JSON.
         """
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
@@ -1983,6 +2069,7 @@ class SalaryDashboardService:
                 params.append(date_to)
 
             _net = net_pay_sum.strip()
+            lim = max(1, int(limit or 200))
             not_in_salary_sql = f"""
                 SELECT p.order_id,
                        {_net} AS amount,
@@ -1992,22 +2079,22 @@ class SalaryDashboardService:
                   AND (p.is_cancelled = 0 OR p.is_cancelled IS NULL)
                   {status_filter}
                   {date_filter}
+                  AND NOT EXISTS (
+                      SELECT 1 FROM salary_accruals sa
+                      WHERE sa.order_id = p.order_id
+                  )
                 GROUP BY p.order_id
                 HAVING {_net} > 0
+                ORDER BY first_payment_date DESC
+                LIMIT ?
             """
-            cursor.execute(not_in_salary_sql, params)
+            cursor.execute(not_in_salary_sql, params + [lim])
             payment_rows = [dict(r) for r in cursor.fetchall()]
             if not payment_rows:
                 return []
 
             order_ids = [int(r["order_id"]) for r in payment_rows if r.get("order_id")]
             placeholders = ",".join("?" for _ in order_ids)
-
-            cursor.execute(
-                f"SELECT DISTINCT order_id FROM salary_accruals WHERE order_id IN ({placeholders}) AND order_id IS NOT NULL",
-                order_ids,
-            )
-            order_ids_with_salary = {int(r[0]) for r in cursor.fetchall() if r and r[0]}
 
             cursor.execute(
                 f"""
@@ -2028,7 +2115,7 @@ class SalaryDashboardService:
             result: List[Dict[str, Any]] = []
             for pr in payment_rows:
                 oid = int(pr.get("order_id") or 0)
-                if oid <= 0 or oid in order_ids_with_salary:
+                if oid <= 0:
                     continue
                 meta = order_meta.get(oid, {})
                 result.append({

@@ -634,22 +634,16 @@ function setSort(sortBy, options) {
 }
 
 function loadSalaryExtras() {
-    const roleFilterElement = document.getElementById('roleFilter');
-    const statusFilterElement = document.getElementById('statusFilter');
     const dateFromElement = document.getElementById('dateFrom');
     const dateToElement = document.getElementById('dateTo');
-    if (!roleFilterElement || !statusFilterElement) return;
-
-    const roleFilter = roleFilterElement.value;
-    const statusFilter = statusFilterElement.value;
-    const sortBy = currentSort || 'profit';
     const dateFrom = dateFromElement ? dateFromElement.value : '';
     const dateTo = dateToElement ? dateToElement.value : '';
 
-    let url = `/api/salary/employees?sort_by=${sortBy}&status=${statusFilter}`;
-    if (roleFilter) url += `&role=${roleFilter}`;
-    if (dateFrom) url += `&date_from=${dateFrom}`;
-    if (dateTo) url += `&date_to=${dateTo}`;
+    let url = `/api/salary/extras?`;
+    const qs = [];
+    if (dateFrom) qs.push(`date_from=${encodeURIComponent(dateFrom)}`);
+    if (dateTo) qs.push(`date_to=${encodeURIComponent(dateTo)}`);
+    url += qs.join('&');
 
     fetch(url, {
         method: 'GET',

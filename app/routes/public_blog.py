@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "salary-reports-speed",
+        "file": "blog/17-salary-reports-speed.md",
+        "date": "2026-08",
+        "title": "Багфикс: быстрее Зарплата и Отчёты — Nika CRM",
+        "description": (
+            "5 августа 2026: лёгкие итоги ЗП без полного отчёта, отдельный /api/salary/extras, "
+            "продажи и клиенты в отчётах — SQL LIMIT и агрегаты по периоду."
+        ),
+        "heading": "Быстрее Зарплата и Отчёты",
+        "teaser": "Без повторного полного отчёта ЗП и без загрузки всех продаж года в Python.",
+    },
+    {
         "slug": "client-detail-reports-size",
         "file": "blog/16-client-detail-reports-size.md",
         "date": "2026-08",

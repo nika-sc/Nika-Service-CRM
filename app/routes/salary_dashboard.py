@@ -210,6 +210,7 @@ def api_get_employees():
             payload['not_in_salary'] = SalaryDashboardService.get_not_in_salary_items(
                 date_from=date_from,
                 date_to=date_to,
+                limit=200,
             )
 
         logger.info(f"Found {len(employees)} employees light={light}")
@@ -219,6 +220,50 @@ def api_get_employees():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при получении списка сотрудников: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Внутренняя ошибка сервера'}), 500
+
+
+@bp_api.route('/extras', methods=['GET'])
+@login_required
+def api_salary_extras():
+    """Тяжёлые блоки дашборда ЗП без повторного расчёта списка сотрудников."""
+    if not check_salary_access():
+        return jsonify({'success': False, 'error': 'Нет прав доступа'}), 403
+
+    try:
+        date_from = _normalize_request_date(request.args.get('date_from'))
+        date_to = _normalize_request_date(request.args.get('date_to'))
+
+        period_totals = SalaryDashboardService.get_salary_period_totals(
+            date_from=date_from,
+            date_to=date_to,
+        )
+        cash_reconciliation = SalaryDashboardService.get_cash_reconciliation(
+            date_from=date_from,
+            date_to=date_to,
+            salary_totals=period_totals,
+        )
+        profit_details = SalaryDashboardService.get_profit_details_by_orders(
+            date_from=date_from,
+            date_to=date_to,
+            limit=300,
+        )
+        not_in_salary = SalaryDashboardService.get_not_in_salary_items(
+            date_from=date_from,
+            date_to=date_to,
+            limit=200,
+        )
+        return jsonify({
+            'success': True,
+            'period_totals': period_totals,
+            'cash_reconciliation': cash_reconciliation,
+            'profit_details': profit_details,
+            'not_in_salary': not_in_salary,
+        })
+    except ValidationError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Ошибка при получении extras зарплаты: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Внутренняя ошибка сервера'}), 500
 
 

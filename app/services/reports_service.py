@@ -110,84 +110,38 @@ class ReportsService:
     ) -> Dict[str, Any]:
         """
         Генерирует отчет по продажам.
-        
-        Args:
-            date_from: Дата начала
-            date_to: Дата окончания
-            customer_id: Фильтр по клиенту
-            
-        Returns:
-            Словарь с данными отчета
+        Итоги — отдельными агрегатами по всему периоду; в таблицу — не больше 300 строк.
         """
-        # Используем оптимизированный SQL запрос с агрегацией вместо N+1
+        display_limit = 300
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
-            
-            # Проверяем наличие колонок kind и status в payments
+
             cursor.execute("PRAGMA table_info(payments)")
             pay_cols = [r[1] for r in cursor.fetchall()]
             has_kind = "kind" in pay_cols
             has_status = "status" in pay_cols
-            
-            # Строим запрос для заявок с учетом фильтрации по дате
+
             where_clauses = ["(o.hidden = 0 OR o.hidden IS NULL)"]
-            params = []
-            
+            params: List[Any] = []
+
             if customer_id:
                 where_clauses.append("o.customer_id = ?")
                 params.append(customer_id)
-            
-            # Если указаны даты, фильтруем по дате создания заявки
+
             if date_from or date_to:
-                # Если date_from == date_to, используем строгое равенство
                 if date_from and date_to and date_from == date_to:
                     where_clauses.append("DATE(o.created_at) = DATE(?)")
                     params.append(date_from)
                 else:
-                    # Иначе используем диапазон
                     if date_from:
                         where_clauses.append("DATE(o.created_at) >= DATE(?)")
                         params.append(date_from)
                     if date_to:
                         where_clauses.append("DATE(o.created_at) <= DATE(?)")
                         params.append(date_to)
-            
-            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-            
-            # Оптимизированный запрос: получаем все данные одним запросом с агрегацией
-            # Считаем оплаты с учетом kind и status
-            payment_sum_sql = """
-                COALESCE((
-                    SELECT SUM(
-                        CASE 
-                            WHEN kind = 'refund' THEN -amount 
-                            ELSE amount 
-                        END
-                    )
-                    FROM payments p
-                    WHERE p.order_id = o.id
-                      AND (p.is_cancelled = 0 OR p.is_cancelled IS NULL)
-            """
-            if has_status:
-                payment_sum_sql += " AND p.status = 'captured'"
-            payment_sum_sql += "), 0)"
-            
-            if not has_kind:
-                # Старая схема без kind
-                payment_sum_sql = """
-                    COALESCE((
-                        SELECT SUM(amount)
-                        FROM payments p
-                        WHERE p.order_id = o.id
-                          AND (p.is_cancelled = 0 OR p.is_cancelled IS NULL)
-                """
-                if has_status:
-                    payment_sum_sql += " AND p.status = 'captured'"
-                payment_sum_sql += "), 0)"
-            
-            # Получаем заявки с агрегированными суммами одним запросом.
-            # Важно: избегаем коррелированных подзапросов на order_services/order_parts/payments
-            # (они выполняются "на каждую строку") и вместо этого используем предагрегацию (derived tables) + JOIN.
+
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+
             if has_kind:
                 paid_expr = "SUM(CASE WHEN p.kind = 'refund' THEN -p.amount ELSE p.amount END)"
             else:
@@ -198,17 +152,65 @@ class ReportsService:
                 paid_where.append("p.status = 'captured'")
             paid_where_sql = " AND ".join(paid_where)
 
+            # Агрегаты только по заявкам периода (не по всей БД)
+            filtered_orders_sql = f"SELECT o.id FROM orders o {where_sql}"
+            services_agg_sql = f"""
+                SELECT os.order_id, SUM(os.price * os.quantity) AS services_total
+                FROM order_services os
+                WHERE os.order_id IN ({filtered_orders_sql})
+                GROUP BY os.order_id
+            """
+            parts_agg_sql = f"""
+                SELECT op.order_id, SUM(op.price * op.quantity) AS parts_total
+                FROM order_parts op
+                WHERE op.order_id IN ({filtered_orders_sql})
+                GROUP BY op.order_id
+            """
             payments_agg_sql = f"""
-                SELECT
-                    p.order_id,
-                    COALESCE({paid_expr}, 0) AS paid
+                SELECT p.order_id, COALESCE({paid_expr}, 0) AS paid
                 FROM payments p
                 WHERE {paid_where_sql}
+                  AND p.order_id IN ({filtered_orders_sql})
                 GROUP BY p.order_id
             """
+            # params repeated for each filtered_orders subquery embedding
+            # services + parts + payments each embed filtered_orders once in totals,
+            # and again in list query — build carefully.
 
-            cursor.execute(f'''
-                SELECT 
+            base_from_sql = f"""
+                FROM orders o
+                LEFT JOIN customers c ON c.id = o.customer_id
+                LEFT JOIN ({services_agg_sql}) osum ON osum.order_id = o.id
+                LEFT JOIN ({parts_agg_sql}) psum ON psum.order_id = o.id
+                LEFT JOIN ({payments_agg_sql}) pay ON pay.order_id = o.id
+                {where_sql}
+                  AND (COALESCE(osum.services_total, 0) > 0 OR COALESCE(psum.parts_total, 0) > 0)
+            """
+            # filtered_orders appears 3 times inside joins + outer where uses params once
+            # Each of services/parts/payments embeds filtered_orders_sql once → 3× params
+            # Outer where_sql also needs params → +1
+            order_join_params = list(params) * 3 + list(params)
+
+            cursor.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS cnt,
+                    COALESCE(SUM(COALESCE(osum.services_total, 0)), 0) AS total_services,
+                    COALESCE(SUM(COALESCE(psum.parts_total, 0)), 0) AS total_parts,
+                    COALESCE(SUM(COALESCE(pay.paid, 0)), 0) AS total_payments
+                {base_from_sql}
+                """,
+                order_join_params,
+            )
+            agg = cursor.fetchone()
+            order_count = int(agg["cnt"] or 0) if agg else 0
+            total_services = float(agg["total_services"] or 0) if agg else 0.0
+            total_parts = float(agg["total_parts"] or 0) if agg else 0.0
+            total_payments = float(agg["total_payments"] or 0) if agg else 0.0
+
+            cursor.execute(
+                f"""
+                SELECT
                     o.id,
                     o.order_id,
                     o.created_at,
@@ -219,135 +221,132 @@ class ReportsService:
                     COALESCE(osum.services_total, 0) AS services_total,
                     COALESCE(psum.parts_total, 0) AS parts_total,
                     COALESCE(pay.paid, 0) AS paid,
-                    (SELECT id FROM payments 
-                     WHERE order_id = o.id 
-                     ORDER BY payment_date DESC, created_at DESC 
+                    (SELECT id FROM payments
+                     WHERE order_id = o.id
+                     ORDER BY payment_date DESC, created_at DESC
                      LIMIT 1) AS payment_id
-                FROM orders o
-                LEFT JOIN customers c ON c.id = o.customer_id
-                LEFT JOIN (
-                    SELECT order_id, SUM(price * quantity) AS services_total
-                    FROM order_services
-                    GROUP BY order_id
-                ) osum ON osum.order_id = o.id
-                LEFT JOIN (
-                    SELECT order_id, SUM(price * quantity) AS parts_total
-                    FROM order_parts
-                    GROUP BY order_id
-                ) psum ON psum.order_id = o.id
-                LEFT JOIN (
-                    {payments_agg_sql}
-                ) pay ON pay.order_id = o.id
-                {where_sql}
-                  AND (COALESCE(osum.services_total, 0) > 0 OR COALESCE(psum.parts_total, 0) > 0)
+                {base_from_sql}
                 ORDER BY o.created_at DESC
-            ''', params)
-            
+                LIMIT ?
+                """,
+                order_join_params + [display_limit],
+            )
+
             orders_with_sales = []
-            total_services = 0.0
-            total_parts = 0.0
-            total_payments = 0.0
-            
             for row in cursor.fetchall():
                 order = dict(row)
-                services_total = float(order.get('services_total', 0) or 0)
-                parts_total = float(order.get('parts_total', 0) or 0)
-                paid = float(order.get('paid', 0) or 0)
-                
-                # Обогащаем строки для шаблона
-                order['services_total'] = services_total
-                order['parts_total'] = parts_total
-                order['total_revenue'] = services_total + parts_total
-                order['paid'] = paid
-                order['debt'] = (services_total + parts_total) - paid
-                order['sale_type'] = 'order'  # Тип продажи: из заявки
-                
+                services_total = float(order.get("services_total", 0) or 0)
+                parts_total = float(order.get("parts_total", 0) or 0)
+                paid = float(order.get("paid", 0) or 0)
+                order["services_total"] = services_total
+                order["parts_total"] = parts_total
+                order["total_revenue"] = services_total + parts_total
+                order["paid"] = paid
+                order["debt"] = (services_total + parts_total) - paid
+                order["sale_type"] = "order"
                 orders_with_sales.append(order)
-                
-                total_services += services_total
-                total_parts += parts_total
-                total_payments += paid
-        
-        # Получаем продажи из магазина
-        shop_sales_params = []
-        shop_sales_where = []
-        
-        # Если date_from == date_to, используем строгое равенство
-        if date_from and date_to and date_from == date_to:
-            shop_sales_where.append("DATE(ss.sale_date) = DATE(?)")
-            shop_sales_params.append(date_from)
-        else:
-            # Иначе используем диапазон
-            if date_from:
-                shop_sales_where.append("DATE(ss.sale_date) >= DATE(?)")
+
+            # Магазин: итоги отдельно, в таблицу — лимит
+            shop_sales_params: List[Any] = []
+            shop_sales_where: List[str] = []
+            if date_from and date_to and date_from == date_to:
+                shop_sales_where.append("DATE(ss.sale_date) = DATE(?)")
                 shop_sales_params.append(date_from)
-            if date_to:
-                shop_sales_where.append("DATE(ss.sale_date) <= DATE(?)")
-                shop_sales_params.append(date_to)
-        if customer_id:
-            shop_sales_where.append("ss.customer_id = ?")
-            shop_sales_params.append(customer_id)
-        
-        shop_sales_where_sql = " AND " + " AND ".join(shop_sales_where) if shop_sales_where else ""
-        
-        with get_db_connection(row_factory=sqlite3.Row) as conn:
-            cursor = conn.cursor()
-            
-            # Получаем продажи из магазина
-            cursor.execute(f'''
-                SELECT 
-                    ss.id,
-                    ss.sale_date AS created_at,
-                    ss.customer_id,
-                    COALESCE(c.name, ss.customer_name) AS client_name,
-                    ss.final_amount AS total_revenue,
-                    ss.paid_amount AS paid,
-                    ss.final_amount - ss.paid_amount AS debt,
-                    (SELECT COALESCE(SUM(CASE WHEN item_type = 'service' THEN price * quantity ELSE 0 END), 0) 
-                     FROM shop_sale_items WHERE shop_sale_id = ss.id) AS services_total,
-                    (SELECT COALESCE(SUM(CASE WHEN item_type = 'part' THEN price * quantity ELSE 0 END), 0) 
-                     FROM shop_sale_items WHERE shop_sale_id = ss.id) AS parts_total,
-                    NULL AS order_id,
-                    NULL AS order_uuid,
-                    'shop' AS sale_type
+            else:
+                if date_from:
+                    shop_sales_where.append("DATE(ss.sale_date) >= DATE(?)")
+                    shop_sales_params.append(date_from)
+                if date_to:
+                    shop_sales_where.append("DATE(ss.sale_date) <= DATE(?)")
+                    shop_sales_params.append(date_to)
+            if customer_id:
+                shop_sales_where.append("ss.customer_id = ?")
+                shop_sales_params.append(customer_id)
+            shop_sales_where_sql = (" AND " + " AND ".join(shop_sales_where)) if shop_sales_where else ""
+
+            cursor.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS cnt,
+                    COALESCE(SUM(COALESCE(si.services_total, 0)), 0) AS total_services,
+                    COALESCE(SUM(COALESCE(si.parts_total, 0)), 0) AS total_parts,
+                    COALESCE(SUM(COALESCE(ss.paid_amount, 0)), 0) AS total_payments
                 FROM shop_sales AS ss
-                LEFT JOIN customers c ON c.id = ss.customer_id
+                LEFT JOIN (
+                    SELECT
+                        shop_sale_id,
+                        SUM(CASE WHEN item_type = 'service' THEN price * quantity ELSE 0 END) AS services_total,
+                        SUM(CASE WHEN item_type = 'part' THEN price * quantity ELSE 0 END) AS parts_total
+                    FROM shop_sale_items
+                    GROUP BY shop_sale_id
+                ) si ON si.shop_sale_id = ss.id
                 WHERE 1=1 {shop_sales_where_sql}
-                ORDER BY ss.sale_date DESC, ss.created_at DESC
-            ''', shop_sales_params)
-            
-            shop_sales = [dict(r) for r in cursor.fetchall()]
-            
-            # Добавляем продажи из магазина к заявкам
-            for shop_sale in shop_sales:
-                orders_with_sales.append(shop_sale)
-                total_services += shop_sale.get('services_total', 0)
-                total_parts += shop_sale.get('parts_total', 0)
-                total_payments += shop_sale.get('paid', 0)
-        
-        # Сортируем все продажи по дате
-        orders_with_sales.sort(key=lambda x: x.get('created_at', '') or '', reverse=True)
-        
-        total_revenue = total_services + total_parts
-        total_debt = total_revenue - total_payments
-        total_count = len(orders_with_sales)
-        # Не SSR тысячи строк за год — итоги полные, таблица ограничена
-        display_limit = 300
-        truncated = total_count > display_limit
-        
-        return {
-            'orders': orders_with_sales[:display_limit],
-            'total_orders': total_count,
-            'orders_shown': min(display_limit, total_count),
-            'orders_truncated': truncated,
-            'total_services': total_services,
-            'total_parts': total_parts,
-            'total_payments': total_payments,
-            'total_revenue': total_revenue,
-            'total_debt': total_debt,
-            'date_from': date_from,
-            'date_to': date_to
-        }
+                """,
+                shop_sales_params,
+            )
+            shop_agg = cursor.fetchone()
+            shop_count = int(shop_agg["cnt"] or 0) if shop_agg else 0
+            total_services += float(shop_agg["total_services"] or 0) if shop_agg else 0.0
+            total_parts += float(shop_agg["total_parts"] or 0) if shop_agg else 0.0
+            total_payments += float(shop_agg["total_payments"] or 0) if shop_agg else 0.0
+
+            remaining = max(0, display_limit - len(orders_with_sales))
+            if remaining > 0:
+                cursor.execute(
+                    f"""
+                    SELECT
+                        ss.id,
+                        ss.sale_date AS created_at,
+                        ss.customer_id,
+                        COALESCE(c.name, ss.customer_name) AS client_name,
+                        ss.final_amount AS total_revenue,
+                        ss.paid_amount AS paid,
+                        ss.final_amount - ss.paid_amount AS debt,
+                        COALESCE(si.services_total, 0) AS services_total,
+                        COALESCE(si.parts_total, 0) AS parts_total,
+                        NULL AS order_id,
+                        NULL AS order_uuid,
+                        'shop' AS sale_type
+                    FROM shop_sales AS ss
+                    LEFT JOIN customers c ON c.id = ss.customer_id
+                    LEFT JOIN (
+                        SELECT
+                            shop_sale_id,
+                            SUM(CASE WHEN item_type = 'service' THEN price * quantity ELSE 0 END) AS services_total,
+                            SUM(CASE WHEN item_type = 'part' THEN price * quantity ELSE 0 END) AS parts_total
+                        FROM shop_sale_items
+                        GROUP BY shop_sale_id
+                    ) si ON si.shop_sale_id = ss.id
+                    WHERE 1=1 {shop_sales_where_sql}
+                    ORDER BY ss.sale_date DESC, ss.created_at DESC
+                    LIMIT ?
+                    """,
+                    shop_sales_params + [remaining],
+                )
+                for shop_sale in cursor.fetchall():
+                    orders_with_sales.append(dict(shop_sale))
+
+            orders_with_sales.sort(key=lambda x: x.get("created_at", "") or "", reverse=True)
+            orders_with_sales = orders_with_sales[:display_limit]
+
+            total_count = order_count + shop_count
+            total_revenue = total_services + total_parts
+            total_debt = total_revenue - total_payments
+            truncated = total_count > display_limit
+
+            return {
+                "orders": orders_with_sales,
+                "total_orders": total_count,
+                "orders_shown": len(orders_with_sales),
+                "orders_truncated": truncated,
+                "total_services": total_services,
+                "total_parts": total_parts,
+                "total_payments": total_payments,
+                "total_revenue": total_revenue,
+                "total_debt": total_debt,
+                "date_from": date_from,
+                "date_to": date_to,
+            }
     
     @staticmethod
     @cache_result(timeout=180, key_prefix='reports_profitability')
@@ -579,9 +578,8 @@ class ReportsService:
 
                 where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-                # Считаем сумму по заявке как (услуги + товары) из order_services и order_parts.
-                # Важно: раньше total_spent учитывал только услуги, из-за чего суммы по клиентам были занижены.
-                cursor.execute(f"""
+                # Агрегаты услуг/товаров только по заявкам периода (не по всей БД)
+                base_select = f"""
                     SELECT
                         c.id,
                         c.name,
@@ -599,31 +597,44 @@ class ReportsService:
                             COALESCE(osum.services_total, 0) + COALESCE(psum.parts_total, 0) AS total
                         FROM orders o2
                         LEFT JOIN (
-                            SELECT order_id, SUM(price * quantity) AS services_total
-                            FROM order_services
-                            GROUP BY order_id
+                            SELECT os.order_id, SUM(os.price * os.quantity) AS services_total
+                            FROM order_services os
+                            WHERE os.order_id IN (SELECT o.id FROM orders o {where_sql})
+                            GROUP BY os.order_id
                         ) osum ON osum.order_id = o2.id
                         LEFT JOIN (
-                            SELECT order_id, SUM(price * quantity) AS parts_total
-                            FROM order_parts
-                            GROUP BY order_id
+                            SELECT op.order_id, SUM(op.price * op.quantity) AS parts_total
+                            FROM order_parts op
+                            WHERE op.order_id IN (SELECT o.id FROM orders o {where_sql})
+                            GROUP BY op.order_id
                         ) psum ON psum.order_id = o2.id
                     ) ot ON ot.order_id = o.id
                     {where_sql}
                     GROUP BY c.id
                     HAVING COUNT(DISTINCT o.id) > 0
                     ORDER BY total_spent DESC
-                """, params)
-                rows = cursor.fetchall()
-                items = [dict(row) for row in rows]
+                """
+                # params: services filter + parts filter + outer where
+                query_params = list(params) * 3 if where_sql else []
+
                 display_limit = 500
-                summary_orders = sum(int(i.get('orders_count') or 0) for i in items)
-                summary_spent = sum(float(i.get('total_spent') or 0) for i in items)
+                cursor.execute(
+                    f"SELECT COUNT(*) AS cnt, COALESCE(SUM(orders_count),0) AS summary_orders, "
+                    f"COALESCE(SUM(total_spent),0) AS summary_spent FROM ({base_select}) t",
+                    query_params,
+                )
+                summary_row = cursor.fetchone()
+                total_customers = int(summary_row["cnt"] or 0) if summary_row else 0
+                summary_orders = int(summary_row["summary_orders"] or 0) if summary_row else 0
+                summary_spent = float(summary_row["summary_spent"] or 0) if summary_row else 0.0
+
+                cursor.execute(f"{base_select} LIMIT ?", query_params + [display_limit])
+                items = [dict(row) for row in cursor.fetchall()]
                 return {
-                    'customers': items[:display_limit],
-                    'total_customers': len(items),
-                    'customers_shown': min(display_limit, len(items)),
-                    'customers_truncated': len(items) > display_limit,
+                    'customers': items,
+                    'total_customers': total_customers,
+                    'customers_shown': len(items),
+                    'customers_truncated': total_customers > display_limit,
                     'summary_orders': summary_orders,
                     'summary_spent': summary_spent,
                 }
