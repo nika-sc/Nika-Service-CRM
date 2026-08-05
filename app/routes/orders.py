@@ -1422,7 +1422,6 @@ def order_detail(order_id):
                     new_mgr_norm = int(manager_id) if manager_id is not None else None
                     new_mst_norm = int(master_id) if master_id is not None else None
                     if old_mgr_norm != new_mgr_norm or old_mst_norm != new_mst_norm:
-                        from app.services.salary_service import SalaryService
                         SalaryService.transfer_order_salary_on_assignee_change(
                             order.id,
                             old_master_id=old_mst_norm,
