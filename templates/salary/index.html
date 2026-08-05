@@ -510,7 +510,9 @@ function renderNotInSalary(rows) {
     }).join('');
 }
 
-function setPeriod(period) {
+function setPeriod(period, options) {
+    options = options || {};
+    const shouldReload = options.reload !== false;
     // Обновляем активную кнопку
     const buttons = document.querySelectorAll('#periodButtons button');
     buttons.forEach(btn => {
@@ -604,10 +606,14 @@ function setPeriod(period) {
         }
     }
 
-    loadEmployees();
+    if (shouldReload) {
+        loadEmployees();
+    }
 }
 
-function setSort(sortBy) {
+function setSort(sortBy, options) {
+    options = options || {};
+    const shouldReload = options.reload !== false;
     // Обновляем активную кнопку сортировки
     const buttons = document.querySelectorAll('#sortButtons button');
     buttons.forEach(btn => {
@@ -622,7 +628,45 @@ function setSort(sortBy) {
     });
 
     currentSort = sortBy;
-    loadEmployees();
+    if (shouldReload) {
+        loadEmployees();
+    }
+}
+
+function loadSalaryExtras() {
+    const roleFilterElement = document.getElementById('roleFilter');
+    const statusFilterElement = document.getElementById('statusFilter');
+    const dateFromElement = document.getElementById('dateFrom');
+    const dateToElement = document.getElementById('dateTo');
+    if (!roleFilterElement || !statusFilterElement) return;
+
+    const roleFilter = roleFilterElement.value;
+    const statusFilter = statusFilterElement.value;
+    const sortBy = currentSort || 'profit';
+    const dateFrom = dateFromElement ? dateFromElement.value : '';
+    const dateTo = dateToElement ? dateToElement.value : '';
+
+    let url = `/api/salary/employees?sort_by=${sortBy}&status=${statusFilter}`;
+    if (roleFilter) url += `&role=${roleFilter}`;
+    if (dateFrom) url += `&date_from=${dateFrom}`;
+    if (dateTo) url += `&date_to=${dateTo}`;
+
+    fetch(url, {
+        method: 'GET',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+    })
+        .then(res => res.ok ? res.json() : Promise.reject(new Error('extras HTTP ' + res.status)))
+        .then(data => {
+            if (!data || !data.success) return;
+            cashReconciliationData = data.cash_reconciliation || null;
+            profitDetailsData = data.profit_details || [];
+            notInSalaryData = data.not_in_salary || [];
+            renderCashReconciliation(cashReconciliationData);
+            renderProfitDetails(profitDetailsData);
+            renderNotInSalary(notInSalaryData);
+        })
+        .catch(err => console.warn('Salary extras load failed:', err));
 }
 
 function loadEmployees() {
@@ -663,7 +707,7 @@ function loadEmployees() {
         refreshBtn.disabled = true;
     }
 
-    let url = `/api/salary/employees?sort_by=${sortBy}&status=${statusFilter}`;
+    let url = `/api/salary/employees?sort_by=${sortBy}&status=${statusFilter}&light=1`;
     if (roleFilter) {
         url += `&role=${roleFilter}`;
     }
@@ -735,19 +779,16 @@ function loadEmployees() {
                 console.log(`Loaded ${data.employees ? data.employees.length : 0} employees`);
                 employeesData = data.employees || [];
                 periodTotalsData = data.period_totals || null;
-                cashReconciliationData = data.cash_reconciliation || null;
-                profitDetailsData = data.profit_details || [];
-                notInSalaryData = data.not_in_salary || [];
                 renderEmployees(employeesData, 'all');
                 renderEmployees(employeesData.filter(e => e.role === 'master'), 'masters');
                 renderEmployees(employeesData.filter(e => e.role === 'manager'), 'managers');
-                renderCashReconciliation(cashReconciliationData);
-                renderProfitDetails(profitDetailsData);
-                renderNotInSalary(notInSalaryData);
 
                 // Скрываем глобальный индикатор загрузки
                 const loadingRow = document.getElementById('loadingRow');
                 if (loadingRow) loadingRow.style.display = 'none';
+
+                // Тяжёлые блоки (сверка кассы / детализация) — вторым запросом
+                loadSalaryExtras();
             } else {
                 const errorMsg = data.error || 'Ошибка загрузки';
                 console.error('API returned error:', errorMsg);
@@ -1277,7 +1318,7 @@ function exportToExcel() {
 
 // Инициализация при загрузке страницы
 // Версия скрипта для очистки кэша браузера
-const SALARY_SCRIPT_VERSION = '1.0.5';
+const SALARY_SCRIPT_VERSION = '1.1.0';
 console.log('Salary page script version:', SALARY_SCRIPT_VERSION);
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1306,8 +1347,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('All required elements found, initializing...');
 
-            setPeriod('today');
-            setSort('profit');
+            setPeriod('today', {reload: false});
+            setSort('profit', {reload: false});
             
             // Инициализация tooltips Bootstrap
             setTimeout(() => {
@@ -1349,9 +1390,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
 
-            // Автоматическая загрузка данных
+            // Один лёгкий запрос при старте (без тройного loadEmployees)
             loadEmployees();
-            loadDebts();
         }, 200);
     });
 });

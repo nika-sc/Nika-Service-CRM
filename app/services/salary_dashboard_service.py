@@ -1764,7 +1764,11 @@ class SalaryDashboardService:
 
     @staticmethod
     @handle_service_error
-    def get_cash_reconciliation(date_from: Optional[str] = None, date_to: Optional[str] = None) -> Dict[str, float]:
+    def get_cash_reconciliation(
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        salary_totals: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, float]:
         """
         Сверка зарплатного отчёта с кассой за период.
 
@@ -1776,7 +1780,10 @@ class SalaryDashboardService:
         from app.services.finance_service import FinanceService
 
         cash_summary = FinanceService.get_cash_summary(date_from=date_from, date_to=date_to)
-        salary_totals = SalaryDashboardService.get_salary_period_totals(date_from=date_from, date_to=date_to)
+        if salary_totals is None:
+            salary_totals = SalaryDashboardService.get_salary_period_totals(
+                date_from=date_from, date_to=date_to
+            )
 
         cash_income_total = float((cash_summary or {}).get("total_income") or 0.0)
         salary_revenue_total = float((salary_totals or {}).get("total_revenue_cents") or 0) / 100.0
@@ -1860,9 +1867,67 @@ class SalaryDashboardService:
             )
             salary_by_order = {int(r["order_id"]): dict(r) for r in cursor.fetchall()}
 
-        for order_id in order_ids:
-            try:
-                p = SalaryService.calculate_order_profit(order_id)
+            # Batch profit: один проход вместо N× calculate_order_profit
+            from app.services.salary_service import SalaryService
+            vat_enabled, vat_rate = SalaryService._get_vat_settings()
+            has_kind = "kind" in pay_cols
+            has_status = "status" in pay_cols
+            pay_expr = (
+                "CASE WHEN kind = 'refund' THEN -amount ELSE amount END"
+                if has_kind
+                else "amount"
+            )
+            status_pay = " AND status = 'captured'" if has_status else ""
+            cursor.execute(
+                f"""
+                SELECT order_id, COALESCE(SUM({pay_expr}), 0) AS total_payments
+                FROM payments
+                WHERE order_id IN ({placeholders})
+                  AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                  {status_pay}
+                GROUP BY order_id
+                """,
+                order_ids,
+            )
+            payments_by_order = {
+                int(r["order_id"]): float(r["total_payments"] or 0) for r in cursor.fetchall()
+            }
+
+            cursor.execute(
+                f"""
+                SELECT order_id, COALESCE(SUM(COALESCE(purchase_price, 0) * quantity), 0) AS parts_cost
+                FROM order_parts
+                WHERE order_id IN ({placeholders})
+                GROUP BY order_id
+                """,
+                order_ids,
+            )
+            parts_by_order = {
+                int(r["order_id"]): float(r["parts_cost"] or 0) for r in cursor.fetchall()
+            }
+
+            cursor.execute(
+                f"""
+                SELECT order_id, COALESCE(SUM(COALESCE(cost_price, 0) * quantity), 0) AS services_cost
+                FROM order_services
+                WHERE order_id IN ({placeholders})
+                GROUP BY order_id
+                """,
+                order_ids,
+            )
+            services_by_order = {
+                int(r["order_id"]): float(r["services_cost"] or 0) for r in cursor.fetchall()
+            }
+
+            for order_id in order_ids:
+                total_payments = float(payments_by_order.get(order_id) or 0)
+                total_cost = float(parts_by_order.get(order_id) or 0) + float(
+                    services_by_order.get(order_id) or 0
+                )
+                if vat_enabled:
+                    profit = (total_payments / (1 + float(vat_rate or 0) / 100.0)) - total_cost
+                else:
+                    profit = total_payments - total_cost
                 meta = meta_by_order.get(order_id, {})
                 sal = salary_by_order.get(order_id, {})
                 rows.append({
@@ -1871,15 +1936,13 @@ class SalaryDashboardService:
                     "order_display": f"#{order_id}",
                     "manager_name": meta.get("manager_name") or "—",
                     "master_name": meta.get("master_name") or "—",
-                    "revenue_cents": int(p.get("total_payments_cents") or 0),
-                    "profit_cents": int(p.get("profit_cents") or 0),
-                    "cost_cents": int(p.get("total_cost_cents") or 0),
+                    "revenue_cents": int(round(total_payments * 100)),
+                    "profit_cents": int(round(profit * 100)),
+                    "cost_cents": int(round(total_cost * 100)),
                     "master_salary_cents": int(sal.get("master_salary_cents") or 0),
                     "manager_salary_cents": int(sal.get("manager_salary_cents") or 0),
                 })
-            except Exception as e:
-                logger.warning("Не удалось рассчитать детали прибыли по заявке %s: %s", order_id, e)
-        return rows
+            return rows
 
     @staticmethod
     @handle_service_error

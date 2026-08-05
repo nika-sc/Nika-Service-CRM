@@ -361,10 +361,12 @@ def dashboard():
             preset = None
 
     try:
+        # SSR без profit/analytics — быстрее первый paint; полные данные — в /api/dashboard
         data = DashboardService.get_full_dashboard(
             preset=preset,
             date_from=date_from,
-            date_to=date_to
+            date_to=date_to,
+            include_finance_extras=False,
         )
     except Exception as e:
         logger.error(f"Ошибка получения данных dashboard: {e}")

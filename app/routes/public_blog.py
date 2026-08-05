@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "perf-salary-cash-settings",
+        "file": "blog/14-perf-salary-cash-settings.md",
+        "date": "2026-08",
+        "title": "Быстрее Касса, Отчёты, Зарплата и Настройки — Nika CRM",
+        "description": (
+            "5 августа 2026: лёгкий первый запрос зарплаты, кэш сводки кассы, "
+            "быстрее дашборд отчётов и настройки без загрузки всей таблицы parts."
+        ),
+        "heading": "Ускорение Кассы, Отчётов, ЗП и Настроек",
+        "teaser": "Меньше тяжёлых запросов при открытии разделов — быстрее первый экран.",
+    },
+    {
         "slug": "salary-refund-split",
         "file": "blog/13-salary-refund-split.md",
         "date": "2026-08",

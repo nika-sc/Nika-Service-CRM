@@ -167,6 +167,8 @@ def api_get_employees():
 
         logger.info(f"API call: status={status}, role={role}, sort_by={sort_by}, date_from={date_from}, date_to={date_to}")
 
+        light = str(request.args.get('light') or '').strip().lower() in ('1', 'true', 'yes')
+
         employees = SalaryDashboardService.get_employees_with_stats(
             date_from=date_from,
             date_to=date_to,
@@ -182,30 +184,37 @@ def api_get_employees():
             date_from=date_from,
             date_to=date_to,
         )
-        cash_reconciliation = SalaryDashboardService.get_cash_reconciliation(
-            date_from=date_from,
-            date_to=date_to,
-        )
-        profit_details = SalaryDashboardService.get_profit_details_by_orders(
-            date_from=date_from,
-            date_to=date_to,
-            limit=300,
-        )
-        not_in_salary = SalaryDashboardService.get_not_in_salary_items(
-            date_from=date_from,
-            date_to=date_to,
-        )
 
-        logger.info(f"Found {len(employees)} employees")
-
-        return jsonify({
+        payload = {
             'success': True,
             'employees': employees,
             'period_totals': period_totals,
-            'cash_reconciliation': cash_reconciliation,
-            'profit_details': profit_details,
-            'not_in_salary': not_in_salary,
-        })
+            'cash_reconciliation': None,
+            'profit_details': [],
+            'not_in_salary': [],
+            'light': light,
+        }
+
+        if not light:
+            # Тяжёлые блоки — только по полному запросу (после первого paint)
+            payload['cash_reconciliation'] = SalaryDashboardService.get_cash_reconciliation(
+                date_from=date_from,
+                date_to=date_to,
+                salary_totals=period_totals,
+            )
+            payload['profit_details'] = SalaryDashboardService.get_profit_details_by_orders(
+                date_from=date_from,
+                date_to=date_to,
+                limit=300,
+            )
+            payload['not_in_salary'] = SalaryDashboardService.get_not_in_salary_items(
+                date_from=date_from,
+                date_to=date_to,
+            )
+
+        logger.info(f"Found {len(employees)} employees light={light}")
+
+        return jsonify(payload)
     except ValidationError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:

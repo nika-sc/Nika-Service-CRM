@@ -1124,12 +1124,13 @@ class DashboardService:
             }
 
     @staticmethod
-    @cache_result(timeout=60, key_prefix='dashboard_full')
+    @cache_result(timeout=180, key_prefix='dashboard_full')
     @handle_service_error
     def get_full_dashboard(
         preset: str = None,
         date_from: str = None,
-        date_to: str = None
+        date_to: str = None,
+        include_finance_extras: bool = True,
     ) -> Dict[str, Any]:
         """Все данные для сводного отчёта."""
         current_from, current_to, prev_from, prev_to = DashboardService.get_period_dates(
@@ -1155,14 +1156,15 @@ class DashboardService:
         salary = DashboardService.get_salary_period_summary(current_from, current_to, prev_from, prev_to)
         profit_report = None
         product_analytics = None
-        try:
-            profit_report = FinanceService.get_profit_report(date_from=current_from, date_to=current_to)
-        except Exception:
-            pass
-        try:
-            product_analytics = FinanceService.get_product_analytics(date_from=current_from, date_to=current_to)
-        except Exception:
-            pass
+        if include_finance_extras:
+            try:
+                profit_report = FinanceService.get_profit_report(date_from=current_from, date_to=current_to)
+            except Exception:
+                pass
+            try:
+                product_analytics = FinanceService.get_product_analytics(date_from=current_from, date_to=current_to)
+            except Exception:
+                pass
         return {
             'period': {
                 'current_from': current_from,

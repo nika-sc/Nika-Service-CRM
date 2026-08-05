@@ -765,8 +765,27 @@ def settings():
     try:
         settings = SettingsService.get_general_settings()
         payment_method_settings = SettingsService.get_payment_method_settings()
-        # Используем сервис справочников с кэшированием
-        refs = ReferenceService.get_all_references()
+        # Кэшированные справочники по отдельности — без тяжёлой таблицы parts
+        refs = {
+            'device_types': ReferenceService.get_device_types(),
+            'device_brands': ReferenceService.get_device_brands(),
+            'symptoms': ReferenceService.get_symptoms(),
+            'appearance_tags': ReferenceService.get_appearance_tags(),
+            'order_statuses': ReferenceService.get_order_statuses(include_archived=True),
+            'services': ReferenceService.get_services(),
+            'order_models': [],
+        }
+        try:
+            from app.database.connection import get_db_connection
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                try:
+                    cur.execute("SELECT id, name FROM order_models ORDER BY name")
+                    refs['order_models'] = [{'id': r[0], 'name': r[1]} for r in cur.fetchall()]
+                except Exception:
+                    refs['order_models'] = []
+        except Exception:
+            refs['order_models'] = []
         
         # Преобразуем словари в кортежи для совместимости с шаблоном
         # Шаблон ожидает: device_types/device_brands как (id, name)

@@ -9,11 +9,22 @@ from app.utils.error_handlers import handle_service_error
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str
 from app.utils.exceptions import ValidationError, NotFoundError
 from app.services.action_log_service import ActionLogService
+from app.utils.cache import cache_result, clear_cache
 import logging
 import sqlite3
 import re
 
 logger = logging.getLogger(__name__)
+
+
+def _cash_next_day(date_str: Optional[str]) -> Optional[str]:
+    """Следующий календарный день (для полуоткрытого интервала [from, to+1))."""
+    if not date_str:
+        return None
+    try:
+        return (datetime.strptime(str(date_str)[:10], "%Y-%m-%d").date() + timedelta(days=1)).isoformat()
+    except Exception:
+        return None
 
 
 class FinanceService:
@@ -525,6 +536,10 @@ class FinanceService:
             except Exception as e:
                 logger.warning(f"Не удалось залогировать создание кассовой операции: {e}")
             
+            try:
+                clear_cache(key_prefix='cash_summary')
+            except Exception:
+                pass
             return transaction_id
     
     @staticmethod
@@ -698,6 +713,7 @@ class FinanceService:
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
     
     @staticmethod
+    @cache_result(timeout=45, key_prefix='cash_summary')
     @handle_service_error
     def get_cash_summary(
         date_from: Optional[str] = None,
@@ -716,32 +732,39 @@ class FinanceService:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # Эффективные операции: не отменены, не сторно-записи, и не исходные операции по которым сделано сторно
+            # Эффективные операции: не отменены, не сторно-записи, и не исходные по которым есть сторно
             cancelled_col = 'is_cancelled' in [c[1] for c in cursor.execute("PRAGMA table_info(cash_transactions)").fetchall()]
+            not_storned = (
+                " AND NOT EXISTS ("
+                "SELECT 1 FROM cash_transactions sx WHERE sx.storno_of_id = {alias}.id"
+                ")"
+            )
             effective_filter = " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)" if cancelled_col else ""
             effective_filter += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
-            effective_filter += " AND ct.id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
+            effective_filter += not_storned.format(alias="ct")
             
+            date_from_bound = str(date_from)[:10] if date_from else None
+            date_to_exclusive = _cash_next_day(date_to)
+
             # Рассчитываем остаток на начало периода (до date_from)
             opening_balance = 0.0
-            if date_from:
-                open_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
-                open_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
-                open_eff += " AND id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
+            open_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
+            open_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
+            open_eff += not_storned.format(alias="cash_transactions")
+            if date_from_bound:
                 cursor.execute(f'''
                     SELECT 
                         COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) -
                         COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as balance
                     FROM cash_transactions
-                    WHERE DATE(transaction_date) < DATE(?)
-                    ''' + open_eff, (date_from,))
+                    WHERE transaction_date < ?
+                    ''' + open_eff, (date_from_bound,))
                 row = cursor.fetchone()
                 opening_balance = float(row[0] or 0) if row else 0.0
 
-            # Входящий остаток по способу оплаты (до date_from) — чтобы «Наличные» и др.
-            # переносились на следующий день в карточках, даже если в новом дне нет операций.
+            # Входящий остаток по способу оплаты (до date_from)
             opening_balance_by_method: Dict[str, float] = {}
-            if date_from:
+            if date_from_bound:
                 cursor.execute(
                     f"""
                     SELECT
@@ -749,32 +772,35 @@ class FinanceService:
                         COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) -
                         COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) AS balance
                     FROM cash_transactions
-                    WHERE DATE(transaction_date) < DATE(?)
+                    WHERE transaction_date < ?
                     """
                     + open_eff
                     + """
                     GROUP BY COALESCE(payment_method, 'cash')
                     """,
-                    (date_from,),
+                    (date_from_bound,),
                 )
                 for row in cursor.fetchall():
                     method = row[0] or "cash"
                     opening_balance_by_method[method] = float(row[1] or 0)
             
-            # Параметры для фильтрации по периоду
+            # Параметры для фильтрации по периоду (полуоткрытый интервал)
             params = []
             date_filter = ""
-            if date_from:
-                date_filter += " AND DATE(transaction_date) >= DATE(?)"
-                params.append(date_from)
-            if date_to:
-                date_filter += " AND DATE(transaction_date) <= DATE(?)"
-                params.append(date_to)
+            date_filter_ct = ""
+            if date_from_bound:
+                date_filter += " AND transaction_date >= ?"
+                date_filter_ct += " AND ct.transaction_date >= ?"
+                params.append(date_from_bound)
+            if date_to_exclusive:
+                date_filter += " AND transaction_date < ?"
+                date_filter_ct += " AND ct.transaction_date < ?"
+                params.append(date_to_exclusive)
             
-            # Общие суммы за период (только эффективные: без отменённых и без учёта сторнированных)
+            # Общие суммы за период
             base_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
             base_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
-            base_eff += " AND id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
+            base_eff += not_storned.format(alias="cash_transactions")
             cursor.execute(f'''
                 SELECT 
                     transaction_type,
@@ -793,8 +819,8 @@ class FinanceService:
             period_expense = totals['expense']
             final_balance = opening_balance + period_income - period_expense
             
-            # По категориям за период (только эффективные операции)
-            cat_eff = effective_filter.replace("ct.", "ct.")
+            # По категориям за период
+            cat_eff = effective_filter
             cursor.execute(f'''
                 SELECT 
                     tc.id,
@@ -805,7 +831,7 @@ class FinanceService:
                     COUNT(*) as count
                 FROM cash_transactions ct
                 JOIN transaction_categories tc ON ct.category_id = tc.id
-                WHERE 1=1 {date_filter} {cat_eff}
+                WHERE 1=1 {date_filter_ct} {cat_eff}
                 GROUP BY tc.id
                 ORDER BY total DESC
             ''', params)
@@ -858,15 +884,13 @@ class FinanceService:
             # Перевод между кассами — внутренний виртуальный, не считаем в приход/расход
             internal_eff = " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)" if cancelled_col else ""
             internal_eff += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
-            internal_eff += " AND ct.id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
-            internal_date = ""
-            internal_params = []
-            if date_from:
-                internal_date += " AND DATE(ct.transaction_date) >= DATE(?)"
-                internal_params.append(date_from)
-            if date_to:
-                internal_date += " AND DATE(ct.transaction_date) <= DATE(?)"
-                internal_params.append(date_to)
+            internal_eff += (
+                " AND NOT EXISTS ("
+                "SELECT 1 FROM cash_transactions sx WHERE sx.storno_of_id = ct.id"
+                ")"
+            )
+            internal_date = date_filter_ct
+            internal_params = list(params)
             cursor.execute(
                 """
                 SELECT COALESCE(ct.payment_method, 'cash'), ct.transaction_type, COALESCE(SUM(ct.amount), 0)
@@ -1071,6 +1095,10 @@ class FinanceService:
             except Exception as e:
                 logger.warning(f"Не удалось залогировать отмену операции: {e}")
             
+            try:
+                clear_cache(key_prefix='cash_summary')
+            except Exception:
+                pass
             return True
     
     @staticmethod
