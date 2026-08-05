@@ -623,6 +623,30 @@ let periodOwedCents = 0;
 let overallOwedCents = 0;
 /** К выплате с учётом периода (см. totals.payable_cents на бэкенде) — для формы выплаты */
 let salaryPayableCents = 0;
+let employeeDashboardController = null;
+
+function abortEmployeeDashboardFetch() {
+    if (employeeDashboardController) {
+        try { employeeDashboardController.abort(); } catch (e) { /* ignore */ }
+        employeeDashboardController = null;
+    }
+}
+
+function beginEmployeeDashboardFetch(timeoutMs) {
+    abortEmployeeDashboardFetch();
+    const controller = new AbortController();
+    employeeDashboardController = controller;
+    const ms = timeoutMs || 30000;
+    const timer = setTimeout(function () {
+        try { controller.abort(); } catch (e) { /* ignore */ }
+    }, ms);
+    controller.signal.addEventListener('abort', function () {
+        clearTimeout(timer);
+    });
+    return controller;
+}
+
+window.addEventListener('pagehide', abortEmployeeDashboardFetch);
 
 function setActivePeriodButton(period) {
     const buttons = document.querySelectorAll('#periodButtons button');
@@ -652,9 +676,13 @@ function loadDashboard(period) {
     
     const url = `/api/salary/employee/${employeeId}/${employeeRole}?period=${period}`;
     console.log('Fetching dashboard data from:', url);
+
+    const controller = beginEmployeeDashboardFetch(30000);
+    const signal = controller.signal;
     
     fetch(url, {
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: signal,
     })
         .then(res => {
             console.log('Dashboard response status:', res.status);
@@ -667,6 +695,7 @@ function loadDashboard(period) {
             return res.json();
         })
         .then(data => {
+            if (signal.aborted) return;
             console.log('Dashboard API response:', data);
             if (data.success) {
                 console.log('Dashboard data:', data.dashboard);
@@ -678,6 +707,7 @@ function loadDashboard(period) {
             }
         })
         .catch(error => {
+            if (error && error.name === 'AbortError') return;
             console.error('Error loading dashboard:', error);
             showToast('Ошибка загрузки данных: ' + error.message, 'error');
         });
@@ -691,9 +721,13 @@ function loadCustomPeriod() {
         showToast('Укажите обе даты', 'warning');
         return;
     }
+
+    const controller = beginEmployeeDashboardFetch(30000);
+    const signal = controller.signal;
     
     fetch(`/api/salary/employee/${employeeId}/${employeeRole}?period=custom&date_from=${dateFrom}&date_to=${dateTo}`, {
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: signal,
     })
         .then(res => {
             if (!res.ok) {
@@ -704,6 +738,7 @@ function loadCustomPeriod() {
             return res.json();
         })
         .then(data => {
+            if (signal.aborted) return;
             if (data.success) {
                 renderDashboard(data.dashboard);
             } else {
@@ -711,6 +746,7 @@ function loadCustomPeriod() {
             }
         })
         .catch(error => {
+            if (error && error.name === 'AbortError') return;
             console.error('Ошибка:', error);
             showToast('Ошибка загрузки данных', 'error');
         });

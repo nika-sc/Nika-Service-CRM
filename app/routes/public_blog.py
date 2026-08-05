@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "salary-499-abort",
+        "file": "blog/19-salary-499-abort.md",
+        "date": "2026-08",
+        "title": "Багфикс: меньше nginx 499 на Зарплате — Nika CRM",
+        "description": (
+            "5 августа 2026: AbortController для запросов ЗП, больше слотов gunicorn на WORK, "
+            "request_time в nginx-логе для диагностики 499."
+        ),
+        "heading": "Меньше 499 на Зарплате",
+        "teaser": "Отмена устаревших fetch + ёмкость воркеров + тайминги в access-логе.",
+    },
+    {
         "slug": "all-orders-light",
         "file": "blog/18-all-orders-light.md",
         "date": "2026-08",

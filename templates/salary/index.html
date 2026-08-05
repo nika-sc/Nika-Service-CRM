@@ -405,6 +405,30 @@ let debtsData = null;
 let cashReconciliationData = null;
 let profitDetailsData = [];
 let notInSalaryData = [];
+let salaryFetchController = null;
+
+function abortSalaryFetches() {
+    if (salaryFetchController) {
+        try { salaryFetchController.abort(); } catch (e) { /* ignore */ }
+        salaryFetchController = null;
+    }
+}
+
+function beginSalaryFetch(timeoutMs) {
+    abortSalaryFetches();
+    const controller = new AbortController();
+    salaryFetchController = controller;
+    const ms = timeoutMs || 30000;
+    const timer = setTimeout(function () {
+        try { controller.abort(); } catch (e) { /* ignore */ }
+    }, ms);
+    controller.signal.addEventListener('abort', function () {
+        clearTimeout(timer);
+    });
+    return controller;
+}
+
+window.addEventListener('pagehide', abortSalaryFetches);
 
 var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : function (text) {
     if (text == null || text === undefined) return '';
@@ -633,7 +657,7 @@ function setSort(sortBy, options) {
     }
 }
 
-function loadSalaryExtras() {
+function loadSalaryExtras(signal) {
     const dateFromElement = document.getElementById('dateFrom');
     const dateToElement = document.getElementById('dateTo');
     const dateFrom = dateFromElement ? dateFromElement.value : '';
@@ -645,11 +669,14 @@ function loadSalaryExtras() {
     if (dateTo) qs.push(`date_to=${encodeURIComponent(dateTo)}`);
     url += qs.join('&');
 
-    fetch(url, {
+    const opts = {
         method: 'GET',
         headers: {'Content-Type': 'application/json'},
         credentials: 'same-origin',
-    })
+    };
+    if (signal) opts.signal = signal;
+
+    fetch(url, opts)
         .then(res => res.ok ? res.json() : Promise.reject(new Error('extras HTTP ' + res.status)))
         .then(data => {
             if (!data || !data.success) return;
@@ -660,7 +687,10 @@ function loadSalaryExtras() {
             renderProfitDetails(profitDetailsData);
             renderNotInSalary(notInSalaryData);
         })
-        .catch(err => console.warn('Salary extras load failed:', err));
+        .catch(err => {
+            if (err && err.name === 'AbortError') return;
+            console.warn('Salary extras load failed:', err);
+        });
 }
 
 function loadEmployees() {
@@ -714,21 +744,18 @@ function loadEmployees() {
 
     console.log('Loading employees with URL:', url);
 
-    // Таймаут для запроса (30 секунд)
-    const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
-    });
+    const controller = beginSalaryFetch(30000);
+    const signal = controller.signal;
 
-    const fetchPromise = fetch(url, {
+    fetch(url, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',  // Важно для отправки cookies
-        redirect: 'follow'  // Следуем редиректам
-    });
-
-    Promise.race([fetchPromise, timeoutPromise])
+        credentials: 'same-origin',
+        redirect: 'follow',
+        signal: signal,
+    })
         .then(res => {
             console.log('Response received:', {
                 status: res.status,
@@ -744,16 +771,13 @@ function loadEmployees() {
 
             if (contentType && contentType.includes('text/html')) {
                 console.warn('Received HTML instead of JSON - likely a redirect to login');
-                // Пробуем прочитать как текст, чтобы увидеть куда редирект
                 return res.text().then(html => {
                     console.warn('HTML response:', html.substring(0, 200));
                     throw new Error('Redirected to login page');
                 });
             }
 
-            // Проверяем статус ответа
             if (!res.ok) {
-                // Пробуем прочитать ошибку
                 return res.text().then(text => {
                     console.error('Error response:', text);
                     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -763,6 +787,7 @@ function loadEmployees() {
             return res.json();
         })
         .then(data => {
+            if (signal.aborted) return;
             console.log('API response received:', data);
             
             if (!data) {
@@ -777,18 +802,16 @@ function loadEmployees() {
                 renderEmployees(employeesData.filter(e => e.role === 'master'), 'masters');
                 renderEmployees(employeesData.filter(e => e.role === 'manager'), 'managers');
 
-                // Скрываем глобальный индикатор загрузки
                 const loadingRow = document.getElementById('loadingRow');
                 if (loadingRow) loadingRow.style.display = 'none';
 
-                // Тяжёлые блоки (сверка кассы / детализация) — вторым запросом
-                loadSalaryExtras();
+                // Тяжёлые блоки — тем же signal (новый loadEmployees abort'нёт и extras)
+                loadSalaryExtras(signal);
             } else {
                 const errorMsg = data.error || 'Ошибка загрузки';
                 console.error('API returned error:', errorMsg);
                 showToast(errorMsg, 'error');
                 
-                // Скрываем индикатор загрузки даже при ошибке
                 const loadingRow = document.getElementById('loadingRow');
                 if (loadingRow) {
                     loadingRow.innerHTML = '<td colspan="9" class="text-center text-muted py-3"><p class="mb-0">Ошибка загрузки данных</p></td>';
@@ -796,19 +819,18 @@ function loadEmployees() {
             }
         })
         .catch(error => {
+            if (error && error.name === 'AbortError') return;
             console.error('Fetch error:', error);
-            console.error('Error stack:', error.stack);
             
-            if (error.message.includes('Redirected to login') || error.message.includes('login')) {
+            if (error.message && (error.message.includes('Redirected to login') || error.message.includes('login'))) {
                 console.warn('Redirecting to login page');
                 showToast('Необходима авторизация. Перенаправляем...', 'warning');
                 setTimeout(() => window.location.href = '/login', 1000);
             } else {
-                const errorMsg = error.message || 'Ошибка загрузки данных';
+                const errorMsg = (error && error.message) || 'Ошибка загрузки данных';
                 console.error('Showing error toast:', errorMsg);
                 showToast(errorMsg, 'error');
                 
-                // Показываем сообщение об ошибке в таблице
                 const loadingRow = document.getElementById('loadingRow');
                 if (loadingRow) {
                     loadingRow.innerHTML = `<td colspan="9" class="text-center text-danger py-3">
@@ -822,7 +844,7 @@ function loadEmployees() {
             }
         })
         .finally(() => {
-            // Скрываем индикатор загрузки
+            if (signal.aborted) return;
             if (refreshBtn) {
                 refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
                 refreshBtn.disabled = false;
