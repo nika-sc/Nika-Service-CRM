@@ -94,6 +94,77 @@ class SalaryQueries:
             raise
 
     @staticmethod
+    def delete_accruals_for_order_role(order_id: int, role: str) -> int:
+        """Удаляет начисления по заявке только для указанной роли (master/manager)."""
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'DELETE FROM salary_accruals WHERE order_id = ? AND role = ?',
+                    (order_id, role),
+                )
+                conn.commit()
+                return cursor.rowcount
+        except Exception as e:
+            logger.error(
+                f"Ошибка при удалении начислений роли {role} для заявки {order_id}: {e}",
+                exc_info=True,
+            )
+            raise
+
+    @staticmethod
+    def reassign_accruals_user(
+        order_id: int,
+        role: str,
+        new_user_id: int,
+        old_user_id: Optional[int] = None,
+    ) -> int:
+        """
+        Переносит начисления заявки на другого сотрудника (суммы и даты сохраняются).
+
+        Если old_user_id задан — обновляет только его строки; иначе все строки роли.
+        """
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                if old_user_id is not None:
+                    cursor.execute(
+                        '''
+                        UPDATE salary_accruals
+                        SET user_id = ?,
+                            calculated_from_id = CASE
+                                WHEN calculated_from IN ('master', 'manager')
+                                     AND calculated_from_id = ? THEN ?
+                                ELSE calculated_from_id
+                            END
+                        WHERE order_id = ? AND role = ? AND user_id = ?
+                        ''',
+                        (new_user_id, old_user_id, new_user_id, order_id, role, old_user_id),
+                    )
+                else:
+                    cursor.execute(
+                        '''
+                        UPDATE salary_accruals
+                        SET user_id = ?,
+                            calculated_from_id = CASE
+                                WHEN calculated_from IN ('master', 'manager')
+                                     THEN ?
+                                ELSE calculated_from_id
+                            END
+                        WHERE order_id = ? AND role = ?
+                        ''',
+                        (new_user_id, new_user_id, order_id, role),
+                    )
+                conn.commit()
+                return cursor.rowcount
+        except Exception as e:
+            logger.error(
+                f"Ошибка переноса начислений заявки {order_id} role={role}: {e}",
+                exc_info=True,
+            )
+            raise
+
+    @staticmethod
     def delete_accruals_for_shop_sale(shop_sale_id: int) -> int:
         """
         Удаляет все начисления зарплаты по продаже магазина (например при возврате).

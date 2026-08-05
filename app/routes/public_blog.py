@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "bugfixes-cache-salary",
+        "file": "blog/12-bugfixes-cache-salary.md",
+        "date": "2026-08",
+        "title": "Багфиксы: Redis-кэш, дашборд и смена мастера с зарплатой — Nika CRM",
+        "description": (
+            "Исправления 5 августа 2026: 500 при добавлении услуг из‑за Redis, "
+            "рассинхрон типов кэша на дашборде и перенос начислений при смене мастера/менеджера."
+        ),
+        "heading": "Багфиксы кэша и зарплаты",
+        "teaser": "Услуги без 500, стабильный дашборд с Redis, перевод ЗП на нового мастера.",
+    },
+    {
         "slug": "perf-cash-mobile",
         "file": "blog/11-perf-cash-mobile.md",
         "date": "2026-07",

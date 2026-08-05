@@ -2447,6 +2447,15 @@
                             <a href="{{ url_for('orders.add_order') }}" class="btn btn-light btn-sm" title="Создать новую заявку" aria-label="Создать новую заявку" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                 <i class="fas fa-plus"></i>
                             </a>
+                            {% if blocks_edit or is_final %}
+                            <button id="reassignAssigneesBtn" class="btn btn-light btn-sm" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#editOrderModal" data-assignees-only="1"
+                                    title="Сменить мастера или менеджера (зарплата будет перенесена)"
+                                    aria-label="Сменить исполнителей"
+                                    style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                <i class="fas fa-user-friends"></i>
+                            </button>
+                            {% endif %}
                             <button id="editOrderBtn" class="btn btn-light btn-sm" type="button" {% if blocks_edit or is_final %}style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem; opacity: 0.5; cursor: not-allowed;" title="Сначала откройте заявку" aria-label="Редактировать заявку" data-blocked="1"{% else %}data-bs-toggle="modal" data-bs-target="#editOrderModal" title="Редактировать заявку" aria-label="Редактировать заявку" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;"{% endif %}>
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -3515,8 +3524,9 @@
     <div class="modal fade" id="editOrderModal" tabindex="-1" aria-labelledby="editOrderModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <form method="POST" action="/order/{{ order.order_id }}">
+                <form method="POST" action="/order/{{ order.order_id }}" id="editOrderForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="assignees_only" id="assigneesOnlyFlag" value="0"/>
                     <div class="modal-header">
                         <h5 class="modal-title" id="editOrderModalLabel">Редактирование заявки #{{ order.id }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
@@ -5047,26 +5057,66 @@
         // Инициализируем TomSelect для модели при открытии модального окна
         const editOrderModal = document.getElementById('editOrderModal');
         if (editOrderModal) {
-            // Блокируем открытие модального окна, если редактирование заблокировано
+            // В закрытом статусе модалку можно открыть только в режиме смены исполнителей
             {% if blocks_edit or is_final %}
             editOrderModal.addEventListener('show.bs.modal', function(e) {
-                // Закрываем модальное окно сразу после открытия
-                const bsModal = bootstrap.Modal.getInstance(editOrderModal);
-                if (bsModal) {
-                    bsModal.hide();
-                } else {
-                    // Если модальное окно еще не инициализировано, отменяем его показ
+                const related = e.relatedTarget;
+                const assigneesOnly = related && related.getAttribute('data-assignees-only') === '1';
+                if (!assigneesOnly) {
                     e.preventDefault();
+                    const bsModal = bootstrap.Modal.getInstance(editOrderModal);
+                    if (bsModal) bsModal.hide();
+                    showToast('Редактирование заявки заблокировано. Можно сменить мастера/менеджера кнопкой «Сменить исполнителей».', 'warning', 'Редактирование заблокировано');
+                    return false;
                 }
-                showToast('Редактирование заявки заблокировано для {% if is_final %}финального статуса{% else %}этого статуса{% endif %}', 'warning', 'Редактирование заблокировано');
-                return false;
             }, true);
             {% endif %}
             let tomEditModel = null;
+
+            function setEditOrderAssigneesOnlyMode(enabled) {
+                const flag = document.getElementById('assigneesOnlyFlag');
+                const title = document.getElementById('editOrderModalLabel');
+                const form = document.getElementById('editOrderForm');
+                if (flag) flag.value = enabled ? '1' : '0';
+                if (title) {
+                    title.textContent = enabled
+                        ? 'Смена исполнителей заявки #{{ order.id }}'
+                        : 'Редактирование заявки #{{ order.id }}';
+                }
+                if (!form) return;
+                const keepNames = new Set(['manager', 'master', 'csrf_token', 'assignees_only', 'status']);
+                form.querySelectorAll('input, select, textarea, button').forEach(function(el) {
+                    if (el.id === 'assigneesOnlyFlag') return;
+                    if (el.type === 'hidden' && keepNames.has(el.name)) return;
+                    if (el.closest('.modal-footer')) return;
+                    if (el.classList.contains('btn-close')) return;
+                    const name = el.getAttribute('name') || '';
+                    const isAssigneeField = name === 'manager' || name === 'master';
+                    if (enabled) {
+                        if (!isAssigneeField && el.tagName !== 'BUTTON') {
+                            el.dataset.prevDisabled = el.disabled ? '1' : '0';
+                            el.disabled = true;
+                        } else {
+                            el.disabled = false;
+                        }
+                    } else if (el.dataset.prevDisabled !== undefined) {
+                        el.disabled = el.dataset.prevDisabled === '1';
+                        delete el.dataset.prevDisabled;
+                    }
+                });
+                // Disabled fields are not submitted — keep assignee selects enabled
+                form.querySelectorAll('select[name="manager"], select[name="master"]').forEach(function(sel) {
+                    sel.disabled = false;
+                });
+            }
             
-            editOrderModal.addEventListener('show.bs.modal', function() {
+            editOrderModal.addEventListener('show.bs.modal', function(e) {
+                const related = e.relatedTarget;
+                const assigneesOnly = !!(related && related.getAttribute('data-assignees-only') === '1');
+                setEditOrderAssigneesOnlyMode(assigneesOnly);
+
                 const editModelSelect = document.getElementById('editModel');
-                if (!editModelSelect) return;
+                if (!editModelSelect || assigneesOnly) return;
                 
                 // Удаляем старый экземпляр, если есть
                 if (tomEditModel) {

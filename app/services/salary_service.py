@@ -868,6 +868,135 @@ class SalaryService:
 
     @staticmethod
     @handle_service_error
+    def transfer_order_salary_on_assignee_change(
+        order_id: int,
+        *,
+        old_master_id: Optional[int],
+        new_master_id: Optional[int],
+        old_manager_id: Optional[int],
+        new_manager_id: Optional[int],
+    ) -> Dict[str, int]:
+        """
+        Переносит уже существующие начисления на нового мастера/менеджера.
+
+        Суммы и даты начислений сохраняются (это перевод, не полный пересчёт правил).
+        Если исполнитель снят (None) — начисления этой роли по заявке удаляются.
+        """
+        result = {
+            'master_updated': 0,
+            'manager_updated': 0,
+            'master_deleted': 0,
+            'manager_deleted': 0,
+        }
+        if not order_id or order_id <= 0:
+            raise ValidationError("Неверный ID заявки")
+
+        old_master_id = int(old_master_id) if old_master_id is not None else None
+        new_master_id = int(new_master_id) if new_master_id is not None else None
+        old_manager_id = int(old_manager_id) if old_manager_id is not None else None
+        new_manager_id = int(new_manager_id) if new_manager_id is not None else None
+
+        if old_master_id != new_master_id:
+            if new_master_id is None:
+                result['master_deleted'] = SalaryQueries.delete_accruals_for_order_role(
+                    order_id, 'master'
+                )
+            else:
+                updated = SalaryQueries.reassign_accruals_user(
+                    order_id,
+                    'master',
+                    new_master_id,
+                    old_user_id=old_master_id,
+                )
+                # Если начисления ещё на старом исполнителе (после прошлых сбоев) —
+                # переносим все строки роли.
+                if updated == 0:
+                    updated = SalaryQueries.reassign_accruals_user(
+                        order_id, 'master', new_master_id, old_user_id=None
+                    )
+                result['master_updated'] = updated
+
+        if old_manager_id != new_manager_id:
+            if new_manager_id is None:
+                result['manager_deleted'] = SalaryQueries.delete_accruals_for_order_role(
+                    order_id, 'manager'
+                )
+            else:
+                updated = SalaryQueries.reassign_accruals_user(
+                    order_id,
+                    'manager',
+                    new_manager_id,
+                    old_user_id=old_manager_id,
+                )
+                if updated == 0:
+                    updated = SalaryQueries.reassign_accruals_user(
+                        order_id, 'manager', new_manager_id, old_user_id=None
+                    )
+                result['manager_updated'] = updated
+
+        touched = sum(result.values())
+        if touched:
+            # Чтобы повторный перевод в статус «начисляет зарплату» не пересоздал
+            # начисления (order.updated_at > MAX(accrual.created_at)), подтягиваем
+            # метку начислений вперёд. Период отчётов идёт по дате оплаты, не created_at.
+            try:
+                from app.utils.datetime_utils import get_moscow_now_str
+                now = get_moscow_now_str()
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        '''
+                        UPDATE salary_accruals
+                        SET created_at = ?
+                        WHERE order_id = ? AND created_at < ?
+                        ''',
+                        (now, order_id, now),
+                    )
+                    conn.commit()
+            except Exception as e:
+                logger.warning(
+                    "Не удалось обновить created_at начислений после переноса заявки %s: %s",
+                    order_id,
+                    e,
+                )
+            logger.info(
+                "Перенос зарплаты по заявке %s: master %s->%s (%s/%s), manager %s->%s (%s/%s)",
+                order_id,
+                old_master_id,
+                new_master_id,
+                result['master_updated'],
+                result['master_deleted'],
+                old_manager_id,
+                new_manager_id,
+                result['manager_updated'],
+                result['manager_deleted'],
+            )
+            try:
+                ActionLogService.log_action(
+                    user_id=None,
+                    username='system',
+                    action_type='update',
+                    entity_type='salary_accrual',
+                    entity_id=order_id,
+                    description=f"Перенос начислений при смене исполнителей заявки #{order_id}",
+                    details={
+                        'old_master_id': old_master_id,
+                        'new_master_id': new_master_id,
+                        'old_manager_id': old_manager_id,
+                        'new_manager_id': new_manager_id,
+                        **result,
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    "Не удалось залогировать перенос зарплаты для заявки %s: %s",
+                    order_id,
+                    e,
+                )
+        return result
+
+    @staticmethod
+    @handle_service_error
     def accrue_salary_for_order(order_id: int, force_recalculate: bool = False) -> List[int]:
         """
         Начисляет зарплату по заявке.

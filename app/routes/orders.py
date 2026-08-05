@@ -1250,12 +1250,42 @@ def order_detail(order_id):
         # Если POST - обновление заявки
         if request.method == 'POST':
             try:
-                # Проверяем, разрешено ли редактирование заявки
-                if not OrderService.check_order_edit_allowed(order.id):
-                    flash('Редактирование заявки заблокировано для текущего статуса. Разрешено только добавление комментариев.', 'error')
-                    # Перенаправляем обратно на страницу заявки (номер из БД — order_id, как в файле)
+                edit_allowed = OrderService.check_order_edit_allowed(order.id)
+                assignees_only = str(request.form.get('assignees_only') or '').strip() in ('1', 'true', 'yes')
+                # В закрытом статусе разрешена только смена мастера/менеджера (+ перенос зарплаты)
+                if not edit_allowed and not assignees_only:
+                    flash(
+                        'Редактирование заявки заблокировано для текущего статуса. '
+                        'Можно сменить мастера/менеджера — откройте «Сменить исполнителей».',
+                        'error',
+                    )
                     return redirect(url_for('orders.order_detail', order_id=order.order_id))
-                
+
+                manager_id = int(request.form['manager'])
+                master_raw = request.form.get('master', '')
+                master_id = int(master_raw) if master_raw and master_raw.isdigit() else None
+
+                if not edit_allowed and assignees_only:
+                    user_id = current_user.id if current_user.is_authenticated else None
+                    username = current_user.username if current_user.is_authenticated else None
+                    result = OrderService.update_order_assignees(
+                        order.id,
+                        manager_id=manager_id,
+                        master_id=master_id,
+                        user_id=user_id,
+                        username=username,
+                    )
+                    transfer = result.get('salary_transfer') or {}
+                    moved = sum(int(v or 0) for v in transfer.values())
+                    if result.get('changed'):
+                        if moved:
+                            flash('Исполнители обновлены, начисления зарплаты перенесены.', 'success')
+                        else:
+                            flash('Исполнители обновлены.', 'success')
+                    else:
+                        flash('Изменений не было.', 'info')
+                    return redirect(url_for('orders.order_detail', order_id=order.order_id))
+
                 # Извлекаем данные из формы
                 # ВАЖНО: Поля клиента (client_name, phone, email) теперь скрыты в форме редактирования
                 # и должны редактироваться в разделе клиента. Но оставляем их для обратной совместимости.
@@ -1273,12 +1303,11 @@ def order_detail(order_id):
                 appearance = request.form.get('appearance', '').strip()
                 prepayment = request.form.get('prepayment', '0').strip()
                 password = request.form.get('password', '').strip()
-                manager_id = int(request.form['manager'])
-                master_raw = request.form.get('master', '')
-                master_id = int(master_raw) if master_raw and master_raw.isdigit() else None
                 # Статус теперь не редактируется через форму - используется выпадающий список в интерфейсе
                 # Не обновляем статус через форму редактирования заявки
                 status_id = None  # Статус не обновляется через форму редактирования
+                old_manager_id_before = order_data['order'].get('manager_id')
+                old_master_id_before = order_data['order'].get('master_id')
                 
                 # Обновляем клиента только если данные клиента были переданы (для обратной совместимости)
                 # В новой версии формы эти поля скрыты, поэтому клиент не будет обновляться
@@ -1414,6 +1443,29 @@ def order_detail(order_id):
                                 pass
                     
                     conn.commit()
+
+                # Если сменили мастера/менеджера при уже существующих начислениях — переносим ЗП
+                try:
+                    old_mgr_norm = int(old_manager_id_before) if old_manager_id_before is not None else None
+                    old_mst_norm = int(old_master_id_before) if old_master_id_before is not None else None
+                    new_mgr_norm = int(manager_id) if manager_id is not None else None
+                    new_mst_norm = int(master_id) if master_id is not None else None
+                    if old_mgr_norm != new_mgr_norm or old_mst_norm != new_mst_norm:
+                        from app.services.salary_service import SalaryService
+                        SalaryService.transfer_order_salary_on_assignee_change(
+                            order.id,
+                            old_master_id=old_mst_norm,
+                            new_master_id=new_mst_norm,
+                            old_manager_id=old_mgr_norm,
+                            new_manager_id=new_mgr_norm,
+                        )
+                except Exception as salary_transfer_err:
+                    logger.error(
+                        "Не удалось перенести зарплату при смене исполнителей заявки %s: %s",
+                        order.id,
+                        salary_transfer_err,
+                        exc_info=True,
+                    )
                 
                 # Статус больше не обновляется через форму редактирования заявки
                 # Используйте выпадающий список статуса в интерфейсе заявки для изменения статуса
@@ -3184,6 +3236,48 @@ def toggle_order_visibility_api(order_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/orders/<int:order_id>/assignees', methods=['POST'])
+@login_required
+@permission_required('edit_orders')
+def api_update_order_assignees(order_id):
+    """
+    Смена мастера/менеджера заявки (разрешена и в закрытом статусе).
+    При наличии начислений переносит зарплату на новых исполнителей.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        manager_raw = data.get('manager_id', data.get('manager'))
+        master_raw = data.get('master_id', data.get('master'))
+        if manager_raw is None or manager_raw == '':
+            return jsonify({'success': False, 'error': 'Укажите менеджера'}), 400
+        try:
+            manager_id = int(manager_raw)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Неверный ID менеджера'}), 400
+        master_id = None
+        if master_raw not in (None, ''):
+            try:
+                master_id = int(master_raw)
+            except (TypeError, ValueError):
+                return jsonify({'success': False, 'error': 'Неверный ID мастера'}), 400
+
+        result = OrderService.update_order_assignees(
+            order_id,
+            manager_id=manager_id,
+            master_id=master_id,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            username=current_user.username if current_user.is_authenticated else None,
+        )
+        return jsonify({'success': True, **result})
+    except (ValidationError, NotFoundError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        logger.error("Ошибка смены исполнителей заявки %s: %s", order_id, e, exc_info=True)
+        return jsonify({'success': False, 'error': 'Не удалось сменить исполнителей'}), 500
 
 
 @bp.route('/api/order/<int:order_id>/pin', methods=['POST'])

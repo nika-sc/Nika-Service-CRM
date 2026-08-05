@@ -307,6 +307,103 @@ class OrderService:
                 return False
         
         return True
+
+    @staticmethod
+    @handle_service_error
+    def update_order_assignees(
+        order_id: int,
+        manager_id: Optional[int],
+        master_id: Optional[int],
+        *,
+        user_id: Optional[int] = None,
+        username: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Меняет менеджера/мастера заявки даже в закрытом статусе и переносит начисления.
+
+        Полное редактирование заявки при blocks_edit по-прежнему запрещено;
+        смена исполнителей и перевод зарплаты — отдельный разрешённый сценарий.
+        """
+        from app.database.connection import get_db_connection
+        from app.services.salary_service import SalaryService
+        from app.utils.datetime_utils import get_moscow_now_str
+
+        if not order_id or order_id <= 0:
+            raise ValidationError("Неверный ID заявки")
+        if manager_id is not None and manager_id <= 0:
+            raise ValidationError("Неверный ID менеджера")
+        if master_id is not None and master_id <= 0:
+            master_id = None
+
+        order = OrderService.get_order(order_id)
+        if not order:
+            raise NotFoundError(f"Заявка с ID {order_id} не найдена")
+
+        old_manager_id = int(order.manager_id) if getattr(order, 'manager_id', None) is not None else None
+        old_master_id = int(order.master_id) if getattr(order, 'master_id', None) is not None else None
+        new_manager_id = int(manager_id) if manager_id is not None else None
+        new_master_id = int(master_id) if master_id is not None else None
+
+        if old_manager_id == new_manager_id and old_master_id == new_master_id:
+            return {
+                'changed': False,
+                'manager_id': new_manager_id,
+                'master_id': new_master_id,
+                'salary_transfer': {},
+            }
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                UPDATE orders
+                SET manager_id = ?, master_id = ?, updated_at = ?
+                WHERE id = ?
+                ''',
+                (new_manager_id, new_master_id, get_moscow_now_str(), order_id),
+            )
+            conn.commit()
+
+        salary_transfer = SalaryService.transfer_order_salary_on_assignee_change(
+            order_id,
+            old_master_id=old_master_id,
+            new_master_id=new_master_id,
+            old_manager_id=old_manager_id,
+            new_manager_id=new_manager_id,
+        )
+
+        try:
+            from app.services.action_log_service import ActionLogService
+            details = {}
+            if old_manager_id != new_manager_id:
+                details['manager'] = {'old_id': old_manager_id, 'new_id': new_manager_id}
+            if old_master_id != new_master_id:
+                details['master'] = {'old_id': old_master_id, 'new_id': new_master_id}
+            if details:
+                ActionLogService.log_action(
+                    user_id=user_id,
+                    username=username,
+                    action_type='update',
+                    entity_type='order',
+                    entity_id=order_id,
+                    description=f"Смена исполнителей заявки #{order_id}",
+                    details=details,
+                )
+        except Exception as e:
+            logger.warning("Не удалось залогировать смену исполнителей заявки %s: %s", order_id, e)
+
+        try:
+            from app.utils.cache import clear_cache
+            clear_cache(key_prefix='order')
+        except Exception:
+            pass
+
+        return {
+            'changed': True,
+            'manager_id': new_manager_id,
+            'master_id': new_master_id,
+            'salary_transfer': salary_transfer,
+        }
     
     @staticmethod
     def get_order_payments(order_id: int) -> List[Dict]:
