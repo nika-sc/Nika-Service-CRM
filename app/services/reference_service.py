@@ -239,8 +239,6 @@ class ReferenceService:
         Использует уже закэшированные get_* методы.
         """
         return {
-            'device_types': ReferenceService.get_device_types(),
-            'device_brands': ReferenceService.get_device_brands(),
             'managers': ReferenceService.get_managers(),
             'masters': ReferenceService.get_masters(),
             'order_statuses': ReferenceService.get_order_statuses(include_archived=True),

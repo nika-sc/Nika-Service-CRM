@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "all-orders-light",
+        "file": "blog/18-all-orders-light.md",
+        "date": "2026-08",
+        "title": "Багфикс: лёгкий реестр заявок /all_orders — Nika CRM",
+        "description": (
+            "5 августа 2026: меню статусов и контакты не дублируются в каждой строке DataTables; "
+            "канбан без мёртвых data-* и лишнего запроса."
+        ),
+        "heading": "Лёгкий реестр заявок",
+        "teaser": "AJAX реестра ~271→82 КБ; канбан легче и быстрее.",
+    },
+    {
         "slug": "salary-reports-speed",
         "file": "blog/17-salary-reports-speed.md",
         "date": "2026-08",

@@ -3,11 +3,13 @@
 {% block title %}Все заявки — Nika CRM{% endblock %}
 
 {% block datatables_css %}
+{% if view == 'registry' %}
     <!-- DataTables CSS (локально) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/1.13.7/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/buttons/2.4.2/css/buttons.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/css/responsive.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/datatables/colreorder/1.7.0/css/colReorder.bootstrap5.min.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block styles %}
@@ -949,36 +951,8 @@
                                 </div>
                                 <div class="card-body p-1 kanban-column-scroll">
                                     {% for order in status_orders %}
-                                    {% set phone_clean = order.phone|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('+', '') if order.phone else '' %}
-                                    {% set phone_8 = '' %}
-                                    {% set phone_7 = '' %}
-                                    {% if phone_clean and phone_clean|length == 11 %}
-                                        {% if phone_clean[0] == '8' %}
-                                            {% set phone_7 = '7' + phone_clean[1:] %}
-                                            {% set phone_8 = phone_clean %}
-                                        {% elif phone_clean[0] == '7' %}
-                                            {% set phone_7 = phone_clean %}
-                                            {% set phone_8 = '8' + phone_clean[1:] %}
-                                        {% endif %}
-                                    {% endif %}
-                                        <div class="card mb-1 kanban-card" 
-                                             style="cursor: pointer; transition: all 0.2s ease;"
-                                             data-id="{{ order.id }}"
-                                             data-order-id="{{ order.id }}"
-                                             data-client-name="{{ order.client_name }}"
-                                             data-email="{{ order.email }}"
-                                             data-phone="{{ order.phone }}"
-                                             data-phone-display="{{ order.phone_display or order.phone }}"
-                                             data-device-type="{{ order.device_type }}"
-                                             data-device-brand="{{ order.device_brand }}"
-                                             data-model="{{ order.model or '' }}"
-                                             data-manager="{{ order.manager }}"
-                                             data-master="{{ order.master }}"
-                                             data-symptom-tags="{{ order.symptom_tags }}"
-                                             data-appearance="{{ order.appearance }}"
-                                             data-prepayment="{{ order.prepayment }}"
-                                             data-serial-number="{{ order.serial_number }}"
-                                             data-search="{{ ((order.client_name|lower if order.client_name else '') + ' ' + (order.client_name if order.client_name else '') + ' ' + phone_clean + ' ' + phone_7 + ' ' + phone_8 + ' ' + (order.email|lower if order.email else '') + ' ' + (order.email if order.email else '') + ' ' + (order.id|string if order.id is not none else '') + ' ' + (order.order_id|string if order.order_id is not none else '') + ' ' + (order.device_type|lower if order.device_type else '') + ' ' + (order.device_type if order.device_type else '') + ' ' + (order.device_brand|lower if order.device_brand else '') + ' ' + (order.device_brand if order.device_brand else '') + ' ' + (order.model|lower if order.model else '') + ' ' + (order.model if order.model else '') + ' ' + (order.symptom_tags|lower if order.symptom_tags else '') + ' ' + (order.symptom_tags if order.symptom_tags else '') + ' ' + (order.appearance|lower if order.appearance else '') + ' ' + (order.appearance if order.appearance else '') + ' ' + (order.manager|lower if order.manager else '') + ' ' + (order.manager if order.manager else '') + ' ' + (order.master|lower if order.master else '') + ' ' + (order.master if order.master else '') + ' ' + (order.status_name|lower if order.status_name else '') + ' ' + (order.status_name if order.status_name else '')).strip() }}"
+                                        <div class="card mb-1 kanban-card"
+                                             style="cursor: pointer;"
                                              onclick="window.location.href='/order/{{ order.id|urlencode }}'">
                                             <div class="card-body p-1">
                                                 <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
@@ -1078,12 +1052,14 @@
 {% endblock %}
 
 {% block datatables_js %}
+{% if view == 'registry' %}
     <!-- DataTables JS -->
     <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/jquery.dataTables.min.js') }}"></script>
     <script src="{{ url_for('static', filename='cdn/datatables/1.13.7/js/dataTables.bootstrap5.min.js') }}"></script>
     <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/dataTables.responsive.min.js') }}"></script>
     <script src="{{ url_for('static', filename='cdn/datatables/responsive/2.5.0/js/responsive.bootstrap5.min.js') }}"></script>
     <script src="{{ url_for('static', filename='cdn/datatables/colreorder/1.7.0/js/dataTables.colReorder.min.js') }}"></script>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -1092,19 +1068,32 @@
         function showPhoneMenu(event, phone) {
             event.stopPropagation();
             const menuId = 'phoneMenu-' + phone;
-            const menu = document.getElementById(menuId);
-            
+            let menu = document.getElementById(menuId);
+            if (!menu) return;
+
             // Закрываем все другие меню
             document.querySelectorAll('.contact-dropdown').forEach(m => {
                 if (m.id !== menuId) {
                     m.classList.remove('show');
                 }
             });
-            
-            // Переключаем текущее меню
-            if (menu) {
-                menu.classList.toggle('show');
+
+            // Собираем ссылки один раз при первом открытии
+            if (!menu.dataset.ready) {
+                const digits = String(phone || '').replace(/\D/g, '');
+                let tg = digits;
+                if (digits.length === 11 && digits.startsWith('8')) tg = '7' + digits.slice(1);
+                else if (!digits.startsWith('7') && digits.length >= 10) tg = digits;
+                menu.innerHTML =
+                    '<a href="tel:' + digits + '" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fas fa-phone"></i> Позвонить</a>' +
+                    '<a href="https://wa.me/' + digits + '" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-whatsapp"></i> WhatsApp</a>' +
+                    '<a href="viber://chat?number=' + digits + '" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-viber"></i> Viber</a>' +
+                    '<a href="https://t.me/+' + tg + '" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-telegram"></i> Написать в Телеграмм</a>' +
+                    '<a href="#" class="contact-dropdown-item" onclick="copyToClipboard(\'' + digits + '\', event)"><i class="fas fa-copy"></i> Копировать</a>';
+                menu.dataset.ready = '1';
             }
+
+            menu.classList.toggle('show');
         }
 
         // Закрытие меню при клике вне его
@@ -1307,6 +1296,12 @@
             const isOpen = menu.hasClass('show');
             window.closeAllStatusMenusGlobal();
             if (isOpen) return false;
+
+            // Подставляем общее меню статусов (один HTML на все строки)
+            if (window._sharedStatusMenuHtml && !menu.data('filled')) {
+                menu.html(window._sharedStatusMenuHtml);
+                menu.data('filled', 1);
+            }
 
             const currentStatusId = String(buttonEl.getAttribute('data-status-id') || '');
             menu.find('.status-dropdown-item').removeClass('active');
@@ -1511,6 +1506,12 @@
                             d.csrf_token = meta.content;
                         }
                         return d;
+                    },
+                    "dataSrc": function (json) {
+                        if (json && json.status_menu_html) {
+                            window._sharedStatusMenuHtml = json.status_menu_html;
+                        }
+                        return (json && json.data) ? json.data : [];
                     }
                 },
                 "columns": [
@@ -1753,6 +1754,16 @@
                     const isOpen = menu.hasClass('show');
                     closeAllStatusMenus();
                     if (isOpen) return;
+
+                    if (window._sharedStatusMenuHtml && !menu.data('filled')) {
+                        menu.html(window._sharedStatusMenuHtml);
+                        menu.data('filled', 1);
+                    }
+                    const currentStatusId = String($(button).attr('data-status-id') || '');
+                    menu.find('.status-dropdown-item').removeClass('active');
+                    if (currentStatusId) {
+                        menu.find('.status-dropdown-item[data-status-id="' + currentStatusId + '"]').addClass('active');
+                    }
 
                     row.addClass('dropdown-open');
                     menu.addClass('show');

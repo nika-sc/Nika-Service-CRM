@@ -203,33 +203,13 @@ def _get_all_orders_header_counters() -> dict:
         ''')
         in_progress_orders_count = (cursor.fetchone() or [0])[0] or 0
 
-        cursor.execute('''
-            SELECT
-                m.id,
-                m.name,
-                COALESCE(cnt.cnt, 0) AS cnt
-            FROM masters m
-            LEFT JOIN (
-                SELECT o.master_id AS mid, COUNT(*) AS cnt
-                FROM orders o
-                JOIN order_statuses os ON os.id = o.status_id
-                WHERE (o.hidden = 0 OR o.hidden IS NULL)
-        ''' + not_deleted_clause + '''
-                  AND (os.is_final = 0 OR os.is_final IS NULL)
-                  AND (LOWER(TRIM(os.name)) NOT LIKE '%незабираш%')
-                GROUP BY o.master_id
-            ) cnt ON cnt.mid = m.id
-            ORDER BY m.name
-        ''')
-        master_in_progress_counters = [dict(row) for row in cursor.fetchall()]
-
     return {
         'status_dict': status_dict,
         'status_counters': status_counters,
         'active_status_counters': active_status_counters,
         'archived_status_counters': archived_status_counters,
         'in_progress_orders_count': in_progress_orders_count,
-        'master_in_progress_counters': master_in_progress_counters,
+        'master_in_progress_counters': [],
     }
 
 
@@ -736,13 +716,14 @@ def all_orders():
             if not date_to:
                 date_to = today.isoformat()
                 filters['date_to'] = date_to
-            _kanban_max_orders = 500
-            count_pg = OrderService.get_orders_with_details(filters, 1, 1)
-            if count_pg.total <= 0:
-                paginator = count_pg
+            _kanban_max_orders = 150
+            total = OrderQueries.count_orders(filters if filters else None)
+            if total <= 0:
+                from app.utils.pagination import Paginator
+                paginator = Paginator([], page=1, per_page=_kanban_max_orders, total=0)
                 orders = []
             else:
-                take = min(count_pg.total, _kanban_max_orders)
+                take = min(total, _kanban_max_orders)
                 paginator = OrderService.get_orders_with_details(filters, 1, take)
                 orders = paginator.items
         else:
@@ -779,8 +760,6 @@ def all_orders():
         # Конвертируем в кортежи для шаблона
         managers = [(m['id'], m['name']) for m in refs.get('managers', [])]
         masters = [(m['id'], m['name']) for m in refs.get('masters', [])]
-        device_types = refs['device_types']
-        device_brands = refs['device_brands']
         
         # Создаем мапы для быстрого доступа
         status_map = {s['id']: s for s in order_statuses}
@@ -793,7 +772,7 @@ def all_orders():
             active_status_counters = counters['active_status_counters']
             archived_status_counters = counters['archived_status_counters']
             in_progress_orders_count = counters['in_progress_orders_count']
-            master_in_progress_counters = counters['master_in_progress_counters']
+            master_in_progress_counters = []
         except Exception as e:
             logger.error(f"Ошибка при подсчете статистики по статусам: {e}")
             status_dict = {}
@@ -825,8 +804,6 @@ def all_orders():
             date_to=date_to,
             managers=managers,
             masters=masters,
-            device_types=device_types,
-            device_brands=device_brands,
             order_statuses=order_statuses,
             status_map=status_map,
             status_map_by_code=status_map_by_code,
@@ -1073,7 +1050,7 @@ def api_datatables_orders():
             + '</div>'
         )
 
-        # col 1: статус — общее меню статусов (не пересобираем на каждую строку)
+        # col 1: статус — меню статусов одно на страницу (подставляется при открытии)
         col_status = (
             '<div class="dropdown" onclick="event.stopPropagation();">'
             f'<button class="btn btn-sm dropdown-toggle quick-status-btn" type="button" '
@@ -1085,9 +1062,7 @@ def api_datatables_orders():
             'color: #fff; min-width: 150px;">'
             f'{_html.escape(str(status_name))}'
             '</button>'
-            '<ul class="dropdown-menu status-dropdown-menu">'
-            + shared_menu_html +
-            '</ul></div>'
+            '<ul class="dropdown-menu status-dropdown-menu"></ul></div>'
         )
 
         # col 2: клиент + телефон
@@ -1103,17 +1078,12 @@ def api_datatables_orders():
         phone_block = ''
         if phone_digits:
             phone_display = format_phone_display(phone_digits) if phone_digits else phone_digits
+            # Меню контактов собирается на клике (не дублируем 5 ссылок в каждой строке)
             phone_block = (
                 '<div class="contact-item mt-1">'
                 f'<span class="contact-value text-muted small" data-phone="{phone_digits}" '
                 f'onclick="showPhoneMenu(event, \'{phone_digits}\')">{_html.escape(phone_display)}</span>'
-                f'<div class="contact-dropdown" id="phoneMenu-{phone_digits}">'
-                f'<a href="tel:{phone_digits}" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fas fa-phone"></i> Позвонить</a>'
-                f'<a href="https://wa.me/{phone_digits}" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-whatsapp"></i> WhatsApp</a>'
-                f'<a href="viber://chat?number={phone_digits}" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-viber"></i> Viber</a>'
-                f'<a href="https://t.me/+{(phone_digits if phone_digits.startswith("7") else ("7" + phone_digits[1:] if len(phone_digits) == 11 and phone_digits.startswith("8") else phone_digits))}" class="contact-dropdown-item" onclick="event.stopPropagation();"><i class="fab fa-telegram"></i> Написать в Телеграмм</a>'
-                f'<a href="#" class="contact-dropdown-item" onclick="copyToClipboard(\'{phone_digits}\', event)"><i class="fas fa-copy"></i> Копировать</a>'
-                '</div>'
+                f'<div class="contact-dropdown" id="phoneMenu-{phone_digits}"></div>'
                 f'<button class="contact-btn" onclick="copyToClipboard(\'{phone_digits}\', event)" title="Копировать"><i class="fas fa-copy"></i></button>'
                 '</div>'
             )
@@ -1209,7 +1179,8 @@ def api_datatables_orders():
         "draw": draw,
         "recordsTotal": records_total,
         "recordsFiltered": records_filtered,
-        "data": data
+        "data": data,
+        "status_menu_html": shared_menu_html,
     })
 
 @bp.route('/order/<order_id>', methods=['GET', 'POST'])
