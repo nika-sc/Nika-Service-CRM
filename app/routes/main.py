@@ -765,42 +765,22 @@ def settings():
     try:
         settings = SettingsService.get_general_settings()
         payment_method_settings = SettingsService.get_payment_method_settings()
-        # Кэшированные справочники по отдельности — без тяжёлой таблицы parts
-        refs = {
-            'device_types': ReferenceService.get_device_types(),
-            'device_brands': ReferenceService.get_device_brands(),
-            'symptoms': ReferenceService.get_symptoms(),
-            'appearance_tags': ReferenceService.get_appearance_tags(),
-            'order_statuses': ReferenceService.get_order_statuses(include_archived=True),
-            'services': ReferenceService.get_services(),
-            'order_models': [],
+        # Справочники устройств (тысячи строк) — не SSR: грузятся AJAX при открытии вкладки
+        # «Данные об устройстве», иначе HTML /settings раздувается до ~8 МБ и UI «зависает».
+        device_types = []
+        device_brands = []
+        symptoms = []
+        appearance_tags = []
+        order_models = []
+        statuses = ReferenceService.get_order_statuses(include_archived=True)
+        services = ReferenceService.get_services()
+        usage_counts = {
+            'device_types': {},
+            'device_brands': {},
+            'symptoms': {},
+            'appearance_tags': {},
+            'services': {},
         }
-        try:
-            from app.database.connection import get_db_connection
-            with get_db_connection() as conn:
-                cur = conn.cursor()
-                try:
-                    cur.execute("SELECT id, name FROM order_models ORDER BY name")
-                    refs['order_models'] = [{'id': r[0], 'name': r[1]} for r in cur.fetchall()]
-                except Exception:
-                    refs['order_models'] = []
-        except Exception:
-            refs['order_models'] = []
-        
-        # Преобразуем словари в кортежи для совместимости с шаблоном
-        # Шаблон ожидает: device_types/device_brands как (id, name)
-        # symptoms/appearance_tags как (id, name, sort_order)
-        device_types = [(dt['id'], dt['name']) for dt in refs.get('device_types', [])]
-        device_brands = [(db['id'], db['name']) for db in refs.get('device_brands', [])]
-        symptoms = [(s['id'], s['name'], s.get('sort_order', 0)) for s in refs.get('symptoms', [])]
-        appearance_tags = [(at['id'], at['name'], at.get('sort_order', 0)) for at in refs.get('appearance_tags', [])]
-        
-        statuses = refs.get('order_statuses', [])
-        services = refs.get('services', [])
-        order_models = [(m['id'], m['name']) for m in refs.get('order_models', [])]
-        
-        # Получаем usage counts для всех справочников одним запросом
-        usage_counts = ReferenceService.get_all_usage_counts()
     except Exception as e:
         logger.exception(f"Ошибка при загрузке страницы настроек: {e}")
         flash('Ошибка при загрузке данных настроек', 'error')

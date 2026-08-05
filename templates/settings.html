@@ -914,30 +914,12 @@
                                     <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-hover table-sm mb-0 device-data-table" id="deviceTypesTable">
                                             <tbody id="deviceTypesTableBody">
-                                                {% for dt in device_types %}
-                                                {% set id = dt[0] %}
-                                                {% set name = dt[1] %}
-                                                <tr data-type-id="{{ id }}">
-                                                    <td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>
-                                                    <td class="py-1"><small>{{ name }}</small></td>
-                                                    <td class="text-end pe-2" style="width: 100px;">
-                                                        <button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="{{ id }}" data-name="{{ name }}" data-type="device-types" title="Использование">
-                                                            <i class="fas fa-info-circle"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="{{ id }}" data-name="{{ name }}" data-type="device-type" title="Редактировать">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="{{ id }}" data-type="device-type" title="Удалить">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr class="device-data-placeholder"><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted">{{ device_types|length }} шт.</small>
+                                        <small class="text-muted" id="deviceTypesCount">—</small>
                                     </div>
                                 </div>
                             </div>
@@ -954,30 +936,12 @@
                                     <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-hover table-sm mb-0 device-data-table" id="deviceBrandsTable">
                                             <tbody id="deviceBrandsTableBody">
-                                                {% for db in device_brands %}
-                                                {% set id = db[0] %}
-                                                {% set name = db[1] %}
-                                                <tr data-brand-id="{{ id }}">
-                                                    <td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>
-                                                    <td class="py-1"><small>{{ name }}</small></td>
-                                                    <td class="text-end pe-2" style="width: 100px;">
-                                                        <button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="{{ id }}" data-name="{{ name }}" data-type="device-brands" title="Использование">
-                                                            <i class="fas fa-info-circle"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="{{ id }}" data-name="{{ name }}" data-type="device-brand" title="Редактировать">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="{{ id }}" data-type="device-brand" title="Удалить">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr class="device-data-placeholder"><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted">{{ device_brands|length }} шт.</small>
+                                        <small class="text-muted" id="deviceBrandsCount">—</small>
                                     </div>
                                 </div>
                             </div>
@@ -994,28 +958,12 @@
                                     <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-hover table-sm mb-0 device-data-table sortable-table" id="symptomsTable">
                                             <tbody id="symptomsTableBody">
-                                                {% for id, name, sort_order in symptoms %}
-                                                <tr data-symptom-id="{{ id }}" data-sort-order="{{ sort_order }}">
-                                                    <td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>
-                                                    <td class="py-1"><small>{{ name }}</small></td>
-                                                    <td class="text-end pe-2" style="width: 100px;">
-                                                        <button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="{{ id }}" data-name="{{ name }}" data-type="symptoms" title="Использование">
-                                                            <i class="fas fa-info-circle"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="{{ id }}" data-name="{{ name }}" data-type="symptom" title="Редактировать">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="{{ id }}" data-type="symptom" title="Удалить">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr class="device-data-placeholder"><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted">{{ symptoms|length }} шт.</small>
+                                        <small class="text-muted" id="symptomsCount">—</small>
                                     </div>
                                 </div>
                             </div>
@@ -1032,28 +980,12 @@
                                     <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-hover table-sm mb-0 device-data-table sortable-table" id="appearanceTagsTable">
                                             <tbody id="appearanceTagsTableBody">
-                                                {% for id, name, sort_order in appearance_tags %}
-                                                <tr data-tag-id="{{ id }}" data-sort-order="{{ sort_order }}">
-                                                    <td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>
-                                                    <td class="py-1"><small>{{ name }}</small></td>
-                                                    <td class="text-end pe-2" style="width: 100px;">
-                                                        <button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="{{ id }}" data-name="{{ name }}" data-type="appearance-tags" title="Использование">
-                                                            <i class="fas fa-info-circle"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="{{ id }}" data-name="{{ name }}" data-type="appearance-tag" title="Редактировать">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="{{ id }}" data-type="appearance-tag" title="Удалить">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr class="device-data-placeholder"><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted">{{ appearance_tags|length }} шт.</small>
+                                        <small class="text-muted" id="appearanceTagsCount">—</small>
                                     </div>
                                 </div>
                             </div>
@@ -1070,27 +1002,12 @@
                                     <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-hover table-sm mb-0 device-data-table" id="orderModelsTable">
                                             <tbody id="orderModelsTableBody">
-                                                {% for id, name in order_models %}
-                                                <tr data-model-id="{{ id }}">
-                                                    <td class="py-1 ps-2"><small>{{ name }}</small></td>
-                                                    <td class="text-end pe-2" style="width: 100px;">
-                                                        <button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="{{ id }}" data-name="{{ name }}" data-type="order-model" title="Использование">
-                                                            <i class="fas fa-info-circle"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="{{ id }}" data-name="{{ name }}" data-type="order-model" title="Редактировать">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="{{ id }}" data-type="order-model" title="Удалить">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr class="device-data-placeholder"><td colspan="2" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted">{{ order_models|length }} шт.</small>
+                                        <small class="text-muted" id="orderModelsCount">—</small>
                                     </div>
                                 </div>
                             </div>
@@ -2217,6 +2134,162 @@ if (addStatusModal) {
 // Управление данными об устройстве
 let editingItemId = null;
 let editingItemType = null;
+let deviceDataLoaded = false;
+let deviceDataLoading = false;
+const deviceDataSortables = {};
+
+function escDeviceHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function deviceActionButtons(id, name, usageType, editType) {
+    const safeName = escDeviceHtml(name);
+    const safeId = escDeviceHtml(id);
+    return `<button class="btn btn-sm btn-link p-0 text-info show-usage" data-id="${safeId}" data-name="${safeName}" data-type="${usageType}" title="Использование"><i class="fas fa-info-circle"></i></button>` +
+        `<button class="btn btn-sm btn-link p-0 text-warning edit-item ms-1" data-id="${safeId}" data-name="${safeName}" data-type="${editType}" title="Редактировать"><i class="fas fa-edit"></i></button>` +
+        `<button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="${safeId}" data-type="${editType}" title="Удалить"><i class="fas fa-trash"></i></button>`;
+}
+
+function setDeviceCount(elId, n) {
+    const el = document.getElementById(elId);
+    if (el) el.textContent = n + ' шт.';
+}
+
+function renderSortableDeviceRows(tbody, items, idAttr, usageType, editType) {
+    const frag = document.createDocumentFragment();
+    (items || []).forEach(item => {
+        const id = item.id;
+        const name = item.name || '';
+        const sortOrder = item.sort_order != null ? item.sort_order : 0;
+        const tr = document.createElement('tr');
+        tr.setAttribute(idAttr, id);
+        tr.setAttribute('data-sort-order', sortOrder);
+        tr.innerHTML =
+            `<td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>` +
+            `<td class="py-1"><small>${escDeviceHtml(name)}</small></td>` +
+            `<td class="text-end pe-2" style="width: 100px;">${deviceActionButtons(id, name, usageType, editType)}</td>`;
+        frag.appendChild(tr);
+    });
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+}
+
+function renderOrderModelRows(tbody, items) {
+    const frag = document.createDocumentFragment();
+    (items || []).forEach(item => {
+        const id = item.id;
+        const name = item.name || '';
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-model-id', id);
+        tr.innerHTML =
+            `<td class="py-1 ps-2"><small>${escDeviceHtml(name)}</small></td>` +
+            `<td class="text-end pe-2" style="width: 100px;">${deviceActionButtons(id, name, 'order-model', 'order-model')}</td>`;
+        frag.appendChild(tr);
+    });
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+}
+
+function initDeviceDataSortables() {
+    if (typeof Sortable === 'undefined') return;
+    const configs = [
+        ['symptomsTableBody', 'symptoms'],
+        ['appearanceTagsTableBody', 'appearance-tags'],
+        ['deviceTypesTableBody', 'device-types'],
+        ['deviceBrandsTableBody', 'device-brands'],
+    ];
+    configs.forEach(([bodyId, type]) => {
+        const el = document.getElementById(bodyId);
+        if (!el) return;
+        if (deviceDataSortables[bodyId]) {
+            try { deviceDataSortables[bodyId].destroy(); } catch (e) {}
+        }
+        deviceDataSortables[bodyId] = new Sortable(el, {
+            handle: '.sort-handle',
+            animation: 150,
+            onEnd: function() {
+                updateSortOrder(type, el);
+            }
+        });
+    });
+}
+
+function loadDeviceDataTables(force) {
+    if (deviceDataLoading) return Promise.resolve();
+    if (deviceDataLoaded && !force) return Promise.resolve();
+    deviceDataLoading = true;
+
+    const bodies = [
+        'deviceTypesTableBody', 'deviceBrandsTableBody', 'symptomsTableBody',
+        'appearanceTagsTableBody', 'orderModelsTableBody'
+    ];
+    bodies.forEach(id => {
+        const tb = document.getElementById(id);
+        if (tb) {
+            tb.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Загрузка...</td></tr>';
+        }
+    });
+
+    return Promise.all([
+        fetch('/api/device-types').then(r => r.json()),
+        fetch('/api/device-brands').then(r => r.json()),
+        fetch('/api/symptoms').then(r => r.json()),
+        fetch('/api/appearance-tags').then(r => r.json()),
+        fetch('/api/order-models').then(r => r.json()),
+    ]).then(([types, brands, symptoms, tags, models]) => {
+        const typesArr = Array.isArray(types) ? types : [];
+        const brandsArr = Array.isArray(brands) ? brands : [];
+        const symptomsArr = Array.isArray(symptoms) ? symptoms : [];
+        const tagsArr = Array.isArray(tags) ? tags : [];
+        const modelsArr = Array.isArray(models) ? models : [];
+
+        renderSortableDeviceRows(document.getElementById('deviceTypesTableBody'), typesArr, 'data-type-id', 'device-types', 'device-type');
+        renderSortableDeviceRows(document.getElementById('deviceBrandsTableBody'), brandsArr, 'data-brand-id', 'device-brands', 'device-brand');
+        renderSortableDeviceRows(document.getElementById('symptomsTableBody'), symptomsArr, 'data-symptom-id', 'symptoms', 'symptom');
+        renderSortableDeviceRows(document.getElementById('appearanceTagsTableBody'), tagsArr, 'data-tag-id', 'appearance-tags', 'appearance-tag');
+        renderOrderModelRows(document.getElementById('orderModelsTableBody'), modelsArr);
+
+        setDeviceCount('deviceTypesCount', typesArr.length);
+        setDeviceCount('deviceBrandsCount', brandsArr.length);
+        setDeviceCount('symptomsCount', symptomsArr.length);
+        setDeviceCount('appearanceTagsCount', tagsArr.length);
+        setDeviceCount('orderModelsCount', modelsArr.length);
+
+        initDeviceDataSortables();
+        deviceDataLoaded = true;
+    }).catch(err => {
+        console.error('Ошибка загрузки справочников устройств:', err);
+        bodies.forEach(id => {
+            const tb = document.getElementById(id);
+            if (tb) tb.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-3">Ошибка загрузки</td></tr>';
+        });
+    }).finally(() => {
+        deviceDataLoading = false;
+    });
+}
+
+function reloadDeviceDataTables() {
+    return loadDeviceDataTables(true);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const deviceDataTab = document.getElementById('device-data-tab');
+    if (deviceDataTab) {
+        deviceDataTab.addEventListener('shown.bs.tab', function() {
+            loadDeviceDataTables();
+        });
+    }
+    if (document.getElementById('device-data')?.classList.contains('active') ||
+        window.location.hash === '#device-data' ||
+        localStorage.getItem('settingsActiveTab') === '#device-data') {
+        loadDeviceDataTables();
+    }
+});
 
 // Обработчики для кнопок редактирования и удаления
 document.addEventListener('click', function(e) {
@@ -2271,7 +2344,7 @@ document.addEventListener('click', function(e) {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    reloadDeviceDataTables();
                 } else {
                     alert(data.error || 'Ошибка удаления');
                 }
@@ -2299,7 +2372,7 @@ function saveDeviceType() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addDeviceTypeModal')).hide();
-            location.reload();
+            reloadDeviceDataTables();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2326,7 +2399,7 @@ function saveDeviceBrand() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addDeviceBrandModal')).hide();
-            location.reload();
+            reloadDeviceDataTables();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2353,7 +2426,7 @@ function saveSymptom() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addSymptomModal')).hide();
-            location.reload();
+            reloadDeviceDataTables();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2380,7 +2453,7 @@ function saveAppearanceTag() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addAppearanceTagModal')).hide();
-            location.reload();
+            reloadDeviceDataTables();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2407,7 +2480,7 @@ function saveOrderModel() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addOrderModelModal')).hide();
-            location.reload();
+            reloadDeviceDataTables();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2990,53 +3063,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Инициализация drag-and-drop сортировки
 document.addEventListener('DOMContentLoaded', function() {
-    // Сортировка для симптомов
-    const symptomsTableBody = document.getElementById('symptomsTableBody');
-    if (symptomsTableBody) {
-        new Sortable(symptomsTableBody, {
-            handle: '.sort-handle',
-            animation: 150,
-            onEnd: function(evt) {
-                updateSortOrder('symptoms', symptomsTableBody);
-            }
-        });
-    }
-
-    // Сортировка для тегов внешнего вида
-    const appearanceTagsTableBody = document.getElementById('appearanceTagsTableBody');
-    if (appearanceTagsTableBody) {
-        new Sortable(appearanceTagsTableBody, {
-            handle: '.sort-handle',
-            animation: 150,
-            onEnd: function(evt) {
-                updateSortOrder('appearance-tags', appearanceTagsTableBody);
-            }
-        });
-    }
-
-    // Сортировка для типов устройств
-    const deviceTypesTableBody = document.getElementById('deviceTypesTableBody');
-    if (deviceTypesTableBody) {
-        new Sortable(deviceTypesTableBody, {
-            handle: '.sort-handle',
-            animation: 150,
-            onEnd: function(evt) {
-                updateSortOrder('device-types', deviceTypesTableBody);
-            }
-        });
-    }
-
-    // Сортировка для брендов устройств
-    const deviceBrandsTableBody = document.getElementById('deviceBrandsTableBody');
-    if (deviceBrandsTableBody) {
-        new Sortable(deviceBrandsTableBody, {
-            handle: '.sort-handle',
-            animation: 150,
-            onEnd: function(evt) {
-                updateSortOrder('device-brands', deviceBrandsTableBody);
-            }
-        });
-    }
+    // Справочники устройств сортируются после AJAX-загрузки (initDeviceDataSortables)
 
     // Сортировка для услуг
     const servicesTableBody = document.getElementById('servicesTableBody');
