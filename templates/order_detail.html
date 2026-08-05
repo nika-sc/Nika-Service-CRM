@@ -5372,26 +5372,48 @@
 
         function scheduleReloadAfterPrintFlow(defaultDelayMs = 1000) {
             const mode = String(CLOSED_PRINT_MODE || 'choice');
+            const reloadOnce = () => {
+                // Без open_payment_modal в URL — иначе после reload модалка оплаты откроется снова
+                const url = new URL(window.location.href);
+                url.searchParams.delete('open_payment_modal');
+                const qs = url.searchParams.toString();
+                window.location.href = url.pathname + (qs ? '?' + qs : '') + url.hash;
+            };
             if (mode !== 'choice') {
-                setTimeout(() => location.reload(), defaultDelayMs);
+                setTimeout(reloadOnce, defaultDelayMs);
                 return;
             }
 
             const modalEl = document.getElementById('closedPrintChoiceModal');
             if (!modalEl) {
-                setTimeout(() => location.reload(), defaultDelayMs);
+                setTimeout(reloadOnce, defaultDelayMs);
                 return;
             }
 
             let reloaded = false;
-            const reloadOnce = () => {
+            const reloadSafe = () => {
                 if (reloaded) return;
                 reloaded = true;
-                location.reload();
+                reloadOnce();
             };
-            modalEl.addEventListener('hidden.bs.modal', reloadOnce, { once: true });
+            modalEl.addEventListener('hidden.bs.modal', reloadSafe, { once: true });
             // Fallback: если модалка не появилась/не закрылась, всё равно обновим страницу.
-            setTimeout(reloadOnce, 15000);
+            setTimeout(reloadSafe, 15000);
+        }
+
+        function stripOpenPaymentModalFromUrl() {
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('open_payment_modal')) return;
+            url.searchParams.delete('open_payment_modal');
+            const qs = url.searchParams.toString();
+            history.replaceState(null, '', url.pathname + (qs ? '?' + qs : '') + url.hash);
+        }
+
+        function reloadOrderDetailClean() {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('open_payment_modal');
+            const qs = url.searchParams.toString();
+            window.location.href = url.pathname + (qs ? '?' + qs : '') + url.hash;
         }
 
         function runAutoPrintFromQueryIfNeeded() {
@@ -6849,8 +6871,8 @@
                                 scheduleReloadAfterPrintFlow(RELOAD_DELAY);
                             }, 150);
                         } else {
-                            // Перезагрузка страницы — обновятся сумма к доплате, прибыль, зарплата
-                            setTimeout(() => location.reload(), RELOAD_DELAY);
+                            // Перезагрузка без open_payment_modal — иначе модалка откроется повторно
+                            setTimeout(() => reloadOrderDetailClean(), RELOAD_DELAY);
                         }
                     } else {
                         showToast(data.error || 'Не удалось добавить оплату', 'error', 'Ошибка');
@@ -6867,7 +6889,7 @@
         // Функция для открытия модалки оплаты с информацией о долге
         function openPaymentModalWithDebt() {
             const addPaymentModal = document.getElementById('addPaymentModal');
-            if (!addPaymentModal) return;
+            if (!addPaymentModal) return false;
             
             // Получаем актуальные данные о долге из DOM
             const orderTotalEl = document.querySelector('[data-order-total]');
@@ -6895,6 +6917,11 @@
                     const debtText = orderDebtEl.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
                     orderDebt = parseFloat(debtText) || orderDebt;
                 }
+            }
+
+            if (orderDebt <= 0) {
+                showToast('Долг отсутствует', 'info', null, 3000);
+                return false;
             }
             
             // Обновляем информацию в модалке
@@ -6931,6 +6958,7 @@
             window._paymentModalFromCloseFlow = true;
             const modal = new bootstrap.Modal(addPaymentModal);
             modal.show();
+            return true;
         }
         
         // Глобальная функция для вызова из других мест
@@ -6940,7 +6968,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             const params = new URLSearchParams(window.location.search);
             if (params.get('open_payment_modal') === '1') {
-                setTimeout(function() { openPaymentModalWithDebt(); }, 500);
+                // Сразу убираем флаг: иначе после оплаты reload снова откроет модалку
+                stripOpenPaymentModalFromUrl();
+                setTimeout(function() {
+                    if (openPaymentModalWithDebt()) {
+                        // Как при закрытии с карточки: после оплаты — выбор печати
+                        pendingClosedPrintAfterPayment = true;
+                    }
+                }, 500);
             }
         });
 
