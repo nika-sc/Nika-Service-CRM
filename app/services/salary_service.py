@@ -826,10 +826,11 @@ class SalaryService:
             )
 
     @staticmethod
-    def order_changed_since_last_accrual(order_id: int) -> bool:
+    def order_line_items_changed_since_last_accrual(order_id: int) -> bool:
         """
-        Проверяет, изменилась ли заявка после последнего начисления (новые/изменённые услуги,
-        товары, оплаты или обновление заявки). Если начислений ещё нет — возвращает True.
+        True, если после последнего начисления появились новые услуги/товары/оплаты.
+        Не смотрит на orders.updated_at: смена статуса и смена мастера тоже обновляют updated_at
+        и раньше ложно запускали force_recalculate (задвоение/пересоздание ЗП).
         """
         try:
             with get_db_connection() as conn:
@@ -842,7 +843,6 @@ class SalaryService:
                 last_accrual = row[0] if row and row[0] else None
                 if not last_accrual:
                     return True
-                # Есть ли новые услуги, товары или оплаты после последнего начисления?
                 cursor.execute(
                     """
                     SELECT 1 FROM order_services WHERE order_id = ? AND created_at > ?
@@ -854,17 +854,123 @@ class SalaryService:
                     """,
                     (order_id, last_accrual, order_id, last_accrual, order_id, last_accrual),
                 )
-                if cursor.fetchone():
-                    return True
-                # Обновлялась ли заявка после последнего начисления (редактирование услуг/товаров)?
-                cursor.execute(
-                    "SELECT 1 FROM orders WHERE id = ? AND updated_at IS NOT NULL AND updated_at > ? LIMIT 1",
-                    (order_id, last_accrual),
-                )
                 return cursor.fetchone() is not None
         except Exception as e:
-            logger.warning(f"Ошибка проверки изменений заявки {order_id}: {e}")
+            logger.warning(f"Ошибка проверки изменений позиций заявки {order_id}: {e}")
             return True
+
+    @staticmethod
+    def order_changed_since_last_accrual(order_id: int) -> bool:
+        """
+        Проверяет, изменился ли состав заявки после последнего начисления
+        (новые услуги/товары/оплаты). Смена статуса/мастера сама по себе не считается.
+        """
+        return SalaryService.order_line_items_changed_since_last_accrual(order_id)
+
+    @staticmethod
+    def order_assignees_match_accruals(order_id: int) -> bool:
+        """True, если user_id начислений master/manager совпадают с master_id/manager_id заявки."""
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT master_id, manager_id FROM orders WHERE id = ?",
+                    (order_id,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return True
+                order_master_id = int(row[0]) if row[0] is not None else None
+                order_manager_id = int(row[1]) if row[1] is not None else None
+                cursor.execute(
+                    """
+                    SELECT DISTINCT user_id FROM salary_accruals
+                    WHERE order_id = ? AND role = 'master'
+                    """,
+                    (order_id,),
+                )
+                master_users = {int(r[0]) for r in cursor.fetchall() if r[0] is not None}
+                cursor.execute(
+                    """
+                    SELECT DISTINCT user_id FROM salary_accruals
+                    WHERE order_id = ? AND role = 'manager'
+                    """,
+                    (order_id,),
+                )
+                manager_users = {int(r[0]) for r in cursor.fetchall() if r[0] is not None}
+
+                if master_users:
+                    if order_master_id is None or master_users != {order_master_id}:
+                        return False
+                if manager_users:
+                    if order_manager_id is None or manager_users != {order_manager_id}:
+                        return False
+                return True
+        except Exception as e:
+            logger.warning(f"Ошибка сверки исполнителей и начислений заявки {order_id}: {e}")
+            return True
+
+    @staticmethod
+    @handle_service_error
+    def sync_accruals_to_order_assignees(order_id: int) -> Dict[str, int]:
+        """Переносит начисления на текущих master_id/manager_id заявки (без пересчёта сумм)."""
+        result = {
+            'master_updated': 0,
+            'manager_updated': 0,
+            'master_deleted': 0,
+            'manager_deleted': 0,
+        }
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT master_id, manager_id FROM orders WHERE id = ?",
+                (order_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise NotFoundError(f"Заявка с ID {order_id} не найдена")
+            new_master_id = int(row[0]) if row[0] is not None else None
+            new_manager_id = int(row[1]) if row[1] is not None else None
+
+            cursor.execute(
+                "SELECT DISTINCT user_id FROM salary_accruals WHERE order_id = ? AND role = 'master'",
+                (order_id,),
+            )
+            master_users = {int(r[0]) for r in cursor.fetchall() if r[0] is not None}
+            cursor.execute(
+                "SELECT DISTINCT user_id FROM salary_accruals WHERE order_id = ? AND role = 'manager'",
+                (order_id,),
+            )
+            manager_users = {int(r[0]) for r in cursor.fetchall() if r[0] is not None}
+
+        if master_users:
+            if new_master_id is None:
+                result['master_deleted'] = SalaryQueries.delete_accruals_for_order_role(
+                    order_id, 'master'
+                )
+            elif master_users != {new_master_id}:
+                result['master_updated'] = SalaryQueries.reassign_accruals_user(
+                    order_id, 'master', new_master_id, old_user_id=None
+                )
+
+        if manager_users:
+            if new_manager_id is None:
+                result['manager_deleted'] = SalaryQueries.delete_accruals_for_order_role(
+                    order_id, 'manager'
+                )
+            elif manager_users != {new_manager_id}:
+                result['manager_updated'] = SalaryQueries.reassign_accruals_user(
+                    order_id, 'manager', new_manager_id, old_user_id=None
+                )
+
+        touched = sum(result.values())
+        if touched:
+            logger.info(
+                "Синхронизация начислений с исполнителями заявки %s: %s",
+                order_id,
+                result,
+            )
+        return result
 
     @staticmethod
     @handle_service_error
@@ -936,29 +1042,6 @@ class SalaryService:
 
         touched = sum(result.values())
         if touched:
-            # Чтобы повторный перевод в статус «начисляет зарплату» не пересоздал
-            # начисления (order.updated_at > MAX(accrual.created_at)), подтягиваем
-            # метку начислений вперёд. Период отчётов идёт по дате оплаты, не created_at.
-            try:
-                from app.utils.datetime_utils import get_moscow_now_str
-                now = get_moscow_now_str()
-                with get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        '''
-                        UPDATE salary_accruals
-                        SET created_at = ?
-                        WHERE order_id = ? AND created_at < ?
-                        ''',
-                        (now, order_id, now),
-                    )
-                    conn.commit()
-            except Exception as e:
-                logger.warning(
-                    "Не удалось обновить created_at начислений после переноса заявки %s: %s",
-                    order_id,
-                    e,
-                )
             logger.info(
                 "Перенос зарплаты по заявке %s: master %s->%s (%s/%s), manager %s->%s (%s/%s)",
                 order_id,

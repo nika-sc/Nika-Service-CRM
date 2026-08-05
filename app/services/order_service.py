@@ -660,30 +660,50 @@ class OrderService:
                 # Важно: повторный перевод заявки в "зарплатный" статус не должен создавать
                 # новые начисления и дублировать записи в отчете/action-logs.
                 # Поэтому при смене статуса начисляем только если начислений по заявке еще нет.
-                salary_accrued = False
+                # Не смотрим на orders.updated_at: «открыл → сменил мастера → закрыл» иначе
+                # делал force_recalculate и выглядело как задвоение ЗП.
+                salary_accrued = False  # True только при реальном создании/пересчёте (для toast)
+                salary_transferred = False
                 if accrues_salary and status_changed:
                     try:
                         from app.services.salary_service import SalaryService
                         existing_accruals = SalaryService.get_accruals_for_order(order_id) or []
                         if not existing_accruals:
                             accrual_ids = SalaryService.accrue_salary_for_order(order_id)
+                            salary_accrued = len(accrual_ids) > 0
                         else:
-                            # Если заявка изменилась после последнего начисления (новые услуги/товары/оплаты),
-                            # пересчитываем начисления, иначе оставляем текущие.
-                            if SalaryService.order_changed_since_last_accrual(order_id):
-                                accrual_ids = SalaryService.accrue_salary_for_order(order_id, force_recalculate=True)
+                            line_items_changed = (
+                                SalaryService.order_line_items_changed_since_last_accrual(order_id)
+                            )
+                            assignees_ok = SalaryService.order_assignees_match_accruals(order_id)
+                            if line_items_changed:
+                                accrual_ids = SalaryService.accrue_salary_for_order(
+                                    order_id, force_recalculate=True
+                                )
+                                salary_accrued = True
                                 logger.info(
-                                    f"Зарплата по заявке {order_id} пересчитана: "
+                                    f"Зарплата по заявке {order_id} пересчитана (изменились позиции/оплаты): "
                                     f"было {len(existing_accruals)} начислений, стало {len(accrual_ids)}"
+                                )
+                            elif not assignees_ok:
+                                SalaryService.sync_accruals_to_order_assignees(order_id)
+                                salary_transferred = True
+                                existing_accruals = SalaryService.get_accruals_for_order(order_id) or []
+                                accrual_ids = [a.get('id') for a in existing_accruals if a.get('id')]
+                                logger.info(
+                                    f"Зарплата по заявке {order_id}: перенос на текущих исполнителей "
+                                    f"без пересчёта ({len(accrual_ids)} записей)"
                                 )
                             else:
                                 accrual_ids = [a.get('id') for a in existing_accruals if a.get('id')]
                                 logger.info(
                                     f"Начисление зарплаты пропущено для заявки {order_id}: "
-                                    f"изменений после начисления нет ({len(existing_accruals)} записей)"
+                                    f"изменений позиций нет, исполнители совпадают ({len(existing_accruals)} записей)"
                                 )
-                        salary_accrued = len(accrual_ids) > 0
-                        logger.info(f"Зарплата по заявке {order_id}: {len(accrual_ids)} записей")
+                        logger.info(
+                            f"Зарплата по заявке {order_id}: записей={len(accrual_ids)}, "
+                            f"new={salary_accrued}, transferred={salary_transferred}"
+                        )
                     except Exception as e:
                         logger.error(f"Ошибка при начислении зарплаты по заявке {order_id}: {e}", exc_info=True)
                         # Не прерываем выполнение, просто логируем ошибку
@@ -696,6 +716,7 @@ class OrderService:
                     'success': True,
                     'triggers_payment_modal': triggers_payment_modal,
                     'accrues_salary': salary_accrued,
+                    'salary_transferred': salary_transferred,
                     'blocks_edit': blocks_edit,
                     'is_final': is_final,
                     'requires_comment': requires_comment,

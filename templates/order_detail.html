@@ -5562,9 +5562,13 @@
                     }
                     
                     if (data.accrues_salary) {
-                        // Зарплата уже начислена на сервере, можно показать уведомление
+                        // Реальное создание/пересчёт начислений (не повторное закрытие)
                         showToast('Зарплата начислена', 'info', null, 2000);
-                        // Обновляем информацию о зарплате в карточке заявки
+                        if (typeof loadSalaryInfo === 'function') {
+                            loadSalaryInfo();
+                        }
+                    } else if (data.salary_transferred) {
+                        showToast('Начисления перенесены на текущего исполнителя', 'info', null, 2500);
                         if (typeof loadSalaryInfo === 'function') {
                             loadSalaryInfo();
                         }

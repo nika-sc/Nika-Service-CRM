@@ -3082,6 +3082,7 @@ def update_order_status_api(order_id):
                 'status_color': status_info['color'],
                 'triggers_payment_modal': result.get('triggers_payment_modal', False),
                 'accrues_salary': result.get('accrues_salary', False),
+                'salary_transferred': result.get('salary_transferred', False),
                 'blocks_edit': result.get('blocks_edit', False),
                 'is_final': result.get('is_final', False),
                 'requires_comment': result.get('requires_comment', False)
