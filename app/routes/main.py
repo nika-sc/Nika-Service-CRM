@@ -92,14 +92,15 @@ def _reset_login_guard(key: str):
 
 def _windows_setup_info():
     """Ссылки на автономный Windows SETUP (публичный релиз + зеркало на демо)."""
-    version = "1.0.4"
+    version = "1.0.5"
     filename = f"NikaCRM-Offline-Setup-{version}-x64.exe"
     tag = f"windows-setup-{version}"
     github_base = "https://github.com/nika-sc/Nika-Service-CRM"
     return {
         "version": version,
         "filename": filename,
-        "sha256": "0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E",
+        "build_date": "2026-08-08",
+        "sha256": "2D2053E214EDC135816D96C801A9B4D08DCAC8BE4EB36EF594DC12A1CD8B3731",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",
@@ -862,7 +863,6 @@ def settings():
                 })
                 # Mail.ru отклоняет From=noreply@example.com из демо-дампа — чистим при сохранении.
                 try:
-                    from email.utils import parseaddr
                     from app.services.notification_service import _is_placeholder_sender_email
                     _, sender_box = parseaddr((payload.get('mail_default_sender') or '').strip())
                     uname = (payload.get('mail_username') or '').strip()
