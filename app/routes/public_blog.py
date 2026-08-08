@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "customer-portal-login",
+        "file": "blog/20-customer-portal-login.md",
+        "date": "2026-08",
+        "title": "Клиентский портал: вход, доступ и работа — Nika CRM",
+        "description": (
+            "8 августа 2026: отдельный сценарий личного кабинета клиента — адрес входа, "
+            "выдача пароля в CRM и разделы портала со скриншотами."
+        ),
+        "heading": "Клиентский портал: вход и работа",
+        "teaser": "Как сотруднику выдать доступ, а клиенту войти в /portal/login и пользоваться кабинетом.",
+    },
+    {
         "slug": "salary-499-abort",
         "file": "blog/19-salary-499-abort.md",
         "date": "2026-08",

@@ -1,9 +1,13 @@
 [CmdletBinding()]
 param(
-    [string] $AssetsDir = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "packaging\windows\assets")
+    [string] $AssetsDir = ""
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $AssetsDir) {
+    $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+    $AssetsDir = Join-Path $repoRoot "packaging\windows\assets"
+}
 $manifestPath = Join-Path $AssetsDir "manifest.json"
 
 if (-not (Test-Path -LiteralPath $manifestPath)) {

@@ -789,6 +789,16 @@ NikaNewCrm/
 - Чат сотрудников в левом сайдбаре (Socket.IO; опционально Web Push)
 - Портал клиента: заявки и «Мои устройства»
 
+### Клиентский портал: как выдать доступ и как войти
+
+- Адрес входа клиента: `/portal/login` (локально: `http://127.0.0.1:5000/portal/login`, демо: `https://demo.nika-sc.ru/portal/login`)
+- Сотрудник выдаёт пароль в карточке клиента (`/clients/<id>`) и передаёт клиенту телефон + временный пароль
+- Клиент при первом входе меняет пароль, затем видит `/portal/dashboard`, `/portal/orders`, `/portal/payments`, `/portal/devices`, `/portal/wallet`
+- Подробно со скриншотами: [docs/USER_WALKTHROUGH.md](docs/USER_WALKTHROUGH.md) (§13) и [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (§17)
+
+![Портал — вход](docs/assets/walkthrough/29-portal-login.png)
+![Портал — дашборд](docs/assets/walkthrough/34-portal-dashboard.png)
+
 ### Права доступа
 - См. матрицу в [docs/USER_GUIDE.md](docs/USER_GUIDE.md) и [docs/API.md](docs/API.md)
 - Кастомным ролям сотрудников нельзя: `manage_users`, `manage_settings`

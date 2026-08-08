@@ -1,5 +1,5 @@
 #define MyAppName "Nika CRM"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -38,7 +38,7 @@ CloseApplications=yes
 RestartApplications=no
 MinVersion=10.0.17763
 DiskSpanning=no
-VersionInfoVersion=1.0.4.0
+VersionInfoVersion=1.0.5.0
 VersionInfoCompany=Service Center Nika
 VersionInfoDescription=Nika CRM Offline Installer for Windows
 VersionInfoCopyright=Copyright (c) 2026 Alexander Smelkov

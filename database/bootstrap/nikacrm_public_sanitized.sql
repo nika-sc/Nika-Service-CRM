@@ -10257,6 +10257,10 @@ ALTER TABLE ONLY public.order_pins
 -- =====================================================================
 -- Post-bootstrap schema: postgres migrations 011-014 (idempotent)
 -- =====================================================================
+-- pg_dump sets search_path to '' (empty). Unqualified CREATE/ALTER in this
+-- tail would fail with "no schema has been selected to create in" on Windows
+-- installer / fresh psql -f import. Restore public before idempotent DDL.
+SET search_path TO public;
 
 -- Demo-only visitor / presence events (enabled via DEMO_VISITOR_STATS=1)
 CREATE TABLE IF NOT EXISTS demo_visitor_events (

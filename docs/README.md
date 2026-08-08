@@ -9,7 +9,7 @@
 | [USER_WALKTHROUGH.md](USER_WALKTHROUGH.md) | Обучение | Сценарий рабочего дня со скриншотами (`/docs/walkthrough`), в т.ч. счета B2B |
 | [API.md](API.md) | Разработчики | HTTP API, RBAC, портал, чат |
 | [DEPLOY.md](DEPLOY.md) | Админы VPS | Docker / PostgreSQL (внутренний ops-док) |
-| [blog/](blog/) | Все | Публичный блог фич (`/blog`): [смена исполнителей и багфиксы](blog/12-bugfixes-cache-salary.md), счета [08](blog/08-invoices-b2b.md)–[10](blog/10-invoices-blank-signs.md), [производительность](blog/11-perf-cash-mobile.md) |
+| [blog/](blog/) | Все | Публичный блог фич (`/blog`): [клиентский портал](blog/20-customer-portal-login.md), [смена исполнителей и багфиксы](blog/12-bugfixes-cache-salary.md), счета [08](blog/08-invoices-b2b.md)–[10](blog/10-invoices-blank-signs.md), [производительность](blog/11-perf-cash-mobile.md) |
 
 На демо с `PUBLIC_LANDING=1` руководства открываются без GitHub:  
 https://demo.nika-sc.ru/docs

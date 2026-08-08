@@ -53,8 +53,8 @@ try {
     Set-Check "database_users" ([int] $userCount -ge 4) "users=$userCount"
 
     $desktop = [Environment]::GetFolderPath("CommonDesktopDirectory")
-    Set-Check "open_shortcut" (Test-Path (Join-Path $desktop "Nika CRM - Открыть.lnk"))
-    Set-Check "restart_shortcut" (Test-Path (Join-Path $desktop "Nika CRM - Перезапустить сервис.lnk"))
+    Set-Check "open_shortcut" (Test-Path (Join-Path $desktop "Nika CRM — Открыть.lnk"))
+    Set-Check "restart_shortcut" (Test-Path (Join-Path $desktop "Nika CRM — Перезапустить сервис.lnk"))
 
     Restart-Service -Name "NikaCRM-Web" -Force
     Start-Sleep -Seconds 5

@@ -33,7 +33,7 @@ $postgresServiceName = "NikaCRM-PostgreSQL"
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
 Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.4"
+Write-Host "[Nika CRM Setup] Bootstrap version 1.0.5"
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
