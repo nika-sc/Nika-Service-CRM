@@ -121,6 +121,10 @@ class Config:
     # Канонический URL лендинга для meta/sitemap (иначе берётся request.url_root).
     PUBLIC_LANDING_CANONICAL = (os.environ.get("PUBLIC_LANDING_CANONICAL") or "").strip().rstrip("/")
 
+    # Публичный адрес CRM для ссылок в письмах клиенту (##PORTAL_URL##).
+    # Письма уходят из фонового потока без request-контекста, поэтому адрес нужен явно.
+    PORTAL_PUBLIC_URL = (os.environ.get("PORTAL_PUBLIC_URL") or "").strip().rstrip("/")
+
     # Публичное демо: подсказка на /login (учётка, счётчики из БД, текст про железо).
     # Включать только на демо-VPS: DEMO_LOGIN_BANNER=1
     DEMO_LOGIN_BANNER = os.environ.get("DEMO_LOGIN_BANNER", "").strip().lower() in (

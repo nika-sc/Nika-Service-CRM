@@ -84,6 +84,73 @@ def _normalize_email_address(raw_value: str) -> str:
         return ''
 
 
+def _resolve_portal_login_url() -> str:
+    """
+    Публичный адрес страницы входа клиента в личный кабинет.
+
+    Письмо «Заказ принят» уходит из фонового потока без request-контекста,
+    поэтому основной источник — PORTAL_PUBLIC_URL из окружения.
+    """
+    from flask import current_app, request, has_request_context
+
+    base = ''
+    try:
+        base = (current_app.config.get('PORTAL_PUBLIC_URL') or '').strip().rstrip('/')
+        if not base:
+            base = (current_app.config.get('PUBLIC_LANDING_CANONICAL') or '').strip().rstrip('/')
+    except Exception:
+        base = ''
+    if not base and has_request_context():
+        base = (request.url_root or '').rstrip('/')
+    if not base:
+        try:
+            hosts = current_app.config.get('TRUSTED_HOSTS') or []
+        except Exception:
+            hosts = []
+        for host in hosts:
+            host = (host or '').strip().strip('/')
+            if not host or host in ('localhost', '127.0.0.1', '0.0.0.0') or '.' not in host:
+                continue
+            base = host if host.startswith('http') else f"https://{host}"
+            break
+    if not base:
+        return ''
+    return f"{base}/portal/login"
+
+
+def _get_last_generated_portal_password(customer_id: int) -> str:
+    """
+    Возвращает последний выданный пароль портала из журнала действий.
+
+    Нужен для повторной отправки письма: пароль хранится только хешем,
+    открытое значение остаётся в action_logs, пока клиент его не сменил.
+    """
+    try:
+        with get_db_connection(row_factory=sqlite3.Row) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT details
+                FROM action_logs
+                WHERE entity_type = 'customer_portal_password'
+                AND entity_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                ''',
+                (customer_id,)
+            )
+            row = cursor.fetchone()
+        if not row or not row['details']:
+            return ''
+        details = row['details']
+        if isinstance(details, str):
+            details = json.loads(details)
+        return str((details or {}).get('generated_password') or '')
+    except Exception as e:
+        logger.debug(f"Не удалось получить пароль портала из журнала для клиента {customer_id}: {e}")
+        return ''
+
+
 def _send_mail_with_retry(mail_client, message, app, max_attempts: int = 2) -> bool:
     """
     Отправка письма с повторной попыткой при временных SMTP-сбоях.
@@ -479,9 +546,10 @@ class NotificationService:
     <p>Здравствуйте, ##CLIENT_NAME##!</p>
     <p>Ваша заявка <strong>##ORDER_NUMBER##</strong> успешно принята в работу. Мы свяжемся с вами при необходимости и сообщим о готовности.</p>
     <p><strong>Данные для входа в личный кабинет:</strong><br>
+    Адрес входа: <a href="##PORTAL_URL##">##PORTAL_URL##</a><br>
     Логин: <strong>##PORTAL_LOGIN##</strong><br>
     Временный пароль: <strong>##PORTAL_TEMP_PASSWORD##</strong></p>
-    <p>Рекомендуем сменить пароль после первого входа. В кабинете вы можете отслеживать статус заявки.</p>
+    <p>При первом входе система попросит задать свой пароль. В кабинете вы можете отслеживать статус заявки.</p>
     <p>Спасибо за обращение! С уважением,<br>сервисный центр «Ника».</p>
 </div>
             """,
@@ -673,6 +741,7 @@ class NotificationService:
 
             portal_login = getattr(customer, 'phone', '') or ''
             portal_temp_password = ''
+            portal_url = _resolve_portal_login_url()
             if template_type == 'order_accepted':
                 has_portal = bool(getattr(customer, 'portal_enabled', 0))
                 has_password = bool(getattr(customer, 'portal_password_hash', None))
@@ -680,6 +749,10 @@ class NotificationService:
                     generated = CustomerPortalService.generate_and_set_portal_password(cid)
                     if generated:
                         portal_temp_password = generated
+                elif not getattr(customer, 'portal_password_changed', 0):
+                    # Доступ уже выдан, но клиент ещё не менял пароль:
+                    # повторное письмо должно содержать тот же пароль, а не пустую строку.
+                    portal_temp_password = _get_last_generated_portal_password(cid)
 
             # photo count из вложений комментариев по заявке
             photo_count = 0
@@ -743,6 +816,7 @@ class NotificationService:
                 'UPDATED_AT': get_moscow_now_str('%d.%m.%Y %H:%M:%S'),
                 'PORTAL_LOGIN': portal_login,
                 'PORTAL_TEMP_PASSWORD': portal_temp_password,
+                'PORTAL_URL': portal_url,
                 'ORDER_DEVICE_TYPE': order_device_type,
                 'ORDER_DEVICE_BRAND': order_device_brand,
                 'ORDER_MODEL': order_model,

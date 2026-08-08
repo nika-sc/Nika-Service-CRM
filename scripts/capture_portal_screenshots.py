@@ -7,6 +7,7 @@ Default target is public demo:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -15,6 +16,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "assets" / "walkthrough"
 
+# Пары «страница кабинета» должны отличаться: одинаковые байты означают,
+# что вход не удался и снят экран логина.
+CABINET_SHOTS = (
+    "29-portal-login.png",
+    "34-portal-dashboard.png",
+    "35-portal-orders.png",
+    "36-portal-payments.png",
+    "37-portal-devices.png",
+    "38-portal-wallet.png",
+)
+
+
+def _find_duplicates(out: Path, names: tuple[str, ...]) -> list[list[str]]:
+    by_digest: dict[str, list[str]] = {}
+    for name in names:
+        path = out / name
+        if not path.exists():
+            continue
+        digest = hashlib.md5(path.read_bytes()).hexdigest()
+        by_digest.setdefault(digest, []).append(name)
+    return [group for group in by_digest.values() if len(group) > 1]
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture Nika CRM customer portal screenshots")
@@ -22,6 +45,13 @@ def main() -> int:
     parser.add_argument("--staff-user", default="demo_admin")
     parser.add_argument("--staff-password", default="Demo2026!")
     parser.add_argument("--portal-password", default="Portal123!")
+    parser.add_argument(
+        "--customer-id",
+        type=int,
+        default=None,
+        help="Клиент для съёмки кабинета. По умолчанию первый из /clients, "
+             "но у него может не быть заявок и платежей.",
+    )
     parser.add_argument("--out", type=Path, default=OUT)
     args = parser.parse_args()
 
@@ -79,15 +109,18 @@ def main() -> int:
         goto("/clients", wait_ms=1800)
         shot("30-portal-clients-list.png")
 
-        # Open first client card from /clients/<id>
-        href = ""
-        for a in page.locator("a[href*='/clients/']").all():
-            link = a.get_attribute("href") or ""
-            if re.search(r"/clients/\d+$", link):
-                href = link
-                break
-        if not href:
-            raise RuntimeError("Could not find client detail link on /clients")
+        # Open client card
+        if args.customer_id:
+            href = f"/clients/{args.customer_id}"
+        else:
+            href = ""
+            for a in page.locator("a[href*='/clients/']").all():
+                link = a.get_attribute("href") or ""
+                if re.search(r"/clients/\d+$", link):
+                    href = link
+                    break
+            if not href:
+                raise RuntimeError("Could not find client detail link on /clients")
 
         goto(href if href.startswith("/") else f"/{href}", wait_ms=1800)
         shot("31-portal-client-card.png")
@@ -139,8 +172,11 @@ def main() -> int:
                 f"Failed to set portal password: {set_result.get('status')} {set_result.get('payload')}"
             )
 
-        # Show customer detail with portal block after password set
+        # Portal password lives inside the edit modal, so open it for the screenshot
         goto(f"/clients/{customer_id}", wait_ms=1500)
+        page.locator("button[data-bs-target='#editCustomerModal']").first.click()
+        page.wait_for_selector("#editCustomerModal.show", timeout=15000)
+        page.wait_for_timeout(800)
         shot("32-portal-password-issued.png")
 
         # Portal login with customer creds
@@ -151,15 +187,26 @@ def main() -> int:
         page.locator("button[type='submit']").click()
         page.wait_for_timeout(1800)
 
-        # First login requires password change
+        # First login forces a password change: the form asks for the current
+        # password again (phone stays readonly), and leaving it empty silently
+        # blocks the submit.
         if page.locator("input[name='new_password']").count():
+            page.locator("input[name='password']").fill(args.portal_password)
             page.locator("input[name='new_password']").fill(args.portal_password)
             page.locator("input[name='new_password_confirm']").fill(args.portal_password)
             page.locator("button[type='submit']").click()
-            page.wait_for_timeout(1800)
+            page.wait_for_timeout(2000)
+
+        if "/portal/login" in page.url:
+            raise RuntimeError(
+                f"Portal login failed, still on {page.url}. "
+                "Screenshots would show the login page instead of the customer cabinet."
+            )
 
         # Customer portal pages
         goto("/portal/dashboard", wait_ms=1500)
+        if "/portal/login" in page.url:
+            raise RuntimeError("Portal session lost before dashboard screenshot")
         shot("34-portal-dashboard.png")
 
         goto("/portal/orders", wait_ms=1500)
@@ -175,6 +222,14 @@ def main() -> int:
         shot("38-portal-wallet.png")
 
         browser.close()
+
+    duplicates = _find_duplicates(out, CABINET_SHOTS)
+    if duplicates:
+        raise RuntimeError(
+            "Identical portal screenshots detected: "
+            + "; ".join(" == ".join(group) for group in duplicates)
+            + ". This usually means the portal session was not established."
+        )
 
     print("Done.")
     return 0

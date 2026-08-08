@@ -14,5 +14,19 @@ python scripts/capture_walkthrough_screenshots.py --base-url http://127.0.0.1:50
 Отдельная съёмка портала (подготовка пароля в CRM + вход клиента):
 
 ```bash
-python scripts/capture_portal_screenshots.py
+python scripts/capture_portal_screenshots.py --customer-id 2
 ```
+
+Указывайте `--customer-id` клиента с заявками и платежами, иначе разделы кабинета будут пустыми.
+
+Скрипт сам проверяет, что вход в портал состоялся (`/portal/dashboard`) и что снимки кабинета не совпадают побайтово. Если проверка падает — значит снялся экран логина, а не кабинет; публиковать такие файлы нельзя.
+
+Снимать только на демо-данных: кадры `30`–`32` показывают список и карточку клиента, поэтому боевая база с реальными ФИО и телефонами не годится. Локально это разворачивается так:
+
+```bash
+psql -d nikacrm_shots -f database/bootstrap/nikacrm_public_sanitized.sql
+DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/nikacrm_shots NIKA_DEMO_SEED_CONFIRM=YES \
+  python scripts/seed_demo_bulk.py --yes --orders 120 --customers 60 --staff-users 12 --parts 40
+```
+
+Учётка для съёмки — `demo_admin` / `Demo2026!`.
