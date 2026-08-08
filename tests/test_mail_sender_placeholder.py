@@ -55,3 +55,34 @@ def test_apply_replaces_demo_sender(monkeypatch):
     ns._apply_mail_config_from_settings(app)
     assert app.config['MAIL_DEFAULT_SENDER'] == 'nika-sc@bk.ru'
     assert ns._resolve_sender_email(app) == 'nika-sc@bk.ru'
+
+
+def test_apply_does_not_fallback_empty_smtp_to_localhost(monkeypatch):
+    from app.services import notification_service as ns
+    import app.services.settings_service as ss
+
+    monkeypatch.setattr(
+        ss.SettingsService,
+        'get_general_settings',
+        staticmethod(lambda: {
+            'mail_server': '',
+            'mail_port': 587,
+            'mail_use_tls': True,
+            'mail_use_ssl': False,
+            'mail_username': 'a@b.ru',
+            'mail_password': 'secret',
+            'mail_default_sender': 'a@b.ru',
+            'mail_timeout': 3,
+        }),
+    )
+    monkeypatch.delenv('MAIL_SERVER', raising=False)
+    app = _App(
+        MAIL_SERVER='localhost',
+        MAIL_PORT=587,
+        MAIL_USERNAME='a@b.ru',
+        MAIL_PASSWORD='secret',
+        MAIL_DEFAULT_SENDER='a@b.ru',
+        MAIL_TIMEOUT=3,
+    )
+    ns._apply_mail_config_from_settings(app)
+    assert app.config['MAIL_SERVER'] == ''

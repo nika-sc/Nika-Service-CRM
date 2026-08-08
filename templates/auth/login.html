@@ -118,13 +118,14 @@
                             {% endif %}
                             {% if windows_setup %}
                             <hr class="my-3 opacity-50">
-                            <div class="fw-semibold mb-2"><i class="fab fa-windows me-1"></i> Windows Offline SETUP</div>
+                            <div class="fw-semibold mb-2"><i class="fab fa-windows me-1"></i> Windows Offline SETUP {{ windows_setup.version }}{% if windows_setup.build_date %} ({{ windows_setup.build_date }}){% endif %}</div>
                             <p class="mb-2">
                                 Автономная установка на свой ПК (нужны права администратора):
                                 <a href="{{ windows_setup.github_download_url }}">скачать с GitHub</a>
                                 ·
                                 <a href="{{ windows_setup.demo_download_url }}">зеркало</a>.
                                 Логины SETUP: <code>admin</code>/<code>manager</code>/<code>master</code>/<code>viewer</code>, пароль <code>111111</code>.
+                                {% if windows_setup.sha256 %}<span class="d-block small text-muted mt-1">SHA256: <code>{{ windows_setup.sha256 }}</code></span>{% endif %}
                             </p>
                             {% endif %}
                         </div>

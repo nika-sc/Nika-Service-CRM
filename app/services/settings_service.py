@@ -157,6 +157,10 @@ class SettingsService:
                         uname = (d.get('mail_username') or '').strip()
                         if _is_placeholder_sender_email(sender_box) and uname and '@' in uname and not _is_placeholder_sender_email(uname):
                             d['mail_default_sender'] = uname
+                        # director@example.com из bootstrap не показываем как «настоящий» адрес
+                        _, director_box = parseaddr((d.get('director_email') or '').strip())
+                        if _is_placeholder_sender_email(director_box):
+                            d['director_email'] = ''
                     except Exception:
                         pass
                     # Нормализуем булевы/числа для шаблона
@@ -326,66 +330,59 @@ class SettingsService:
                     close_print_mode = str(payload.get('close_print_mode') or 'choice')
                     if close_print_mode not in ('choice', 'sales_receipt', 'work_act', 'both', 'none'):
                         close_print_mode = 'choice'
-                    if has_director_cols:
-                        cursor.execute(
-                            '''
-                            UPDATE general_settings
-                            SET close_print_mode = ?,
-                                auto_email_order_accepted = ?,
-                                auto_email_status_update = ?,
-                                auto_email_order_ready = ?,
-                                auto_email_order_closed = ?,
-                                director_email = ?,
-                                auto_email_director_order_accepted = ?,
-                                auto_email_director_order_closed = ?,
-                                sms_enabled = ?,
-                                telegram_enabled = ?,
-                                signature_name = ?,
-                                signature_position = ?
-                            WHERE id = 1
-                            ''',
-                            (
-                                close_print_mode,
-                                1 if _mail_bool('auto_email_order_accepted', True) else 0,
-                                1 if _mail_bool('auto_email_status_update', True) else 0,
-                                1 if _mail_bool('auto_email_order_ready', True) else 0,
-                                1 if _mail_bool('auto_email_order_closed', True) else 0,
-                                payload.get('director_email', ''),
-                                1 if _mail_bool('auto_email_director_order_accepted', True) else 0,
-                                1 if _mail_bool('auto_email_director_order_closed', True) else 0,
-                                1 if _mail_bool('sms_enabled', False) else 0,
-                                1 if _mail_bool('telegram_enabled', False) else 0,
-                                payload.get('signature_name', ''),
-                                payload.get('signature_position', ''),
-                            )
+                    cursor.execute(
+                        '''
+                        UPDATE general_settings
+                        SET close_print_mode = ?,
+                            auto_email_order_accepted = ?,
+                            auto_email_status_update = ?,
+                            auto_email_order_ready = ?,
+                            auto_email_order_closed = ?,
+                            sms_enabled = ?,
+                            telegram_enabled = ?,
+                            signature_name = ?,
+                            signature_position = ?
+                        WHERE id = 1
+                        ''',
+                        (
+                            close_print_mode,
+                            1 if _mail_bool('auto_email_order_accepted', True) else 0,
+                            1 if _mail_bool('auto_email_status_update', True) else 0,
+                            1 if _mail_bool('auto_email_order_ready', True) else 0,
+                            1 if _mail_bool('auto_email_order_closed', True) else 0,
+                            1 if _mail_bool('sms_enabled', False) else 0,
+                            1 if _mail_bool('telegram_enabled', False) else 0,
+                            payload.get('signature_name', ''),
+                            payload.get('signature_position', ''),
                         )
-                    else:
-                        cursor.execute(
-                            '''
-                            UPDATE general_settings
-                            SET close_print_mode = ?,
-                                auto_email_order_accepted = ?,
-                                auto_email_status_update = ?,
-                                auto_email_order_ready = ?,
-                                auto_email_order_closed = ?,
-                                sms_enabled = ?,
-                                telegram_enabled = ?,
-                                signature_name = ?,
-                                signature_position = ?
-                            WHERE id = 1
-                            ''',
-                            (
-                                close_print_mode,
-                                1 if _mail_bool('auto_email_order_accepted', True) else 0,
-                                1 if _mail_bool('auto_email_status_update', True) else 0,
-                                1 if _mail_bool('auto_email_order_ready', True) else 0,
-                                1 if _mail_bool('auto_email_order_closed', True) else 0,
-                                1 if _mail_bool('sms_enabled', False) else 0,
-                                1 if _mail_bool('telegram_enabled', False) else 0,
-                                payload.get('signature_name', ''),
-                                payload.get('signature_position', ''),
-                            )
+                    )
+
+                # Email директора — отдельный UPDATE: не зависит от close_print_mode
+                # и не теряется, если колонка есть, а блок автоматизаций нет.
+                if has_director_cols and count > 0:
+                    director_email = (payload.get('director_email') or '').strip()
+                    try:
+                        from email.utils import parseaddr
+                        from app.services.notification_service import _is_placeholder_sender_email
+                        _, director_box = parseaddr(director_email)
+                        if _is_placeholder_sender_email(director_box):
+                            director_email = ''
+                    except Exception:
+                        pass
+                    cursor.execute(
+                        '''
+                        UPDATE general_settings
+                        SET director_email = ?,
+                            auto_email_director_order_accepted = ?,
+                            auto_email_director_order_closed = ?
+                        WHERE id = 1
+                        ''',
+                        (
+                            director_email,
+                            1 if _mail_bool('auto_email_director_order_accepted', True) else 0,
+                            1 if _mail_bool('auto_email_director_order_closed', True) else 0,
                         )
+                    )
 
                 # B2B реквизиты продавца (счета)
                 b2b_cols = [
@@ -431,6 +428,14 @@ class SettingsService:
                 
                 # Очищаем кэш настроек
                 clear_cache(key_prefix='settings')
+
+                # Синхронизируем SMTP в .env (Windows ProgramData / Linux корень), если файл есть.
+                # Пустой пароль в форме не затирает MAIL_PASSWORD в файле.
+                try:
+                    from app.utils.dotenv_file import sync_mail_settings_to_dotenv
+                    sync_mail_settings_to_dotenv(payload)
+                except Exception as e:
+                    logger.warning(f"Не удалось синхронизировать MAIL_* в .env: {e}")
 
                 # Логируем изменение настроек
                 try:

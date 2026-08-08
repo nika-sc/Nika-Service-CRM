@@ -100,7 +100,7 @@ def _windows_setup_info():
         "version": version,
         "filename": filename,
         "build_date": "2026-08-08",
-        "sha256": "2D2053E214EDC135816D96C801A9B4D08DCAC8BE4EB36EF594DC12A1CD8B3731",
+        "sha256": "18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",
@@ -828,6 +828,8 @@ def settings():
             if 'org_name' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})
+                # Только поля вкладки «Общие» / почта. Чекбоксы «Уведомления клиентам»
+                # живут в отдельной форме — иначе при сохранении SMTP они сбрасываются в off.
                 payload.update({
                     'org_name': request.form.get('org_name', ''),
                     'phone': request.form.get('phone', ''),
@@ -851,16 +853,11 @@ def settings():
                     'mail_timeout': request.form.get('mail_timeout', ''),
                     'print_page_size': request.form.get('print_page_size', 'A4'),
                     'print_margin_mm': int(request.form.get('print_margin_mm') or 3),
-                    'close_print_mode': request.form.get('close_print_mode', 'choice'),
-                    'auto_email_order_accepted': request.form.get('auto_email_order_accepted') == 'on',
-                    'auto_email_status_update': request.form.get('auto_email_status_update') == 'on',
-                    'auto_email_order_ready': request.form.get('auto_email_order_ready') == 'on',
-                    'auto_email_order_closed': request.form.get('auto_email_order_closed') == 'on',
-                    'sms_enabled': request.form.get('sms_enabled') == 'on',
-                    'telegram_enabled': request.form.get('telegram_enabled') == 'on',
-                    'signature_name': request.form.get('signature_name', ''),
-                    'signature_position': request.form.get('signature_position', ''),
                 })
+                if 'signature_name' in request.form:
+                    payload['signature_name'] = request.form.get('signature_name', '')
+                if 'signature_position' in request.form:
+                    payload['signature_position'] = request.form.get('signature_position', '')
                 # Mail.ru отклоняет From=noreply@example.com из демо-дампа — чистим при сохранении.
                 try:
                     from app.services.notification_service import _is_placeholder_sender_email
@@ -907,6 +904,7 @@ def settings():
             elif 'automation_settings' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})
+                # Только поля вкладки «Уведомления клиентам» — не трогаем подписи/почту/директора.
                 payload.update({
                     'close_print_mode': request.form.get('close_print_mode', 'choice'),
                     'auto_email_order_accepted': request.form.get('auto_email_order_accepted') == 'on',
@@ -915,8 +913,6 @@ def settings():
                     'auto_email_order_closed': request.form.get('auto_email_order_closed') == 'on',
                     'sms_enabled': request.form.get('sms_enabled') == 'on',
                     'telegram_enabled': request.form.get('telegram_enabled') == 'on',
-                    'signature_name': request.form.get('signature_name', ''),
-                    'signature_position': request.form.get('signature_position', ''),
                 })
                 SettingsService.save_general_settings(payload)
                 settings = SettingsService.get_general_settings()
@@ -938,12 +934,26 @@ def settings():
             elif 'director_notifications_test' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 recipient = (request.form.get('director_email') or current_settings.get('director_email') or '').strip()
-                if not _is_valid_ascii_email(recipient):
-                    flash('Тест не отправлен: укажите корректный Email директора (ASCII).', 'error')
+                from app.services.notification_service import NotificationService, _is_placeholder_sender_email
+                _, recipient_box = parseaddr(recipient)
+                if not _is_valid_ascii_email(recipient) or _is_placeholder_sender_email(recipient_box):
+                    flash(
+                        'Тест не отправлен: укажите реальный Email директора (не @example.com из демо).',
+                        'error',
+                    )
                     success = False
                     director_test_result = {'ok': False, 'message': 'Последняя проверка: email директора невалиден.'}
+                    settings = SettingsService.get_general_settings()
                 else:
-                    from app.services.notification_service import NotificationService
+                    # Сохраняем email до теста — иначе после ошибки SMTP поле откатывается к демо-адресу
+                    payload = dict(current_settings or {})
+                    payload.update({
+                        'director_email': recipient,
+                        'auto_email_director_order_accepted': request.form.get('auto_email_director_order_accepted') == 'on',
+                        'auto_email_director_order_closed': request.form.get('auto_email_director_order_closed') == 'on',
+                    })
+                    SettingsService.save_general_settings(payload)
+                    settings = SettingsService.get_general_settings()
                     sent, err_msg = NotificationService.send_director_test_email(recipient)
                     success = bool(sent)
                     if sent:
@@ -984,8 +994,13 @@ def settings():
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})
                 director_email = (request.form.get('director_email') or '').strip()
-                if director_email and not _is_valid_ascii_email(director_email):
-                    flash('Email директора должен быть корректным адресом в формате user@domain.com (ASCII).', 'error')
+                from app.services.notification_service import _is_placeholder_sender_email
+                _, director_box = parseaddr(director_email)
+                if director_email and (not _is_valid_ascii_email(director_email) or _is_placeholder_sender_email(director_box)):
+                    flash(
+                        'Email директора должен быть реальным адресом user@domain.com (не @example.com из демо).',
+                        'error',
+                    )
                     success = False
                     settings = SettingsService.get_general_settings()
                 else:

@@ -1,5 +1,6 @@
 #define MyAppName "Nika CRM"
 #define MyAppVersion "1.0.5"
+#define MyAppVersionDate "2026-08-08"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -11,12 +12,13 @@
 AppId={{D606AA35-BA7B-46F0-96E4-72EB1CCCE693}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion} ({#MyAppVersionDate})
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL=https://github.com/nika-sc/Nika-Service-CRM/issues
 AppUpdatesURL={#MyAppURL}
 AppContact={#MyAppEmail}
-AppComments=Free open-source CRM for service centers. MIT License.
+AppComments=Free open-source CRM for service centers. MIT License. Build {#MyAppVersionDate}.
 DefaultDirName={autopf}\NikaCRM
 DefaultGroupName=Nika CRM
 DisableProgramGroupPage=yes
@@ -40,7 +42,7 @@ MinVersion=10.0.17763
 DiskSpanning=no
 VersionInfoVersion=1.0.5.0
 VersionInfoCompany=Service Center Nika
-VersionInfoDescription=Nika CRM Offline Installer for Windows
+VersionInfoDescription=Nika CRM Offline Installer for Windows ({#MyAppVersionDate})
 VersionInfoCopyright=Copyright (c) 2026 Alexander Smelkov
 VersionInfoProductName=Nika CRM
 VersionInfoProductVersion={#MyAppVersion}

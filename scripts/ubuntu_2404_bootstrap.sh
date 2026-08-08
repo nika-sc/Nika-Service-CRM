@@ -79,6 +79,24 @@ SOCKETIO_CORS_ALLOWED_ORIGINS=http://localhost:5000,http://127.0.0.1:5000,@priva
 RATELIMIT_STORAGE_URI=memory://
 TIMEZONE_OFFSET=3
 EOF
+if [[ -f "$DEST/scripts/templates/mail.env.snippet" ]]; then
+  cat "$DEST/scripts/templates/mail.env.snippet" >>"$DEST/.env"
+else
+  cat >>"$DEST/.env" <<'EOF'
+
+# =============================================================================
+# Настройки для отправки писем клиентам (SMTP)
+# Можно заполнить здесь или в CRM: Настройки → Общие → Почта (SMTP).
+# =============================================================================
+MAIL_SERVER=
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USE_SSL=False
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_DEFAULT_SENDER=
+EOF
+fi
 chmod 600 "$DEST/.env"
 
 cd "$DEST"

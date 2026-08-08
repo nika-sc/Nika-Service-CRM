@@ -353,18 +353,23 @@ cd Nika-Service-CRM
 ### Windows SETUP (полный офлайн-установщик)
 
 Для Windows 10/11 x64 доступен единый автономный установщик
-`NikaCRM-Offline-Setup-1.0.4-x64.exe`.
+`NikaCRM-Offline-Setup-1.0.5-x64.exe` (**сборка 2026-08-08**).
 Он не требует интернета и автоматически устанавливает встроенные Python 3.12
 и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
 миграции и регистрирует Nika CRM как службу Windows с автозапуском.
 
+**Что нового в 1.0.5 (2026-08-08):** доступ из LAN; SMTP без демо-`noreply@example.com`
+(поле «От кого» = логин); подсказки почты в настройках; правки квитанций и
+предварительной стоимости. Подробности — [блог Windows SETUP 1.0.5](docs/blog/23-windows-setup-1-0-5.md)
+и [SMTP](docs/blog/22-smtp-mail-setup.md).
+
 **Скачать:**
 
-- [NikaCRM-Offline-Setup-1.0.4-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.4/NikaCRM-Offline-Setup-1.0.4-x64.exe)
-- [Страница релиза `windows-setup-1.0.4`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.4)
-- [Зеркало на демо-сайте](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.4-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
+- [Зеркало на демо-сайте](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `0B7BD33ACA0D68AC8EEE1C63EB3C5B6BD671EC84A364C305E78CB59A00AD557E`
+SHA256: `18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D`
 
 1. Скачайте EXE по ссылке выше.
 2. Запустите установщик **от имени администратора** (права Admin обязательны).

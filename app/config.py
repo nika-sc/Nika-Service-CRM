@@ -85,7 +85,8 @@ class Config:
     TIMEZONE_OFFSET = int(os.environ.get('TIMEZONE_OFFSET', '3'))
     
     # Flask-Mail настройки
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
+    # Пустой default: иначе Flask-Mail/старый код ходит на localhost → WinError 10061.
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', '')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'

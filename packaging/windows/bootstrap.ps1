@@ -33,7 +33,7 @@ $postgresServiceName = "NikaCRM-PostgreSQL"
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
 Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.5"
+Write-Host "[Nika CRM Setup] Bootstrap version 1.0.5 (2026-08-08)"
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
@@ -407,6 +407,14 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         "TIMEZONE_OFFSET" = "3"
         "PUBLIC_LANDING" = "0"
         "DEMO_LOGIN_BANNER" = "0"
+        # Пустой SMTP-блок: заполняется в CRM Настройки → Почта (синхронизируется обратно в .env)
+        "MAIL_SERVER" = ""
+        "MAIL_PORT" = "587"
+        "MAIL_USE_TLS" = "True"
+        "MAIL_USE_SSL" = "False"
+        "MAIL_USERNAME" = ""
+        "MAIL_PASSWORD" = ""
+        "MAIL_DEFAULT_SENDER" = ""
     }
     if (-not (Test-Path -LiteralPath $envFile)) {
         $alwaysSet["SECRET_KEY"] = $setIfMissing["SECRET_KEY"]
@@ -416,6 +424,20 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         $alwaysSet["DEMO_LOGIN_BANNER"] = "0"
     }
     Merge-DotEnvFile -Path $envFile -AlwaysSet $alwaysSet -SetIfMissing $setIfMissing
+    # Комментарий-подсказка SMTP один раз (ключи уже в файле через SetIfMissing)
+    $envText = [System.IO.File]::ReadAllText($envFile)
+    if ($envText -notmatch "отправки писем клиентам \(SMTP\)") {
+        $mailComment = @"
+
+# =============================================================================
+# Настройки для отправки писем клиентам (SMTP)
+# Заполните в CRM: Настройки → Общие → Почта (SMTP) — ключи ниже обновятся автоматически.
+# Или пропишите вручную (пароль приложения, не обычный пароль почты).
+# =============================================================================
+"@
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::AppendAllText($envFile, $mailComment.Replace("`n", "`r`n"), $utf8NoBom)
+    }
     Import-DotEnv $envFile
 
     Write-Step "Opening Windows Firewall for local network access"

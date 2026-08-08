@@ -4,15 +4,19 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Published download links:**
+**Published download links (1.0.5, build 2026-08-08):**
 
-- [NikaCRM-Offline-Setup-1.0.4-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.4/NikaCRM-Offline-Setup-1.0.4-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.4)
-- [Demo mirror](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.4-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
+- [Demo mirror](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+
+SHA256: `18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D`
+
+**Changelog 1.0.5 (2026-08-08):** LAN access; SMTP From must match login (no demo `noreply@example.com`); mail settings UX + docs; receipt/estimated-cost fixes. See `docs/blog/23-windows-setup-1-0-5.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.4-x64.exe` (links above).
+1. Download `NikaCRM-Offline-Setup-1.0.5-x64.exe` (links above).
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change

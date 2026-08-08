@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "windows-setup-1-0-5",
+        "file": "blog/23-windows-setup-1-0-5.md",
+        "date": "2026-08",
+        "title": "Windows SETUP 1.0.5 (2026-08-08): LAN, SMTP и квитанции — Nika CRM",
+        "description": (
+            "8 августа 2026: офлайн-установщик 1.0.5 — доступ из LAN, исправление "
+            "noreply@example.com для Mail.ru, гайд SMTP, правки квитанций и предварительной стоимости."
+        ),
+        "heading": "Windows SETUP 1.0.5",
+        "teaser": "Сборка от 2026-08-08: LAN, SMTP «От кого»=логин, квитанции.",
+    },
+    {
         "slug": "smtp-mail-setup",
         "file": "blog/22-smtp-mail-setup.md",
         "date": "2026-08",

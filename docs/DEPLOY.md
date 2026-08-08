@@ -107,13 +107,15 @@ systemctl is-active nikacrm nginx
 Два равноправных источника (приоритет у заполненных полей в CRM):
 
 1. **Настройки → Общие → Почта (SMTP)** — основной путь для Windows Offline и большинства установок.
-2. Переменные `MAIL_*` в `.env` — удобно на Linux/VPS.
+   При сохранении CRM обновляет `MAIL_*` в `.env` (если файл есть).
+2. Переменные `MAIL_*` в `.env` — шаблон пустых ключей ставится при Linux/Windows install
+   (`scripts/templates/mail.env.snippet`, `.env.example`).
 
 ```
 MAIL_SERVER=smtp.mail.ru
 MAIL_PORT=587
-MAIL_USE_TLS=true
-MAIL_USE_SSL=false
+MAIL_USE_TLS=True
+MAIL_USE_SSL=False
 MAIL_USERNAME=your@bk.ru
 MAIL_PASSWORD=...
 # Тот же mailbox, что логин (не noreply@example.com):
@@ -122,7 +124,7 @@ MAIL_DEFAULT_SENDER=Nika CRM <your@bk.ru>
 
 **Важно:** `MAIL_DEFAULT_SENDER` / поле «От кого» должно содержать **тот же email**, что `MAIL_USERNAME`. Демо-значение `noreply@example.com` провайдеры отклоняют (`550 not local sender`). Подробно: [USER_GUIDE § 13.5](USER_GUIDE.md#135-почта-smtp) и статья блога `smtp-mail-setup`.
 
-После правки `.env` — перезапуск приложения (`docker compose up -d` / служба Windows).
+После ручной правки `.env` — перезапуск приложения (`docker compose up -d` / служба Windows). После сохранения в UI CRM перезапуск обычно не обязателен (процесс обновляет `os.environ`).
 
 ## Web Push (чат сотрудников, опционально)
 

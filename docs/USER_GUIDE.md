@@ -96,19 +96,23 @@ Nika CRM — веб-система для сервисного центра: з�
 
 ### 2.3. Автономная установка на Windows
 
-Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база):
+Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база), версия **1.0.5**, дата сборки **2026-08-08**:
 
-1. Скачайте [NikaCRM-Offline-Setup-1.0.4-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.4/NikaCRM-Offline-Setup-1.0.4-x64.exe)  
-   или зеркало на [demo.nika-sc.ru/downloads/…](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.4-x64.exe).
+1. Скачайте [NikaCRM-Offline-Setup-1.0.5-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)  
+   или зеркало на [demo.nika-sc.ru/downloads/…](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe).
 2. Запустите **от имени администратора**.
 3. Ярлык **Nika CRM — Открыть** → `http://127.0.0.1:5000`. С другого ПК в LAN: `http://<IP-этого-ПК>:5000` (доступ из сети включён по умолчанию; смените демо-пароли).
 4. Войдите демо-учёткой и смените пароль.
+
+**Что нового в 1.0.5:** LAN из коробки; SMTP — «От кого» совпадает с логином (демо `noreply@example.com` больше не ломает Mail.ru); подсказки в Настройках → Почта; правки квитанций и предварительной стоимости. См. § 13.5 и блог [windows-setup-1-0-5](/blog/windows-setup-1-0-5).
+
+SHA256: `18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D`
 
 **Пароль PostgreSQL для pgAdmin** — не `111111` (это только демо-логины CRM). Установщик генерирует случайные пароли. Ярлык **Nika CRM — Пароль базы данных** или скрипт `packaging/windows/show-db-credentials.ps1` (нужны права администратора). Данные: `%ProgramData%\NikaCRM\installer\install-state.json` и `DATABASE_URL` в `%ProgramData%\NikaCRM\.env`.
 
 Если CRM не открывается с другого ПК: ярлык **Nika CRM — Доступ по сети (LAN)** / `enable-lan-access.ps1`.
 
-Страница релиза: [windows-setup-1.0.4](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.4).
+Страница релиза: [windows-setup-1.0.5](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5).
 
 Поддержка: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru), [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20Помощь%20по%20установке), [Telegram](https://t.me/nikaserviceadler).
 

@@ -71,7 +71,14 @@ def _apply_mail_config_from_settings(app):
         if val is not None and val != '':
             return val
         return os.environ.get(env_key) or app.config.get(key, default)
-    app.config['MAIL_SERVER'] = _get('mail_server', 'MAIL_SERVER', '') or app.config.get('MAIL_SERVER', 'localhost')
+    # Пустой SMTP не подменяем на localhost из Flask defaults — иначе Windows даёт
+    # WinError 10061 вместо явной ошибки «сервер не задан».
+    db_server = gs.get('mail_server')
+    if db_server is not None and str(db_server).strip():
+        configured_server = str(db_server).strip()
+    else:
+        configured_server = (os.environ.get('MAIL_SERVER') or '').strip()
+    app.config['MAIL_SERVER'] = configured_server
     app.config['MAIL_PORT'] = int(_get('mail_port', 'MAIL_PORT', 587) or 587)
     app.config['MAIL_USE_TLS'] = bool(gs.get('mail_use_tls') if gs.get('mail_use_tls') is not None else (os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'))
     app.config['MAIL_USE_SSL'] = bool(gs.get('mail_use_ssl') if gs.get('mail_use_ssl') is not None else (os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'))
@@ -1078,8 +1085,12 @@ class NotificationService:
             with current_app.app_context():
                 app = current_app._get_current_object()
                 _apply_mail_config_from_settings(app)
-                if not (app.config.get('MAIL_SERVER') or app.config.get('MAIL_SERVER') == 'localhost'):
-                    return False, "Не задан SMTP-сервер (MAIL_SERVER в настройках или переменной окружения)."
+                mail_server = (app.config.get('MAIL_SERVER') or '').strip()
+                if not mail_server or mail_server.lower() in ('localhost', '127.0.0.1'):
+                    return False, (
+                        "Не задан SMTP-сервер. Укажите его во вкладке «Общие» "
+                        "(например smtp.mail.ru) и сохраните настройки почты."
+                    )
                 sender = _resolve_sender_email(app)
                 if not sender or '@' not in sender:
                     logger.warning("Тест директору: не задан корректный отправитель.")
@@ -1099,6 +1110,13 @@ class NotificationService:
             return True, None
         except Exception as e:
             err_text = str(e).strip() or type(e).__name__
+            low = err_text.lower()
+            if '10061' in err_text or 'connection refused' in low or 'отверг запрос' in low:
+                err_text = (
+                    f"{err_text}. Проверьте SMTP-сервер/порт во вкладке «Общие», "
+                    "что исходящие подключения не блокирует брандмауэр или Windows Sandbox, "
+                    "и что почта сохранена (не пустой сервер)."
+                )
             logger.warning(f"Не удалось отправить тестовое письмо директору: {e}", exc_info=True)
             return False, err_text
 

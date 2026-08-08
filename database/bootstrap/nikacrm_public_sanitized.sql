@@ -3986,7 +3986,7 @@ COPY public.devices (id, customer_id, device_type_id, device_brand_id, serial_nu
 --
 
 COPY public.general_settings (id, org_name, phone, address, inn, ogrn, logo_url, currency, country, updated_at, default_warranty_days, timezone_offset, mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_password, mail_default_sender, mail_timeout, close_print_mode, auto_email_order_accepted, auto_email_status_update, auto_email_order_ready, auto_email_order_closed, sms_enabled, telegram_enabled, signature_name, signature_position, director_email, auto_email_director_order_accepted, auto_email_director_order_closed) FROM stdin;
-1	Nika Service CRM Demo	+7 (900) 000-00-00	Demo address				RUB	Россия	2025-11-27 15:44:30	30	3		587	1	0				3	choice	1	1	1	1	0	0	Demo Director	Director	director@example.com	1	1
+1	Nika Service CRM Demo	+7 (900) 000-00-00	Demo address				RUB	Россия	2025-11-27 15:44:30	30	3		587	1	0				3	choice	1	1	1	1	0	0	Demo Director	Director		1	1
 \.
 
 
