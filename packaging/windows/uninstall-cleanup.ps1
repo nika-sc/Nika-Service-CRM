@@ -20,8 +20,14 @@ Start-Sleep -Seconds 2
 & sc.exe delete "NikaCRM-PostgreSQL" | Out-Null
 
 foreach ($ruleName in @("Nika CRM (HTTP 5000)")) {
-    Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
-        Remove-NetFirewallRule -ErrorAction SilentlyContinue
+    try {
+        Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
+            Remove-NetFirewallRule -ErrorAction SilentlyContinue
+    }
+    catch {
+        # Sandbox / locked-down hosts may lack Firewall CIM classes.
+    }
+    & netsh.exe advfirewall firewall delete rule name="$ruleName" | Out-Null
 }
 
 $desktop = [Environment]::GetFolderPath("CommonDesktopDirectory")

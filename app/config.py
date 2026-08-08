@@ -32,6 +32,8 @@ class Config:
     # Допустимые Host заголовки (защита от Host Header attacks).
     # Токен @private разрешает любой private/loopback/link-local IP
     # (192.168/16, 10/8, 172.16–31/12 и т.п.) — удобно для LAN при DHCP.
+    # В create_app список копируется в HOST_ALLOWLIST, а Flask TRUSTED_HOSTS
+    # сбрасывается в None: Werkzeug не понимает @private и режет LAN IP с 400.
     TRUSTED_HOSTS = [
         h.strip().lower()
         for h in (os.environ.get(
@@ -89,7 +91,8 @@ class Config:
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@service-center.local')
+    # Пусто по умолчанию: при отправке берётся MAIL_USERNAME (демо noreply@example.com ломает Mail.ru).
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', '')
     MAIL_TIMEOUT = int(os.environ.get('MAIL_TIMEOUT', 3))
     
     # Flask-SocketIO настройки

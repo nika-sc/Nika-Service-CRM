@@ -24,7 +24,7 @@ from app.services.warehouse_service import WarehouseService
 from app.services.salary_service import SalaryService
 from app.services.user_service import UserService
 from app.services.action_log_service import ActionLogService
-from app.utils.validators import normalize_phone
+from app.utils.validators import normalize_phone, parse_non_negative_money, money_values_equal
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str, get_moscow_now_naive, convert_to_moscow
 from app.utils.cache import clear_cache, cache_result
@@ -515,22 +515,16 @@ def add_order():
             appearance = request.form.get('appearance', '').strip()
 
             # Предварительная стоимость (оценка, не касса)
-            estimated_cost_raw = request.form.get('estimated_cost', '0').strip()
-            try:
-                estimated_cost = float(estimated_cost_raw) if estimated_cost_raw else 0.0
-                if estimated_cost < 0:
-                    raise ValidationError("Предварительная стоимость не может быть отрицательной")
-            except (ValueError, TypeError):
-                raise ValidationError("Неверный формат предварительной стоимости")
+            estimated_cost = parse_non_negative_money(
+                request.form.get('estimated_cost', '0'),
+                field_label='Предварительная стоимость',
+            )
             
             # Предоплата необязательна; пустое значение = 0
-            prepayment_raw = request.form.get('prepayment', '0').strip()
-            try:
-                prepayment = float(prepayment_raw) if prepayment_raw else 0.0
-                if prepayment < 0:
-                    raise ValidationError("Предоплата не может быть отрицательной")
-            except (ValueError, TypeError):
-                raise ValidationError("Неверный формат предоплаты")
+            prepayment = parse_non_negative_money(
+                request.form.get('prepayment', '0'),
+                field_label='Предоплата',
+            )
             
             # Способ предоплаты
             prepayment_method = request.form.get('prepayment_method', 'cash').strip()
@@ -1282,8 +1276,17 @@ def order_detail(order_id):
                 serial_number = request.form.get('serial_number', '').strip()
                 model = request.form.get('model', '').strip() or None
                 appearance = request.form.get('appearance', '').strip()
-                prepayment = request.form.get('prepayment', '0').strip()
-                estimated_cost = request.form.get('estimated_cost', '0').strip()
+                prepayment = parse_non_negative_money(
+                    request.form.get('prepayment', '0'),
+                    field_label='Предоплата',
+                )
+                estimated_cost = parse_non_negative_money(
+                    request.form.get('estimated_cost', '0'),
+                    field_label='Предварительная стоимость',
+                )
+                # Храним как строку числа (как create_order / TEXT column)
+                prepayment = str(prepayment)
+                estimated_cost = str(estimated_cost)
                 password = request.form.get('password', '').strip()
                 # Статус теперь не редактируется через форму - используется выпадающий список в интерфейсе
                 # Не обновляем статус через форму редактирования заявки
@@ -1541,9 +1544,9 @@ def order_detail(order_id):
                             'new_name': new_master.get('name') if new_master else 'Не назначен'
                         }
                         logger.debug(f"Обнаружено изменение master: '{old_master.get('name') if old_master else 'Не назначен'}' -> '{new_master.get('name') if new_master else 'Не назначен'}'")
-                    if prepayment != str(order_data['order'].get('prepayment', 0)):
+                    if not money_values_equal(prepayment, order_data['order'].get('prepayment', 0)):
                         changes['prepayment'] = {'old': order_data['order'].get('prepayment'), 'new': prepayment}
-                    if str(estimated_cost or '0') != str(order_data['order'].get('estimated_cost', '0') or '0'):
+                    if not money_values_equal(estimated_cost, order_data['order'].get('estimated_cost', '0')):
                         changes['estimated_cost'] = {
                             'old': order_data['order'].get('estimated_cost', '0'),
                             'new': estimated_cost or '0',

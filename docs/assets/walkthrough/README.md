@@ -11,6 +11,8 @@ python scripts/capture_walkthrough_screenshots.py --base-url http://127.0.0.1:50
 Счета B2B: `24-invoices-list.png` … `28-invoice-create.png`.
 Портал клиента: `29-portal-login.png` … `38-portal-wallet.png`.
 
+SMTP / почта (иллюстрации гайда § 13.5): `39-smtp-mailru-correct.png`, `40-smtp-sender-mismatch.png`, `41-smtp-checklist.png`.
+
 Отдельная съёмка портала (подготовка пароля в CRM + вход клиента):
 
 ```bash

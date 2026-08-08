@@ -50,12 +50,12 @@ function Merge-DotEnvFile {
     $order = New-Object System.Collections.Generic.List[string]
     if (Test-Path -LiteralPath $Path) {
         foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
-            $trimmed = $line.Trim()
+            $trimmed = $line.Trim().TrimStart([char]0xFEFF)
             if (-not $trimmed -or $trimmed.StartsWith("#") -or -not $trimmed.Contains("=")) {
                 continue
             }
             $name, $value = $trimmed.Split("=", 2)
-            $key = $name.Trim()
+            $key = $name.Trim().TrimStart([char]0xFEFF)
             if (-not $existing.ContainsKey($key)) {
                 $order.Add($key) | Out-Null
             }
@@ -79,7 +79,9 @@ function Merge-DotEnvFile {
     $lines = foreach ($key in $order) {
         "{0}={1}" -f $key, $existing[$key]
     }
-    $lines | Set-Content -LiteralPath $Path -Encoding UTF8
+    # PS 5.1 Set-Content -Encoding UTF8 writes BOM; strip it for python-dotenv.
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllLines($Path, $lines, $utf8NoBom)
 }
 
 $computerName = ($env:COMPUTERNAME -as [string])
@@ -96,19 +98,33 @@ Merge-DotEnvFile -Path $envFile -AlwaysSet @{
 } -SetIfMissing @{}
 
 $ruleName = "Nika CRM (HTTP $Port)"
-$existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-if (-not $existingRule) {
-    Write-Host "Creating firewall rule: $ruleName (Private, Domain)"
+# Recreate with Any profile so older Private/Domain-only rules are upgraded.
+try {
+    Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
+        Remove-NetFirewallRule -ErrorAction SilentlyContinue
+    Write-Host "Ensuring firewall rule: $ruleName (Any profile)"
     New-NetFirewallRule `
         -DisplayName $ruleName `
         -Direction Inbound `
         -Action Allow `
         -Protocol TCP `
         -LocalPort $Port `
-        -Profile Private,Domain | Out-Null
+        -Profile Any `
+        -ErrorAction Stop | Out-Null
 }
-else {
-    Write-Host "Firewall rule already present: $ruleName"
+catch {
+    Write-Host "NetFirewallRule unavailable ($($_.Exception.Message)); trying netsh..."
+    & netsh.exe advfirewall firewall delete rule name="$ruleName" | Out-Null
+    & netsh.exe advfirewall firewall add rule `
+        name="$ruleName" `
+        dir=in action=allow protocol=TCP localport=$Port `
+        profile=any | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Ensured firewall rule via netsh: $ruleName"
+    }
+    else {
+        Write-Host "WARN: could not create firewall rule. Open TCP $Port manually if LAN access is blocked."
+    }
 }
 
 $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue

@@ -33,7 +33,7 @@ $postgresServiceName = "NikaCRM-PostgreSQL"
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
 Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.6"
+Write-Host "[Nika CRM Setup] Bootstrap version 1.0.5"
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
@@ -104,13 +104,24 @@ function Test-PortAvailable([int] $Port) {
 
 function Import-DotEnv([string] $Path) {
     foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
-        $trimmed = $line.Trim()
+        $trimmed = $line.Trim().TrimStart([char]0xFEFF)
         if (-not $trimmed -or $trimmed.StartsWith("#") -or -not $trimmed.Contains("=")) {
             continue
         }
         $name, $value = $trimmed.Split("=", 2)
-        [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), "Process")
+        [Environment]::SetEnvironmentVariable($name.Trim().TrimStart([char]0xFEFF), $value.Trim(), "Process")
     }
+}
+
+function Write-DotEnvUtf8NoBom {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string[]] $Lines
+    )
+    # Windows PowerShell 5.1 Set-Content -Encoding UTF8 writes BOM; python-dotenv
+    # then sees the first key as "`uFEFFTRUSTED_HOSTS" and LAN @private is ignored.
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllLines($Path, $Lines, $utf8NoBom)
 }
 
 function Get-PrimaryLanIPv4 {
@@ -147,12 +158,12 @@ function Merge-DotEnvFile {
     $order = New-Object System.Collections.Generic.List[string]
     if (Test-Path -LiteralPath $Path) {
         foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
-            $trimmed = $line.Trim()
+            $trimmed = $line.Trim().TrimStart([char]0xFEFF)
             if (-not $trimmed -or $trimmed.StartsWith("#") -or -not $trimmed.Contains("=")) {
                 continue
             }
             $name, $value = $trimmed.Split("=", 2)
-            $key = $name.Trim()
+            $key = $name.Trim().TrimStart([char]0xFEFF)
             if (-not $existing.ContainsKey($key)) {
                 $order.Add($key) | Out-Null
             }
@@ -176,7 +187,7 @@ function Merge-DotEnvFile {
     $lines = foreach ($key in $order) {
         "{0}={1}" -f $key, $existing[$key]
     }
-    $lines | Set-Content -LiteralPath $Path -Encoding UTF8
+    Write-DotEnvUtf8NoBom -Path $Path -Lines $lines
 }
 
 function Ensure-NikaCrmFirewallRule {
@@ -184,20 +195,42 @@ function Ensure-NikaCrmFirewallRule {
         [int] $Port = 5000
     )
     $ruleName = "Nika CRM (HTTP $Port)"
-    $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-    if (-not $existing) {
+
+    # Always recreate with Profile Any so upgrades replace older Private/Domain-only rules
+    # (Windows Sandbox / some Wi-Fi adapters use Public).
+    try {
+        Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
+            Remove-NetFirewallRule -ErrorAction SilentlyContinue
         New-NetFirewallRule `
             -DisplayName $ruleName `
             -Direction Inbound `
             -Action Allow `
             -Protocol TCP `
             -LocalPort $Port `
-            -Profile Private,Domain `
+            -Profile Any `
             -ErrorAction Stop | Out-Null
-        Write-Step "Created firewall rule: $ruleName (Private, Domain)"
+        Write-Step "Ensured firewall rule: $ruleName (Any profile)"
+        return
     }
-    else {
-        Write-Step "Firewall rule already present: $ruleName"
+    catch {
+        Write-Step "NetFirewallRule unavailable ($($_.Exception.Message)); trying netsh fallback"
+    }
+
+    # Sandbox / some SKUs lack Firewall CIM classes ("Invalid class"). netsh is enough.
+    try {
+        & netsh.exe advfirewall firewall delete rule name="$ruleName" | Out-Null
+        & netsh.exe advfirewall firewall add rule `
+            name="$ruleName" `
+            dir=in action=allow protocol=TCP localport=$Port `
+            profile=any | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Step "Ensured firewall rule via netsh: $ruleName (Any profile)"
+            return
+        }
+        Write-Step "WARN: could not create firewall rule (netsh exit $LASTEXITCODE). Open TCP $Port manually for LAN access."
+    }
+    catch {
+        Write-Step "WARN: firewall rule skipped ($($_.Exception.Message)). Open TCP $Port manually for LAN access."
     }
 }
 
@@ -355,33 +388,28 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
     $computerName = ($env:COMPUTERNAME -as [string])
     if (-not $computerName) { $computerName = "localhost" }
     $trustedHosts = "localhost,127.0.0.1,@private,$computerName,$computerName.local"
+    # LAN defaults always applied on install/repair so an old ProgramData\.env
+    # without @private cannot block http://<lan-ip>:5000 after upgrade.
     $alwaysSet = @{
         "FLASK_ENV" = "production"
         "DB_DRIVER" = "postgres"
         "DATABASE_URL" = "postgresql://nikacrm:$appDbPassword@127.0.0.1:$postgresPort/nikacrm"
-    }
-    $setIfMissing = @{
-        "SECRET_KEY" = (New-SafePassword "NikaSecretA1")
         "APP_HOST" = "0.0.0.0"
         "APP_PORT" = "5000"
         "TRUSTED_HOSTS" = $trustedHosts
         "SOCKETIO_CORS_ALLOWED_ORIGINS" = "http://localhost:5000,http://127.0.0.1:5000,@private"
         "SESSION_COOKIE_SECURE" = "0"
         "USE_HTTPS" = "false"
+    }
+    $setIfMissing = @{
+        "SECRET_KEY" = (New-SafePassword "NikaSecretA1")
         "RATELIMIT_STORAGE_URI" = "memory://"
         "TIMEZONE_OFFSET" = "3"
         "PUBLIC_LANDING" = "0"
         "DEMO_LOGIN_BANNER" = "0"
     }
-    # On fresh install force LAN-ready defaults even if a partial .env exists.
     if (-not (Test-Path -LiteralPath $envFile)) {
-        $alwaysSet["APP_HOST"] = "0.0.0.0"
-        $alwaysSet["APP_PORT"] = "5000"
-        $alwaysSet["TRUSTED_HOSTS"] = $trustedHosts
-        $alwaysSet["SOCKETIO_CORS_ALLOWED_ORIGINS"] = "http://localhost:5000,http://127.0.0.1:5000,@private"
         $alwaysSet["SECRET_KEY"] = $setIfMissing["SECRET_KEY"]
-        $alwaysSet["SESSION_COOKIE_SECURE"] = "0"
-        $alwaysSet["USE_HTTPS"] = "false"
         $alwaysSet["RATELIMIT_STORAGE_URI"] = "memory://"
         $alwaysSet["TIMEZONE_OFFSET"] = "3"
         $alwaysSet["PUBLIC_LANDING"] = "0"

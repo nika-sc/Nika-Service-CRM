@@ -30,6 +30,56 @@ def _is_private_or_local_host(host: str) -> bool:
     return bool(addr.is_private or addr.is_loopback or addr.is_link_local)
 
 
+def _hostname_from_host_header(host_header: str) -> str:
+    """
+    Extract hostname from an HTTP Host header.
+    Supports IPv4 (`1.2.3.4:5000`), IPv6 (`[fe80::1]:5000`), bare names.
+    """
+    host = (host_header or '').strip().lower()
+    if not host:
+        return ''
+    if host.startswith('['):
+        end = host.find(']')
+        if end != -1:
+            return host[1:end]
+        return ''
+    # IPv4 / hostname with optional :port (exactly one colon → port)
+    if host.count(':') == 1:
+        return host.split(':', 1)[0].strip()
+    return host
+
+
+def _socketio_origin_allowed(
+    origin: str,
+    *,
+    static_origins: set[str],
+    app_port: int,
+    allow_private: bool,
+) -> bool:
+    """Allow listed origins, or (with @private) http(s)://<private-ip>:<app_port>."""
+    if not origin:
+        return False
+    origin_norm = origin.strip().rstrip('/')
+    if origin_norm in static_origins or origin in static_origins:
+        return True
+    if not allow_private:
+        return False
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(origin)
+    except Exception:
+        return False
+    if (parsed.scheme or '').lower() not in ('http', 'https'):
+        return False
+    hostname = (parsed.hostname or '').lower()
+    if not hostname or not _is_private_or_local_host(hostname):
+        return False
+    port = parsed.port
+    if port is None:
+        port = 443 if parsed.scheme == 'https' else 80
+    return int(port) == int(app_port)
+
+
 def _local_ipv4_addresses() -> list:
     """Best-effort list of non-loopback IPv4 addresses on this machine."""
     found = set()
@@ -135,12 +185,29 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     _write_api_buckets = defaultdict(deque)  # key: remote_addr, value: timestamps
 
+    # Flask/Werkzeug валидирует Host по TRUSTED_HOSTS и не понимает токен @private.
+    # Список правил держим в HOST_ALLOWLIST; встроенную проверку Flask отключаем —
+    # иначе LAN IP (Sandbox Hyper-V 172.x, DHCP и т.п.) получают HTML 400
+    # «Host is not trusted» до нашего before_request.
+    #
+    # Читаем TRUSTED_HOSTS из os.environ заново: class-body Config может
+    # зафиксировать дефолт, если модуль импортировали до dotenv (или ключ с BOM).
+    def _parse_trusted_hosts_env() -> list:
+        raw = (os.environ.get('TRUSTED_HOSTS') or os.environ.get('\ufeffTRUSTED_HOSTS') or '').strip()
+        if not raw:
+            return list(app.config.get('TRUSTED_HOSTS') or [])
+        return [h.strip().lower() for h in raw.split(',') if h.strip()]
+
+    _trusted_hosts = _parse_trusted_hosts_env()
+    app.config['HOST_ALLOWLIST'] = _trusted_hosts
+    app.config['TRUSTED_HOSTS'] = None
+
     def _host_allowed(host_header: str) -> bool:
-        trusted = app.config.get('TRUSTED_HOSTS') or []
+        trusted = app.config.get('HOST_ALLOWLIST') or []
         if not trusted:
             # Если список не задан, не блокируем трафик
             return True
-        host = (host_header or '').split(':', 1)[0].strip().lower()
+        host = _hostname_from_host_header(host_header)
         if not host:
             return False
         allow_private = any(
@@ -456,19 +523,40 @@ def create_app(config_class=Config):
         mail.init_app(app)
     if socketio is not None:
         raw_origins = str(app.config.get('SOCKETIO_CORS_ALLOWED_ORIGINS', '')).strip()
-        # Если в TRUSTED_HOSTS есть @private — расширяем CORS локальными IP,
+        # Если в HOST_ALLOWLIST / TRUSTED_HOSTS есть @private — расширяем CORS локальными IP,
         # даже если SOCKETIO_CORS_ALLOWED_ORIGINS их явно не перечисляет.
-        trusted_hosts = app.config.get('TRUSTED_HOSTS') or []
-        if any((h or '').strip().lower() == '@private' for h in trusted_hosts):
+        trusted_hosts = app.config.get('HOST_ALLOWLIST') or app.config.get('TRUSTED_HOSTS') or []
+        allow_private_hosts = any((h or '').strip().lower() == '@private' for h in trusted_hosts)
+        if allow_private_hosts:
             if raw_origins and '@private' not in raw_origins.lower():
                 raw_origins = raw_origins.rstrip(',') + ',@private'
             elif not raw_origins:
                 raw_origins = 'http://localhost:5000,http://127.0.0.1:5000,@private'
         app_port = int(os.environ.get('APP_PORT', '5000') or 5000)
         cors_origins = _expand_socketio_cors_origins(raw_origins, app_port)
+        # @private: callable CORS so DHCP / Sandbox IP changes work without restart.
+        # Static list alone only covers IPs known at process start.
+        if allow_private_hosts and cors_origins != '*':
+            static_origins = {
+                str(item).strip().rstrip('/').lower()
+                for item in (cors_origins or [])
+                if str(item).strip()
+            }
+
+            def _cors_allowed_origin(origin, *args, **kwargs):
+                return _socketio_origin_allowed(
+                    origin or '',
+                    static_origins=static_origins,
+                    app_port=app_port,
+                    allow_private=True,
+                )
+
+            cors_for_socketio = _cors_allowed_origin
+        else:
+            cors_for_socketio = cors_origins
         socketio_kwargs = {
             'async_mode': app.config.get('SOCKETIO_ASYNC_MODE', 'threading'),
-            'cors_allowed_origins': cors_origins,
+            'cors_allowed_origins': cors_for_socketio,
         }
         redis_url = (app.config.get('REDIS_URL') or '').strip()
         if redis_url:

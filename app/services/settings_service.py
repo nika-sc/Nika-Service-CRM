@@ -149,6 +149,16 @@ class SettingsService:
                         d['mail_username'] = os.environ.get('MAIL_USERNAME', '')
                     if not d.get('mail_default_sender') and os.environ.get('MAIL_DEFAULT_SENDER'):
                         d['mail_default_sender'] = os.environ.get('MAIL_DEFAULT_SENDER', '')
+                    # Демо-дамп: «Nika CRM Demo <noreply@example.com>» — в форме показывать логин.
+                    try:
+                        from email.utils import parseaddr
+                        from app.services.notification_service import _is_placeholder_sender_email
+                        _, sender_box = parseaddr((d.get('mail_default_sender') or '').strip())
+                        uname = (d.get('mail_username') or '').strip()
+                        if _is_placeholder_sender_email(sender_box) and uname and '@' in uname and not _is_placeholder_sender_email(uname):
+                            d['mail_default_sender'] = uname
+                    except Exception:
+                        pass
                     # Нормализуем булевы/числа для шаблона
                     if d.get('mail_use_tls') is not None and not isinstance(d.get('mail_use_tls'), bool):
                         d['mail_use_tls'] = bool(d.get('mail_use_tls'))

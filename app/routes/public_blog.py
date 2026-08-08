@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "smtp-mail-setup",
+        "file": "blog/22-smtp-mail-setup.md",
+        "date": "2026-08",
+        "title": "Настройка почты SMTP: Mail.ru и поле «От кого» — Nika CRM",
+        "description": (
+            "8 августа 2026: как заполнить SMTP в настройках CRM, почему Mail.ru отклоняет "
+            "noreply@example.com и чем логин отличается от поля «От кого»."
+        ),
+        "heading": "Настройка почты (SMTP)",
+        "teaser": "Mail.ru/Яндекс: «От кого» = логин; демо noreply@example.com ломает отправку.",
+    },
+    {
         "slug": "lan-access-and-receipt-fixes",
         "file": "blog/21-lan-access-and-receipt-fixes.md",
         "date": "2026-08",

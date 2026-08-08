@@ -18,8 +18,12 @@ def load_service_environment() -> None:
         raise RuntimeError(f"Nika CRM environment file not found: {ENV_FILE}")
 
     for name, value in dotenv_values(ENV_FILE).items():
-        if name and value is not None:
-            os.environ[name] = value
+        if not name or value is None:
+            continue
+        # PowerShell Set-Content -Encoding UTF8 may prefix the first key with BOM.
+        key = name.lstrip("\ufeff").strip()
+        if key:
+            os.environ[key] = value
 
     os.environ.setdefault("FLASK_ENV", "production")
 

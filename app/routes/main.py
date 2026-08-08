@@ -860,6 +860,16 @@ def settings():
                     'signature_name': request.form.get('signature_name', ''),
                     'signature_position': request.form.get('signature_position', ''),
                 })
+                # Mail.ru отклоняет From=noreply@example.com из демо-дампа — чистим при сохранении.
+                try:
+                    from email.utils import parseaddr
+                    from app.services.notification_service import _is_placeholder_sender_email
+                    _, sender_box = parseaddr((payload.get('mail_default_sender') or '').strip())
+                    uname = (payload.get('mail_username') or '').strip()
+                    if _is_placeholder_sender_email(sender_box) and uname and '@' in uname and not _is_placeholder_sender_email(uname):
+                        payload['mail_default_sender'] = uname
+                except Exception:
+                    pass
                 SettingsService.save_general_settings(payload)
                 # Сохраняем подписи способов оплаты, если блок присутствует в форме
                 if 'payment_method_cash_label' in request.form or 'payment_methods_custom_json' in request.form:

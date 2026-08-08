@@ -191,6 +191,35 @@ def validate_price(price: Any) -> float:
         raise ValidationError("Неверный формат цены")
 
 
+def parse_non_negative_money(raw: Any, field_label: str = "Сумма") -> float:
+    """
+    Парсит неотрицательную денежную сумму из формы.
+
+    Допускает пустое значение (=0) и десятичную запятую (`1,5` → 1.5).
+    """
+    text = '' if raw is None else str(raw).strip()
+    if not text:
+        return 0.0
+    # Одна запятая как десятичный разделитель (RU-ввод), иначе оставляем как есть.
+    if text.count(',') == 1 and '.' not in text:
+        text = text.replace(',', '.', 1)
+    try:
+        value = float(text)
+    except (ValueError, TypeError):
+        raise ValidationError(f"Неверный формат: {field_label}")
+    if value < 0:
+        raise ValidationError(f"{field_label} не может быть отрицательной")
+    return value
+
+
+def money_values_equal(left: Any, right: Any) -> bool:
+    """Сравнение денежных значений с учётом '100' vs '100.0'."""
+    try:
+        return abs(float(left or 0) - float(right or 0)) < 1e-9
+    except (ValueError, TypeError):
+        return str(left or '') == str(right or '')
+
+
 def validate_quantity(quantity: Any) -> int:
     """
     Валидирует количество.

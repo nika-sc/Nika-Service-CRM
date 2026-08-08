@@ -49,7 +49,7 @@ The script downloads version-pinned official installers, verifies SHA256,
 resolves a CPython 3.12 Windows wheelhouse, writes an integrity manifest and
 builds:
 
-`packaging\windows\output\NikaCRM-Offline-Setup-1.0.4-x64.exe`
+`packaging\windows\output\NikaCRM-Offline-Setup-1.0.5-x64.exe`
 
 Downloaded assets and build output are deliberately excluded from Git. To
 rebuild using already downloaded files:
@@ -96,7 +96,8 @@ New installs are LAN-ready by default:
 
 - `APP_HOST=0.0.0.0`
 - `TRUSTED_HOSTS=localhost,127.0.0.1,@private,<COMPUTERNAME>,...`
-- Windows Firewall inbound rule **Nika CRM (HTTP 5000)** for profiles **Private** and **Domain** (not Public)
+- Windows Firewall inbound rule **Nika CRM (HTTP 5000)** for **Any** profile (recreated on setup/repair so older Private/Domain-only rules are upgraded; Sandbox-safe)
+- `TRUSTED_HOSTS` includes `@private` so any LAN IP works without editing `.env` (app Host check + dynamic Socket.IO CORS, not a per-IP list)
 
 If an older install still opens only on this PC, run (as Administrator):
 

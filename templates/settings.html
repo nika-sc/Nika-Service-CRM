@@ -442,17 +442,77 @@
                             </div>
                         </div>
 
-                        <hr class="my-4">
+                        <hr class="my-4" id="mail-smtp">
                         <h5 class="mb-3"><i class="fas fa-envelope me-2"></i>Почта (SMTP)</h5>
-                        <p class="text-muted small">Настройки для отправки писем клиентам (например, при смене статуса заявки). Если не заполнены, используются значения из .env.</p>
-                        <div class="row g-3">
+                        <div class="alert alert-warning border-warning mb-3" role="note">
+                            <div class="fw-semibold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Важно для Mail.ru / Яндекс / Gmail</div>
+                            <p class="mb-2 small">
+                                Поле <strong>«От кого»</strong> — это не подпись ради красоты: провайдер проверяет адрес отправителя.
+                                Адрес в скобках <code>&lt;...&gt;</code> должен <strong>совпадать с логином</strong>.
+                                Демо-значение <code>noreply@example.com</code> Mail.ru отклоняет с ошибкой
+                                <em>not local sender over smtp</em>.
+                            </p>
+                            <p class="mb-2 small">
+                                Пример правильно:
+                                <code>Nika CRM &lt;nika-sc@bk.ru&gt;</code>
+                                при логине <code>nika-sc@bk.ru</code>.
+                                Можно оставить «От кого» пустым — подставится логин.
+                            </p>
+                            <p class="mb-0 small">
+                                Подробный гайд со скриншотами:
+                                <a href="/docs/guide#135-почта-smtp" target="_blank" rel="noopener">Руководство → § 13.5 Почта (SMTP)</a>
+                                ·
+                                <a href="/blog/smtp-mail-setup" target="_blank" rel="noopener">статья в блоге</a>.
+                            </p>
+                        </div>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle mb-0 bg-white">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Провайдер</th>
+                                        <th>SMTP-сервер</th>
+                                        <th>Порт</th>
+                                        <th>TLS / SSL</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr>
+                                        <td>Mail.ru / BK.ru</td>
+                                        <td><code>smtp.mail.ru</code></td>
+                                        <td><code>587</code></td>
+                                        <td>TLS вкл., SSL выкл.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Яндекс</td>
+                                        <td><code>smtp.yandex.ru</code></td>
+                                        <td><code>587</code></td>
+                                        <td>TLS вкл., SSL выкл.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Gmail</td>
+                                        <td><code>smtp.gmail.com</code></td>
+                                        <td><code>587</code></td>
+                                        <td>TLS вкл.; пароль приложения</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small">Письма клиентам, директору и тестам SMTP. На Windows Offline обычно достаточно заполнить эту форму (не обязательно <code>MAIL_*</code> в <code>.env</code>). Если поля пустые — берутся значения из окружения.</p>
+                        <div class="row g-3" id="mail-smtp-fields">
                             <div class="col-md-6">
-                                <label class="form-label">SMTP-сервер</label>
-                                <input type="text" class="form-control" name="mail_server" value="{{ settings.mail_server or '' }}" placeholder="smtp.yandex.ru">
+                                <label class="form-label" for="mailServer">SMTP-сервер</label>
+                                <input type="text" class="form-control" id="mailServer" name="mail_server" value="{{ settings.mail_server or '' }}" placeholder="smtp.mail.ru" list="mailServerPresets" autocomplete="off">
+                                <datalist id="mailServerPresets">
+                                    <option value="smtp.mail.ru"></option>
+                                    <option value="smtp.yandex.ru"></option>
+                                    <option value="smtp.gmail.com"></option>
+                                </datalist>
+                                <div class="form-text">Для Mail.ru / @bk.ru: <code>smtp.mail.ru</code></div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Порт</label>
-                                <input type="number" class="form-control" name="mail_port" value="{{ settings.mail_port if settings.mail_port is not none else 587 }}" min="1" max="65535" placeholder="587">
+                                <label class="form-label" for="mailPort">Порт</label>
+                                <input type="number" class="form-control" id="mailPort" name="mail_port" value="{{ settings.mail_port if settings.mail_port is not none else 587 }}" min="1" max="65535" placeholder="587">
+                                <div class="form-text">Обычно <code>587</code></div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">TLS</label>
@@ -460,6 +520,7 @@
                                     <input class="form-check-input" type="checkbox" name="mail_use_tls" id="mailUseTls" {% if settings.mail_use_tls %}checked{% endif %}>
                                     <label class="form-check-label" for="mailUseTls">Вкл.</label>
                                 </div>
+                                <div class="form-text">Для 587 — да</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">SSL</label>
@@ -467,14 +528,22 @@
                                     <input class="form-check-input" type="checkbox" name="mail_use_ssl" id="mailUseSsl" {% if settings.mail_use_ssl %}checked{% endif %}>
                                     <label class="form-check-label" for="mailUseSsl">Вкл.</label>
                                 </div>
+                                <div class="form-text">Для 587 — нет</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Логин (email)</label>
-                                <input type="text" class="form-control" name="mail_username" value="{{ settings.mail_username or '' }}" placeholder="noreply@example.com" autocomplete="off">
+                                <label class="form-label" for="mailUsername">
+                                    Логин (email)
+                                    <span class="badge text-bg-primary ms-1">обязательно</span>
+                                </label>
+                                <input type="text" class="form-control border-primary" id="mailUsername" name="mail_username" value="{{ settings.mail_username or '' }}" placeholder="you@mail.ru" autocomplete="off">
+                                <div class="form-text">Полный email ящика, с которого разрешена отправка (не «noreply@example.com»).</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Пароль</label>
-                                <input type="password" class="form-control" name="mail_password" value="" placeholder="Оставьте пустым, чтобы не менять" autocomplete="new-password">
+                                <label class="form-label" for="mailPassword">
+                                    Пароль
+                                    <span class="badge text-bg-primary ms-1">пароль приложения</span>
+                                </label>
+                                <input type="password" class="form-control" id="mailPassword" name="mail_password" value="" placeholder="Оставьте пустым, чтобы не менять" autocomplete="new-password">
                                 {% if smtp_password_configured %}
                                 <div class="form-text text-success">
                                     <i class="fas fa-check-circle me-1"></i>Пароль SMTP сохранён. Оставьте поле пустым, чтобы не менять его.
@@ -484,17 +553,70 @@
                                     <i class="fas fa-exclamation-circle me-1"></i>Пароль SMTP не задан. Введите пароль приложения и нажмите «Сохранить».
                                 </div>
                                 {% endif %}
-                                <div class="form-text text-muted">Для Gmail/Яндекс используйте пароль приложения. Значение не отображается и не записывается в журнал действий.</div>
+                                <div class="form-text text-muted">Mail.ru / Яндекс / Gmail: пароль приложения из настроек ящика, не обычный пароль входа на сайт. Значение не показывается и не пишется в журнал действий.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">От кого (имя и адрес)</label>
-                                <input type="text" class="form-control" name="mail_default_sender" value="{{ settings.mail_default_sender or '' }}" placeholder="Сервисный центр &lt;noreply@example.com&gt;">
+                                <label class="form-label" for="mailDefaultSender">
+                                    От кого (имя и адрес)
+                                    <span class="badge text-bg-danger ms-1">совпадать с логином</span>
+                                </label>
+                                <input type="text" class="form-control border-danger-subtle" id="mailDefaultSender" name="mail_default_sender" value="{{ settings.mail_default_sender or '' }}" placeholder="Сервисный центр &lt;you@mail.ru&gt;" autocomplete="off">
+                                <div class="form-text text-danger-emphasis">
+                                    Формат: <code>Имя компании &lt;тот-же-email-что-логин&gt;</code>.
+                                    Не оставляйте демо <code>Nika CRM Demo &lt;noreply@example.com&gt;</code>.
+                                </div>
+                                <div id="mailSenderHint" class="form-text fw-semibold" hidden></div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Таймаут (сек)</label>
-                                <input type="number" class="form-control" name="mail_timeout" value="{{ settings.mail_timeout if settings.mail_timeout is not none else 3 }}" min="1" max="60">
+                                <label class="form-label" for="mailTimeout">Таймаут (сек)</label>
+                                <input type="number" class="form-control" id="mailTimeout" name="mail_timeout" value="{{ settings.mail_timeout if settings.mail_timeout is not none else 3 }}" min="1" max="60">
                             </div>
                         </div>
+                        <script>
+                        (function () {
+                            const userEl = document.getElementById('mailUsername');
+                            const senderEl = document.getElementById('mailDefaultSender');
+                            const hintEl = document.getElementById('mailSenderHint');
+                            if (!userEl || !senderEl || !hintEl) return;
+                            function extractEmail(raw) {
+                                const m = String(raw || '').match(/<([^>]+)>/);
+                                const addr = (m ? m[1] : String(raw || '')).trim().toLowerCase();
+                                return addr.includes('@') ? addr : '';
+                            }
+                            function syncHint() {
+                                const login = extractEmail(userEl.value);
+                                const from = extractEmail(senderEl.value);
+                                senderEl.classList.remove('is-invalid', 'is-valid', 'border-danger');
+                                hintEl.hidden = true;
+                                hintEl.className = 'form-text fw-semibold';
+                                if (!login) return;
+                                if (!from) {
+                                    hintEl.hidden = false;
+                                    hintEl.classList.add('text-success');
+                                    hintEl.textContent = '«От кого» пусто — при отправке подставится логин (' + login + ').';
+                                    senderEl.classList.add('is-valid');
+                                    return;
+                                }
+                                if (from === login) {
+                                    hintEl.hidden = false;
+                                    hintEl.classList.add('text-success');
+                                    hintEl.textContent = 'Адрес в «От кого» совпадает с логином — так нужно.';
+                                    senderEl.classList.add('is-valid');
+                                    return;
+                                }
+                                const demo = from.endsWith('@example.com') || from.endsWith('@example.org') || from === 'noreply@service-center.local';
+                                hintEl.hidden = false;
+                                hintEl.classList.add('text-danger');
+                                hintEl.textContent = demo
+                                    ? 'Демо-адрес отправителя (' + from + ') провайдер отклонит. Укажите тот же email, что в логине, или очистите поле.'
+                                    : 'Адрес «От кого» (' + from + ') отличается от логина (' + login + '). Mail.ru/Яндекс часто отклоняют такую отправку.';
+                                senderEl.classList.add('is-invalid', 'border-danger');
+                            }
+                            userEl.addEventListener('input', syncHint);
+                            senderEl.addEventListener('input', syncHint);
+                            syncHint();
+                        })();
+                        </script>
 
                         <hr class="my-4">
                         <h5 class="mb-3"><i class="fas fa-signature me-2"></i>Подписи в печатных формах</h5>

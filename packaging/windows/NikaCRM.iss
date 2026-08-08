@@ -1,5 +1,5 @@
 #define MyAppName "Nika CRM"
-#define MyAppVersion "1.0.6"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -38,7 +38,7 @@ CloseApplications=yes
 RestartApplications=no
 MinVersion=10.0.17763
 DiskSpanning=no
-VersionInfoVersion=1.0.6.0
+VersionInfoVersion=1.0.5.0
 VersionInfoCompany=Service Center Nika
 VersionInfoDescription=Nika CRM Offline Installer for Windows
 VersionInfoCopyright=Copyright (c) 2026 Alexander Smelkov
@@ -218,6 +218,11 @@ begin
   );
   LegalConfirmationPage.Values[0] := False;
   LegalConfirmationPage.Values[1] := False;
+  if WizardSilent then
+  begin
+    LegalConfirmationPage.Values[0] := True;
+    LegalConfirmationPage.Values[1] := True;
+  end;
 
   DocumentationPage := CreateCustomPage(
     LegalConfirmationPage.ID,
@@ -257,13 +262,29 @@ begin
      ((not LegalConfirmationPage.Values[0]) or
       (not LegalConfirmationPage.Values[1])) then
   begin
-    MsgBox(
-      'Для продолжения отметьте оба пункта.',
-      mbInformation,
-      MB_OK
-    );
-    Result := False;
+    if WizardSilent then
+    begin
+      LegalConfirmationPage.Values[0] := True;
+      LegalConfirmationPage.Values[1] := True;
+    end
+    else
+    begin
+      MsgBox(
+        'Для продолжения отметьте оба пункта.',
+        mbInformation,
+        MB_OK
+      );
+      Result := False;
+    end;
   end;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  // Silent/very silent installs cannot interact with the custom legal page.
+  if WizardSilent and (PageID = LegalConfirmationPage.ID) then
+    Result := True;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

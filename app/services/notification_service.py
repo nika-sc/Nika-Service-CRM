@@ -16,6 +16,46 @@ from app.utils.datetime_utils import get_moscow_now_str
 
 logger = logging.getLogger(__name__)
 
+# Демо/заглушки из bootstrap и placeholders — Mail.ru/Яндекс отклоняют как "not local sender".
+_PLACEHOLDER_SENDER_DOMAINS = frozenset({
+    'example.com',
+    'example.org',
+    'example.net',
+    'localhost',
+    'invalid',
+    'service-center.local',
+    'local',
+})
+
+
+def _is_placeholder_sender_email(email: str) -> bool:
+    """True для заглушек вроде noreply@example.com из демо-дампа."""
+    addr = (email or '').strip().lower()
+    if not addr or '@' not in addr:
+        return True
+    domain = addr.rsplit('@', 1)[-1].strip('.')
+    if not domain:
+        return True
+    if domain in _PLACEHOLDER_SENDER_DOMAINS:
+        return True
+    # *.example.com и т.п.
+    for base in ('example.com', 'example.org', 'example.net'):
+        if domain == base or domain.endswith('.' + base):
+            return True
+    return False
+
+
+def _ascii_mailbox(email: str) -> str:
+    """Возвращает email, если он ASCII и похож на mailbox; иначе ''."""
+    addr = (email or '').strip()
+    if not addr or '@' not in addr:
+        return ''
+    try:
+        addr.encode('ascii')
+    except UnicodeEncodeError:
+        return ''
+    return addr
+
 
 def _apply_mail_config_from_settings(app):
     """
@@ -37,7 +77,13 @@ def _apply_mail_config_from_settings(app):
     app.config['MAIL_USE_SSL'] = bool(gs.get('mail_use_ssl') if gs.get('mail_use_ssl') is not None else (os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'))
     app.config['MAIL_USERNAME'] = _get('mail_username', 'MAIL_USERNAME', '') or app.config.get('MAIL_USERNAME', '')
     app.config['MAIL_PASSWORD'] = _get('mail_password', 'MAIL_PASSWORD', '') or app.config.get('MAIL_PASSWORD', '')
-    app.config['MAIL_DEFAULT_SENDER'] = _get('mail_default_sender', 'MAIL_DEFAULT_SENDER', '') or app.config.get('MAIL_DEFAULT_SENDER', '')
+    configured_sender = _get('mail_default_sender', 'MAIL_DEFAULT_SENDER', '') or app.config.get('MAIL_DEFAULT_SENDER', '')
+    # Демо-дамп кладёт «Nika CRM Demo <noreply@example.com>» — не использовать как From.
+    _, sender_mailbox = parseaddr((configured_sender or '').strip())
+    username = (app.config.get('MAIL_USERNAME') or '').strip()
+    if _is_placeholder_sender_email(sender_mailbox) and username and '@' in username and not _is_placeholder_sender_email(username):
+        configured_sender = username
+    app.config['MAIL_DEFAULT_SENDER'] = configured_sender
     app.config['MAIL_TIMEOUT'] = int(_get('mail_timeout', 'MAIL_TIMEOUT', 3) or 3)
 
 
@@ -45,25 +91,17 @@ def _resolve_sender_email(app) -> str:
     """
     Возвращает безопасный SMTP envelope sender (только email ASCII).
     Это предотвращает падение smtplib на не-ASCII имени отправителя.
+    Демо-адреса (noreply@example.com) игнорируются — берётся MAIL_USERNAME.
     """
     raw_sender = (app.config.get('MAIL_DEFAULT_SENDER') or '').strip()
     _, parsed_email = parseaddr(raw_sender)
-    parsed_email = (parsed_email or '').strip()
+    parsed_email = _ascii_mailbox(parsed_email)
+    if parsed_email and not _is_placeholder_sender_email(parsed_email):
+        return parsed_email
 
-    if parsed_email and '@' in parsed_email:
-        try:
-            parsed_email.encode('ascii')
-            return parsed_email
-        except UnicodeEncodeError:
-            pass
-
-    username = (app.config.get('MAIL_USERNAME') or '').strip()
-    if username and '@' in username:
-        try:
-            username.encode('ascii')
-            return username
-        except UnicodeEncodeError:
-            return ''
+    username = _ascii_mailbox(app.config.get('MAIL_USERNAME') or '')
+    if username and not _is_placeholder_sender_email(username):
+        return username
 
     return ''
 
@@ -104,7 +142,11 @@ def _resolve_portal_login_url() -> str:
         base = (request.url_root or '').rstrip('/')
     if not base:
         try:
-            hosts = current_app.config.get('TRUSTED_HOSTS') or []
+            hosts = (
+                current_app.config.get('HOST_ALLOWLIST')
+                or current_app.config.get('TRUSTED_HOSTS')
+                or []
+            )
         except Exception:
             hosts = []
         for host in hosts:
