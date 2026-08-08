@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
 _POSTS = [
     {
+        "slug": "lan-access-and-receipt-fixes",
+        "file": "blog/21-lan-access-and-receipt-fixes.md",
+        "date": "2026-08",
+        "title": "LAN, квитанция и предварительная стоимость — Nika CRM",
+        "description": (
+            "8 августа 2026: доступ CRM из локальной сети, объединение внешнего вида и комплектации "
+            "в квитанции, сохранение размера шрифта в шаблонах, поле предварительной стоимости."
+        ),
+        "heading": "LAN, квитанция и предварительная стоимость",
+        "teaser": "Доступ по сети, одна строка в квитанции, font-size в шаблонах, оценка цены при приёмке.",
+    },
+    {
         "slug": "customer-portal-login",
         "file": "blog/20-customer-portal-login.md",
         "date": "2026-08",
