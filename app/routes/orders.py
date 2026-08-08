@@ -513,6 +513,15 @@ def add_order():
             
             serial_number = request.form.get('serial_number', '').strip()
             appearance = request.form.get('appearance', '').strip()
+
+            # Предварительная стоимость (оценка, не касса)
+            estimated_cost_raw = request.form.get('estimated_cost', '0').strip()
+            try:
+                estimated_cost = float(estimated_cost_raw) if estimated_cost_raw else 0.0
+                if estimated_cost < 0:
+                    raise ValidationError("Предварительная стоимость не может быть отрицательной")
+            except (ValueError, TypeError):
+                raise ValidationError("Неверный формат предварительной стоимости")
             
             # Предоплата необязательна; пустое значение = 0
             prepayment_raw = request.form.get('prepayment', '0').strip()
@@ -570,6 +579,7 @@ def add_order():
                 serial_number=serial_number if serial_number else None,
                 prepayment=prepayment,
                 prepayment_method=prepayment_method,
+                estimated_cost=estimated_cost,
                 password=password if password else None,
                 appearance=appearance if appearance else None,
                 comment=comment if comment else None,
@@ -1273,6 +1283,7 @@ def order_detail(order_id):
                 model = request.form.get('model', '').strip() or None
                 appearance = request.form.get('appearance', '').strip()
                 prepayment = request.form.get('prepayment', '0').strip()
+                estimated_cost = request.form.get('estimated_cost', '0').strip()
                 password = request.form.get('password', '').strip()
                 # Статус теперь не редактируется через форму - используется выпадающий список в интерфейсе
                 # Не обновляем статус через форму редактирования заявки
@@ -1336,23 +1347,42 @@ def order_detail(order_id):
                     # Обновляем заявку БЕЗ статуса (статус обновим через сервис для правильного логирования)
                     # Время в часовом поясе приложения (из настроек БД/конфига)
                     updated_at_moscow = get_moscow_now_str()
-                    
-                    cursor.execute('''
-                        UPDATE orders
-                        SET manager_id = ?, master_id = ?,
-                            prepayment = ?, prepayment_cents = COALESCE(?, prepayment_cents), password = ?, appearance = ?,
-                            comment = ?, symptom_tags = ?, model = ?, model_id = ?, updated_at = ?
-                        WHERE id = ?
-                    ''', (manager_id, master_id, prepayment, prepayment_cents,
-                          password if password else None,
-                          appearance if appearance else None,
-                          comment if comment else None,
-                          symptom_tags if symptom_tags else None,
-                          model_text_value,
-                          model_id_value,
-                          updated_at_moscow,
-                          order.id))
-                    
+
+                    set_parts = [
+                        'manager_id = ?',
+                        'master_id = ?',
+                        'prepayment = ?',
+                        'prepayment_cents = COALESCE(?, prepayment_cents)',
+                        'password = ?',
+                        'appearance = ?',
+                        'comment = ?',
+                        'symptom_tags = ?',
+                        'model = ?',
+                        'model_id = ?',
+                        'updated_at = ?',
+                    ]
+                    update_values = [
+                        manager_id,
+                        master_id,
+                        prepayment,
+                        prepayment_cents,
+                        password if password else None,
+                        appearance if appearance else None,
+                        comment if comment else None,
+                        symptom_tags if symptom_tags else None,
+                        model_text_value,
+                        model_id_value,
+                        updated_at_moscow,
+                    ]
+                    if 'estimated_cost' in order_cols:
+                        set_parts.insert(-1, 'estimated_cost = ?')
+                        update_values.insert(-1, estimated_cost or '0')
+                    update_values.append(order.id)
+
+                    cursor.execute(
+                        f"UPDATE orders SET {', '.join(set_parts)} WHERE id = ?",
+                        update_values,
+                    )                    
                     # Обновляем симптомы в order_symptoms
                     # Сначала удаляем старые связи
                     cursor.execute('DELETE FROM order_symptoms WHERE order_id = ?', (order.id,))
@@ -1513,6 +1543,11 @@ def order_detail(order_id):
                         logger.debug(f"Обнаружено изменение master: '{old_master.get('name') if old_master else 'Не назначен'}' -> '{new_master.get('name') if new_master else 'Не назначен'}'")
                     if prepayment != str(order_data['order'].get('prepayment', 0)):
                         changes['prepayment'] = {'old': order_data['order'].get('prepayment'), 'new': prepayment}
+                    if str(estimated_cost or '0') != str(order_data['order'].get('estimated_cost', '0') or '0'):
+                        changes['estimated_cost'] = {
+                            'old': order_data['order'].get('estimated_cost', '0'),
+                            'new': estimated_cost or '0',
+                        }
                     
                     # Дополнительные поля для отслеживания
                     old_model = order_data['order'].get('model') or ''
@@ -2032,6 +2067,23 @@ def order_detail(order_id):
                                 'color': 'success',
                                 'title': 'Изменена предоплата',
                                 'description': f'Предоплата изменена с {old_val} ₽ на {new_val} ₽',
+                                'username': username
+                            })
+
+                    if 'estimated_cost' in details or 'Предварительная стоимость' in details:
+                        estimated_info = details.get('estimated_cost') or details.get('Предварительная стоимость') or {}
+                        if isinstance(estimated_info, dict):
+                            old_val = estimated_info.get('old') or '0'
+                            new_val = estimated_info.get('new') or '0'
+                            order_history.append({
+                                'date_str': date_str,
+                                'time_str': time_str,
+                                'datetime': log_created_at,
+                                'type': 'estimated_cost_change',
+                                'icon': 'calculator',
+                                'color': 'info',
+                                'title': 'Изменена предварительная стоимость',
+                                'description': f'Предварительная стоимость изменена с {old_val} ₽ на {new_val} ₽',
                                 'username': username
                             })
                     
@@ -2554,6 +2606,12 @@ def order_detail(order_id):
                     values['PREPAYMENT'] = _safe(f"{prepayment_val:.2f}")
                 except (ValueError, TypeError):
                     values['PREPAYMENT'] = _safe("0.00")
+
+                try:
+                    estimated_val = float(order_obj.get('estimated_cost', 0) or 0)
+                    values['ESTIMATED_COST'] = _safe(f"{estimated_val:.2f}") if estimated_val > 0 else ''
+                except (ValueError, TypeError):
+                    values['ESTIMATED_COST'] = ''
                 
                 values.update({
                     'MODEL': _safe(order_obj.get('model') or ''),
@@ -2574,9 +2632,14 @@ def order_detail(order_id):
                     values['total.paid.words'] = _safe(_amount_to_words_ru(paid_val))
                     prep_for_words = float(order_obj.get('prepayment', 0) or 0)
                     values['PREPAYMENT_WORDS'] = _safe(_amount_to_words_ru(prep_for_words))
+                    est_for_words = float(order_obj.get('estimated_cost', 0) or 0)
+                    values['ESTIMATED_COST_WORDS'] = (
+                        _safe(_amount_to_words_ru(est_for_words)) if est_for_words > 0 else ''
+                    )
                 except (ValueError, TypeError):
                     values['total.paid.words'] = ''
                     values['PREPAYMENT_WORDS'] = ''
+                    values['ESTIMATED_COST_WORDS'] = ''
 
                 # Ссылка на статус заказа (QR) и штрих-код номера заказа
                 try:
@@ -2675,17 +2738,8 @@ def order_detail(order_id):
                         )
                     # Санитизация перед выводом (защита от XSS)
                     try:
-                        from bleach import clean
-                        rendered_html = clean(
-                            rendered_html,
-                            tags=['p', 'table', 'tbody', 'tr', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                                  'strong', 'em', 'u', 'ol', 'ul', 'li', 'br', 'img', 'span', 'div', 'var-inline'],
-                            attributes={'*': ['style', 'class', 'width', 'height', 'border', 'colspan', 'rowspan',
-                                              'data-var', 'data-for', 'src', 'alt']},
-                            protocols=['http', 'https', 'data'],
-                            strip=False,
-                            strip_comments=True,
-                        )
+                        from app.utils.template_html_sanitizer import sanitize_order_print_html
+                        rendered_html = sanitize_order_print_html(rendered_html)
                     except ImportError:
                         pass
                     return rendered_html

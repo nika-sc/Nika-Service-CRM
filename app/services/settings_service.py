@@ -680,26 +680,8 @@ class SettingsService:
         try:
             # Санитизация HTML контента (если установлен bleach)
             try:
-                from bleach import clean
-                cleaned_content = clean(
-                    html_content,
-                    tags=[
-                        'html', 'head', 'body', 'meta', 'title', 'style',
-                        'p', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
-                        'colgroup', 'col', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                        'strong', 'b', 'em', 'i', 'u', 'ol', 'ul', 'li', 'br', 'hr',
-                        'img', 'span', 'div', 'a', 'var-inline',
-                    ],
-                    attributes={
-                        '*': [
-                            'style', 'class', 'width', 'height', 'border', 'cellpadding',
-                            'cellspacing', 'colspan', 'rowspan', 'valign', 'align',
-                            'data-var', 'data-for', 'src', 'alt', 'data-file-id',
-                            'charset', 'name', 'content', 'href', 'target', 'rel',
-                        ]
-                    },
-                    strip=False,
-                )
+                from app.utils.template_html_sanitizer import sanitize_print_template_html
+                cleaned_content = sanitize_print_template_html(html_content)
             except ImportError:
                 # Если bleach не установлен, используем оригинальный контент
                 cleaned_content = html_content
@@ -799,18 +781,8 @@ class SettingsService:
         try:
             # Для email оставляем мягкую санитизацию, аналогично печатным шаблонам.
             try:
-                from bleach import clean
-                cleaned_content = clean(
-                    html_content,
-                    tags=[
-                        'p', 'table', 'tbody', 'tr', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                        'strong', 'em', 'u', 'ol', 'ul', 'li', 'br', 'img', 'span', 'div', 'a', 'var-inline'
-                    ],
-                    attributes={
-                        '*': ['style', 'class', 'width', 'height', 'border', 'colspan', 'rowspan', 'data-var', 'src', 'alt', 'href', 'target', 'rel']
-                    },
-                    strip=False
-                )
+                from app.utils.template_html_sanitizer import sanitize_email_template_html
+                cleaned_content = sanitize_email_template_html(html_content)
             except ImportError:
                 cleaned_content = html_content
 

@@ -33,7 +33,7 @@ def main() -> None:
 
     serve(
         app,
-        host=os.environ.get("APP_HOST", "127.0.0.1"),
+        host=os.environ.get("APP_HOST", "0.0.0.0"),
         port=int(os.environ.get("APP_PORT", "5000")),
         threads=8,
         channel_timeout=120,

@@ -1,5 +1,5 @@
 #define MyAppName "Nika CRM"
-#define MyAppVersion "1.0.5"
+#define MyAppVersion "1.0.6"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -38,7 +38,7 @@ CloseApplications=yes
 RestartApplications=no
 MinVersion=10.0.17763
 DiskSpanning=no
-VersionInfoVersion=1.0.5.0
+VersionInfoVersion=1.0.6.0
 VersionInfoCompany=Service Center Nika
 VersionInfoDescription=Nika CRM Offline Installer for Windows
 VersionInfoCopyright=Copyright (c) 2026 Alexander Smelkov
@@ -79,10 +79,12 @@ Source: "assets\nssm.exe"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafteri
 Source: "assets\wheelhouse\*"; DestDir: "{tmp}\NikaCRM-offline\wheelhouse"; Flags: deleteafterinstall recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{commondesktop}\Nika CRM — Открыть"; Filename: "http://127.0.0.1:5000"; Comment: "Открыть Nika CRM в браузере"
+Name: "{commondesktop}\Nika CRM — Открыть"; Filename: "http://127.0.0.1:5000"; Comment: "Открыть Nika CRM в браузере (локально). Из локальной сети: http://<IP-этого-ПК>:5000"
 Name: "{commondesktop}\Nika CRM — Перезапустить сервис"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\restart-service.ps1"""; WorkingDir: "{app}\app"; Comment: "Перезапустить локальный сервер Nika CRM"
 Name: "{group}\Nika CRM — Открыть"; Filename: "http://127.0.0.1:5000"
 Name: "{group}\Nika CRM — Перезапустить сервис"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\restart-service.ps1"""; WorkingDir: "{app}\app"
+Name: "{group}\Nika CRM — Доступ по сети (LAN)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\enable-lan-access.ps1"""; WorkingDir: "{app}\app"; Comment: "Включить/починить доступ к CRM из локальной сети"
+Name: "{group}\Nika CRM — Пароль базы данных"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\show-db-credentials.ps1"""; WorkingDir: "{app}\app"; Comment: "Показать пароли PostgreSQL для pgAdmin (нужны права администратора)"
 Name: "{group}\Nika CRM — Журналы"; Filename: "{sys}\explorer.exe"; Parameters: """{commonappdata}\NikaCRM\logs"""
 Name: "{group}\Nika CRM — Руководство пользователя"; Filename: "{#MyGuideURL}"
 Name: "{group}\Nika CRM — Онлайн-демо"; Filename: "{#MyDemoURL}"

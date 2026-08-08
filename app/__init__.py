@@ -1,7 +1,9 @@
 """
 Инициализация Flask приложения.
 """
+import ipaddress
 import logging
+import socket
 from fnmatch import fnmatch
 import time
 from collections import defaultdict, deque
@@ -17,6 +19,73 @@ import os
 from app.config import Config
 from app.database.connection import init_db
 from app.middleware.auth import setup_auth
+
+
+def _is_private_or_local_host(host: str) -> bool:
+    """True if host is a private/loopback/link-local IP (IPv4 or IPv6)."""
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return bool(addr.is_private or addr.is_loopback or addr.is_link_local)
+
+
+def _local_ipv4_addresses() -> list:
+    """Best-effort list of non-loopback IPv4 addresses on this machine."""
+    found = set()
+    try:
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM):
+            ip = info[4][0]
+            if ip and not ip.startswith('127.'):
+                found.add(ip)
+    except OSError:
+        pass
+    try:
+        # Connect to a public address (no packets sent) to discover the preferred LAN IP.
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(('8.8.8.8', 80))
+            ip = sock.getsockname()[0]
+            if ip and not ip.startswith('127.'):
+                found.add(ip)
+    except OSError:
+        pass
+    return sorted(found)
+
+
+def _expand_socketio_cors_origins(raw_origins: str, app_port: int) -> list | str:
+    """
+    Parse SOCKETIO_CORS_ALLOWED_ORIGINS.
+    If TRUSTED_HOSTS-style token '@private' appears, append http://<local-ip>:<port>
+    and http://<hostname>:<port> origins (no wildcard '*').
+    """
+    raw = (raw_origins or '').strip()
+    if not raw:
+        return []
+    if raw == '*':
+        return '*'
+    items = [item.strip() for item in raw.split(',') if item.strip()]
+    allow_private = any(item.lower() == '@private' for item in items)
+    origins = [item for item in items if item.lower() != '@private']
+    if allow_private:
+        scheme_port = int(app_port or 5000)
+        for ip in _local_ipv4_addresses():
+            origins.append(f'http://{ip}:{scheme_port}')
+        hostname = (socket.gethostname() or '').strip()
+        if hostname:
+            origins.append(f'http://{hostname}:{scheme_port}')
+            origins.append(f'http://{hostname}.local:{scheme_port}')
+        # Deduplicate while preserving order
+        seen = set()
+        deduped = []
+        for origin in origins:
+            key = origin.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(origin)
+        origins = deduped
+    return origins
 
 # Инициализация расширений
 login_manager = LoginManager()
@@ -74,9 +143,15 @@ def create_app(config_class=Config):
         host = (host_header or '').split(':', 1)[0].strip().lower()
         if not host:
             return False
+        allow_private = any(
+            (pattern or '').strip().lower() == '@private'
+            for pattern in trusted
+        )
+        if allow_private and _is_private_or_local_host(host):
+            return True
         for pattern in trusted:
             p = pattern.strip().lower()
-            if not p:
+            if not p or p == '@private':
                 continue
             if p.startswith('*.'):
                 # Разрешаем поддомены для шаблона вида *.example.com
@@ -381,12 +456,16 @@ def create_app(config_class=Config):
         mail.init_app(app)
     if socketio is not None:
         raw_origins = str(app.config.get('SOCKETIO_CORS_ALLOWED_ORIGINS', '')).strip()
-        if not raw_origins:
-            cors_origins = []
-        elif raw_origins == '*':
-            cors_origins = '*'
-        else:
-            cors_origins = [item.strip() for item in raw_origins.split(',') if item.strip()]
+        # Если в TRUSTED_HOSTS есть @private — расширяем CORS локальными IP,
+        # даже если SOCKETIO_CORS_ALLOWED_ORIGINS их явно не перечисляет.
+        trusted_hosts = app.config.get('TRUSTED_HOSTS') or []
+        if any((h or '').strip().lower() == '@private' for h in trusted_hosts):
+            if raw_origins and '@private' not in raw_origins.lower():
+                raw_origins = raw_origins.rstrip(',') + ',@private'
+            elif not raw_origins:
+                raw_origins = 'http://localhost:5000,http://127.0.0.1:5000,@private'
+        app_port = int(os.environ.get('APP_PORT', '5000') or 5000)
+        cors_origins = _expand_socketio_cors_origins(raw_origins, app_port)
         socketio_kwargs = {
             'async_mode': app.config.get('SOCKETIO_ASYNC_MODE', 'threading'),
             'cors_allowed_origins': cors_origins,

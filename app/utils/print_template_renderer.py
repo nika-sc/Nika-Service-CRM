@@ -127,28 +127,9 @@ def render_print_template(
         )
 
     try:
-        from bleach import clean
+        from app.utils.template_html_sanitizer import sanitize_print_template_html
 
-        rendered_html = clean(
-            rendered_html,
-            tags=[
-                "html", "head", "body", "meta", "title", "style",
-                "p", "table", "thead", "tbody", "tfoot", "tr", "td", "th",
-                "colgroup", "col",
-                "h1", "h2", "h3", "h4", "h5", "h6",
-                "strong", "b", "em", "i", "u", "ol", "ul", "li", "br", "hr",
-                "img", "span", "div", "a", "var-inline",
-            ],
-            attributes={
-                "*": [
-                    "style", "class", "width", "height", "border", "cellpadding",
-                    "cellspacing", "colspan", "rowspan", "valign", "align",
-                    "data-var", "data-for", "src", "alt", "data-file-id",
-                    "charset", "name", "content", "href", "target", "rel",
-                ]
-            },
-            strip=False,
-        )
+        rendered_html = sanitize_print_template_html(rendered_html)
     except ImportError:
         pass
 

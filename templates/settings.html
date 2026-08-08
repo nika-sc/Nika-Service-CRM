@@ -3414,6 +3414,8 @@ let editingPartId = null;
                     <li><code>##total.paid.words##</code> — сумма прописью</li>
                     <li><code>##PREPAYMENT##</code> — предоплата</li>
                     <li><code>##PREPAYMENT_WORDS##</code> — предоплата прописью</li>
+                    <li><code>##ESTIMATED_COST##</code> — предварительная стоимость</li>
+                    <li><code>##ESTIMATED_COST_WORDS##</code> — предварительная стоимость прописью</li>
                     <li><code>##CURRENCY##</code> — валюта (₽)</li>
                 </ul>
             </div>
@@ -3508,6 +3510,8 @@ let editingPartId = null;
             'total.paid.words': 'Двести восемьдесят семь тысяч триста девяносто девять рублей 65 копеек',
             PREPAYMENT: '1000.00',
             PREPAYMENT_WORDS: 'Одна тысяча рублей 00 копеек',
+            ESTIMATED_COST: '5000.00',
+            ESTIMATED_COST_WORDS: 'Пять тысяч рублей 00 копеек',
             ENGINEER_NAME: 'Сергей',
             MASTER_NAME: 'Сергей',
             MANAGER_NAME: 'Николай',
@@ -5157,7 +5161,8 @@ let editingPartId = null;
                 menubar: true,
                 height: 320,
                 plugins: 'link lists table code fullscreen preview',
-                toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | table link | code preview fullscreen',
+                toolbar: 'undo redo | styles fontsize | bold italic underline | alignleft aligncenter alignright | bullist numlist | table link | code preview fullscreen',
+                font_size_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 24pt',
                 branding: false,
                 setup: function (editor) {
                     editor.on('change keyup', function () {

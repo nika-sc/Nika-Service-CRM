@@ -29,7 +29,9 @@ class Config:
     SESSION_COOKIE_NAME = os.environ.get('SESSION_COOKIE_NAME', 'nikacrm_session')
     # Лимит размера тела запроса (защита от больших payload / DoS)
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', str(12 * 1024 * 1024)))  # 12MB
-    # Допустимые Host заголовки (защита от Host Header attacks)
+    # Допустимые Host заголовки (защита от Host Header attacks).
+    # Токен @private разрешает любой private/loopback/link-local IP
+    # (192.168/16, 10/8, 172.16–31/12 и т.п.) — удобно для LAN при DHCP.
     TRUSTED_HOSTS = [
         h.strip().lower()
         for h in (os.environ.get(
@@ -92,7 +94,8 @@ class Config:
     
     # Flask-SocketIO настройки
     SOCKETIO_ASYNC_MODE = 'threading'
-    # Допустимые origin для Socket.IO (CSV или '*')
+    # Допустимые origin для Socket.IO (CSV или '*').
+    # Токен @private добавляет http://<локальный-IP>:<APP_PORT> и hostname.
     SOCKETIO_CORS_ALLOWED_ORIGINS = os.environ.get(
         'SOCKETIO_CORS_ALLOWED_ORIGINS',
         'http://localhost:5000,http://127.0.0.1:5000'

@@ -3,6 +3,7 @@
 #
 #   sudo bash scripts/linux_setup.sh
 #   sudo bash scripts/linux_setup.sh --with-nginx
+#   sudo bash scripts/linux_setup.sh --lan
 #   DEST=/opt/nika-crm REPO_URL=https://github.com/nika-sc/Nika-Service-CRM.git sudo bash scripts/linux_setup.sh
 #   sudo bash scripts/linux_setup.sh --from-dir /path/to/already/cloned
 #
@@ -12,6 +13,7 @@
 set -euo pipefail
 
 WITH_NGINX=0
+WITH_LAN=0
 FROM_DIR=""
 REPO_URL="${REPO_URL:-https://github.com/nika-sc/Nika-Service-CRM.git}"
 BRANCH="${BRANCH:-main}"
@@ -20,12 +22,13 @@ DEST="${DEST:-/root/Nika-Service-CRM}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --with-nginx) WITH_NGINX=1; shift ;;
+    --lan) WITH_LAN=1; shift ;;
     --from-dir) FROM_DIR="${2:-}"; shift 2 ;;
     --dest) DEST="${2:-}"; shift 2 ;;
     --repo) REPO_URL="${2:-}"; shift 2 ;;
     --branch) BRANCH="${2:-}"; shift 2 ;;
     -h|--help)
-      sed -n '2,12p' "$0"
+      sed -n '2,14p' "$0"
       exit 0
       ;;
     *) echo "Неизвестный аргумент: $1"; exit 1 ;;
@@ -79,8 +82,14 @@ UNIT_SRC="$DEST/deploy/systemd/nikacrm.service.example"
 UNIT_DST="/etc/systemd/system/nikacrm.service"
 if [[ -f "$UNIT_SRC" ]]; then
   LOG "Установка systemd unit → $UNIT_DST"
+  BIND_ADDR="127.0.0.1:5000"
+  if [[ "$WITH_LAN" == "1" && "$WITH_NGINX" != "1" ]]; then
+    BIND_ADDR="0.0.0.0:5000"
+    LOG "LAN mode: gunicorn bind $BIND_ADDR"
+  fi
   sed \
     -e "s|/root/Nika-Service-CRM|$DEST|g" \
+    -e "s|--bind 127.0.0.1:5000|--bind ${BIND_ADDR}|g" \
     "$UNIT_SRC" > "$UNIT_DST"
   systemctl daemon-reload
   systemctl enable --now nikacrm
@@ -88,6 +97,13 @@ if [[ -f "$UNIT_SRC" ]]; then
   systemctl is-active --quiet nikacrm && LOG "nikacrm: active" || LOG "WARN: nikacrm не active — journalctl -u nikacrm"
 else
   LOG "WARN: нет $UNIT_SRC — systemd не настроен"
+fi
+
+if [[ "$WITH_LAN" == "1" && "$WITH_NGINX" != "1" ]]; then
+  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi "Status: active"; then
+    ufw allow 5000/tcp || LOG "WARN: не удалось открыть 5000/tcp в ufw"
+    LOG "ufw: allow 5000/tcp"
+  fi
 fi
 
 # optional nginx
@@ -119,8 +135,13 @@ IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 IP="${IP:-127.0.0.1}"
 if [[ "$WITH_NGINX" == "1" ]]; then
   URL="http://${IP}/"
-else
+  URL_HINT=""
+elif [[ "$WITH_LAN" == "1" ]]; then
   URL="http://${IP}:5000/"
+  URL_HINT="LAN включён (--lan). Смените демо-пароли, если CRM доступна из сети."
+else
+  URL="http://127.0.0.1:5000/"
+  URL_HINT="С другого ПК порт 5000 недоступен (gunicorn на 127.0.0.1). Для LAN: переустановите с --lan или добавьте --with-nginx."
 fi
 
 echo
@@ -129,6 +150,9 @@ echo " Nika CRM установлена"
 echo " Каталог:  $DEST"
 echo " .env:     $DEST/.env  (права 600)"
 echo " URL:      $URL"
+if [[ -n "$URL_HINT" ]]; then
+  echo " Подсказка: $URL_HINT"
+fi
 echo " Сервис:   systemctl status nikacrm"
 echo
 echo " Демо-логины (после bootstrap-дампа):"

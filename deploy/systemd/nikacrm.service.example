@@ -8,6 +8,10 @@
 # Реестр заявок в приложении использует POST для DataTables; флаг оставлен для совместимости.
 # WORK (~2 CPU / 4 ГБ): --workers 3 --threads 4
 # DEMO / VPS ~1 ГБ / 1 CPU: --workers 2 --threads 4 (3–4 воркера на 1 ГБ — риск OOM)
+#
+# По умолчанию bind на 127.0.0.1:5000 (за reverse-proxy). Для доступа из LAN
+# без nginx: --bind 0.0.0.0:5000 и TRUSTED_HOSTS=...,@private в .env.
+# На публичном VPS не открывайте 5000/tcp в интернет без TLS.
 
 [Unit]
 Description=Nika CRM Gunicorn Service

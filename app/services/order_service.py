@@ -750,6 +750,7 @@ class OrderService:
         serial_number: Optional[str] = None,
         prepayment: str = '0',
         prepayment_method: str = 'cash',
+        estimated_cost: str = '0',
         password: Optional[str] = None,
         appearance: Optional[str] = None,
         comment: Optional[str] = None,
@@ -771,6 +772,7 @@ class OrderService:
             serial_number: Серийный номер (опционально)
             prepayment: Предоплата
             prepayment_method: Способ предоплаты (cash, card, transfer)
+            estimated_cost: Предварительная стоимость (оценка)
             password: Пароль от устройства
             appearance: Внешний вид
             comment: Комментарий
@@ -921,12 +923,14 @@ class OrderService:
                     has_model_column = 'model' in columns
                     has_model_id_column = 'model_id' in columns
                     has_prepayment_cents_column = 'prepayment_cents' in columns
+                    has_estimated_cost_column = 'estimated_cost' in columns
                     logger.debug(f"Колонки в таблице orders: {columns}, has_model_column={has_model_column}, has_model_id_column={has_model_id_column}")
                 except Exception as pragma_e:
                     logger.warning(f"Не удалось проверить структуру таблицы: {pragma_e}")
                     has_model_column = True
                     has_model_id_column = True
                     has_prepayment_cents_column = False
+                    has_estimated_cost_column = False
                 
                 try:
                     # Формируем список колонок и значений для INSERT
@@ -946,11 +950,20 @@ class OrderService:
                         prepayment_value = float(prepayment or 0)
                     except Exception:
                         prepayment_value = 0.0
+
+                    try:
+                        estimated_cost_value = float(estimated_cost or 0)
+                    except Exception:
+                        estimated_cost_value = 0.0
                     
                     # Добавляем prepayment_cents если колонка существует
                     if has_prepayment_cents_column:
                         insert_columns.append('prepayment_cents')
                         insert_values.append(int(round(prepayment_value * 100)))
+
+                    if has_estimated_cost_column:
+                        insert_columns.append('estimated_cost')
+                        insert_values.append(str(estimated_cost_value))
                     
                     # Добавляем model и model_id если колонки существуют
                     if has_model_column:

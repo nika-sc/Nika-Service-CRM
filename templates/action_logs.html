@@ -267,7 +267,7 @@
                                             {# Проверяем обычные поля (для логов от order_detail) #}
                                             {% if not has_useful_data %}
                                                 {# Проверяем наличие ключей device_type, device_brand и других полезных полей напрямую #}
-                                                {% if 'device_type' in log.details or 'device_brand' in log.details or 'status' in log.details or 'manager' in log.details or 'master' in log.details or 'symptom_tags' in log.details or 'appearance' in log.details or 'serial_number' in log.details or 'model' in log.details or 'password' in log.details or 'comment' in log.details or 'prepayment' in log.details or 'client_name' in log.details or 'phone' in log.details or 'email' in log.details %}
+                                                {% if 'device_type' in log.details or 'device_brand' in log.details or 'status' in log.details or 'manager' in log.details or 'master' in log.details or 'symptom_tags' in log.details or 'appearance' in log.details or 'serial_number' in log.details or 'model' in log.details or 'password' in log.details or 'comment' in log.details or 'prepayment' in log.details or 'estimated_cost' in log.details or 'client_name' in log.details or 'phone' in log.details or 'email' in log.details %}
                                                     {% set has_useful_data = true %}
                                                 {% else %}
                                                     {# Если нет известных полей, проверяем любые другие не в excluded_keys #}
@@ -308,6 +308,7 @@
                                                 'phone': 'Телефон',
                                                 'email': 'Email',
                                                 'prepayment': 'Предоплата',
+                                                'estimated_cost': 'Предварительная стоимость',
                                                 'price': 'Цена',
                                                 'quantity': 'Количество',
                                                 'device': 'Устройство',
@@ -436,6 +437,11 @@
                                                             <span class="text-muted">{{ value.old or '—' }}</span>
                                                             <i class="fas fa-arrow-right mx-1 text-muted"></i>
                                                             <span>{{ value.new or '—' }} ₽</span>
+                                                        {% elif key == 'estimated_cost' and value is mapping and value.old is defined %}
+                                                            <strong>Предварительная стоимость:</strong>
+                                                            <span class="text-muted">{{ value.old or '—' }}</span>
+                                                            <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                                            <span>{{ value.new or '—' }} ₽</span>
                                                         {% elif key == 'client_name' and value is mapping and value.old is defined %}
                                                             <strong>Имя клиента:</strong>
                                                             <span class="text-muted">{{ value.old or '—' }}</span>
@@ -464,7 +470,7 @@
                                                                 {% endif %}
                                                             </div>
                                                             {% endfor %}
-                                                        {% elif value is mapping and ('old' in value or 'new' in value) and key not in ['status', 'manager', 'master', 'device_type', 'device_brand', 'symptom_tags', 'appearance', 'serial_number', 'model', 'password', 'comment', 'prepayment', 'client_name', 'phone', 'email'] %}
+                                                        {% elif value is mapping and ('old' in value or 'new' in value) and key not in ['status', 'manager', 'master', 'device_type', 'device_brand', 'symptom_tags', 'appearance', 'serial_number', 'model', 'password', 'comment', 'prepayment', 'estimated_cost', 'client_name', 'phone', 'email'] %}
                                                             {# Общий шаблон для словарей с old/new, которые не обработаны выше #}
                                                             <strong>{{ field_labels.get(key, key) }}:</strong>
                                                             <span class="text-muted">{{ value.old or '—' }}</span>

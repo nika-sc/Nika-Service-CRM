@@ -19,6 +19,11 @@ else {
 Start-Sleep -Seconds 2
 & sc.exe delete "NikaCRM-PostgreSQL" | Out-Null
 
+foreach ($ruleName in @("Nika CRM (HTTP 5000)")) {
+    Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
+        Remove-NetFirewallRule -ErrorAction SilentlyContinue
+}
+
 $desktop = [Environment]::GetFolderPath("CommonDesktopDirectory")
 $programs = [Environment]::GetFolderPath("CommonPrograms")
 Remove-Item -LiteralPath (Join-Path $desktop "Nika CRM - Открыть.lnk") -Force

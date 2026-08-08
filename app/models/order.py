@@ -27,6 +27,7 @@ class Order(BaseModel):
         status_id: ID статуса
         status: Код статуса (legacy)
         prepayment: Предоплата
+        estimated_cost: Предварительная стоимость (оценка, не касса)
         password: Пароль от устройства
         appearance: Внешний вид (текст, для обратной совместимости)
         comment: Комментарий
@@ -64,6 +65,7 @@ class Order(BaseModel):
         self.status_name = kwargs.get('status_name')
         self.status_color = kwargs.get('status_color')
         self.prepayment = kwargs.get('prepayment', '0')
+        self.estimated_cost = kwargs.get('estimated_cost', '0')
         self.password = kwargs.get('password')
         self.appearance = kwargs.get('appearance')
         self.comment = kwargs.get('comment')
@@ -117,6 +119,14 @@ class Order(BaseModel):
                     errors.append("Предоплата не может быть отрицательной")
             except (ValueError, TypeError):
                 errors.append("Неверный формат предоплаты")
+
+        if self.estimated_cost is not None:
+            try:
+                estimated = float(self.estimated_cost) if isinstance(self.estimated_cost, str) else self.estimated_cost
+                if estimated < 0:
+                    errors.append("Предварительная стоимость не может быть отрицательной")
+            except (ValueError, TypeError):
+                errors.append("Неверный формат предварительной стоимости")
         
         if errors:
             raise ValidationError("; ".join(errors))
@@ -280,6 +290,7 @@ class Order(BaseModel):
             'status_name': self.status_name,
             'status_color': self.status_color,
             'prepayment': self.prepayment,
+            'estimated_cost': self.estimated_cost,
             'password': self.password,
             'appearance': self.appearance,
             'comment': self.comment,

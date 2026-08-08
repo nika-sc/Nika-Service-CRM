@@ -2382,6 +2382,9 @@
             <p><strong>Внешний вид / комплектация:</strong> {{ order.appearance }}</p>
             {% endif %}
             <table class="print-info-table">
+                {% if order.estimated_cost and order.estimated_cost|string != '0' and order.estimated_cost|string != '0.0' and order.estimated_cost|string != '0.00' %}
+                <tr><td>Предварительная стоимость:</td><td><strong>{{ order.estimated_cost }} {{ settings.currency or 'RUB' }}</strong></td></tr>
+                {% endif %}
                 <tr><td>Предоплата:</td><td><strong>{{ order.prepayment or '0' }} {{ settings.currency or 'RUB' }}</strong></td></tr>
                 <tr><td>Статус:</td><td><strong>{{ order.status_name or 'Не указан' }}</strong></td></tr>
                 <tr><td>Менеджер:</td><td>{{ order.manager_name or '—' }}</td></tr>
@@ -2715,6 +2718,10 @@
                                                 <span class="compact-value" style="font-size: 0.85rem;">{{ order.updated_at|format_date(with_time=True) }}</span>
                                             </div>
                                             {% endif %}
+                                            <div class="compact-info-item highlight-item">
+                                                <span class="compact-label"><i class="fas fa-calculator me-1"></i>Предв. стоимость:</span>
+                                                <span class="compact-value fw-semibold">{{ order.estimated_cost or '0' }} {{ settings.currency if settings and settings.currency else 'RUB' }}</span>
+                                            </div>
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-ruble-sign me-1"></i>Предоплата:</span>
                                                 <span class="compact-value fw-semibold">{{ order.prepayment or '0' }} {{ settings.currency if settings and settings.currency else 'RUB' }}</span>
@@ -3614,6 +3621,10 @@
                                     {% endfor %}
                                 </select>
                                 <input type="hidden" name="appearance" id="editAppearanceInput" value="{{ order.appearance or '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Предварительная стоимость (₽)</label>
+                                <input type="number" class="form-control" name="estimated_cost" value="{{ order.estimated_cost or 0 }}" min="0" step="1">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Предоплата (₽)</label>

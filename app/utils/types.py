@@ -40,6 +40,7 @@ class OrderDict(TypedDict, total=False):
     status_id: Optional[int]
     status: str
     prepayment: str
+    estimated_cost: str
     password: Optional[str]
     appearance: Optional[str]
     comment: Optional[str]

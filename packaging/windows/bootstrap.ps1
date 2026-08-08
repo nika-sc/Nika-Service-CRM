@@ -33,7 +33,7 @@ $postgresServiceName = "NikaCRM-PostgreSQL"
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
 Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.5"
+Write-Host "[Nika CRM Setup] Bootstrap version 1.0.6"
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
@@ -110,6 +110,94 @@ function Import-DotEnv([string] $Path) {
         }
         $name, $value = $trimmed.Split("=", 2)
         [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), "Process")
+    }
+}
+
+function Get-PrimaryLanIPv4 {
+    try {
+        $candidates = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+            Where-Object {
+                $_.IPAddress -and
+                $_.IPAddress -notlike "127.*" -and
+                $_.IPAddress -notlike "169.254.*" -and
+                $_.PrefixOrigin -ne "WellKnown"
+            } |
+            Sort-Object -Property InterfaceMetric, PrefixLength
+        if ($candidates) {
+            return [string] $candidates[0].IPAddress
+        }
+    }
+    catch {
+        # Fall through to empty string.
+    }
+    return ""
+}
+
+function Merge-DotEnvFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $AlwaysSet,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $SetIfMissing
+    )
+
+    $existing = @{}
+    $order = New-Object System.Collections.Generic.List[string]
+    if (Test-Path -LiteralPath $Path) {
+        foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith("#") -or -not $trimmed.Contains("=")) {
+                continue
+            }
+            $name, $value = $trimmed.Split("=", 2)
+            $key = $name.Trim()
+            if (-not $existing.ContainsKey($key)) {
+                $order.Add($key) | Out-Null
+            }
+            $existing[$key] = $value.Trim()
+        }
+    }
+
+    foreach ($key in $AlwaysSet.Keys) {
+        if (-not $existing.ContainsKey($key)) {
+            $order.Add($key) | Out-Null
+        }
+        $existing[$key] = [string] $AlwaysSet[$key]
+    }
+    foreach ($key in $SetIfMissing.Keys) {
+        if (-not $existing.ContainsKey($key)) {
+            $order.Add($key) | Out-Null
+            $existing[$key] = [string] $SetIfMissing[$key]
+        }
+    }
+
+    $lines = foreach ($key in $order) {
+        "{0}={1}" -f $key, $existing[$key]
+    }
+    $lines | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Ensure-NikaCrmFirewallRule {
+    param(
+        [int] $Port = 5000
+    )
+    $ruleName = "Nika CRM (HTTP $Port)"
+    $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+    if (-not $existing) {
+        New-NetFirewallRule `
+            -DisplayName $ruleName `
+            -Direction Inbound `
+            -Action Allow `
+            -Protocol TCP `
+            -LocalPort $Port `
+            -Profile Private,Domain `
+            -ErrorAction Stop | Out-Null
+        Write-Step "Created firewall rule: $ruleName (Private, Domain)"
+    }
+    else {
+        Write-Step "Firewall rule already present: $ruleName"
     }
 }
 
@@ -264,23 +352,46 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
     if ($LASTEXITCODE -ne 0) { throw "Failed to grant database privileges." }
 
     Write-Step "Writing application environment"
-    $secretKey = New-SafePassword "NikaSecretA1"
-    $envLines = @(
-        "FLASK_ENV=production",
-        "DB_DRIVER=postgres",
-        "DATABASE_URL=postgresql://nikacrm:$appDbPassword@127.0.0.1:$postgresPort/nikacrm",
-        "SECRET_KEY=$secretKey",
-        "APP_HOST=127.0.0.1",
-        "APP_PORT=5000",
-        "TRUSTED_HOSTS=localhost,127.0.0.1",
-        "SESSION_COOKIE_SECURE=0",
-        "RATELIMIT_STORAGE_URI=memory://",
-        "TIMEZONE_OFFSET=3",
-        "PUBLIC_LANDING=0",
-        "DEMO_LOGIN_BANNER=0"
-    )
-    $envLines | Set-Content -LiteralPath $envFile -Encoding UTF8
+    $computerName = ($env:COMPUTERNAME -as [string])
+    if (-not $computerName) { $computerName = "localhost" }
+    $trustedHosts = "localhost,127.0.0.1,@private,$computerName,$computerName.local"
+    $alwaysSet = @{
+        "FLASK_ENV" = "production"
+        "DB_DRIVER" = "postgres"
+        "DATABASE_URL" = "postgresql://nikacrm:$appDbPassword@127.0.0.1:$postgresPort/nikacrm"
+    }
+    $setIfMissing = @{
+        "SECRET_KEY" = (New-SafePassword "NikaSecretA1")
+        "APP_HOST" = "0.0.0.0"
+        "APP_PORT" = "5000"
+        "TRUSTED_HOSTS" = $trustedHosts
+        "SOCKETIO_CORS_ALLOWED_ORIGINS" = "http://localhost:5000,http://127.0.0.1:5000,@private"
+        "SESSION_COOKIE_SECURE" = "0"
+        "USE_HTTPS" = "false"
+        "RATELIMIT_STORAGE_URI" = "memory://"
+        "TIMEZONE_OFFSET" = "3"
+        "PUBLIC_LANDING" = "0"
+        "DEMO_LOGIN_BANNER" = "0"
+    }
+    # On fresh install force LAN-ready defaults even if a partial .env exists.
+    if (-not (Test-Path -LiteralPath $envFile)) {
+        $alwaysSet["APP_HOST"] = "0.0.0.0"
+        $alwaysSet["APP_PORT"] = "5000"
+        $alwaysSet["TRUSTED_HOSTS"] = $trustedHosts
+        $alwaysSet["SOCKETIO_CORS_ALLOWED_ORIGINS"] = "http://localhost:5000,http://127.0.0.1:5000,@private"
+        $alwaysSet["SECRET_KEY"] = $setIfMissing["SECRET_KEY"]
+        $alwaysSet["SESSION_COOKIE_SECURE"] = "0"
+        $alwaysSet["USE_HTTPS"] = "false"
+        $alwaysSet["RATELIMIT_STORAGE_URI"] = "memory://"
+        $alwaysSet["TIMEZONE_OFFSET"] = "3"
+        $alwaysSet["PUBLIC_LANDING"] = "0"
+        $alwaysSet["DEMO_LOGIN_BANNER"] = "0"
+    }
+    Merge-DotEnvFile -Path $envFile -AlwaysSet $alwaysSet -SetIfMissing $setIfMissing
     Import-DotEnv $envFile
+
+    Write-Step "Opening Windows Firewall for local network access"
+    Ensure-NikaCrmFirewallRule -Port 5000
 
     Write-Step "Verifying application role privileges"
     & (Join-Path $appRoot "scripts\Grant-LocalPostgresAppPrivileges.ps1") `
@@ -352,7 +463,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
     Invoke-Nssm @("set", $serviceName, "AppParameters", "nikacrm_service.py")
     Invoke-Nssm @("set", $serviceName, "AppDirectory", $appRoot)
     Invoke-Nssm @("set", $serviceName, "DisplayName", "Nika CRM Web Server")
-    Invoke-Nssm @("set", $serviceName, "Description", "Local Nika CRM server on http://127.0.0.1:5000")
+    Invoke-Nssm @("set", $serviceName, "Description", "Nika CRM web server (LAN-ready on port 5000)")
     Invoke-Nssm @("set", $serviceName, "Start", "SERVICE_AUTO_START")
     Invoke-Nssm @("set", $serviceName, "AppExit", "Default", "Restart")
     Invoke-Nssm @("set", $serviceName, "AppRestartDelay", "5000")
@@ -382,7 +493,16 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         throw "Nika CRM service did not pass the HTTP health check."
     }
 
+    $lanIp = Get-PrimaryLanIPv4
     Write-Step "Installation completed successfully"
+    Write-Host "Local URL:  http://127.0.0.1:5000"
+    if ($lanIp) {
+        Write-Host "LAN URL:    http://${lanIp}:5000"
+        Write-Host "Change demo passwords if other devices on the network can reach this PC."
+    }
+    else {
+        Write-Host "LAN URL:    (no private IPv4 detected; open http://<this-pc-ip>:5000 from another device)"
+    }
 }
 catch {
     Write-Error ("Automatic setup failed: {0}`n{1}" -f $_.Exception.Message, $_.ScriptStackTrace)

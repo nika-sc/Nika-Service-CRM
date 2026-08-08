@@ -33,6 +33,7 @@ SQLite в новых сценариях не использовать.
    ```bash
    cp docker/env.example .env
    # задайте SECRET_KEY, пароли Postgres, при необходимости SMTP и TRUSTED_HOSTS
+   # для LAN без домена можно: TRUSTED_HOSTS=localhost,127.0.0.1,@private
    python3 -c "import secrets; print(secrets.token_hex(32))"
    ```
 

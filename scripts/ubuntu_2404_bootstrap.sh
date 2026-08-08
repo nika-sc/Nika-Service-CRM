@@ -67,12 +67,15 @@ if [[ -f "$DEST/save/scripts/grant_app_user_after_vps_restore.sql" ]]; then
 fi
 
 umask 077
+HOST_NAME="$(hostname -s 2>/dev/null || hostname || echo localhost)"
 cat >"$DEST/.env" <<EOF
 SECRET_KEY=${SECRET}
 FLASK_ENV=production
 FLASK_DEBUG=False
 DB_DRIVER=postgres
 DATABASE_URL=postgresql://nikacrm:${NIKA_PASS}@127.0.0.1:5432/nikacrm
+TRUSTED_HOSTS=localhost,127.0.0.1,@private,${HOST_NAME}
+SOCKETIO_CORS_ALLOWED_ORIGINS=http://localhost:5000,http://127.0.0.1:5000,@private
 RATELIMIT_STORAGE_URI=memory://
 TIMEZONE_OFFSET=3
 EOF

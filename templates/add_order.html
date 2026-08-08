@@ -543,7 +543,16 @@
                         <small class="text-muted">Теги для быстрой приёмки</small>
                     </div>
                     <input type="hidden" id="appearance" name="appearance" value="">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label for="estimated_cost" class="form-label">Предварительная стоимость</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="estimated_cost" name="estimated_cost"
+                                   value="0" min="0" step="1">
+                            <span class="input-group-text">₽</span>
+                        </div>
+                        <small class="text-muted">Оценка для клиента (в квитанции)</small>
+                    </div>
+                    <div class="col-md-3">
                         <label for="prepayment" class="form-label">Предоплата</label>
                         <div class="input-group">
                             <input type="number" class="form-control" id="prepayment" name="prepayment"
@@ -1306,7 +1315,7 @@
             8
         );
         bindTildeSelect(tomSymptomTags, () => tomAppearanceTags);
-        bindTildeSelect(tomAppearanceTags, '#prepayment');
+        bindTildeSelect(tomAppearanceTags, '#estimated_cost');
         const appearanceHiddenInput = document.getElementById('appearance');
         const syncAppearanceHidden = () => {
             if (appearanceHiddenInput && intakeChecklistInput) {
@@ -1853,6 +1862,8 @@
             setAppearanceTagsFromString(order.appearance || order.intake_checklist || '');
             
             // Заполняем остальные поля
+            const estimatedCostInput = document.getElementById('estimated_cost');
+            if (estimatedCostInput) estimatedCostInput.value = order.estimated_cost || '0';
             const prepaymentInput = document.getElementById('prepayment');
             if (prepaymentInput) prepaymentInput.value = order.prepayment || '0';
             // Обновляем состояние поля способа предоплаты
@@ -2060,6 +2071,7 @@
         bindEnterNext('#phone', tomDeviceType);
         bindEnterNext('#serialNumber', '#password');
         bindEnterNext('#password', tomModel);
+        bindEnterNext('#estimated_cost', '#prepayment');
         bindEnterNext('#prepayment', '#manager');
         bindEnterNext('#manager', '#master');
         bindEnterNext('#master', '#comment');

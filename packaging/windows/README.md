@@ -81,12 +81,54 @@ Run the installer in a clean Windows Sandbox and collect JSON/log results:
 ### Port is occupied
 
 The database installer automatically tries `5432`, `55432` and `55433`.
-The web interface requires `127.0.0.1:5000`; stop the program using that port
-before installation:
+The web service listens on all interfaces (`APP_HOST=0.0.0.0`, port `5000`) so
+other PCs on the LAN can open `http://<this-pc-ip>:5000`. Locally you can still
+use `http://127.0.0.1:5000`. Stop any other program using port `5000` before
+installation:
 
 ```powershell
 Get-NetTCPConnection -LocalPort 5000 | Select-Object OwningProcess
 ```
+
+### Access from the local network (LAN)
+
+New installs are LAN-ready by default:
+
+- `APP_HOST=0.0.0.0`
+- `TRUSTED_HOSTS=localhost,127.0.0.1,@private,<COMPUTERNAME>,...`
+- Windows Firewall inbound rule **Nika CRM (HTTP 5000)** for profiles **Private** and **Domain** (not Public)
+
+If an older install still opens only on this PC, run (as Administrator):
+
+```powershell
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\NikaCRM\app\packaging\windows\enable-lan-access.ps1"
+```
+
+Or use the Start menu shortcut **Nika CRM — Доступ по сети (LAN)**.
+
+**Security:** any device on the same private network can reach the CRM. Change
+demo passwords (`admin` / `111111`, …) immediately.
+
+### PostgreSQL password (pgAdmin)
+
+There is **no fixed database password** such as `111111`. That password is only
+for demo **web** accounts. PostgreSQL passwords are random per installation.
+
+Show them (Administrator PowerShell):
+
+```powershell
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\NikaCRM\app\packaging\windows\show-db-credentials.ps1"
+```
+
+Or Start menu: **Nika CRM — Пароль базы данных**.
+
+Credentials are stored in:
+
+- `%ProgramData%\NikaCRM\installer\install-state.json` (`postgres_super_password`, `app_db_password`, `postgres_port`) — ACL: SYSTEM + Administrators only
+- `%ProgramData%\NikaCRM\.env` → `DATABASE_URL` (role `nikacrm`)
+
+Connect in pgAdmin to `127.0.0.1`, database `nikacrm`, user `nikacrm` (or
+`postgres` for the superuser), port from the script (usually `5432`).
 
 ### PostgreSQL does not start
 
