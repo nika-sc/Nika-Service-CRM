@@ -41,7 +41,7 @@ def _find_duplicates(out: Path, names: tuple[str, ...]) -> list[list[str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture Nika CRM customer portal screenshots")
-    parser.add_argument("--base-url", default="https://demo.nika-sc.ru")
+    parser.add_argument("--base-url", default="https://service.nika-crm.ru")
     parser.add_argument("--staff-user", default="demo_admin")
     parser.add_argument("--staff-password", default="Demo2026!")
     parser.add_argument("--portal-password", default="Portal123!")

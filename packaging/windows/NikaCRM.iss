@@ -4,7 +4,7 @@
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
-#define MyDemoURL "https://demo.nika-sc.ru/"
+#define MyDemoURL "https://service.nika-crm.ru/"
 #define MyGuideURL "https://github.com/nika-sc/Nika-Service-CRM/blob/main/docs/USER_GUIDE.md"
 #define SourceRoot "..\.."
 
@@ -155,7 +155,7 @@ begin
     'Установщик автоматически развернёт Python 3.12, PostgreSQL 18, демонстрационную базу и службы автозапуска.' + #13#10 + #13#10 +
     'Автор: Александр Смелков, сервисный центр «Ника», Сочи.' + #13#10 +
     'Проект: https://github.com/nika-sc/Nika-Service-CRM' + #13#10 +
-    'Демо: https://demo.nika-sc.ru/' + #13#10 +
+    'Демо: https://service.nika-crm.ru/' + #13#10 +
     'Email: smelkov2008@yandex.ru';
 
   ExtractTemporaryFile('installer-hero.bmp');

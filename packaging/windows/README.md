@@ -8,7 +8,7 @@ all Windows Python wheels required by the application.
 
 - [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 - [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
-- [Demo mirror](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
 SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 

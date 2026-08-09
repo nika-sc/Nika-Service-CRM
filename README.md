@@ -10,14 +10,17 @@
 </p>
 
 <p align="center">
-  <a href="https://demo.nika-sc.ru/"><img src="https://img.shields.io/badge/Demo-online-2bb8a6?style=for-the-badge" alt="Live demo"></a>
+  <a href="https://www.nika-crm.ru/"><img src="https://img.shields.io/badge/Hub-nika--crm.ru-ff5a3c?style=for-the-badge" alt="Nika CRM hub"></a>
+  <a href="https://service.nika-crm.ru/"><img src="https://img.shields.io/badge/Demo-Service-2bb8a6?style=for-the-badge" alt="Live demo Service"></a>
   <a href="https://firstvds.ru/?from=528402"><img src="https://img.shields.io/badge/Бесплатная%20установка-FirstVDS%20VPS-e8b86d?style=for-the-badge" alt="Free install via FirstVDS"></a>
   <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-0f1c24?style=for-the-badge" alt="MIT License"></a>
   <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
 </p>
 
 <p align="center">
-  <a href="https://demo.nika-sc.ru/"><b>Открыть демо</b></a>
+  <a href="https://www.nika-crm.ru/"><b>Все продукты</b></a>
+  ·
+  <a href="https://service.nika-crm.ru/"><b>Демо Service</b></a>
   ·
   <a href="#free-install-vps"><b>Бесплатная установка на VPS</b></a>
   ·
@@ -29,6 +32,8 @@
   ·
   <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5"><b>Связаться</b></a>
 </p>
+
+**Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) (хаб) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо Service) · Fitness — [fitness.nika-crm.ru](https://fitness.nika-crm.ru/) / [Nika-Fitness-CRM](https://github.com/nika-sc/Nika-Fitness-CRM)
 
 > **Не хотите читать длинную инструкцию?**  
 > **Бесплатно** установлю и помогу поддерживать CRM, если вы возьмёте VPS у партнёра **FirstVDS** по [реферальной ссылке](https://firstvds.ru/?from=528402) и промокоду **`648528402`**.  
@@ -367,7 +372,7 @@ cd Nika-Service-CRM
 
 - [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 - [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
-- [Зеркало на демо-сайте](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
 SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 
@@ -386,7 +391,7 @@ SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 
 Это учётки локальной OSS-базы и Windows SETUP. Онлайн-демо использует
 отдельную учётку, указанную в окне входа на
-[demo.nika-sc.ru](https://demo.nika-sc.ru/).
+[service.nika-crm.ru](https://service.nika-crm.ru/).
 
 Программа устанавливается в `%ProgramFiles%\NikaCRM`, а база и журналы
 хранятся в `%ProgramData%\NikaCRM`. При удалении приложения каталог с данными
@@ -426,7 +431,7 @@ SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
   [Query-классы](app/database/queries/README.md), [маршруты](app/routes/README.md),
   [утилиты](app/utils/README.md), [middleware](app/middleware/README.md),
   [шаблоны](templates/README.md)
-- [онлайн-демо](https://demo.nika-sc.ru/) · [документация на демо](https://demo.nika-sc.ru/docs)
+- [онлайн-демо](https://service.nika-crm.ru/) · [документация на демо](https://service.nika-crm.ru/docs)
 - сайт СЦ [nika-sc.ru](https://nika-sc.ru/)
 - связь: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru),
   [nika-sc@bk.ru](mailto:nika-sc@bk.ru) (тема `Nika-CRM Помощь по установке`),
@@ -773,7 +778,7 @@ NikaNewCrm/
 - [О проекте и установка](docs/ABOUT.md)
 - [API](docs/API.md)
 - [Деплой](docs/DEPLOY.md)
-- На демо без GitHub: [demo.nika-sc.ru/docs](https://demo.nika-sc.ru/docs)
+- На демо без GitHub: [service.nika-crm.ru/docs](https://service.nika-crm.ru/docs)
 
 ### Документация модулей кода
 
@@ -810,7 +815,7 @@ NikaNewCrm/
 
 ### Клиентский портал: как выдать доступ и как войти
 
-- Адрес входа клиента: `/portal/login` (локально: `http://127.0.0.1:5000/portal/login`, демо: `https://demo.nika-sc.ru/portal/login`)
+- Адрес входа клиента: `/portal/login` (локально: `http://127.0.0.1:5000/portal/login`, демо: `https://service.nika-crm.ru/portal/login`)
 - Пароль портала создаётся автоматически при первом появлении клиента в CRM
 - Если у клиента указан email, ссылка на портал, логин (телефон) и временный пароль уходят письмом «Заказ принят» при создании заявки. Для рабочей ссылки задайте `PORTAL_PUBLIC_URL` в `.env` и оставьте тег `##PORTAL_URL##` в шаблоне письма
 - Без email пароль выдаёт сотрудник: карточка клиента (`/clients/<id>`) → «Редактировать» → блок «Пароль для портала» (есть кнопка «Показать пароль»)
@@ -1623,7 +1628,7 @@ pytest --cov=app
 - Зафиксирован единый сценарий работы с личным кабинетом клиента: сотрудник выдаёт доступ в CRM, клиент входит в `/portal/login`, меняет пароль при первом входе и работает в разделах портала.
 - Явно документированы адреса портала:
   - локально: `http://127.0.0.1:5000/portal/login`
-  - демо: `https://demo.nika-sc.ru/portal/login`
+  - демо: `https://service.nika-crm.ru/portal/login`
 - В walkthrough добавлен отдельный блок по порталу (**раздел 13**) с реальным пошаговым сценарием от выдачи доступа до экрана кошелька клиента.
 - В полном руководстве обновлён раздел «Клиентский портал» (адрес входа, порядок действий, что видит клиент, что делает сотрудник).
 

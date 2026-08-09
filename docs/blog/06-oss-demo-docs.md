@@ -5,7 +5,7 @@
 ## OSS и демо
 
 - Публичный код: [github.com/nika-sc/Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM).
-- Демо: [demo.nika-sc.ru](https://demo.nika-sc.ru/) — автообновление с ветки `main`.
+- Демо: [service.nika-crm.ru](https://service.nika-crm.ru/) — автообновление с ветки `main`.
 - Порядок релиза: приватный `master` → `production` → рабочий VPS → OSS → демо.
 
 ![Вход в демо CRM](assets/walkthrough/01-login.png)

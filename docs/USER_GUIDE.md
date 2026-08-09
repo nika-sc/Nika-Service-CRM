@@ -55,7 +55,7 @@ Nika CRM — веб-система для сервисного центра: з�
 
 **Рабочая база данных** — только **PostgreSQL**. SQLite в проекте — наследие, не используйте его для новой установки.
 
-Публичная демонстрация: [https://demo.nika-sc.ru/](https://demo.nika-sc.ru/).  
+Публичная демонстрация: [https://service.nika-crm.ru/](https://service.nika-crm.ru/).  
 Исходники OSS: [github.com/nika-sc/Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM).
 
 ---
@@ -99,7 +99,7 @@ Nika CRM — веб-система для сервисного центра: з�
 Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база), версия **1.0.5**, дата сборки **2026-08-08**:
 
 1. Скачайте [NikaCRM-Offline-Setup-1.0.5-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)  
-   или зеркало на [demo.nika-sc.ru/downloads/…](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe).
+   или зеркало на [service.nika-crm.ru/downloads/…](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe).
 2. Запустите **от имени администратора**.
 3. Ярлык **Nika CRM — Открыть** → `http://127.0.0.1:5000`. С другого ПК в LAN: `http://<IP-этого-ПК>:5000` (доступ из сети включён по умолчанию; смените демо-пароли).
 4. Войдите демо-учёткой и смените пароль.
@@ -763,7 +763,7 @@ SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 ### 17.1. Адрес портала и вход клиента
 
 - Локально: `http://127.0.0.1:5000/portal/login`
-- Публичное демо: `https://demo.nika-sc.ru/portal/login`
+- Публичное демо: `https://service.nika-crm.ru/portal/login`
 
 Порядок входа:
 
@@ -923,7 +923,7 @@ SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 - [API.md](API.md) — HTTP API  
 - [database/bootstrap/README.md](../database/bootstrap/README.md) — дамп и демо-логины  
 
-На демо: [/docs](https://demo.nika-sc.ru/docs) (руководства без GitHub).
+На демо: [/docs](https://service.nika-crm.ru/docs) (руководства без GitHub).
 
 ### 20.4. История документа
 

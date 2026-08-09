@@ -5,7 +5,7 @@
 ## Адрес входа в портал
 
 - Локальная установка: `http://127.0.0.1:5000/portal/login`
-- Публичное демо: `https://demo.nika-sc.ru/portal/login`
+- Публичное демо: `https://service.nika-crm.ru/portal/login`
 
 Это отдельный вход от CRM сотрудников (`/login`).
 

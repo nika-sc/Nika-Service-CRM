@@ -12,6 +12,6 @@
 | [blog/](blog/) | Все | Публичный блог фич (`/blog`): [клиентский портал](blog/20-customer-portal-login.md), [смена исполнителей и багфиксы](blog/12-bugfixes-cache-salary.md), счета [08](blog/08-invoices-b2b.md)–[10](blog/10-invoices-blank-signs.md), [производительность](blog/11-perf-cash-mobile.md) |
 
 На демо с `PUBLIC_LANDING=1` руководства открываются без GitHub:  
-https://demo.nika-sc.ru/docs
+https://service.nika-crm.ru/docs
 
 Скриншоты walkthrough: [assets/walkthrough/](assets/walkthrough/).

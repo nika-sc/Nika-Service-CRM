@@ -2,7 +2,7 @@
 Съёмка скриншотов для docs/USER_WALKTHROUGH.md с DEMO/локальной CRM.
 
 Пример (демо):
-  python scripts/capture_walkthrough_screenshots.py --base-url https://demo.nika-sc.ru --user demo_admin --password Demo2026!
+  python scripts/capture_walkthrough_screenshots.py --base-url https://service.nika-crm.ru --user demo_admin --password Demo2026!
 """
 from __future__ import annotations
 

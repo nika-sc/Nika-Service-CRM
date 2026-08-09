@@ -103,7 +103,7 @@ def _windows_setup_info():
         "sha256": "B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
-        "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",
+        "demo_download_url": f"https://service.nika-crm.ru/downloads/{filename}",
         "requires_admin": True,
     }
 

@@ -4,7 +4,7 @@
 
 Работает на своём сервере или в локальной сети, без SaaS.
 
-- Живое демо: [demo.nika-sc.ru](https://demo.nika-sc.ru/)
+- Живое демо: [service.nika-crm.ru](https://service.nika-crm.ru/)
 - Исходный код: [GitHub Nika-Service-CRM](https://github.com/nika-sc/Nika-Service-CRM)
 - Лицензия: MIT
 

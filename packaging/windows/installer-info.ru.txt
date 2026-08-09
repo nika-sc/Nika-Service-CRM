@@ -31,7 +31,7 @@ Nika CRM — открытая система управления сервисн
 Официальная страница проекта:
 https://github.com/nika-sc/Nika-Service-CRM
 Онлайн-демонстрация:
-https://demo.nika-sc.ru/
+https://service.nika-crm.ru/
 Сайт сервисного центра:
 https://nika-sc.ru/
 Email разработчика: smelkov2008@yandex.ru
