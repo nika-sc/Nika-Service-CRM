@@ -17,13 +17,28 @@ def test_placeholder_sender_falls_back_to_username():
 
 
 def test_real_sender_kept():
-    from app.services.notification_service import _resolve_sender_email
+    from app.services.notification_service import _resolve_sender_email, _resolve_message_sender
 
     app = _App(
         MAIL_DEFAULT_SENDER='SC <sales@bk.ru>',
         MAIL_USERNAME='nika-sc@bk.ru',
     )
     assert _resolve_sender_email(app) == 'sales@bk.ru'
+    assert _resolve_message_sender(app) == 'SC <sales@bk.ru>'
+
+
+def test_message_sender_encodes_cyrillic_display_name():
+    from app.services.notification_service import _resolve_message_sender, _resolve_sender_email
+
+    app = _App(
+        MAIL_DEFAULT_SENDER='Сервисный центр Ника в Адлере на ул. Ульянова 73 <nika-sc@bk.ru>',
+        MAIL_USERNAME='nika-sc@bk.ru',
+    )
+    assert _resolve_sender_email(app) == 'nika-sc@bk.ru'
+    msg_from = _resolve_message_sender(app)
+    assert 'nika-sc@bk.ru' in msg_from
+    assert 'Ульянова' not in msg_from  # RFC2047, not raw Cyrillic in header token
+    assert msg_from.startswith('=?') or '<' in msg_from
 
 
 def test_apply_replaces_demo_sender(monkeypatch):

@@ -48,7 +48,7 @@ def test_sync_skips_empty_password(tmp_path: Path, monkeypatch):
     assert "MAIL_SERVER=smtp.mail.ru" in text
 
 
-def test_sync_writes_ascii_mailbox_only_for_sender(tmp_path: Path, monkeypatch):
+def test_sync_preserves_display_name_sender(tmp_path: Path, monkeypatch):
     from app.utils import dotenv_file as df
 
     env = tmp_path / ".env"
@@ -66,7 +66,32 @@ def test_sync_writes_ascii_mailbox_only_for_sender(tmp_path: Path, monkeypatch):
         }
     )
     text = env.read_text(encoding="utf-8")
-    assert "MAIL_DEFAULT_SENDER=a@b.ru" in text
-    assert "Сервисный" not in text
-    assert 'MAIL_DEFAULT_SENDER="' not in text
+    assert "Сервисный центр Ника <a@b.ru>" in text
+    assert "MAIL_DEFAULT_SENDER=" in text
+    assert text.split("MAIL_DEFAULT_SENDER=", 1)[1].split("\n", 1)[0].startswith('"')
     assert "MAIL_PASSWORD=secret" in text
+
+
+def test_sync_skips_placeholder_sender(tmp_path: Path, monkeypatch):
+    from app.utils import dotenv_file as df
+
+    env = tmp_path / ".env"
+    env.write_text("MAIL_DEFAULT_SENDER=old@b.ru\n", encoding="utf-8")
+    monkeypatch.setattr(df, "resolve_dotenv_path", lambda: env)
+    df.sync_mail_settings_to_dotenv(
+        {
+            "mail_server": "smtp.mail.ru",
+            "mail_port": 587,
+            "mail_use_tls": True,
+            "mail_use_ssl": False,
+            "mail_username": "a@b.ru",
+            "mail_password": "",
+            "mail_default_sender": "Demo <noreply@example.com>",
+        }
+    )
+    text = env.read_text(encoding="utf-8")
+    assert "MAIL_DEFAULT_SENDER=" in text
+    assert "noreply@example.com" not in text
+    # empty value after strip of placeholder
+    line = [ln for ln in text.splitlines() if ln.startswith("MAIL_DEFAULT_SENDER=")][0]
+    assert line == "MAIL_DEFAULT_SENDER="

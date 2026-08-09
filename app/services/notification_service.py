@@ -168,8 +168,7 @@ def _apply_mail_config_from_settings(app):
 
 def _resolve_sender_email(app) -> str:
     """
-    Возвращает безопасный SMTP envelope sender (только email ASCII).
-    Это предотвращает падение smtplib на не-ASCII имени отправителя.
+    ASCII mailbox для SMTP envelope / проверок (без display name).
     Демо-адреса (noreply@example.com) игнорируются — берётся MAIL_USERNAME.
     """
     raw_sender = (app.config.get('MAIL_DEFAULT_SENDER') or '').strip()
@@ -183,6 +182,31 @@ def _resolve_sender_email(app) -> str:
         return username
 
     return ''
+
+
+def _resolve_message_sender(app) -> str:
+    """
+    Значение From для Flask-Mail Message: «Имя <email>» с RFC2047 для кириллицы.
+    Envelope по-прежнему берёт только ASCII mailbox через parseaddr внутри SMTP.
+    """
+    from email.utils import formataddr
+
+    raw_sender = _strip_env_quotes((app.config.get('MAIL_DEFAULT_SENDER') or '').strip())
+    display_name, parsed_email = parseaddr(raw_sender)
+    parsed_email = _ascii_mailbox(parsed_email)
+    username = _ascii_mailbox(app.config.get('MAIL_USERNAME') or '')
+
+    if parsed_email and _is_placeholder_sender_email(parsed_email):
+        parsed_email = ''
+        display_name = ''
+    if not parsed_email and username and not _is_placeholder_sender_email(username):
+        parsed_email = username
+    if not parsed_email:
+        return ''
+    display_name = (display_name or '').strip()
+    if display_name:
+        return formataddr((display_name, parsed_email))
+    return parsed_email
 
 
 def _normalize_email_address(raw_value: str) -> str:
@@ -404,7 +428,7 @@ class NotificationService:
             with current_app.app_context():
                 app = current_app._get_current_object()
                 _apply_mail_config_from_settings(app)
-                sender = _resolve_sender_email(app)
+                sender = _resolve_message_sender(app)
                 if sender:
                     msg = Message(subject=subject, sender=sender, recipients=[email], html=body)
                     _send_mail_with_retry(mail, msg, app)
@@ -974,17 +998,16 @@ class NotificationService:
             with current_app.app_context():
                 app = current_app._get_current_object()
                 _apply_mail_config_from_settings(app)
-                sender = _resolve_sender_email(app)
-                if not sender or '@' not in sender:
+                if not _resolve_sender_email(app):
                     logger.warning("Email клиенту: не задан корректный отправитель.")
                     return False
                 if not (app.config.get('MAIL_PASSWORD') or '').strip():
                     logger.warning("Email клиенту: не задан пароль SMTP.")
                     return False
-                # Тема с кириллицей — ок для Flask-Mail; envelope From только ASCII mailbox.
+                # Тема с кириллицей — ок для Flask-Mail; From — display name + ASCII mailbox.
                 msg = Message(
                     subject=subject,
-                    sender=sender,
+                    sender=_resolve_message_sender(app),
                     recipients=[recipient_email],
                     html=html_body
                 )
@@ -1156,13 +1179,12 @@ class NotificationService:
             with current_app.app_context():
                 app = current_app._get_current_object()
                 _apply_mail_config_from_settings(app)
-                sender = _resolve_sender_email(app)
-                if not sender or '@' not in sender:
+                if not _resolve_sender_email(app):
                     logger.warning("Email директору: не задан корректный отправитель.")
                     return False
                 msg = Message(
                     subject=subject,
-                    sender=sender,
+                    sender=_resolve_message_sender(app),
                     recipients=[recipient_email],
                     html=html_body
                 )
@@ -1205,15 +1227,15 @@ class NotificationService:
                         "Не задан SMTP-сервер. Укажите его во вкладке «Общие» "
                         "(например smtp.mail.ru) и сохраните настройки почты."
                     )
-                sender = _resolve_sender_email(app)
-                if not sender or '@' not in sender:
+                sender_mailbox = _resolve_sender_email(app)
+                if not sender_mailbox or '@' not in sender_mailbox:
                     logger.warning("Тест директору: не задан корректный отправитель.")
                     return False, "Не задан отправитель (MAIL_DEFAULT_SENDER или MAIL_USERNAME в формате email)."
                 if not app.config.get('MAIL_PASSWORD'):
                     return False, "Не задан пароль SMTP (MAIL_PASSWORD). Задайте в настройках или переменной окружения."
                 msg = Message(
                     subject="Тест уведомлений директору",
-                    sender=sender,
+                    sender=_resolve_message_sender(app),
                     recipients=[recipient],
                     html="""
                         <h3>Тестовая отправка</h3>
@@ -1326,12 +1348,11 @@ class NotificationService:
             with current_app.app_context():
                 app = current_app._get_current_object()
                 _apply_mail_config_from_settings(app)
-                sender = _resolve_sender_email(app)
-                if not sender or '@' not in sender:
+                if not _resolve_sender_email(app):
                     return False, "Не задан отправитель в настройках почты."
                 msg = Message(
                     subject=subject,
-                    sender=sender,
+                    sender=_resolve_message_sender(app),
                     recipients=[recipient],
                     html=html_body,
                 )

@@ -50,41 +50,52 @@ def resolve_dotenv_path() -> Optional[Path]:
 
 
 def _escape_env_value(value: str) -> str:
-    """
-    Значения с пробелами/#/= в .env принято брать в кавычки — это нормально для dotenv.
-    Для MAIL_DEFAULT_SENDER лучше писать только ASCII-email (см. sync), без display name.
-    """
+    """Значения с пробелами/#/=/не-ASCII в .env берём в двойные кавычки (python-dotenv)."""
     text = (value or "").replace("\r", "").replace("\n", " ").strip()
     if not text:
         return ""
     # Уже с кавычками снаружи — не дублируем
     if len(text) >= 2 and text[0] == text[-1] and text[0] in ('"', "'"):
         text = text[1:-1].strip()
-    if any(ch in text for ch in (' ', '#', '=', '"', "'")):
+    needs_quotes = False
+    try:
+        text.encode("ascii")
+    except UnicodeEncodeError:
+        needs_quotes = True
+    if any(ch in text for ch in (' ', '#', '=', '"', "'", '<', '>')):
+        needs_quotes = True
+    if needs_quotes:
         return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
     return text
 
 
 def _mail_sender_for_dotenv(raw_sender: str) -> str:
     """
-    В .env кладём только ASCII mailbox (без «Имя <email>»), чтобы не плодить кавычки
-    и кириллицу. Полное «От кого» остаётся в БД / форме CRM.
+    В .env сохраняем полное «Имя <email>» как в форме CRM.
+    Демо-placeholder (noreply@example.com) не пишем — оставляем пустым
+    (подстановку логина делает UI/notification_service).
     """
     from email.utils import parseaddr
-    _, box = parseaddr((raw_sender or "").strip())
-    box = (box or "").strip()
-    if box and "@" in box:
-        try:
-            box.encode("ascii")
-            return box
-        except UnicodeEncodeError:
-            pass
+
     raw = (raw_sender or "").strip()
-    try:
-        raw.encode("ascii")
-        return raw
-    except UnicodeEncodeError:
+    if not raw:
         return ""
+    _, box = parseaddr(raw)
+    box = (box or "").strip().lower()
+    if not box or "@" not in box:
+        return raw if "@" in raw else ""
+    domain = box.rsplit("@", 1)[-1]
+    if domain in {
+        "example.com",
+        "example.org",
+        "example.net",
+        "localhost",
+        "invalid",
+        "service-center.local",
+        "local",
+    }:
+        return ""
+    return raw
 
 
 def upsert_dotenv_keys(path: Path, updates: Mapping[str, str]) -> bool:
@@ -159,25 +170,10 @@ def sync_mail_settings_to_dotenv(payload: Mapping) -> None:
         "MAIL_USE_TLS": "True" if _as_bool(payload.get("mail_use_tls"), True) else "False",
         "MAIL_USE_SSL": "True" if _as_bool(payload.get("mail_use_ssl"), False) else "False",
         "MAIL_USERNAME": str(payload.get("mail_username") or "").strip(),
-        # В .env только ASCII mailbox — без кавычек и кириллицы в display-name.
-        # Полное «Имя <email>» остаётся в БД / форме CRM.
-        "MAIL_DEFAULT_SENDER": "",
+        "MAIL_DEFAULT_SENDER": _mail_sender_for_dotenv(
+            str(payload.get("mail_default_sender") or "")
+        ),
     }
-    try:
-        from email.utils import parseaddr
-        raw_sender = str(payload.get("mail_default_sender") or "").strip()
-        _, sender_box = parseaddr(raw_sender)
-        sender_box = (sender_box or "").strip()
-        if sender_box and "@" in sender_box:
-            try:
-                sender_box.encode("ascii")
-                updates["MAIL_DEFAULT_SENDER"] = sender_box
-            except UnicodeEncodeError:
-                updates["MAIL_DEFAULT_SENDER"] = ""
-        elif raw_sender and "@" in raw_sender and " " not in raw_sender:
-            updates["MAIL_DEFAULT_SENDER"] = raw_sender
-    except Exception:
-        updates["MAIL_DEFAULT_SENDER"] = str(payload.get("mail_default_sender") or "").strip()
     timeout = payload.get("mail_timeout")
     if timeout not in (None, ""):
         updates["MAIL_TIMEOUT"] = str(timeout)
