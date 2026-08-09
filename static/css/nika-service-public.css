@@ -27,6 +27,14 @@ body.ml-body.nika-service-public {
     var(--nika-bg);
 }
 
+/* AdminLTE injects skip-links (#navigation) — hide green top button/bar */
+.skip-link,
+body.ml-body .ml-skip {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .nika-service-public .app-header.ml-nav-adminlte {
   min-height: 68px;
   padding-block: .35rem;
