@@ -10,7 +10,7 @@ all Windows Python wheels required by the application.
 - [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
 - [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
+SHA256: `9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D`
 
 **Changelog 1.0.5 (2026-08-08):** LAN access; SMTP From must match login (no demo `noreply@example.com`); mail settings UX + docs; receipt/estimated-cost fixes. See `docs/blog/23-windows-setup-1-0-5.md`.
 

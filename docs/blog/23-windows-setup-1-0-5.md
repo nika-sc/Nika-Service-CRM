@@ -8,7 +8,7 @@
 - [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
 - [Зеркало на демо](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
+SHA256: `9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D`
 
 ## Что изменилось относительно 1.0.4
 
@@ -26,6 +26,8 @@ SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 - Email директора сохраняется при тесте; демо `director@example.com` не принимается.
 - Сохранение почты/«Общих» больше не сбрасывает чекбоксы «Уведомления клиентам».
 - При установке в `%ProgramData%\NikaCRM\.env` добавляется пустой блок `MAIL_*`; сохранение почты в UI обновляет эти ключи.
+- После сохранения SMTP на Windows Offline — предупреждение перезапустить службу ярлыком «Nika CRM — Перезапуск службы».
+- Плейсхолдеры «От кого»: `Название вашей компании <ваш@email.ru>` (email = логин).
 - Гайд: [USER_GUIDE § 13.5](/docs/guide#135-почта-smtp), [smtp-mail-setup](/blog/smtp-mail-setup).
 
 ### Заявки и квитанции

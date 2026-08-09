@@ -33,7 +33,7 @@
   <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5"><b>Связаться</b></a>
 </p>
 
-**Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) (хаб) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо Service) · Fitness — [fitness.nika-crm.ru](https://fitness.nika-crm.ru/) / [Nika-Fitness-CRM](https://github.com/nika-sc/Nika-Fitness-CRM)
+**Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) (хаб) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо Service) · соседний продукт Fitness — [fitness.nika-crm.ru](https://fitness.nika-crm.ru/) / [Nika-Fitness-CRM](https://github.com/nika-sc/Nika-Fitness-CRM)
 
 > **Не хотите читать длинную инструкцию?**  
 > **Бесплатно** установлю и помогу поддерживать CRM, если вы возьмёте VPS у партнёра **FirstVDS** по [реферальной ссылке](https://firstvds.ru/?from=528402) и промокоду **`648528402`**.  
@@ -374,7 +374,7 @@ cd Nika-Service-CRM
 - [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
 - [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
+SHA256: `9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D`
 
 1. Скачайте EXE по ссылке выше.
 2. Запустите установщик **от имени администратора** (права Admin обязательны).

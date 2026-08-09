@@ -100,7 +100,7 @@ def _windows_setup_info():
         "version": version,
         "filename": filename,
         "build_date": "2026-08-08",
-        "sha256": "B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0",
+        "sha256": "9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://service.nika-crm.ru/downloads/{filename}",
