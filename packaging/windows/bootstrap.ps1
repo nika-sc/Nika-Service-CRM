@@ -415,6 +415,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         "MAIL_USERNAME" = ""
         "MAIL_PASSWORD" = ""
         "MAIL_DEFAULT_SENDER" = ""
+        "MAIL_TIMEOUT" = "15"
     }
     if (-not (Test-Path -LiteralPath $envFile)) {
         $alwaysSet["SECRET_KEY"] = $setIfMissing["SECRET_KEY"]

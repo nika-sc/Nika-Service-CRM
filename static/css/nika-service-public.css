@@ -1,0 +1,143 @@
+/*
+ * Nika Service marketing — AdminLTE 4 chrome aligned with Fitness / hub.
+ * Teal product accent; same navbar/button geometry as nika-public.
+ */
+:root,
+[data-bs-theme="dark"],
+body.ml-body.nika-service-public {
+  --nika-bg: #08101d;
+  --nika-bg-soft: #0f1929;
+  --nika-surface: #142033;
+  --nika-line: rgba(170, 190, 220, 0.14);
+  --nika-text: #eef4fc;
+  --nika-muted: #94a7c2;
+  --nika-accent: #2bb8a6;
+  --nika-accent-hover: #3dcdb9;
+  --nika-radius: 14px;
+  --nika-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+  --bs-primary: var(--nika-accent);
+}
+
+body.ml-body.nika-service-public {
+  font-family: "Manrope", sans-serif;
+  color: var(--nika-text);
+  background:
+    radial-gradient(900px 540px at 98% -5%, rgba(43, 184, 166, 0.12), transparent 58%),
+    radial-gradient(900px 540px at 5% 105%, rgba(255, 90, 60, 0.06), transparent 60%),
+    var(--nika-bg);
+}
+
+.nika-service-public .app-header.ml-nav-adminlte {
+  min-height: 68px;
+  padding-block: .35rem;
+  margin: 0;
+  background: rgba(9, 17, 30, 0.88) !important;
+  border-bottom: 1px solid var(--nika-line);
+  backdrop-filter: blur(14px);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+.nika-service-public .navbar-brand.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+  color: var(--nika-text);
+  text-decoration: none;
+}
+
+.nika-service-public .brand-mark {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--nika-accent), #1a9e8f);
+  box-shadow: 0 8px 22px rgba(43, 184, 166, .28);
+}
+
+.nika-service-public .brand-copy { line-height: 1.1; }
+.nika-service-public .brand-title {
+  display: block;
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+.nika-service-public .brand-subtitle {
+  display: block;
+  color: var(--nika-muted);
+  font-size: .7rem;
+}
+
+.nika-service-public .app-header .nav-link {
+  color: var(--nika-muted);
+  font-weight: 700;
+  border-radius: 10px;
+  padding: .55rem .8rem;
+}
+.nika-service-public .app-header .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+}
+
+.nika-service-public .navbar-toggler { color: var(--nika-text); }
+
+/* Map legacy ml-btn to shared button language */
+.nika-service-public .ml-btn,
+.nika-service-public .ml-btn-primary,
+.nika-service-public .ml-btn-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 42px;
+  padding: .64rem .95rem;
+  color: #fff !important;
+  font-family: "Manrope", sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  background: linear-gradient(135deg, var(--nika-accent), #1a9e8f) !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.nika-service-public .ml-btn-ghost,
+.nika-service-public .ml-btn.ml-btn-ghost {
+  color: var(--nika-text) !important;
+  background: rgba(255, 255, 255, .045) !important;
+  border-color: var(--nika-line) !important;
+}
+
+.nika-service-public .ml-btn:hover,
+.nika-service-public .ml-btn-primary:hover,
+.nika-service-public .ml-btn-help:hover {
+  filter: brightness(1.06);
+}
+
+.nika-service-public .ml-brand-mark,
+.nika-service-public .ml-kicker {
+  color: var(--nika-accent) !important;
+}
+
+.nika-service-public .ml-hero h1,
+.nika-service-public .ml-brand-mark {
+  font-family: "Syne", sans-serif;
+  letter-spacing: -.03em;
+}
+
+.nika-service-public .ml-online-badge {
+  color: var(--nika-muted);
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.nika-service-public a.hub-products-link {
+  color: #7dffef;
+}

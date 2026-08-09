@@ -100,7 +100,7 @@ def _windows_setup_info():
         "version": version,
         "filename": filename,
         "build_date": "2026-08-08",
-        "sha256": "18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D",
+        "sha256": "FE821D4A86FC5B86C07A8E1FC8BB7265FBE25495CC7BCEAD6CA50FB08A283B7D",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",
@@ -964,32 +964,33 @@ def settings():
                         director_test_result = {'ok': False, 'message': f'Последняя проверка: ошибка отправки на {recipient}. {err_msg or ""}'.strip()}
             elif 'client_email_test' in request.form:
                 current_settings = SettingsService.get_general_settings()
-                recipient = (request.form.get('director_email') or current_settings.get('director_email') or 'alex@smelkoff.ru').strip()
+                recipient = (
+                    request.form.get('client_test_email')
+                    or request.form.get('director_email')
+                    or current_settings.get('director_email')
+                    or ''
+                ).strip()
                 if not _is_valid_ascii_email(recipient):
-                    flash('Тест писем клиенту не отправлен: укажите корректный Email (ASCII).', 'error')
+                    flash(
+                        'Тест писем клиенту не отправлен: укажите корректный Email получателя (ASCII).',
+                        'error',
+                    )
                     success = False
                 else:
                     from app.services.notification_service import NotificationService
-                    from app.database.connection import get_db_connection
-                    with get_db_connection() as conn:
-                        cur = conn.cursor()
-                        cur.execute("SELECT id FROM orders WHERE customer_id IS NOT NULL ORDER BY id DESC LIMIT 1")
-                        row = cur.fetchone()
-                    if not row:
-                        flash('Нет заявок с клиентом в базе. Невозможно отправить тестовые письма клиенту.', 'error')
-                        success = False
+                    ok, total, order_id, err_msg = NotificationService.send_customer_email_test_batch(recipient)
+                    success = ok > 0
+                    if ok:
+                        flash(
+                            f'Отправлено {ok} из {total} тестовых писем клиента '
+                            f'(заявка #{order_id}) на {recipient}.',
+                            'success' if ok == total else 'warning',
+                        )
                     else:
-                        order_id = row[0]
-                        templates = ('order_accepted', 'order_status_update', 'order_ready', 'order_closed_thanks')
-                        ok = 0
-                        for template_type in templates:
-                            if NotificationService.send_customer_order_email(order_id, template_type, override_recipient=recipient):
-                                ok += 1
-                        if ok:
-                            flash(f'Отправлено {ok} из {len(templates)} тестовых писем клиента (с данными заявки #{order_id}) на {recipient}.', 'success')
-                        else:
-                            flash(f'Не удалось отправить тестовые письма клиенту. Проверьте SMTP и логи.', 'error')
-                        success = bool(ok)
+                        flash(
+                            f'Не удалось отправить тестовые письма клиенту: {err_msg or "неизвестная ошибка"}',
+                            'error',
+                        )
             elif 'director_notifications_settings' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})

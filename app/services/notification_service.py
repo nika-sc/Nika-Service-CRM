@@ -57,6 +57,29 @@ def _ascii_mailbox(email: str) -> str:
     return addr
 
 
+def _coerce_mail_bool(value, default: bool = False) -> bool:
+    """Надёжный bool для SMTP: строки 'False'/'True' из .env не через Python bool()."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in ('1', 'true', 'yes', 'on', 't'):
+        return True
+    if text in ('0', 'false', 'no', 'off', 'f', ''):
+        return False
+    return default
+
+
+def _strip_env_quotes(value) -> str:
+    text = str(value or '').strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in ('"', "'"):
+        text = text[1:-1].strip()
+    return text
+
+
 def _apply_mail_config_from_settings(app):
     """
     Подставляет настройки почты в app.config: из БД (general_settings), при пустых — из env.
@@ -65,33 +88,82 @@ def _apply_mail_config_from_settings(app):
     import os
     from app.services.settings_service import SettingsService
     gs = SettingsService.get_general_settings() or {}
+    # Подхватить свежий .env (Windows ProgramData) — служба могла стартовать с пустым MAIL_*.
+    try:
+        from app.utils.dotenv_file import resolve_dotenv_path
+        from dotenv import dotenv_values
+        env_path = resolve_dotenv_path()
+        if env_path is not None and env_path.is_file():
+            for name, value in (dotenv_values(env_path) or {}).items():
+                if not name or value is None:
+                    continue
+                key = str(name).lstrip('\ufeff').strip()
+                if key.startswith('MAIL_'):
+                    os.environ[key] = str(value)
+    except Exception:
+        pass
+
     # Источники: сначала БД, затем env, затем текущий app.config
     def _get(key: str, env_key: str, default):
         val = gs.get(key)
         if val is not None and val != '':
             return val
         return os.environ.get(env_key) or app.config.get(key, default)
+
     # Пустой SMTP не подменяем на localhost из Flask defaults — иначе Windows даёт
     # WinError 10061 вместо явной ошибки «сервер не задан».
     db_server = gs.get('mail_server')
     if db_server is not None and str(db_server).strip():
-        configured_server = str(db_server).strip()
+        configured_server = _strip_env_quotes(db_server)
     else:
-        configured_server = (os.environ.get('MAIL_SERVER') or '').strip()
+        configured_server = _strip_env_quotes(os.environ.get('MAIL_SERVER') or '')
     app.config['MAIL_SERVER'] = configured_server
-    app.config['MAIL_PORT'] = int(_get('mail_port', 'MAIL_PORT', 587) or 587)
-    app.config['MAIL_USE_TLS'] = bool(gs.get('mail_use_tls') if gs.get('mail_use_tls') is not None else (os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'))
-    app.config['MAIL_USE_SSL'] = bool(gs.get('mail_use_ssl') if gs.get('mail_use_ssl') is not None else (os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'))
-    app.config['MAIL_USERNAME'] = _get('mail_username', 'MAIL_USERNAME', '') or app.config.get('MAIL_USERNAME', '')
-    app.config['MAIL_PASSWORD'] = _get('mail_password', 'MAIL_PASSWORD', '') or app.config.get('MAIL_PASSWORD', '')
+
+    try:
+        mail_port = int(_get('mail_port', 'MAIL_PORT', 587) or 587)
+    except (TypeError, ValueError):
+        mail_port = 587
+    app.config['MAIL_PORT'] = mail_port
+
+    if gs.get('mail_use_tls') is not None:
+        use_tls = _coerce_mail_bool(gs.get('mail_use_tls'), True)
+    else:
+        use_tls = _coerce_mail_bool(os.environ.get('MAIL_USE_TLS', 'true'), True)
+    if gs.get('mail_use_ssl') is not None:
+        use_ssl = _coerce_mail_bool(gs.get('mail_use_ssl'), False)
+    else:
+        use_ssl = _coerce_mail_bool(os.environ.get('MAIL_USE_SSL', 'false'), False)
+
+    # Flask-Mail: SSL и TLS вместе → SMTP_SSL + starttls → «please run connect() first».
+    if mail_port == 465:
+        use_ssl, use_tls = True, False
+    elif mail_port == 587:
+        use_ssl, use_tls = False, True
+    elif use_ssl and use_tls:
+        use_ssl, use_tls = False, True
+
+    app.config['MAIL_USE_TLS'] = bool(use_tls)
+    app.config['MAIL_USE_SSL'] = bool(use_ssl)
+    app.config['MAIL_USERNAME'] = _strip_env_quotes(
+        _get('mail_username', 'MAIL_USERNAME', '') or app.config.get('MAIL_USERNAME', '')
+    )
+    app.config['MAIL_PASSWORD'] = _strip_env_quotes(
+        _get('mail_password', 'MAIL_PASSWORD', '') or app.config.get('MAIL_PASSWORD', '')
+    )
     configured_sender = _get('mail_default_sender', 'MAIL_DEFAULT_SENDER', '') or app.config.get('MAIL_DEFAULT_SENDER', '')
+    configured_sender = _strip_env_quotes(configured_sender)
     # Демо-дамп кладёт «Nika CRM Demo <noreply@example.com>» — не использовать как From.
     _, sender_mailbox = parseaddr((configured_sender or '').strip())
     username = (app.config.get('MAIL_USERNAME') or '').strip()
     if _is_placeholder_sender_email(sender_mailbox) and username and '@' in username and not _is_placeholder_sender_email(username):
         configured_sender = username
     app.config['MAIL_DEFAULT_SENDER'] = configured_sender
-    app.config['MAIL_TIMEOUT'] = int(_get('mail_timeout', 'MAIL_TIMEOUT', 3) or 3)
+    try:
+        mail_timeout = int(_get('mail_timeout', 'MAIL_TIMEOUT', 15) or 15)
+    except (TypeError, ValueError):
+        mail_timeout = 15
+    # На Windows Sandbox / слабом канале 3с часто мало для STARTTLS
+    app.config['MAIL_TIMEOUT'] = max(mail_timeout, 15)
 
 
 def _resolve_sender_email(app) -> str:
@@ -906,6 +978,10 @@ class NotificationService:
                 if not sender or '@' not in sender:
                     logger.warning("Email клиенту: не задан корректный отправитель.")
                     return False
+                if not (app.config.get('MAIL_PASSWORD') or '').strip():
+                    logger.warning("Email клиенту: не задан пароль SMTP.")
+                    return False
+                # Тема с кириллицей — ок для Flask-Mail; envelope From только ASCII mailbox.
                 msg = Message(
                     subject=subject,
                     sender=sender,
@@ -925,6 +1001,44 @@ class NotificationService:
                     exc_info=True
                 )
             return False
+
+    @staticmethod
+    def send_customer_email_test_batch(recipient_email: str) -> tuple:
+        """
+        Тест 4 клиентских шаблонов на указанный адрес (данные последней заявки с клиентом).
+        Returns:
+            (ok_count, total, order_id_or_None, error_message_or_None)
+        """
+        recipient = _normalize_email_address(recipient_email or '')
+        if not recipient:
+            return 0, 4, None, "Невалидный email получателя."
+
+        from app.database.connection import get_db_connection
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM orders WHERE customer_id IS NOT NULL ORDER BY id DESC LIMIT 1")
+            row = cur.fetchone()
+        if not row:
+            return 0, 4, None, "Нет заявок с клиентом в базе — нечего подставить в шаблоны."
+
+        order_id = row[0]
+        templates = ('order_accepted', 'order_status_update', 'order_ready', 'order_closed_thanks')
+        ok = 0
+        last_err = None
+        for template_type in templates:
+            try:
+                sent = NotificationService.send_customer_order_email(
+                    order_id, template_type, override_recipient=recipient
+                )
+                if sent:
+                    ok += 1
+                else:
+                    last_err = last_err or f"шаблон {template_type} не отправлен (SMTP/отправитель/пароль)."
+            except Exception as exc:
+                last_err = str(exc).strip() or type(exc).__name__
+        if ok == 0 and not last_err:
+            last_err = "Не удалось отправить ни одного письма. Проверьте SMTP и логи."
+        return ok, len(templates), order_id, last_err
 
     @staticmethod
     def send_director_order_email(
@@ -1111,7 +1225,13 @@ class NotificationService:
         except Exception as e:
             err_text = str(e).strip() or type(e).__name__
             low = err_text.lower()
-            if '10061' in err_text or 'connection refused' in low or 'отверг запрос' in low:
+            if 'please run connect' in low:
+                err_text = (
+                    f"{err_text}. Обычно так бывает, если одновременно включены TLS и SSL, "
+                    "или SMTP-сервер пуст. Для Mail.ru: порт 587, TLS вкл., SSL выкл. "
+                    "Сохраните почту во вкладке «Общие» и повторите тест."
+                )
+            elif '10061' in err_text or 'connection refused' in low or 'отверг запрос' in low:
                 err_text = (
                     f"{err_text}. Проверьте SMTP-сервер/порт во вкладке «Общие», "
                     "что исходящие подключения не блокирует брандмауэр или Windows Sandbox, "

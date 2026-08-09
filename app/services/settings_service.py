@@ -65,7 +65,7 @@ class SettingsService:
             'mail_username': '',
             'mail_password': '',
             'mail_default_sender': '',
-            'mail_timeout': 3,
+            'mail_timeout': 15,
             'close_print_mode': 'choice',
             'auto_email_order_accepted': True,
             'auto_email_status_update': True,
@@ -228,8 +228,8 @@ class SettingsService:
                 def _mail_timeout():
                     v = payload.get('mail_timeout')
                     if v is None or v == '':
-                        return 3
-                    return int(v) if isinstance(v, (int, float)) else int(v or 3)
+                        return 15
+                    return int(v) if isinstance(v, (int, float)) else int(v or 15)
                 mail_password = (payload.get('mail_password') or '').strip()
 
                 if count == 0:

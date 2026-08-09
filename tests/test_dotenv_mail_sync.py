@@ -48,7 +48,7 @@ def test_sync_skips_empty_password(tmp_path: Path, monkeypatch):
     assert "MAIL_SERVER=smtp.mail.ru" in text
 
 
-def test_sync_quotes_sender_with_spaces(tmp_path: Path, monkeypatch):
+def test_sync_writes_ascii_mailbox_only_for_sender(tmp_path: Path, monkeypatch):
     from app.utils import dotenv_file as df
 
     env = tmp_path / ".env"
@@ -62,9 +62,11 @@ def test_sync_quotes_sender_with_spaces(tmp_path: Path, monkeypatch):
             "mail_use_ssl": False,
             "mail_username": "a@b.ru",
             "mail_password": "secret",
-            "mail_default_sender": "Service Center <a@b.ru>",
+            "mail_default_sender": "Сервисный центр Ника <a@b.ru>",
         }
     )
     text = env.read_text(encoding="utf-8")
-    assert 'MAIL_DEFAULT_SENDER="Service Center <a@b.ru>"' in text
+    assert "MAIL_DEFAULT_SENDER=a@b.ru" in text
+    assert "Сервисный" not in text
+    assert 'MAIL_DEFAULT_SENDER="' not in text
     assert "MAIL_PASSWORD=secret" in text

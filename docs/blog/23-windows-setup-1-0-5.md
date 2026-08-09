@@ -8,7 +8,7 @@
 - [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
 - [Зеркало на демо](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D`
+SHA256: `FE821D4A86FC5B86C07A8E1FC8BB7265FBE25495CC7BCEAD6CA50FB08A283B7D`
 
 ## Что изменилось относительно 1.0.4
 
@@ -25,6 +25,7 @@ SHA256: `18B1183EC6E6DB9D24223D2731D6A05FFA6CD3C9147995974A87C4E0613A3C5D`
 - Пустой SMTP больше не подменяется на `localhost` (на Windows это давало `WinError 10061`).
 - Email директора сохраняется при тесте; демо `director@example.com` не принимается.
 - Сохранение почты/«Общих» больше не сбрасывает чекбоксы «Уведомления клиентам».
+- При установке в `%ProgramData%\NikaCRM\.env` добавляется пустой блок `MAIL_*`; сохранение почты в UI обновляет эти ключи.
 - Гайд: [USER_GUIDE § 13.5](/docs/guide#135-почта-smtp), [smtp-mail-setup](/blog/smtp-mail-setup).
 
 ### Заявки и квитанции

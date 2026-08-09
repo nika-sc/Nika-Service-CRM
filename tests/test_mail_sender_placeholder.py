@@ -29,7 +29,9 @@ def test_real_sender_kept():
 def test_apply_replaces_demo_sender(monkeypatch):
     from app.services import notification_service as ns
     import app.services.settings_service as ss
+    import app.utils.dotenv_file as dotenv_file
 
+    monkeypatch.setattr(dotenv_file, 'resolve_dotenv_path', lambda: None)
     monkeypatch.setattr(
         ss.SettingsService,
         'get_general_settings',
@@ -60,7 +62,9 @@ def test_apply_replaces_demo_sender(monkeypatch):
 def test_apply_does_not_fallback_empty_smtp_to_localhost(monkeypatch):
     from app.services import notification_service as ns
     import app.services.settings_service as ss
+    import app.utils.dotenv_file as dotenv_file
 
+    monkeypatch.setattr(dotenv_file, 'resolve_dotenv_path', lambda: None)
     monkeypatch.setattr(
         ss.SettingsService,
         'get_general_settings',
@@ -86,3 +90,32 @@ def test_apply_does_not_fallback_empty_smtp_to_localhost(monkeypatch):
     )
     ns._apply_mail_config_from_settings(app)
     assert app.config['MAIL_SERVER'] == ''
+    assert app.config['MAIL_USE_TLS'] is True
+    assert app.config['MAIL_USE_SSL'] is False
+    assert app.config['MAIL_TIMEOUT'] >= 15
+
+
+def test_apply_forces_tls_only_on_port_587(monkeypatch):
+    from app.services import notification_service as ns
+    import app.services.settings_service as ss
+    import app.utils.dotenv_file as dotenv_file
+
+    monkeypatch.setattr(dotenv_file, 'resolve_dotenv_path', lambda: None)
+    monkeypatch.setattr(
+        ss.SettingsService,
+        'get_general_settings',
+        staticmethod(lambda: {
+            'mail_server': 'smtp.mail.ru',
+            'mail_port': 587,
+            'mail_use_tls': True,
+            'mail_use_ssl': True,  # конфликт — Flask-Mail ломается
+            'mail_username': 'a@b.ru',
+            'mail_password': 'secret',
+            'mail_default_sender': 'a@b.ru',
+            'mail_timeout': 15,
+        }),
+    )
+    app = _App()
+    ns._apply_mail_config_from_settings(app)
+    assert app.config['MAIL_USE_TLS'] is True
+    assert app.config['MAIL_USE_SSL'] is False

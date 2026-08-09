@@ -94,7 +94,7 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
     # Пусто по умолчанию: при отправке берётся MAIL_USERNAME (демо noreply@example.com ломает Mail.ru).
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', '')
-    MAIL_TIMEOUT = int(os.environ.get('MAIL_TIMEOUT', 3))
+    MAIL_TIMEOUT = int(os.environ.get('MAIL_TIMEOUT', 15))
     
     # Flask-SocketIO настройки
     SOCKETIO_ASYNC_MODE = 'threading'

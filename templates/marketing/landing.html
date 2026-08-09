@@ -31,9 +31,15 @@
     <meta name="twitter:image" content="{{ og_image_url }}">
     <meta name="twitter:image:alt" content="Nika CRM — бесплатная CRM для сервисных центров">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <link href="{{ url_for('static', filename='cdn/bootstrap/5.3.0/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/5.3.8/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/1.13.1/font/bootstrap-icons.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/adminlte/4.2.0/css/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing-landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nika-service-public.css') }}">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -181,44 +187,55 @@
     }
     </script>
 </head>
-<body class="ml-body">
+<body class="ml-body nika-service-public layout-top-nav" data-bs-theme="dark">
     <a class="ml-skip" href="#content">К содержимому</a>
 
-    <header class="ml-nav">
-        <div class="ml-nav-inner">
-            <a class="ml-brand" href="{{ canonical_url }}/" aria-label="Nika CRM — на главную демо">Nika CRM</a>
-            <nav class="ml-nav-actions" aria-label="Основная навигация">
-                {% if demo_visitor_stats_enabled %}
-                <span class="ml-online-badge" title="Сейчас работают в демо CRM" aria-live="polite">
-                    <span class="ml-online-dot" aria-hidden="true"></span>
-                    Сейчас в CRM: <strong data-demo-online-count>{{ demo_online_count }}</strong>
+    <nav class="app-header navbar navbar-expand-lg ml-nav-adminlte" aria-label="Основная навигация">
+        <div class="container-xxl">
+            <a class="navbar-brand brand-link" href="{{ canonical_url }}/" aria-label="Nika CRM — на главную демо">
+                <span class="brand-mark">NS</span>
+                <span class="brand-copy">
+                    <span class="brand-title">Nika Service</span>
+                    <span class="brand-subtitle">Service CRM</span>
                 </span>
-                {% endif %}
-            <a class="ml-btn ml-btn-ghost" href="#windows-setup">
-                <i class="fab fa-windows" aria-hidden="true"></i> Windows
             </a>
-            <button type="button" class="ml-btn ml-btn-help ml-btn-help--nav" data-bs-toggle="modal" data-bs-target="#freeInstallModal">
-                <i class="fas fa-headset" aria-hidden="true"></i> Бесплатная установка
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#servicePublicNav" aria-controls="servicePublicNav" aria-expanded="false" aria-label="Меню">
+                <i class="bi bi-list fs-3" aria-hidden="true"></i>
             </button>
-            <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_docs.docs_about') }}">
-                <i class="fas fa-info-circle" aria-hidden="true"></i> О проекте
-            </a>
-            <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_docs.docs_hub') }}">
-                <i class="fas fa-book-open" aria-hidden="true"></i> Руководство
-            </a>
-            <a class="ml-btn ml-btn-ghost" href="{{ url_for('public_blog.blog_index') }}">
-                <i class="fas fa-newspaper" aria-hidden="true"></i> Блог
-            </a>
-                <a class="ml-btn ml-btn-ghost" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">
-                    <i class="fab fa-github" aria-hidden="true"></i> GitHub
-                    <span class="visually-hidden">(откроется в новой вкладке)</span>
-                </a>
-                <button type="button" class="ml-btn ml-btn-primary" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
-                    <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Войти в демо
-                </button>
-            </nav>
+            <div class="collapse navbar-collapse" id="servicePublicNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1 flex-wrap">
+                    <li class="nav-item">
+                        <a class="nav-link hub-products-link" href="https://nika-crm.ru/">Все продукты</a>
+                    </li>
+                    {% if demo_visitor_stats_enabled %}
+                    <li class="nav-item">
+                        <span class="ml-online-badge nav-link" title="Сейчас работают в демо CRM" aria-live="polite">
+                            <span class="ml-online-dot" aria-hidden="true"></span>
+                            Сейчас в CRM: <strong data-demo-online-count>{{ demo_online_count }}</strong>
+                        </span>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item d-none d-xl-block"><a class="nav-link" href="#windows-setup">Windows</a></li>
+                    <li class="nav-item d-none d-lg-block"><a class="nav-link" href="{{ url_for('public_docs.docs_about') }}">О проекте</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('public_docs.docs_hub') }}">Руководство</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('public_blog.blog_index') }}">Блог</a></li>
+                    <li class="nav-item d-none d-xl-block">
+                        <a class="nav-link" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </li>
+                    <li class="nav-item">
+                        <button type="button" class="ml-btn ml-btn-primary btn-sm ms-lg-2" data-bs-toggle="modal" data-bs-target="#demoLoginModal">
+                            <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Войти в демо
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button type="button" class="ml-btn ml-btn-ghost btn-sm" data-bs-toggle="modal" data-bs-target="#freeInstallModal">
+                            <i class="fas fa-headset" aria-hidden="true"></i> Установка
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </header>
+    </nav>
 
     <main id="content" tabindex="-1">
         <section class="ml-hero ml-hero--b" aria-labelledby="hero-title">
@@ -758,7 +775,8 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/5.3.8/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/adminlte/4.2.0/js/adminlte.min.js') }}"></script>
     <script>
     (function () {
         var shots = {{ screenshot_files | tojson }};
