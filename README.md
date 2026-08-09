@@ -369,7 +369,7 @@ cd Nika-Service-CRM
 - [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
 - [Зеркало на демо-сайте](https://demo.nika-sc.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
 
-SHA256: `68B84FAB184B1288F50679FE89FC072D56CE5EAE7704E03A7583CB1F1027E350`
+SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 
 1. Скачайте EXE по ссылке выше.
 2. Запустите установщик **от имени администратора** (права Admin обязательны).

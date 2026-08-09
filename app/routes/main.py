@@ -100,7 +100,7 @@ def _windows_setup_info():
         "version": version,
         "filename": filename,
         "build_date": "2026-08-08",
-        "sha256": "68B84FAB184B1288F50679FE89FC072D56CE5EAE7704E03A7583CB1F1027E350",
+        "sha256": "B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://demo.nika-sc.ru/downloads/{filename}",

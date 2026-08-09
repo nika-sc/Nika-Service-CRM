@@ -106,7 +106,7 @@ Nika CRM — веб-система для сервисного центра: з�
 
 **Что нового в 1.0.5:** LAN из коробки; SMTP — «От кого» совпадает с логином (демо `noreply@example.com` больше не ломает Mail.ru); подсказки в Настройках → Почта; правки квитанций и предварительной стоимости. См. § 13.5 и блог [windows-setup-1-0-5](/blog/windows-setup-1-0-5).
 
-SHA256: `68B84FAB184B1288F50679FE89FC072D56CE5EAE7704E03A7583CB1F1027E350`
+SHA256: `B59064646DAC2BD12812AB407C5FAAEE9737FFF33C2D4C9B60CE6FDBFCF4A7B0`
 
 **Пароль PostgreSQL для pgAdmin** — не `111111` (это только демо-логины CRM). Установщик генерирует случайные пароли. Ярлык **Nika CRM — Пароль базы данных** или скрипт `packaging/windows/show-db-credentials.ps1` (нужны права администратора). Данные: `%ProgramData%\NikaCRM\installer\install-state.json` и `DATABASE_URL` в `%ProgramData%\NikaCRM\.env`.
 
