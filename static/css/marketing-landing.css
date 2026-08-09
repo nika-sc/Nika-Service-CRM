@@ -335,9 +335,11 @@ body.ml-body {
 .ml-blog-date {
   font-family: var(--ml-font-ui);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
   color: #6fe8d6;
   margin: 0;
   text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
 }
 
 .ml-hero h1 {

@@ -5,7 +5,7 @@ import logging
 import re
 from pathlib import Path
 
-from flask import Blueprint, abort, g, render_template, url_for
+from flask import Blueprint, abort, g, redirect, render_template, url_for
 
 from app.routes.main import _landing_canonical_url, _public_landing_enabled, _windows_setup_info
 from app.utils.public_markdown import render_docs_markdown
@@ -14,35 +14,24 @@ bp = Blueprint("public_blog", __name__)
 logger = logging.getLogger(__name__)
 
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
+# date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
         "slug": "windows-setup-1-0-6",
         "file": "blog/24-windows-setup-1-0-6.md",
-        "date": "2026-08",
-        "title": "Windows SETUP 1.0.6 (2026-08-09): перезапуск службы после SMTP — Nika CRM",
+        "date": "2026-08-09 17:45",
+        "title": "Windows SETUP 1.0.6 (2026-08-09): LAN, SMTP и перезапуск службы — Nika CRM",
         "description": (
-            "9 августа 2026: офлайн-установщик 1.0.6 — после сохранения почты перезапустите "
-            "службу ярлыком на рабочем столе; понятнее поле «От кого»."
+            "9 августа 2026: офлайн-установщик 1.0.6 — LAN, SMTP без noreply@example.com, "
+            "после сохранения почты перезапуск службы, плейсхолдеры «От кого», квитанции."
         ),
         "heading": "Windows SETUP 1.0.6",
-        "teaser": "Сборка от 2026-08-09: рестарт службы после SMTP, плейсхолдеры «От кого».",
-    },
-    {
-        "slug": "windows-setup-1-0-5",
-        "file": "blog/23-windows-setup-1-0-5.md",
-        "date": "2026-08",
-        "title": "Windows SETUP 1.0.5 (2026-08-08): LAN, SMTP и квитанции — Nika CRM",
-        "description": (
-            "8 августа 2026: офлайн-установщик 1.0.5 — доступ из LAN, исправление "
-            "noreply@example.com для Mail.ru, гайд SMTP, правки квитанций и предварительной стоимости."
-        ),
-        "heading": "Windows SETUP 1.0.5",
-        "teaser": "Сборка от 2026-08-08: LAN, SMTP «От кого»=логин, квитанции.",
+        "teaser": "Сборка 2026-08-09: LAN + SMTP + рестарт службы после сохранения почты.",
     },
     {
         "slug": "smtp-mail-setup",
         "file": "blog/22-smtp-mail-setup.md",
-        "date": "2026-08",
+        "date": "2026-08-08 18:30",
         "title": "Настройка почты SMTP: Mail.ru и поле «От кого» — Nika CRM",
         "description": (
             "8 августа 2026: как заполнить SMTP в настройках CRM, почему Mail.ru отклоняет "
@@ -54,7 +43,7 @@ _POSTS = [
     {
         "slug": "lan-access-and-receipt-fixes",
         "file": "blog/21-lan-access-and-receipt-fixes.md",
-        "date": "2026-08",
+        "date": "2026-08-08 16:00",
         "title": "LAN, квитанция и предварительная стоимость — Nika CRM",
         "description": (
             "8 августа 2026: доступ CRM из локальной сети, объединение внешнего вида и комплектации "
@@ -66,7 +55,7 @@ _POSTS = [
     {
         "slug": "customer-portal-login",
         "file": "blog/20-customer-portal-login.md",
-        "date": "2026-08",
+        "date": "2026-08-08 12:00",
         "title": "Клиентский портал: вход, доступ и работа — Nika CRM",
         "description": (
             "8 августа 2026: отдельный сценарий личного кабинета клиента — адрес входа, "
@@ -78,7 +67,7 @@ _POSTS = [
     {
         "slug": "salary-499-abort",
         "file": "blog/19-salary-499-abort.md",
-        "date": "2026-08",
+        "date": "2026-08-05 19:00",
         "title": "Багфикс: меньше nginx 499 на Зарплате — Nika CRM",
         "description": (
             "5 августа 2026: AbortController для запросов ЗП, больше слотов gunicorn на WORK, "
@@ -90,7 +79,7 @@ _POSTS = [
     {
         "slug": "all-orders-light",
         "file": "blog/18-all-orders-light.md",
-        "date": "2026-08",
+        "date": "2026-08-05 17:30",
         "title": "Багфикс: лёгкий реестр заявок /all_orders — Nika CRM",
         "description": (
             "5 августа 2026: меню статусов и контакты не дублируются в каждой строке DataTables; "
@@ -102,7 +91,7 @@ _POSTS = [
     {
         "slug": "salary-reports-speed",
         "file": "blog/17-salary-reports-speed.md",
-        "date": "2026-08",
+        "date": "2026-08-05 16:00",
         "title": "Багфикс: быстрее Зарплата и Отчёты — Nika CRM",
         "description": (
             "5 августа 2026: лёгкие итоги ЗП без полного отчёта, отдельный /api/salary/extras, "
@@ -114,7 +103,7 @@ _POSTS = [
     {
         "slug": "client-detail-reports-size",
         "file": "blog/16-client-detail-reports-size.md",
-        "date": "2026-08",
+        "date": "2026-08-05 14:30",
         "title": "Багфикс: лёгкая карточка клиента и отчёты без мегабайт HTML — Nika CRM",
         "description": (
             "5 августа 2026: карточка клиента без SSR тысяч option справочников; "
@@ -126,7 +115,7 @@ _POSTS = [
     {
         "slug": "nav-hang-settings",
         "file": "blog/15-nav-hang-settings.md",
-        "date": "2026-08",
+        "date": "2026-08-05 13:00",
         "title": "Багфикс: меню больше не зависает при быстрых переходах — Nika CRM",
         "description": (
             "5 августа 2026: настройки без SSR тысяч справочников устройств (~8 МБ → ~0.5 МБ), "
@@ -138,7 +127,7 @@ _POSTS = [
     {
         "slug": "perf-salary-cash-settings",
         "file": "blog/14-perf-salary-cash-settings.md",
-        "date": "2026-08",
+        "date": "2026-08-05 11:30",
         "title": "Быстрее Касса, Отчёты, Зарплата и Настройки — Nika CRM",
         "description": (
             "5 августа 2026: лёгкий первый запрос зарплаты, кэш сводки кассы, "
@@ -150,7 +139,7 @@ _POSTS = [
     {
         "slug": "salary-refund-split",
         "file": "blog/13-salary-refund-split.md",
-        "date": "2026-08",
+        "date": "2026-08-05 10:00",
         "title": "Зарплата и возвраты: без двойных строк в карточке сотрудника — Nika CRM",
         "description": (
             "5 августа 2026: разбивка начислений по оплатам больше не учитывает "
@@ -162,7 +151,7 @@ _POSTS = [
     {
         "slug": "bugfixes-cache-salary",
         "file": "blog/12-bugfixes-cache-salary.md",
-        "date": "2026-08",
+        "date": "2026-08-05 09:00",
         "title": "Багфиксы: Redis-кэш, дашборд и смена мастера с зарплатой — Nika CRM",
         "description": (
             "5 августа 2026: кнопка «Сменить исполнителей» на закрытой заявке с переносом ЗП; "
@@ -174,7 +163,7 @@ _POSTS = [
     {
         "slug": "perf-cash-mobile",
         "file": "blog/11-perf-cash-mobile.md",
-        "date": "2026-07",
+        "date": "2026-07-26 18:00",
         "title": "Производительность, касса по статьям и мобильное меню — Nika CRM",
         "description": (
             "Redis и gunicorn multi-worker, исправление периода «Прошлый месяц», "
@@ -186,7 +175,7 @@ _POSTS = [
     {
         "slug": "invoices-blank-signs",
         "file": "blog/10-invoices-blank-signs.md",
-        "date": "2026-07",
+        "date": "2026-07-29 16:00",
         "title": "Печать счетов без подписи и печати — живая печать — Nika CRM",
         "description": (
             "Бланк счёта, акта и накладной без электронных картинок подписи и печати "
@@ -198,7 +187,7 @@ _POSTS = [
     {
         "slug": "invoices-print-ux",
         "file": "blog/09-invoices-print-ux.md",
-        "date": "2026-07",
+        "date": "2026-07-28 15:00",
         "title": "Счета B2B: печать, шаблоны и оплата без заявки — Nika CRM",
         "description": (
             "TinyMCE-шаблоны счёта, акта и накладной, печать A4, размеры подписи/печати, "
@@ -210,7 +199,7 @@ _POSTS = [
     {
         "slug": "invoices-b2b",
         "file": "blog/08-invoices-b2b.md",
-        "date": "2026-07",
+        "date": "2026-07-27 14:00",
         "title": "Счета для юрлиц и ИП — Nika CRM",
         "description": (
             "Модуль счетов B2B: выставление из заявки, печать счёта/акта/накладной, "
@@ -222,34 +211,34 @@ _POSTS = [
     {
         "slug": "windows-landing-setup",
         "file": "blog/07-windows-landing-setup.md",
-        "date": "2026-07",
+        "date": "2026-07-25 12:00",
         "title": "Windows SETUP, лендинг и установка на VPS — Nika CRM",
         "description": "Офлайн SETUP для Windows, SEO-лендинг демо и one-shot установка на Ubuntu.",
         "heading": "Windows SETUP, лендинг и VPS",
         "teaser": "Поставить CRM проще: Windows SETUP, публичный лендинг, linux_setup / linux_upgrade.",
     },
     {
-        "slug": "oss-demo-docs",
-        "file": "blog/06-oss-demo-docs.md",
-        "date": "2026-04",
-        "title": "Open Source, демо и документация на сайте — Nika CRM",
-        "description": "Публичный репозиторий, демо-VPS и руководства на /docs без GitHub.",
-        "heading": "OSS, демо и документация",
-        "teaser": "Живое демо, автообновление с main и встроенные руководства.",
-    },
-    {
         "slug": "navbar-mobile",
         "file": "blog/05-navbar-mobile.md",
-        "date": "2026-05",
+        "date": "2026-05-20 12:00",
         "title": "Навбар и мобильный интерфейс — Nika CRM",
         "description": "Главное меню с подменю и удобная работа CRM на телефоне.",
         "heading": "Навбар и мобильный UI",
         "teaser": "Единое меню разделов и адаптация под узкий экран.",
     },
     {
+        "slug": "oss-demo-docs",
+        "file": "blog/06-oss-demo-docs.md",
+        "date": "2026-04-15 12:00",
+        "title": "Open Source, демо и документация на сайте — Nika CRM",
+        "description": "Публичный репозиторий, демо-VPS и руководства на /docs без GitHub.",
+        "heading": "OSS, демо и документация",
+        "teaser": "Живое демо, автообновление с main и встроенные руководства.",
+    },
+    {
         "slug": "staff-chat-pins-security",
         "file": "blog/04-staff-chat-pins-security.md",
-        "date": "2026-04",
+        "date": "2026-04-10 12:00",
         "title": "Чат сотрудников, pins и безопасность — Nika CRM",
         "description": "Внутренний чат с Push, закрепление заявок и hardening nginx/auth.",
         "heading": "Чат, pins, безопасность",
@@ -258,7 +247,7 @@ _POSTS = [
     {
         "slug": "postgresql-production",
         "file": "blog/03-postgresql-production.md",
-        "date": "2026-03",
+        "date": "2026-03-15 12:00",
         "title": "PostgreSQL и продакшен — Nika CRM",
         "description": "Только PostgreSQL: миграции, bootstrap-дамп, бэкапы и Docker.",
         "heading": "PostgreSQL и продакшен",
@@ -267,7 +256,7 @@ _POSTS = [
     {
         "slug": "rbac-reports-salary",
         "file": "blog/02-rbac-reports-salary.md",
-        "date": "2026-01",
+        "date": "2026-01-20 12:00",
         "title": "Права, отчёты и зарплата — Nika CRM",
         "description": "RBAC, отчёты руководителя и начисление зарплаты по заявкам.",
         "heading": "Права, отчёты, зарплата",
@@ -276,7 +265,7 @@ _POSTS = [
     {
         "slug": "core-orders-warehouse-cash",
         "file": "blog/01-core-orders-warehouse-cash.md",
-        "date": "2026-01",
+        "date": "2026-01-10 12:00",
         "title": "Заявки, склад и касса — старт Nika CRM",
         "description": "Базовые модули: заявки на ремонт, клиенты, склад и касса.",
         "heading": "Заявки, склад и касса",
@@ -359,6 +348,9 @@ def blog_post(slug: str):
     _require_public_landing()
     if not _SLUG_RE.match(slug or ""):
         abort(404)
+    # Старый пост 1.0.5 слит в 1.0.6
+    if slug == "windows-setup-1-0-5":
+        return redirect(url_for("public_blog.blog_post", slug="windows-setup-1-0-6"), code=301)
     post = _post_by_slug(slug)
     if not post:
         abort(404)

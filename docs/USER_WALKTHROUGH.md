@@ -39,7 +39,7 @@
 ## Что нового в версии 1.5 (Windows SETUP 1.0.5, 2026-08-08)
 
 - Почта SMTP: «От кого» должно совпадать с логином; демо `noreply@example.com` больше не ломает Mail.ru; гайд в § 13.5 USER_GUIDE и блок подсказок в Настройках.
-- Windows SETUP 1.0.5: дата сборки 2026-08-08, LAN, firewall Any, см. [блог](/blog/windows-setup-1-0-5).
+- Windows SETUP 1.0.5: дата сборки 2026-08-08, LAN, firewall Any, см. [блог 1.0.6](/blog/windows-setup-1-0-6).
 
 ## Что нового в версии 1.4
 
