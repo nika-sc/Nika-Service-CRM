@@ -287,7 +287,7 @@ body.ml-body {
       rgba(15, 28, 36, 0.22) 100%
     ),
     url("../marketing/og-landing.jpg") center 10% / cover no-repeat;
-  opacity: 0.72;
+  opacity: 0.77;
   z-index: 0;
   animation: ml-hero-fade 1.2s ease both;
 }
@@ -365,8 +365,8 @@ body.ml-body {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   background: linear-gradient(
     180deg,
-    rgba(10, 20, 26, 0.55) 0%,
-    rgba(10, 20, 26, 0.82) 100%
+    rgba(10, 20, 26, 0.60) 0%,
+    rgba(10, 20, 26, 0.87) 100%
   );
   backdrop-filter: blur(10px);
   padding: 1.15rem 1.25rem 1.35rem;

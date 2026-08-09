@@ -31,7 +31,7 @@ body.ml-body.nika-service-public {
   min-height: 68px;
   padding-block: .35rem;
   margin: 0;
-  background: rgba(9, 17, 30, 0.88) !important;
+  background: rgba(9, 17, 30, 0.93) !important;
   border-bottom: 1px solid var(--nika-line);
   backdrop-filter: blur(14px);
   position: sticky;
@@ -58,7 +58,7 @@ body.ml-body.nika-service-public {
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--nika-accent), #1a9e8f);
-  box-shadow: 0 8px 22px rgba(43, 184, 166, .28);
+  box-shadow: 0 4px 12px rgba(43, 184, 166, .18);
 }
 
 .nika-service-public .brand-copy { line-height: 1.1; }
@@ -75,19 +75,31 @@ body.ml-body.nika-service-public {
 }
 
 .nika-service-public .app-header .nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   color: var(--nika-muted);
   font-weight: 700;
   border-radius: 10px;
-  padding: .55rem .8rem;
+  padding: .45rem .8rem;
+  line-height: 1.2;
 }
 .nika-service-public .app-header .nav-link:hover {
   color: #fff;
   background: rgba(255, 255, 255, .06);
 }
 
+.nika-service-public .service-public-nav-list > .nav-item {
+  display: flex;
+  align-items: center;
+}
+
 .nika-service-public .navbar-toggler { color: var(--nika-text); }
 
 /* Map legacy ml-btn to shared button language */
+.nika-service-public .app-header .ml-btn,
+.nika-service-public .app-header .ml-btn-primary,
+.nika-service-public .app-header .ml-btn-ghost,
 .nika-service-public .ml-btn,
 .nika-service-public .ml-btn-primary,
 .nika-service-public .ml-btn-help {
@@ -95,8 +107,8 @@ body.ml-body.nika-service-public {
   align-items: center;
   justify-content: center;
   gap: .45rem;
-  min-height: 42px;
-  padding: .64rem .95rem;
+  min-height: 40px;
+  padding: .45rem .9rem;
   color: #fff !important;
   font-family: "Manrope", sans-serif;
   font-weight: 700;
@@ -136,8 +148,4 @@ body.ml-body.nika-service-public {
   color: var(--nika-muted);
   font-size: .8rem;
   font-weight: 600;
-}
-
-.nika-service-public a.hub-products-link {
-  color: #7dffef;
 }
