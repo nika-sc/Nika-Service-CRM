@@ -760,6 +760,7 @@ def settings():
     order_models = []
     success = False
     director_test_result = None
+    client_test_email = ''
     settings = {}
     payment_method_settings = {'cash_label': 'Наличные', 'card_label': 'Карта', 'transfer_label': 'Перевод'}
     
@@ -932,28 +933,19 @@ def settings():
                 )
                 flash('Автоматизации и каналы успешно сохранены!', 'success')
             elif 'director_notifications_test' in request.form:
-                current_settings = SettingsService.get_general_settings()
-                recipient = (request.form.get('director_email') or current_settings.get('director_email') or '').strip()
+                # Тест не сохраняет чекбоксы/настройки — только отправка на введённый адрес.
+                recipient = (request.form.get('director_test_email') or '').strip()
                 from app.services.notification_service import NotificationService, _is_placeholder_sender_email
                 _, recipient_box = parseaddr(recipient)
+                settings = SettingsService.get_general_settings()
                 if not _is_valid_ascii_email(recipient) or _is_placeholder_sender_email(recipient_box):
                     flash(
-                        'Тест не отправлен: укажите реальный Email директора (не @example.com из демо).',
+                        'Тест не отправлен: укажите реальный Email (не @example.com из демо).',
                         'error',
                     )
                     success = False
-                    director_test_result = {'ok': False, 'message': 'Последняя проверка: email директора невалиден.'}
-                    settings = SettingsService.get_general_settings()
+                    director_test_result = {'ok': False, 'message': 'Последняя проверка: email получателя невалиден.'}
                 else:
-                    # Сохраняем email до теста — иначе после ошибки SMTP поле откатывается к демо-адресу
-                    payload = dict(current_settings or {})
-                    payload.update({
-                        'director_email': recipient,
-                        'auto_email_director_order_accepted': request.form.get('auto_email_director_order_accepted') == 'on',
-                        'auto_email_director_order_closed': request.form.get('auto_email_director_order_closed') == 'on',
-                    })
-                    SettingsService.save_general_settings(payload)
-                    settings = SettingsService.get_general_settings()
                     sent, err_msg = NotificationService.send_director_test_email(recipient)
                     success = bool(sent)
                     if sent:
@@ -963,13 +955,8 @@ def settings():
                         flash(f'Не удалось отправить тестовое письмо директору: {err_msg or "неизвестная ошибка"}', 'error')
                         director_test_result = {'ok': False, 'message': f'Последняя проверка: ошибка отправки на {recipient}. {err_msg or ""}'.strip()}
             elif 'client_email_test' in request.form:
-                current_settings = SettingsService.get_general_settings()
-                recipient = (
-                    request.form.get('client_test_email')
-                    or request.form.get('director_email')
-                    or current_settings.get('director_email')
-                    or ''
-                ).strip()
+                recipient = (request.form.get('client_test_email') or '').strip()
+                client_test_email = recipient
                 if not _is_valid_ascii_email(recipient):
                     flash(
                         'Тест писем клиенту не отправлен: укажите корректный Email получателя (ASCII).',
@@ -981,9 +968,13 @@ def settings():
                     ok, total, order_id, err_msg = NotificationService.send_customer_email_test_batch(recipient)
                     success = ok > 0
                     if ok:
+                        if order_id is None:
+                            src = 'тестовые данные (без заявки в БД)'
+                        else:
+                            src = f'заявка #{order_id}'
                         flash(
                             f'Отправлено {ok} из {total} тестовых писем клиента '
-                            f'(заявка #{order_id}) на {recipient}.',
+                            f'({src}) на {recipient}.',
                             'success' if ok == total else 'warning',
                         )
                     else:
@@ -1308,6 +1299,7 @@ def settings():
         email_templates=email_templates,
         director_email_templates=director_email_templates,
         director_test_result=director_test_result,
+        client_test_email=client_test_email,
         payment_method_settings=payment_method_settings,
         smtp_password_configured=bool(
             settings.get('mail_password') or current_app.config.get('MAIL_PASSWORD')

@@ -95,3 +95,7 @@ packaging/windows/assets/
 packaging/windows/output/
 packaging/windows/smoke-results/
 packaging/windows/NikaCRM-Smoke.wsb
+
+# DR off-VPS snapshots (secrets + PII dumps)
+data/database/backups/dr-snapshots/
+database/backups/dr-snapshots/

@@ -1452,7 +1452,7 @@
                                     {{ director_test_result.message }}
                                 </div>
                                 {% endif %}
-                                <form method="POST" action="/settings" class="mb-0">
+                                <form method="POST" action="/settings" class="mb-4">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <input type="hidden" name="director_notifications_settings" value="1">
                                     <div class="row g-3">
@@ -1475,11 +1475,24 @@
                                         </div>
                                     </div>
                                     <div class="mt-3 text-end">
-                                        <button type="submit" name="director_notifications_test" value="1" class="btn btn-outline-secondary me-2">
-                                            <i class="fas fa-paper-plane me-1"></i>Отправить тест
-                                        </button>
                                         <button type="submit" class="btn btn-primary">
                                             <i class="fas fa-save me-1"></i>Сохранить настройки директора
+                                        </button>
+                                    </div>
+                                </form>
+                                <hr class="my-3">
+                                <h6 class="mb-2"><i class="fas fa-vial me-1"></i>Тест письма директору</h6>
+                                <p class="text-muted small mb-2">Не сохраняет настройки — только отправка на указанный адрес.</p>
+                                <form method="POST" action="/settings" class="row g-2 align-items-end mb-0">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="directorTestEmail">Куда отправить тест</label>
+                                        <input type="email" class="form-control" id="directorTestEmail" name="director_test_email"
+                                               value="" placeholder="you@mail.ru" required>
+                                    </div>
+                                    <div class="col-md-auto">
+                                        <button type="submit" name="director_notifications_test" value="1" class="btn btn-outline-secondary">
+                                            <i class="fas fa-paper-plane me-1"></i>Отправить тест
                                         </button>
                                     </div>
                                 </form>
@@ -1638,16 +1651,18 @@
                                 <hr class="my-4">
                                 <h6 class="mb-2"><i class="fas fa-vial me-1"></i>Тест писем клиенту</h6>
                                 <p class="text-muted small mb-3">
-                                    Отправит 4 письма (принят / статус / готов / закрыт) с данными последней заявки,
-                                    у которой есть клиент. Нужны настроенный SMTP и хотя бы одна такая заявка в базе.
+                                    Отправит 4 письма (принят / статус / готов / закрыт).
+                                    Если в базе есть заявка с клиентом — подставит её данные, иначе уйдёт синтетический тест SMTP.
+                                    Нужны настроенный SMTP во вкладке «Общие».
                                 </p>
                                 <form method="POST" action="/settings" class="row g-2 align-items-end">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <div class="col-md-6">
                                         <label class="form-label" for="clientTestEmail">Куда отправить тест</label>
                                         <input type="email" class="form-control" id="clientTestEmail" name="client_test_email"
-                                               value="{{ settings.director_email or '' }}"
-                                               placeholder="you@mail.ru" required>
+                                               value="{{ client_test_email or '' }}"
+                                               placeholder="you@mail.ru" required autocomplete="off">
+                                        <div class="form-text">Независимо от Email директора. Не сохраняет настройки каналов.</div>
                                     </div>
                                     <div class="col-md-auto">
                                         <button type="submit" name="client_email_test" value="1" class="btn btn-outline-info">

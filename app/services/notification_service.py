@@ -1026,37 +1026,129 @@ class NotificationService:
             return False
 
     @staticmethod
+    def _send_synthetic_customer_email(template_type: str, recipient_email: str) -> bool:
+        """
+        Отправка клиентского шаблона с фиктивными плейсхолдерами (тест SMTP без заявок в БД).
+        """
+        from flask import current_app
+        from app.services.settings_service import SettingsService
+
+        recipient = _normalize_email_address(recipient_email or '')
+        if not recipient:
+            return False
+
+        tpl = SettingsService.get_email_template(template_type)
+        html_content = (tpl or {}).get('html_content') if tpl else None
+        if not html_content:
+            html_content = NotificationService._get_default_email_template(template_type)
+
+        values = {
+            'ORDER_NUMBER': '#TEST',
+            'ORDER_ID': '0',
+            'ORDER_UUID': 'test-uuid',
+            'CLIENT_NAME': 'Тестовый клиент',
+            'CLIENT_PHONE': '+70000000000',
+            'CLIENT_EMAIL': recipient,
+            'STATUS_NAME': 'Тест',
+            'DIAGNOSTIC': 'SMTP test',
+            'PHOTO_COUNT': '0',
+            'UPDATED_AT': get_moscow_now_str('%d.%m.%Y %H:%M:%S'),
+            'PORTAL_LOGIN': '+70000000000',
+            'PORTAL_TEMP_PASSWORD': 'test-pass',
+            'PORTAL_URL': _resolve_portal_login_url() or 'https://example.invalid/portal/login',
+            'ORDER_DEVICE_TYPE': 'Телефон',
+            'ORDER_DEVICE_BRAND': 'TestBrand',
+            'ORDER_MODEL': 'Model X',
+            'ORDER_WORK_DONE': 'Диагностика',
+            'ORDER_CREATED_AT': get_moscow_now_str('%d.%m.%Y %H:%M:%S'),
+            'SERIAL_NUMBER': 'SN-TEST',
+            'MANAGER_NAME': 'Менеджер',
+            'MASTER_NAME': 'Мастер',
+            'ORDER_COMMENT': 'Синтетический тест SMTP из Настроек',
+            'ORDER_APPEARANCE': '',
+        }
+        html_body = NotificationService._render_html_template(html_content, values)
+        subject_map = {
+            'order_accepted': 'Тест: Заказ принят',
+            'order_status_update': 'Тест: Изменение статуса',
+            'order_ready': 'Тест: Заказ готов',
+            'order_closed_thanks': 'Тест: Заказ закрыт',
+        }
+        subject = subject_map.get(template_type, f'Тест: {template_type}')
+
+        try:
+            from flask_mail import Message
+            from app import mail, MAIL_AVAILABLE
+            if not MAIL_AVAILABLE or mail is None:
+                return False
+        except ImportError:
+            return False
+
+        with current_app.app_context():
+            app = current_app._get_current_object()
+            _apply_mail_config_from_settings(app)
+            if not _resolve_sender_email(app):
+                logger.warning("Синтетический email клиенту: не задан отправитель.")
+                return False
+            if not (app.config.get('MAIL_PASSWORD') or '').strip():
+                logger.warning("Синтетический email клиенту: не задан пароль SMTP.")
+                return False
+            msg = Message(
+                subject=subject,
+                sender=_resolve_message_sender(app),
+                recipients=[recipient],
+                html=html_body,
+            )
+            _send_mail_with_retry(mail, msg, app)
+        return True
+
+    @staticmethod
     def send_customer_email_test_batch(recipient_email: str) -> tuple:
         """
-        Тест 4 клиентских шаблонов на указанный адрес (данные последней заявки с клиентом).
+        Тест 4 клиентских шаблонов на указанный адрес.
+        Если есть заявка с клиентом — подставляет её данные; иначе синтетический контекст.
         Returns:
             (ok_count, total, order_id_or_None, error_message_or_None)
+            order_id is None when synthetic stubs were used.
         """
         recipient = _normalize_email_address(recipient_email or '')
         if not recipient:
             return 0, 4, None, "Невалидный email получателя."
 
-        from app.database.connection import get_db_connection
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT id FROM orders WHERE customer_id IS NOT NULL ORDER BY id DESC LIMIT 1")
-            row = cur.fetchone()
-        if not row:
-            return 0, 4, None, "Нет заявок с клиентом в базе — нечего подставить в шаблоны."
+        order_id = None
+        try:
+            from app.database.connection import get_db_connection
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id FROM orders WHERE customer_id IS NOT NULL ORDER BY id DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+            if row:
+                order_id = row[0]
+        except Exception as exc:
+            logger.debug("Поиск заявки для клиентского теста: %s", exc)
+            order_id = None
 
-        order_id = row[0]
         templates = ('order_accepted', 'order_status_update', 'order_ready', 'order_closed_thanks')
         ok = 0
         last_err = None
         for template_type in templates:
             try:
-                sent = NotificationService.send_customer_order_email(
-                    order_id, template_type, override_recipient=recipient
-                )
+                if order_id is not None:
+                    sent = NotificationService.send_customer_order_email(
+                        order_id, template_type, override_recipient=recipient
+                    )
+                else:
+                    sent = NotificationService._send_synthetic_customer_email(
+                        template_type, recipient
+                    )
                 if sent:
                     ok += 1
                 else:
-                    last_err = last_err or f"шаблон {template_type} не отправлен (SMTP/отправитель/пароль)."
+                    last_err = last_err or (
+                        f"шаблон {template_type} не отправлен (SMTP/отправитель/пароль)."
+                    )
             except Exception as exc:
                 last_err = str(exc).strip() or type(exc).__name__
         if ok == 0 and not last_err:
