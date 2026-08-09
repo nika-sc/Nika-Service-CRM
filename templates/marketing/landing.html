@@ -207,14 +207,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="https://nika-crm.ru/" rel="noopener">О CRM</a>
                     </li>
-                    {% if demo_visitor_stats_enabled %}
-                    <li class="nav-item">
-                        <span class="ml-online-badge nav-link" title="Сейчас работают в демо CRM" aria-live="polite">
-                            <span class="ml-online-dot" aria-hidden="true"></span>
-                            Сейчас в CRM: <strong data-demo-online-count>{{ demo_online_count }}</strong>
-                        </span>
-                    </li>
-                    {% endif %}
                     <li class="nav-item d-none d-xl-block"><a class="nav-link" href="#windows-setup">Windows</a></li>
                     <li class="nav-item d-none d-lg-block"><a class="nav-link" href="{{ url_for('public_docs.docs_about') }}">О проекте</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('public_docs.docs_hub') }}">Руководство</a></li>
@@ -837,13 +829,5 @@
         if (user) user.focus();
     })();
     </script>
-    {% if demo_visitor_stats_enabled %}
-    <script>
-        window.demoVisitorStatsEnabled = true;
-        window.demoVisitorHeartbeat = false;
-        window.demoVisitorPollOnline = true;
-    </script>
-    <script src="{{ url_for('static', filename='js/demo_presence.js') }}"></script>
-    {% endif %}
 </body>
 </html>
