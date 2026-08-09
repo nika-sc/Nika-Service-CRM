@@ -13,6 +13,12 @@ python scripts/capture_walkthrough_screenshots.py --base-url http://127.0.0.1:50
 
 SMTP / почта (иллюстрации гайда § 13.5): `39-smtp-mailru-correct.png`, `40-smtp-sender-mismatch.png`, `41-smtp-checklist.png`.
 
+PWA (гайд § 18 и блог): `42-pwa-chrome-install.png` … `45-pwa-mobile-add-home.png` —
+
+```bash
+python scripts/capture_pwa_screenshots.py
+```
+
 Отдельная съёмка портала (подготовка пароля в CRM + вход клиента):
 
 ```bash

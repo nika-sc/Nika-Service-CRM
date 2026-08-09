@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
+        "slug": "pwa-install-taskbar",
+        "file": "blog/25-pwa-install-taskbar.md",
+        "date": "2026-08-09 18:15",
+        "title": "Установка PWA и закрепление на панели задач Windows — Nika CRM",
+        "description": (
+            "9 августа 2026: как установить Nika CRM как PWA в Chrome/Edge, закрепить "
+            "на панели задач Windows и добавить на главный экран телефона."
+        ),
+        "heading": "PWA: установка и панель задач",
+        "teaser": "Chrome/Edge → Установить → закрепить на панели задач; мобильный — «На экран Домой».",
+    },
+    {
         "slug": "windows-setup-1-0-6",
         "file": "blog/24-windows-setup-1-0-6.md",
         "date": "2026-08-09 17:45",
