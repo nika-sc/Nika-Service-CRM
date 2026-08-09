@@ -447,19 +447,20 @@
                         <div class="alert alert-warning border-warning mb-3" role="note">
                             <div class="fw-semibold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Важно для Mail.ru / Яндекс / Gmail</div>
                             <p class="mb-2 small">
-                                Поле <strong>«От кого»</strong> — это не подпись ради красоты: провайдер проверяет адрес отправителя.
-                                Адрес в скобках <code>&lt;...&gt;</code> должен <strong>совпадать с логином</strong>.
-                                Демо-значение <code>noreply@example.com</code> Mail.ru отклоняет с ошибкой
-                                <em>not local sender over smtp</em>.
+                                <strong>Логин</strong> — полный email ящика для входа на SMTP (например <code>ваш@bk.ru</code>).
+                                <strong>«От кого»</strong> — как отправитель выглядит в письме:
+                                <code>Название вашей компании &lt;ваш@email.ru&gt;</code>.
+                                Адрес внутри <code>&lt;...&gt;</code> должен <strong>совпадать с логином</strong>
+                                (иначе провайдер ответит <em>not local sender</em>).
                             </p>
                             <p class="mb-2 small">
-                                Пример правильно:
-                                <code>Nika CRM &lt;nika-sc@bk.ru&gt;</code>
-                                при логине <code>nika-sc@bk.ru</code>.
-                                Можно оставить «От кого» пустым — подставится логин.
+                                Пример: логин <code>nika-sc@bk.ru</code> →
+                                «От кого» <code>Сервисный центр Ника &lt;nika-sc@bk.ru&gt;</code>.
+                                Поле можно оставить пустым — подставится логин.
+                                Не оставляйте демо <code>noreply@example.com</code>.
                             </p>
                             <p class="mb-0 small">
-                                Подробный гайд со скриншотами:
+                                Подробный гайд:
                                 <a href="/docs/guide#135-почта-smtp" target="_blank" rel="noopener">Руководство → § 13.5 Почта (SMTP)</a>
                                 ·
                                 <a href="/blog/smtp-mail-setup" target="_blank" rel="noopener">статья в блоге</a>.
@@ -498,6 +499,12 @@
                             </table>
                         </div>
                         <p class="text-muted small">Письма клиентам, директору и тестам SMTP. На Windows Offline обычно достаточно заполнить эту форму (не обязательно <code>MAIL_*</code> в <code>.env</code>). Если поля пустые — берутся значения из окружения.</p>
+                        <div class="alert alert-info border mb-3 py-2 small" role="note">
+                            <i class="fas fa-desktop me-1"></i>
+                            <strong>Windows Offline:</strong> после «Сохранить» перезапустите сервер ярлыком на рабочем столе
+                            <strong>«Nika CRM — Перезапуск службы»</strong> (Restart service), иначе служба может ещё держать старые настройки SMTP.
+                            Затем повторите тест письма.
+                        </div>
                         <div class="row g-3" id="mail-smtp-fields">
                             <div class="col-md-6">
                                 <label class="form-label" for="mailServer">SMTP-сервер</label>
@@ -532,11 +539,11 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="mailUsername">
-                                    Логин (email)
+                                    Логин (email ящика)
                                     <span class="badge text-bg-primary ms-1">обязательно</span>
                                 </label>
-                                <input type="text" class="form-control border-primary" id="mailUsername" name="mail_username" value="{{ settings.mail_username or '' }}" placeholder="you@mail.ru" autocomplete="off">
-                                <div class="form-text">Полный email ящика, с которого разрешена отправка (не «noreply@example.com»).</div>
+                                <input type="text" class="form-control border-primary" id="mailUsername" name="mail_username" value="{{ settings.mail_username or '' }}" placeholder="ваш@email.ru" autocomplete="off">
+                                <div class="form-text">Полный email для входа на SMTP, например <code>ваш@bk.ru</code> или <code>ваш@yandex.ru</code>. Не <code>noreply@example.com</code>.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="mailPassword">
@@ -557,13 +564,15 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="mailDefaultSender">
-                                    От кого (имя и адрес)
-                                    <span class="badge text-bg-danger ms-1">совпадать с логином</span>
+                                    От кого (имя компании и email)
+                                    <span class="badge text-bg-danger ms-1">email = логин</span>
                                 </label>
-                                <input type="text" class="form-control border-danger-subtle" id="mailDefaultSender" name="mail_default_sender" value="{{ settings.mail_default_sender or '' }}" placeholder="Сервисный центр &lt;you@mail.ru&gt;" autocomplete="off">
+                                <input type="text" class="form-control border-danger-subtle" id="mailDefaultSender" name="mail_default_sender" value="{{ settings.mail_default_sender or '' }}" placeholder="Название вашей компании &lt;ваш@email.ru&gt;" autocomplete="off">
                                 <div class="form-text text-danger-emphasis">
-                                    Формат: <code>Имя компании &lt;тот-же-email-что-логин&gt;</code>.
-                                    Не оставляйте демо <code>Nika CRM Demo &lt;noreply@example.com&gt;</code>.
+                                    Вставьте так: <code>Название вашей компании &lt;ваш@email.ru&gt;</code> —
+                                    имя видно получателю, а <code>ваш@email.ru</code> внутри скобок
+                                    <strong>тот же</strong>, что в поле «Логин» выше.
+                                    Пустое поле = отправится только логин.
                                 </div>
                                 <div id="mailSenderHint" class="form-text fw-semibold" hidden></div>
                             </div>

@@ -902,6 +902,15 @@ def settings():
                 log_main_action('update', 'general_settings', None,
                     f'Изменены общие настройки организации: {payload.get("org_name", "")}', audit_payload)
                 flash('Настройки успешно сохранены!', 'success')
+                # Windows Offline: служба читает .env при старте — без перезапуска SMTP может остаться старым.
+                if os.name == 'nt':
+                    flash(
+                        'Почта (SMTP) записана в настройки и в .env. '
+                        'Чтобы служба точно подхватила новые MAIL_*, перезапустите сервер '
+                        'ярлыком на рабочем столе «Nika CRM — Перезапуск службы» '
+                        '(Nika CRM — Restart service). Затем повторите тест письма.',
+                        'warning',
+                    )
             elif 'automation_settings' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})

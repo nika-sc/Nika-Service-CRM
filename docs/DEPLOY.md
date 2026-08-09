@@ -118,13 +118,14 @@ MAIL_USE_TLS=True
 MAIL_USE_SSL=False
 MAIL_USERNAME=your@bk.ru
 MAIL_PASSWORD=...
-# Тот же mailbox, что логин (не noreply@example.com):
-MAIL_DEFAULT_SENDER=Nika CRM <your@bk.ru>
+# Пример: Название вашей компании <your@bk.ru> — mailbox = логин
+MAIL_DEFAULT_SENDER=Название вашей компании <your@bk.ru>
 ```
 
 **Важно:** `MAIL_DEFAULT_SENDER` / поле «От кого» должно содержать **тот же email**, что `MAIL_USERNAME`. Демо-значение `noreply@example.com` провайдеры отклоняют (`550 not local sender`). Подробно: [USER_GUIDE § 13.5](USER_GUIDE.md#135-почта-smtp) и статья блога `smtp-mail-setup`.
 
-После ручной правки `.env` — перезапуск приложения (`docker compose up -d` / служба Windows). После сохранения в UI CRM перезапуск обычно не обязателен (процесс обновляет `os.environ`).
+После ручной правки `.env` — перезапуск приложения (`docker compose up -d` / служба Windows).  
+На **Windows Offline** после сохранения почты в UI CRM тоже перезапустите службу ярлыком **«Nika CRM — Перезапуск службы»** — иначе процесс может держать старые `MAIL_*`. На Linux/Docker после сохранения в UI перезапуск обычно не нужен (процесс обновляет `os.environ`).
 
 ## Web Push (чат сотрудников, опционально)
 
