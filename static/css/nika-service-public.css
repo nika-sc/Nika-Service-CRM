@@ -56,6 +56,9 @@ body.ml-body.nika-service-public {
   border-radius: 12px;
   font-family: "Syne", sans-serif;
   font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
   color: #fff;
   background: linear-gradient(135deg, var(--nika-accent), #1a9e8f);
   box-shadow: 0 4px 12px rgba(43, 184, 166, .18);
