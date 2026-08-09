@@ -4,23 +4,24 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Published download links (1.0.5, build 2026-08-08):**
+**Published download links (1.0.6, build 2026-08-09):**
 
-- [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.6-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.6/NikaCRM-Offline-Setup-1.0.6-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.6)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.6-x64.exe)
 
-SHA256: `9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D`
+SHA256: `FA029F7CC5B53AA2C7CFD39C13539280A6CD654AA0BB1674AD6394F8D0A67387`
 
-**Changelog 1.0.5 (2026-08-08):** LAN access; SMTP From must match login (no demo `noreply@example.com`); mail settings UX + docs; receipt/estimated-cost fixes. See `docs/blog/23-windows-setup-1-0-5.md`.
+**Changelog 1.0.6 (2026-08-09):** After saving SMTP on Windows, restart via desktop shortcut «Nika CRM — Перезапуск службы»; clearer From placeholders. See `docs/blog/24-windows-setup-1-0-6.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.5-x64.exe` (links above).
+1. Download `NikaCRM-Offline-Setup-1.0.6-x64.exe` (links above).
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change
    the password immediately if the computer is accessible to other people.
+5. After changing SMTP in Settings, run **Nika CRM — Перезапуск службы**, then retest mail.
 
 No separate Python or PostgreSQL installation is needed. The installer:
 
@@ -53,7 +54,7 @@ The script downloads version-pinned official installers, verifies SHA256,
 resolves a CPython 3.12 Windows wheelhouse, writes an integrity manifest and
 builds:
 
-`packaging\windows\output\NikaCRM-Offline-Setup-1.0.5-x64.exe`
+`packaging\windows\output\NikaCRM-Offline-Setup-1.0.6-x64.exe`
 
 Downloaded assets and build output are deliberately excluded from Git. To
 rebuild using already downloaded files:

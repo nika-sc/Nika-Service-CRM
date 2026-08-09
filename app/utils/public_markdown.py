@@ -18,6 +18,7 @@ _ALLOWED_TAGS = bleach.sanitizer.ALLOWED_TAGS.union(
         "p", "br", "hr", "pre", "code", "blockquote",
         "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
         "img", "span", "div", "strong", "em", "a",
+        "figure", "figcaption",
     }
 )
 _ALLOWED_ATTRS = {
@@ -30,6 +31,8 @@ _ALLOWED_ATTRS = {
     "div": ["class", "id"],
     "span": ["class", "id"],
     "table": ["class"],
+    "figure": ["class"],
+    "figcaption": ["class"],
     # Якоря оглавления (#18-мобильный-доступ-и-pwa и т.п.) — id должен переживать bleach
     "h1": ["id"],
     "h2": ["id"],
@@ -100,7 +103,7 @@ def _render_cached(rel_path: str, mtime_ns: int) -> str:
 
 
 def _enhance_html_a11y(html: str) -> str:
-    """Добавляет lazy-loading и запасной alt для картинок; помечает внешние ссылки."""
+    """Добавляет lazy-loading, подписи к скриншотам; помечает внешние ссылки."""
 
     def img_repl(match: re.Match) -> str:
         tag = match.group(0)
@@ -108,17 +111,39 @@ def _enhance_html_a11y(html: str) -> str:
             tag = tag[:-1] + ' loading="lazy"' + tag[-1]
         if "decoding=" not in tag:
             tag = tag[:-1] + ' decoding="async"' + tag[-1]
-        if not re.search(r'\balt\s*=', tag, flags=re.IGNORECASE):
+        alt_m = re.search(r'\balt="([^"]*)"', tag, flags=re.IGNORECASE)
+        if not alt_m:
             src_m = re.search(r'\bsrc="([^"]+)"', tag)
             name = Path(src_m.group(1)).name if src_m else "Скриншот"
             tag = tag[:-1] + f' alt="{name}"' + tag[-1]
-        elif re.search(r'\balt=""', tag):
-            src_m = re.search(r'\bsrc="([^"]+)"', tag)
-            name = Path(src_m.group(1)).stem.replace("-", " ") if src_m else "Скриншот"
-            tag = re.sub(r'\balt=""', f'alt="{name}"', tag, count=1)
+            alt_text = name
+        else:
+            alt_text = (alt_m.group(1) or "").strip()
+            if not alt_text:
+                src_m = re.search(r'\bsrc="([^"]+)"', tag)
+                alt_text = Path(src_m.group(1)).stem.replace("-", " ") if src_m else "Скриншот"
+                tag = re.sub(r'\balt=""', f'alt="{alt_text}"', tag, count=1)
+        # Уже в figure — не оборачиваем повторно
         return tag
 
+    # Сначала нормализуем img, затем оборачиваем одиночные <p><img…></p> в figure+figcaption
     html = re.sub(r"<img\b[^>]*>", img_repl, html, flags=re.IGNORECASE)
+
+    def figure_wrap(match: re.Match) -> str:
+        img_tag = match.group(1)
+        alt_m = re.search(r'\balt="([^"]*)"', img_tag, flags=re.IGNORECASE)
+        caption = (alt_m.group(1) if alt_m else "").strip() or "Скриншот"
+        return (
+            f'<figure class="ml-docs-figure">{img_tag}'
+            f'<figcaption class="ml-docs-figcaption">{caption}</figcaption></figure>'
+        )
+
+    html = re.sub(
+        r"<p>\s*(<img\b[^>]*>)\s*</p>",
+        figure_wrap,
+        html,
+        flags=re.IGNORECASE,
+    )
 
     def a_repl(match: re.Match) -> str:
         tag, inner = match.group(1), match.group(2)

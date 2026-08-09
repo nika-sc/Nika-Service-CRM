@@ -92,15 +92,15 @@ def _reset_login_guard(key: str):
 
 def _windows_setup_info():
     """Ссылки на автономный Windows SETUP (публичный релиз + зеркало на демо)."""
-    version = "1.0.5"
+    version = "1.0.6"
     filename = f"NikaCRM-Offline-Setup-{version}-x64.exe"
     tag = f"windows-setup-{version}"
     github_base = "https://github.com/nika-sc/Nika-Service-CRM"
     return {
         "version": version,
         "filename": filename,
-        "build_date": "2026-08-08",
-        "sha256": "9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D",
+        "build_date": "2026-08-09",
+        "sha256": "FA029F7CC5B53AA2C7CFD39C13539280A6CD654AA0BB1674AD6394F8D0A67387",
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://service.nika-crm.ru/downloads/{filename}",

@@ -358,23 +358,24 @@ cd Nika-Service-CRM
 ### Windows SETUP (полный офлайн-установщик)
 
 Для Windows 10/11 x64 доступен единый автономный установщик
-`NikaCRM-Offline-Setup-1.0.5-x64.exe` (**сборка 2026-08-08**).
+`NikaCRM-Offline-Setup-1.0.6-x64.exe` (**сборка 2026-08-09**).
 Он не требует интернета и автоматически устанавливает встроенные Python 3.12
 и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
 миграции и регистрирует Nika CRM как службу Windows с автозапуском.
 
-**Что нового в 1.0.5 (2026-08-08):** доступ из LAN; SMTP без демо-`noreply@example.com`
-(поле «От кого» = логин); подсказки почты в настройках; правки квитанций и
-предварительной стоимости. Подробности — [блог Windows SETUP 1.0.5](docs/blog/23-windows-setup-1-0-5.md)
+**Что нового в 1.0.6 (2026-08-09):** после сохранения SMTP перезапустите службу
+ярлыком **«Nika CRM — Перезапуск службы»**; плейсхолдеры «От кого»
+(`Название вашей компании <ваш@email.ru>`). Подробности —
+[блог Windows SETUP 1.0.6](docs/blog/24-windows-setup-1-0-6.md)
 и [SMTP](docs/blog/22-smtp-mail-setup.md).
 
 **Скачать:**
 
-- [NikaCRM-Offline-Setup-1.0.5-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.5/NikaCRM-Offline-Setup-1.0.5-x64.exe)
-- [Страница релиза `windows-setup-1.0.5`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.5)
-- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.5-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.6-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.6/NikaCRM-Offline-Setup-1.0.6-x64.exe)
+- [Страница релиза `windows-setup-1.0.6`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.6)
+- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.6-x64.exe)
 
-SHA256: `9E466F698D2EE749F72D20FB8262E83454CFEC045A7DC0B068FDD5A18598A33D`
+SHA256: `FA029F7CC5B53AA2C7CFD39C13539280A6CD654AA0BB1674AD6394F8D0A67387`
 
 1. Скачайте EXE по ссылке выше.
 2. Запустите установщик **от имени администратора** (права Admin обязательны).
