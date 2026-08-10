@@ -43,7 +43,8 @@ require_cmd() {
 require_cmd tar
 require_cmd xz
 require_cmd python3
-require_cmd pg_dump
+# Host pg_dump/psql нужны только в mode=host. На WORK (Docker) dump идёт
+# через `docker compose exec postgres pg_dump` — клиент на хосте не обязателен.
 
 detect_mode() {
   if [[ -n "${BACKUP_MODE:-}" ]]; then
@@ -104,10 +105,9 @@ PY
   rm -f "$export_file"
 }
 
+load_env_file
 MODE="$(detect_mode)"
 log "START backup job (recipient=$RECIPIENT_EMAIL, mode=$MODE)"
-
-load_env_file
 
 DB_DUMP_FILE="$TMP_DIR/postgres_${TS}.dump"
 ARCHIVE_FILE="$BACKUP_DIR/crm_full_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
@@ -158,6 +158,8 @@ if [[ "$MODE" == "docker" ]]; then
   )"
   IFS=$'\t' read -r WEB_MAIL_SERVER WEB_MAIL_PORT WEB_MAIL_USE_TLS WEB_MAIL_USE_SSL WEB_MAIL_USERNAME WEB_MAIL_PASSWORD WEB_MAIL_SENDER <<<"$WEB_MAIL_ENV"
 else
+  require_cmd pg_dump
+  require_cmd psql
   DATABASE_URL="${DATABASE_URL:-}"
   if [[ -z "$DATABASE_URL" ]]; then
     log "ERROR: DATABASE_URL не задан (host mode)"
@@ -199,6 +201,33 @@ if [[ -z "${SMTP_USERNAME:-}" ]]; then SMTP_USERNAME="${WEB_MAIL_USERNAME:-}"; f
 if [[ -z "${SMTP_PASSWORD:-}" ]]; then SMTP_PASSWORD="${WEB_MAIL_PASSWORD:-}"; fi
 if [[ -z "${SMTP_SENDER:-}" ]]; then SMTP_SENDER="${WEB_MAIL_SENDER:-$SMTP_USERNAME}"; fi
 
+# Для AUTH всегда предпочитаем MAIL_* из .env (ASCII). В general_settings
+# часто кириллический From и иногда «битый» пароль — smtplib LOGIN тогда падает.
+# Docker web может не пробросить MAIL_PASSWORD — тогда остаётся пароль из БД с non-ASCII.
+if [[ -n "${MAIL_USERNAME:-}" ]]; then
+  SMTP_USERNAME="$MAIL_USERNAME"
+  WEB_MAIL_USERNAME="$MAIL_USERNAME"
+fi
+if [[ -n "${MAIL_PASSWORD:-}" ]]; then
+  SMTP_PASSWORD="$MAIL_PASSWORD"
+  WEB_MAIL_PASSWORD="$MAIL_PASSWORD"
+fi
+if [[ -n "${MAIL_SERVER:-}" ]]; then
+  SMTP_SERVER="$MAIL_SERVER"
+  WEB_MAIL_SERVER="$MAIL_SERVER"
+fi
+if [[ -n "${MAIL_PORT:-}" ]]; then
+  SMTP_PORT="$MAIL_PORT"
+  WEB_MAIL_PORT="$MAIL_PORT"
+fi
+if [[ -n "${MAIL_DEFAULT_SENDER:-}" ]]; then
+  SMTP_SENDER="$MAIL_DEFAULT_SENDER"
+  WEB_MAIL_SENDER="$MAIL_DEFAULT_SENDER"
+elif [[ -n "${WEB_MAIL_SENDER:-}" ]]; then
+  SMTP_SENDER="$WEB_MAIL_SENDER"
+fi
+# From: только mailbox ASCII (отрежем display name с кириллицей на стороне Python)
+
 # Демо-заглушка noreply@example.com — не использовать как From
 case "${SMTP_SENDER,,}" in
   *example.com*|*service-center.local*)
@@ -224,8 +253,9 @@ if [[ -n "${BACKUP_EXTRA_PATHS// }" ]]; then
     fi
   done
 fi
-# Типовые пути DEMO, если не заданы явно
-if [[ ${#EXTRA_LIST[@]} -eq 0 ]]; then
+# Типовые пути DEMO (host mode), если не заданы явно. На Docker/WORK не цепляем
+# /var/www/html — там чужой сайт хостинга и раздувает архив до сотен МБ.
+if [[ ${#EXTRA_LIST[@]} -eq 0 && "$MODE" == "host" ]]; then
   for p in /var/www/nikacrm-downloads /var/www/html /etc/nginx/sites-enabled/nikacrm.conf; do
     [[ -e "$p" ]] && EXTRA_LIST+=("$p")
   done
@@ -268,6 +298,12 @@ TAR_ARGS+=(
   --exclude='./.cursor'
   --exclude='./data/database/backups'
   --exclude='./data/logs'
+  --exclude='./data/database/*.db'
+  --exclude='./data/database/*.db.*'
+  --exclude='./data/database/*.sqlite'
+  --exclude='./data/database/*.bak'
+  --exclude='./data/database/*.bak.*'
+  --exclude='./database/bootstrap/work_vps_*.sql'
   --exclude='./__pycache__'
   --exclude='./.pytest_cache'
   --exclude='./.venv'
@@ -330,9 +366,16 @@ def _ascii_or_empty(value: str) -> str:
     except UnicodeEncodeError:
         return ""
 
-# Envelope From — только ASCII mailbox; display name не в envelope
+# Envelope / AUTH — только ASCII mailbox; display name с кириллицей нельзя в login
 smtp_sender = _ascii_or_empty(smtp_sender) or _ascii_or_empty(smtp_user)
 smtp_user = _ascii_or_empty(smtp_user) or smtp_sender
+# Пароль SMTP обязан быть ASCII (smtplib AUTH PLAIN)
+try:
+    smtp_password.encode("ascii")
+except UnicodeEncodeError as exc:
+    raise SystemExit(f"SMTP password has non-ASCII bytes: {exc}") from exc
+if not smtp_user or not smtp_password:
+    raise SystemExit("SMTP username/password empty after ASCII normalize")
 low = smtp_sender.lower()
 if low.endswith("@example.com") or low.endswith("@example.org") or "service-center.local" in low:
     smtp_sender = smtp_user
@@ -341,12 +384,12 @@ if not archive_path.exists():
     raise FileNotFoundError(f"Archive not found: {archive_path}")
 
 msg = EmailMessage()
-msg["Subject"] = f"[CRM Backup] {backup_host} {backup_ts}"
+msg["Subject"] = f"[CRM Backup] crm.nika-sc.ru {backup_host} {backup_ts}"
 msg["From"] = smtp_sender
 msg["To"] = email_to
 msg.set_content(
     f"Автоматический бэкап CRM / сайта.\n"
-    f"Сервер: {backup_host}\n"
+    f"Сервер: {backup_host} (crm.nika-sc.ru)\n"
     f"Время: {backup_ts}\n"
     f"Размер архива: {backup_size}\n"
     f"Файл: {archive_path.name}\n"
@@ -354,12 +397,23 @@ msg.set_content(
     f"+ доп. пути сайта (downloads/nginx), если есть.\n"
 )
 
-with archive_path.open("rb") as f:
-    msg.add_attachment(
-        f.read(),
-        maintype="application",
-        subtype="xz",
-        filename=archive_path.name,
+# Крупные вложения многие SMTP режут — шлём без файла, путь на диске
+attach_max = int(os.environ.get("BACKUP_ATTACH_MAX_BYTES") or "28000000")
+size_bytes = archive_path.stat().st_size
+if size_bytes <= attach_max:
+    with archive_path.open("rb") as f:
+        msg.add_attachment(
+            f.read(),
+            maintype="application",
+            subtype="xz",
+            filename=archive_path.name,
+        )
+else:
+    msg.set_content(
+        msg.get_content()
+        + f"\nВложение НЕ приложено (размер {size_bytes} > {attach_max}).\n"
+        + f"Файл на WORK: {archive_path}\n"
+        + f"scp root@86.110.194.218:{archive_path} .\n"
     )
 
 if use_ssl:
