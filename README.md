@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/assets/github-banner.jpg" alt="Nika CRM — бесплатная CRM для сервисных центров" width="920">
+  <img src="docs/assets/github-banner.jpg" alt="Nika Service CRM — бесплатная CRM для сервисных центров" width="920">
 </p>
 
-<h1 align="center">Nika CRM</h1>
+<h1 align="center">Nika Service CRM</h1>
 
 <p align="center">
   <strong>Бесплатная open-source CRM для сервисных центров</strong><br>
@@ -52,7 +52,9 @@ CRM может работать:
 - на VPS с вашим доменом;
 - без зависимости от SaaS-платформ.
 
-Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika-CRM`.  
+Это **не** CRM фитнес-клуба. Абонементы, ресепшен и расписание — отдельный продукт: [Nika Fitness CRM](https://github.com/nika-sc/Nika-Fitness-CRM) · демо [fitness.nika-crm.ru](https://fitness.nika-crm.ru/). Бренд: [www.nika-crm.ru](https://www.nika-crm.ru/).
+
+Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika Service CRM`.  
 Если нужна помощь по установке, интеграции или **переносу данных из другой CRM** — с темой `Nika-CRM Помощь по установке`.
 
 Автор: **Александр Смелков** · сервисный центр «Ника», Сочи, 2026.
