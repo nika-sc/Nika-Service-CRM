@@ -10,25 +10,45 @@ from app.services.salary_service import SalaryService
 from datetime import datetime, timedelta
 import sqlite3
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_RU_DATE_RE = re.compile(r"^\d{2}\.\d{2}\.\d{4}$")
+
+
 def _normalize_date_iso(date_str: Optional[str]) -> Optional[str]:
-    """Приводит дату к безопасному формату YYYY-MM-DD или возвращает None."""
+    """Приводит дату к YYYY-MM-DD или None. Лишний хвост после даты не принимается."""
     if not date_str or not str(date_str).strip():
         return None
     s = str(date_str).strip()
-    base = s[:10]
     try:
-        if len(base) == 10 and base[4] == "-" and base[7] == "-":
-            return datetime.strptime(base, "%Y-%m-%d").strftime("%Y-%m-%d")
-        if "." in base:
-            parsed = datetime.strptime(base, "%d.%m.%Y")
-            return parsed.strftime("%Y-%m-%d")
-        return None
+        if _ISO_DATE_RE.fullmatch(s):
+            return datetime.strptime(s, "%Y-%m-%d").strftime("%Y-%m-%d")
+        if _RU_DATE_RE.fullmatch(s):
+            return datetime.strptime(s, "%d.%m.%Y").strftime("%Y-%m-%d")
+        if len(s) >= 11 and s[10] in " T" and _ISO_DATE_RE.fullmatch(s[:10]):
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%Y-%m-%d")
     except ValueError:
         return None
+    return None
+
+
+def _safe_sql_date(value: Optional[str], default: str) -> str:
+    """Только YYYY-MM-DD для подстановки в SQL DATE('...')."""
+    if _ISO_DATE_RE.fullmatch(default or ""):
+        fallback = default
+    else:
+        fallback = "1900-01-01"
+    s = str(value or "").strip()
+    if not _ISO_DATE_RE.fullmatch(s):
+        return fallback
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").strftime("%Y-%m-%d")
+    except ValueError:
+        return fallback
 
 
 def _is_master_role(role: Optional[str]) -> bool:
@@ -335,8 +355,8 @@ class SalaryDashboardService:
                     pay_cols = [r[1] for r in cursor.fetchall()]
                     kind_filter = " AND (p.kind IS NULL OR p.kind != 'refund')" if 'kind' in pay_cols else ""
                     status_filter = " AND p.status = 'captured'" if 'status' in pay_cols else " AND (p.status IS NULL OR p.status != 'cancelled')"
-                    d_from = date_from or '1900-01-01'
-                    d_to = date_to or '2099-12-31'
+                    d_from = _safe_sql_date(date_from, '1900-01-01')
+                    d_to = _safe_sql_date(date_to, '2099-12-31')
                     orders_in_period_sql = f"""
                             SELECT DISTINCT p.order_id FROM payments p
                             WHERE (p.is_cancelled = 0 OR p.is_cancelled IS NULL)
@@ -465,13 +485,13 @@ class SalaryDashboardService:
                 # (безопасно, так как это даты, не пользовательский ввод напрямую)
                 payment_date_filter_str = ""
                 if date_from or date_to:
-                    payment_date_filter_str = f" AND DATE(sp.payment_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(sp.payment_date) <= DATE('{date_to or '2099-12-31'}')"
+                    payment_date_filter_str = f" AND DATE(sp.payment_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(sp.payment_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')"
                 bonus_date_filter_str = ""
                 if date_from or date_to:
-                    bonus_date_filter_str = f" AND DATE(sb.bonus_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(sb.bonus_date) <= DATE('{date_to or '2099-12-31'}')"
+                    bonus_date_filter_str = f" AND DATE(sb.bonus_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(sb.bonus_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')"
                 fine_date_filter_str = ""
                 if date_from or date_to:
-                    fine_date_filter_str = f" AND DATE(sf.fine_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(sf.fine_date) <= DATE('{date_to or '2099-12-31'}')"
+                    fine_date_filter_str = f" AND DATE(sf.fine_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(sf.fine_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')"
                 
                 # Заменяем плейсхолдер в запросе (используем строку, которая точно не встретится в SQL)
                 query = query.replace("__PAYMENT_DATE_FILTER_PLACEHOLDER__", payment_date_filter_str)
@@ -498,8 +518,8 @@ class SalaryDashboardService:
                         if "status" in _pay_cols
                         else " AND (p.status IS NULL OR p.status != 'cancelled')"
                     )
-                    _d_from = date_from or "1900-01-01"
-                    _d_to = date_to or "2099-12-31"
+                    _d_from = _safe_sql_date(date_from, "1900-01-01")
+                    _d_to = _safe_sql_date(date_to, "2099-12-31")
                     if "kind" in _pay_cols:
                         _sum_expr = (
                             "CAST(COALESCE(SUM(CASE WHEN p.kind = 'refund' THEN -p.amount ELSE p.amount END), 0) * 100 AS INTEGER)"
@@ -572,9 +592,9 @@ class SalaryDashboardService:
                                     (mid,),
                                 )
                                 accrued = (cursor.fetchone() or (0,))[0]
-                                bonus_date_f = f" AND DATE(bonus_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(bonus_date) <= DATE('{date_to or '2099-12-31'}')" if (date_from or date_to) else ""
-                                fine_date_f = f" AND DATE(fine_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(fine_date) <= DATE('{date_to or '2099-12-31'}')" if (date_from or date_to) else ""
-                                payment_date_f = f" AND DATE(payment_date) >= DATE('{date_from or '1900-01-01'}') AND DATE(payment_date) <= DATE('{date_to or '2099-12-31'}')" if (date_from or date_to) else ""
+                                bonus_date_f = f" AND DATE(bonus_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(bonus_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')" if (date_from or date_to) else ""
+                                fine_date_f = f" AND DATE(fine_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(fine_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')" if (date_from or date_to) else ""
+                                payment_date_f = f" AND DATE(payment_date) >= DATE('{_safe_sql_date(date_from, '1900-01-01')}') AND DATE(payment_date) <= DATE('{_safe_sql_date(date_to, '2099-12-31')}')" if (date_from or date_to) else ""
                                 cursor.execute(
                                     "SELECT COALESCE(SUM(amount_cents), 0) FROM salary_bonuses WHERE user_id = ? AND role = 'manager'" + bonus_date_f,
                                     (mid,),

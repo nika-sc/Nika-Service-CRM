@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
+        "slug": "security-hardening",
+        "file": "blog/26-security-hardening.md",
+        "date": "2026-08-14 12:30",
+        "title": "Усиление входа и паролей личного кабинета — Nika Service CRM",
+        "description": (
+            "14 августа 2026: общий lockout по Redis, ссылка задать пароль в письме, "
+            "пароль ЛК не хранится открытым текстом, TRUSTED_HOSTS обязателен в production."
+        ),
+        "heading": "Усиление входа и паролей ЛК",
+        "teaser": "Lockout на Redis, ссылка /portal/set-password, пароль кабинета только хеш.",
+    },
+    {
         "slug": "pwa-install-taskbar",
         "file": "blog/25-pwa-install-taskbar.md",
         "date": "2026-08-09 18:15",

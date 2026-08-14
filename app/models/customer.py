@@ -181,47 +181,21 @@ class Customer(BaseModel):
                 customer_id = cursor.lastrowid
                 
                 # Автоматически генерируем пароль для портала
+                generated_password = None
                 try:
                     from app.services.customer_portal_service import CustomerPortalService
                     generated_password = CustomerPortalService.generate_and_set_portal_password(customer_id)
                     if generated_password:
-                        logger.info(f"Автоматически сгенерирован пароль портала для клиента {customer_id}: {generated_password}")
-                        
-                        # Сохраняем пароль в action_logs для возможности просмотра администратором
-                        try:
-                            from flask_login import current_user
-                            from app.services.action_log_service import ActionLogService
-                            
-                            current_user_id = None
-                            current_username = None
-                            try:
-                                if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
-                                    current_user_id = current_user.id
-                                    current_username = current_user.username
-                            except Exception:
-                                pass
-                            
-                            ActionLogService.log_action(
-                                user_id=current_user_id,
-                                username=current_username,
-                                action_type='create',
-                                entity_type='customer_portal_password',
-                                entity_id=customer_id,
-                                description=f"Автоматически сгенерирован пароль портала для клиента {customer.name}",
-                                details={
-                                    'customer_id': customer_id,
-                                    'customer_name': customer.name,
-                                    'customer_phone': customer.phone,
-                                    'generated_password': generated_password,
-                                    'note': 'Пароль сохранен в захешированном виде. При первом входе клиент должен сменить пароль.'
-                                }
-                            )
-                        except Exception as e:
-                            logger.warning(f"Не удалось сохранить пароль в action_logs: {e}")
+                        CustomerPortalService.log_portal_password_generated(
+                            customer_id, customer.name, customer.phone
+                        )
                 except Exception as e:
                     logger.warning(f"Не удалось автоматически установить пароль портала для клиента {customer_id}: {e}")
                 
-                return cls.get_by_id(customer_id)
+                created = cls.get_by_id(customer_id)
+                if created and generated_password:
+                    created._portal_temp_password = generated_password
+                return created
         except sqlite3.IntegrityError as e:
             from app.utils.db_error_translator import translate_db_error
             error_msg = translate_db_error(e)

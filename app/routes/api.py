@@ -41,11 +41,16 @@ def init_limiter(app_limiter):
     limiter = app_limiter
 
 def rate_limit_if_available(limit_str):
-    """Декоратор для rate limiting, если limiter доступен."""
+    """Rate limit: проверка limiter в runtime (при импорте модуля он ещё None)."""
+    from functools import wraps
+
     def decorator(f):
-        if limiter:
-            return limiter.limit(limit_str)(f)
-        return f
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if limiter:
+                return limiter.limit(limit_str)(f)(*args, **kwargs)
+            return f(*args, **kwargs)
+        return wrapper
     return decorator
 
 

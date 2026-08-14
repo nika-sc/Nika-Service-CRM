@@ -6,14 +6,17 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os
 import uuid
-from app.config import Config
 from app.database.connection import get_db_connection
+from app.utils.safe_files import confined_file_path
 import sqlite3
 import logging
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('comments', __name__, url_prefix='/api/comments')
+
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+COMMENTS_UPLOAD_DIR = os.path.join(_PROJECT_ROOT, 'uploads', 'comments')
 
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar'}
@@ -54,7 +57,7 @@ def upload_attachment():
             return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 10 MB)'}), 400
         
         # Сохраняем файл
-        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads', 'comments')
+        upload_dir = COMMENTS_UPLOAD_DIR
         os.makedirs(upload_dir, exist_ok=True)
         
         filename = secure_filename(file.filename)
@@ -102,8 +105,8 @@ def get_attachment(attachment_id):
             if not row:
                 return jsonify({'success': False, 'error': 'Файл не найден'}), 404
             
-            file_path = row['file_path']
-            if not os.path.exists(file_path):
+            file_path = confined_file_path(row['file_path'], COMMENTS_UPLOAD_DIR)
+            if not file_path or not os.path.exists(file_path):
                 return jsonify({'success': False, 'error': 'Файл не найден на диске'}), 404
             
             return send_file(

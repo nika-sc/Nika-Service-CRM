@@ -27,6 +27,10 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
     SESSION_COOKIE_NAME = os.environ.get('SESSION_COOKIE_NAME', 'nikacrm_session')
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_DURATION = timedelta(days=14)
+    REMEMBER_COOKIE_NAME = os.environ.get('REMEMBER_COOKIE_NAME', 'nikacrm_remember')
     # Лимит размера тела запроса (защита от больших payload / DoS)
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', str(12 * 1024 * 1024)))  # 12MB
     # Допустимые Host заголовки (защита от Host Header attacks).
@@ -47,9 +51,11 @@ class Config:
     # CSP в режиме report-only для безопасного внедрения без поломки интерфейса
     CSP_REPORT_ONLY = os.environ.get('CSP_REPORT_ONLY', 'true').strip().lower() in ('1', 'true', 'yes', 'on')
     CSP_REPORT_URI = (os.environ.get('CSP_REPORT_URI') or '').strip()
-    # Можно включать enforcement точечно (например "/api/,/portal/api/")
+    # Enforcement на логин и API (остальные страницы — report-only, пока CSP_REPORT_ONLY=true)
     CSP_ENFORCE_PATH_PREFIXES = [
-        p.strip() for p in (os.environ.get('CSP_ENFORCE_PATH_PREFIXES', '') or '').split(',') if p.strip()
+        p.strip() for p in (
+            os.environ.get('CSP_ENFORCE_PATH_PREFIXES', '/login,/portal/login,/api/,/portal/api/') or ''
+        ).split(',') if p.strip()
     ]
     # Lockout защита от brute-force (staff login)
     LOGIN_LOCKOUT_THRESHOLD = int(os.environ.get('LOGIN_LOCKOUT_THRESHOLD', '8'))
@@ -181,6 +187,9 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = _use_https
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SECURE = _use_https
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
     
     PREFERRED_URL_SCHEME = 'https' if _use_https else 'http'
     

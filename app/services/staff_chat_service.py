@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 
 from app.database.connection import get_db_connection
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_naive
+from app.utils.safe_files import confined_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +70,16 @@ def _is_allowed_file(filename: str, mime_type: str) -> bool:
     ext = ""
     if filename and "." in filename:
         ext = filename.rsplit(".", 1)[1].lower()
+    mime = (mime_type or "").lower()
+    if ext in ("svg", "svgz") or mime == "image/svg+xml":
+        return False
     if ext in _ALLOWED_EXTENSIONS:
         return True
-    if not mime_type:
+    if not mime:
         return False
-    if mime_type in _ALLOWED_MIME_EXACT:
+    if mime in _ALLOWED_MIME_EXACT:
         return True
-    return any(mime_type.startswith(prefix) for prefix in _ALLOWED_MIME_PREFIXES)
+    return any(mime.startswith(prefix) for prefix in _ALLOWED_MIME_PREFIXES)
 
 
 def _sanitize_text(text: Optional[str]) -> str:
@@ -627,7 +631,9 @@ class StaffChatService:
             if row["deleted_at"] is not None:
                 return None
             rel_path = (row["file_path"] or "").replace("\\", "/")
-            abs_path = os.path.join(_PROJECT_ROOT, rel_path)
+            abs_path = confined_file_path(os.path.join(_PROJECT_ROOT, rel_path), _UPLOAD_ROOT)
+            if not abs_path:
+                return None
             return {
                 "id": row["id"],
                 "message_id": row["message_id"],

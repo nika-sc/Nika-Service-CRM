@@ -1,7 +1,7 @@
 """
 Blueprint для главных страниц и аутентификации.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, g, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, g, abort, session
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -23,6 +23,7 @@ from urllib.parse import urlparse, urljoin
 from email.utils import parseaddr
 from collections import defaultdict, deque
 from app.database.connection import get_db_connection
+from app.utils import login_lockout
 
 
 def log_main_action(action_type: str, entity_type: str, entity_id: int = None, description: str = None, details: dict = None):
@@ -44,9 +45,6 @@ def log_main_action(action_type: str, entity_type: str, entity_id: int = None, d
 
 bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
-_LOGIN_GUARD_LOCK = threading.Lock()
-_LOGIN_FAILURES = defaultdict(deque)  # key -> timestamps
-_LOGIN_LOCKOUTS = {}  # key -> lockout_until timestamp
 
 
 def _login_client_ip() -> str:
@@ -58,36 +56,15 @@ def _login_guard_key(username: str) -> str:
 
 
 def _is_login_locked(key: str) -> bool:
-    now = time.time()
-    with _LOGIN_GUARD_LOCK:
-        locked_until = _LOGIN_LOCKOUTS.get(key, 0)
-        if locked_until <= now:
-            _LOGIN_LOCKOUTS.pop(key, None)
-            return False
-        return True
+    return login_lockout.is_locked('staff', key)
 
 
 def _register_login_failure(key: str):
-    now = time.time()
-    window_sec = int(current_app.config.get('LOGIN_LOCKOUT_WINDOW_SEC', 600) or 600)
-    threshold = int(current_app.config.get('LOGIN_LOCKOUT_THRESHOLD', 8) or 8)
-    lockout_sec = int(current_app.config.get('LOGIN_LOCKOUT_DURATION_SEC', 900) or 900)
-    with _LOGIN_GUARD_LOCK:
-        bucket = _LOGIN_FAILURES[key]
-        window_start = now - float(window_sec)
-        while bucket and bucket[0] < window_start:
-            bucket.popleft()
-        bucket.append(now)
-        if len(bucket) >= threshold:
-            _LOGIN_LOCKOUTS[key] = now + float(lockout_sec)
-            bucket.clear()
-            logger.warning("Staff login lockout activated for key=%s", key)
+    login_lockout.register_failure('staff', key)
 
 
 def _reset_login_guard(key: str):
-    with _LOGIN_GUARD_LOCK:
-        _LOGIN_FAILURES.pop(key, None)
-        _LOGIN_LOCKOUTS.pop(key, None)
+    login_lockout.clear('staff', key)
 
 
 def _windows_setup_info():
@@ -247,11 +224,14 @@ def init_limiter(app_limiter):
     limiter = app_limiter
 
 def rate_limit_if_available(limit_str):
-    """Декоратор для rate limiting, если limiter доступен."""
+    """Rate limit: проверка limiter в runtime (при импорте модуля он ещё None)."""
     def decorator(f):
-        if limiter:
-            return limiter.limit(limit_str)(f)
-        return f
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if limiter:
+                return limiter.limit(limit_str)(f)(*args, **kwargs)
+            return f(*args, **kwargs)
+        return wrapper
     return decorator
 
 
@@ -447,6 +427,7 @@ def login():
                 
                 user = User(user_dict)
                 remember_me = request.form.get('remember_me') in ('1', 'on', 'true', 'True')
+                session.clear()
                 login_user(user, remember=remember_me)
                 UserService.update_user_last_login(user.id)
                 try:

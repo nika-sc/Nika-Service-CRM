@@ -202,10 +202,27 @@ def create_app(config_class=Config):
     app.config['HOST_ALLOWLIST'] = _trusted_hosts
     app.config['TRUSTED_HOSTS'] = None
 
+    from app.config import ProductionConfig
+    _is_production = (
+        config_class == ProductionConfig
+        or (
+            isinstance(config_class, type)
+            and issubclass(config_class, ProductionConfig)
+            and not getattr(config_class, 'TESTING', False)
+        )
+    )
+    if _is_production and not _trusted_hosts:
+        raise ValueError(
+            "TRUSTED_HOSTS обязателен в production: укажите домен(ы) CRM через запятую, "
+            "не оставляйте список пустым."
+        )
+
     def _host_allowed(host_header: str) -> bool:
         trusted = app.config.get('HOST_ALLOWLIST') or []
         if not trusted:
-            # Если список не задан, не блокируем трафик
+            # Dev/test: пустой список не режет трафик. Production выше уже не стартует.
+            if _is_production:
+                return False
             return True
         host = _hostname_from_host_header(host_header)
         if not host:
@@ -490,7 +507,7 @@ def create_app(config_class=Config):
             response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
         # Чувствительные страницы/ответы не кэшируем браузером
         p = request.path or ''
-        if p.startswith('/login') or p.startswith('/portal/login') or p.startswith('/api/'):
+        if p.startswith('/login') or p.startswith('/portal/login') or p.startswith('/portal/set-password') or p.startswith('/api/'):
             response.headers.setdefault('Cache-Control', 'no-store')
         return response
 

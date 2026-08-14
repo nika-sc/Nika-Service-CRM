@@ -263,37 +263,15 @@ def _resolve_portal_login_url() -> str:
     return f"{base}/portal/login"
 
 
-def _get_last_generated_portal_password(customer_id: int) -> str:
-    """
-    Возвращает последний выданный пароль портала из журнала действий.
-
-    Нужен для повторной отправки письма: пароль хранится только хешем,
-    открытое значение остаётся в action_logs, пока клиент его не сменил.
-    """
-    try:
-        with get_db_connection(row_factory=sqlite3.Row) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                SELECT details
-                FROM action_logs
-                WHERE entity_type = 'customer_portal_password'
-                AND entity_id = ?
-                ORDER BY created_at DESC
-                LIMIT 1
-                ''',
-                (customer_id,)
-            )
-            row = cursor.fetchone()
-        if not row or not row['details']:
-            return ''
-        details = row['details']
-        if isinstance(details, str):
-            details = json.loads(details)
-        return str((details or {}).get('generated_password') or '')
-    except Exception as e:
-        logger.debug(f"Не удалось получить пароль портала из журнала для клиента {customer_id}: {e}")
+def _resolve_portal_setup_url(token: str) -> str:
+    """Ссылка «задать пароль» из письма (одноразовый токен)."""
+    token = (token or '').strip()
+    login_url = _resolve_portal_login_url()
+    if not token or not login_url:
         return ''
+    if '/portal/login' in login_url:
+        return login_url.replace('/portal/login', f'/portal/set-password?token={token}', 1)
+    return f"{login_url.rstrip('/')}/set-password?token={token}"
 
 
 def _send_mail_with_retry(mail_client, message, app, max_attempts: int = 2) -> bool:
@@ -690,11 +668,11 @@ class NotificationService:
     <h2 style="color: #333;">Заказ принят</h2>
     <p>Здравствуйте, ##CLIENT_NAME##!</p>
     <p>Ваша заявка <strong>##ORDER_NUMBER##</strong> успешно принята в работу. Мы свяжемся с вами при необходимости и сообщим о готовности.</p>
-    <p><strong>Данные для входа в личный кабинет:</strong><br>
-    Адрес входа: <a href="##PORTAL_URL##">##PORTAL_URL##</a><br>
-    Логин: <strong>##PORTAL_LOGIN##</strong><br>
-    Временный пароль: <strong>##PORTAL_TEMP_PASSWORD##</strong></p>
-    <p>При первом входе система попросит задать свой пароль. В кабинете вы можете отслеживать статус заявки.</p>
+    <p><strong>Личный кабинет:</strong><br>
+    Задать пароль (ссылка действует 2 дня): <a href="##PORTAL_SETUP_URL##">##PORTAL_SETUP_URL##</a><br>
+    Вход: <a href="##PORTAL_URL##">##PORTAL_URL##</a><br>
+    Логин (телефон): <strong>##PORTAL_LOGIN##</strong></p>
+    <p>После установки пароля в кабинете можно отслеживать статус заявки.</p>
     <p>Спасибо за обращение! С уважением,<br>сервисный центр «Ника».</p>
 </div>
             """,
@@ -886,18 +864,41 @@ class NotificationService:
 
             portal_login = getattr(customer, 'phone', '') or ''
             portal_temp_password = ''
+            portal_setup_url = ''
             portal_url = _resolve_portal_login_url()
             if template_type == 'order_accepted':
                 has_portal = bool(getattr(customer, 'portal_enabled', 0))
                 has_password = bool(getattr(customer, 'portal_password_hash', None))
+                just_generated = ''
                 if not has_portal or not has_password:
                     generated = CustomerPortalService.generate_and_set_portal_password(cid)
                     if generated:
-                        portal_temp_password = generated
-                elif not getattr(customer, 'portal_password_changed', 0):
-                    # Доступ уже выдан, но клиент ещё не менял пароль:
-                    # повторное письмо должно содержать тот же пароль, а не пустую строку.
-                    portal_temp_password = _get_last_generated_portal_password(cid)
+                        just_generated = generated
+                        try:
+                            CustomerPortalService.log_portal_password_generated(
+                                cid,
+                                getattr(customer, 'name', '') or '',
+                                getattr(customer, 'phone', '') or '',
+                            )
+                        except Exception:
+                            pass
+                try:
+                    setup_token = CustomerPortalService.generate_token(cid, expires_days=2)
+                    portal_setup_url = _resolve_portal_setup_url(setup_token)
+                except Exception as e:
+                    logger.warning("Не удалось создать ссылку задания пароля ЛК: %s", e)
+                # Старые кастомные шаблоны с ##PORTAL_TEMP_PASSWORD## — только что сгенерированный пароль,
+                # не plaintext из логов.
+                if just_generated and 'PORTAL_TEMP_PASSWORD' in (html_content or '').upper():
+                    portal_temp_password = just_generated
+                if portal_setup_url and 'PORTAL_SETUP_URL' not in (html_content or '').upper():
+                    from html import escape as _html_escape
+                    safe_setup = _html_escape(portal_setup_url, quote=True)
+                    html_content = (
+                        (html_content or '')
+                        + '<p>Задать пароль личного кабинета: '
+                        + f'<a href="{safe_setup}">{safe_setup}</a></p>'
+                    )
 
             # photo count из вложений комментариев по заявке
             photo_count = 0
@@ -962,6 +963,7 @@ class NotificationService:
                 'PORTAL_LOGIN': portal_login,
                 'PORTAL_TEMP_PASSWORD': portal_temp_password,
                 'PORTAL_URL': portal_url,
+                'PORTAL_SETUP_URL': portal_setup_url,
                 'ORDER_DEVICE_TYPE': order_device_type,
                 'ORDER_DEVICE_BRAND': order_device_brand,
                 'ORDER_MODEL': order_model,
@@ -1056,6 +1058,7 @@ class NotificationService:
             'PORTAL_LOGIN': '+70000000000',
             'PORTAL_TEMP_PASSWORD': 'test-pass',
             'PORTAL_URL': _resolve_portal_login_url() or 'https://example.invalid/portal/login',
+            'PORTAL_SETUP_URL': 'https://example.invalid/portal/set-password?token=test',
             'ORDER_DEVICE_TYPE': 'Телефон',
             'ORDER_DEVICE_BRAND': 'TestBrand',
             'ORDER_MODEL': 'Model X',

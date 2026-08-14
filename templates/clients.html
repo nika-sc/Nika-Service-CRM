@@ -646,20 +646,20 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Закрываем модальное окно
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
                     modal.hide();
-                    
-                    // Очищаем форму
                     form.reset();
-                    
-                    // Показываем уведомление
-                    showNotification('Клиент успешно добавлен', 'success');
-                    
-                    // Перезагружаем страницу через небольшую задержку
+                    if (result.portal_temp_password) {
+                        showNotification(
+                            'Клиент добавлен. Пароль ЛК (один раз): ' + result.portal_temp_password,
+                            'success'
+                        );
+                    } else {
+                        showNotification('Клиент успешно добавлен', 'success');
+                    }
                     setTimeout(() => {
                         window.location.reload();
-                    }, 1000);
+                    }, 2500);
                 } else {
                     showNotification(result.error || 'Ошибка при добавлении клиента', 'error');
                 }

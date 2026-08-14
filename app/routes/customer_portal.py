@@ -4,23 +4,17 @@ Blueprint для публичного личного кабинета клиен
 from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify
 from functools import wraps
 from flask_login import current_user
-import time
-import threading
-from collections import defaultdict, deque
 from app.services.customer_portal_service import CustomerPortalService
 from app.services.customer_service import CustomerService
 from app.services.order_service import OrderService
 from app.services.device_service import DeviceService
 from app.utils.exceptions import ValidationError, NotFoundError
-from flask import current_app
+from app.utils import login_lockout
 import logging
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('customer_portal', __name__, url_prefix='/portal')
-_PORTAL_LOGIN_GUARD_LOCK = threading.Lock()
-_PORTAL_LOGIN_FAILURES = defaultdict(deque)  # key -> timestamps
-_PORTAL_LOGIN_LOCKOUTS = {}  # key -> lockout_until timestamp
 
 # Инициализация limiter для этого blueprint
 limiter = None
@@ -70,36 +64,15 @@ def _portal_login_guard_key(phone: str) -> str:
 
 
 def _is_portal_login_locked(key: str) -> bool:
-    now = time.time()
-    with _PORTAL_LOGIN_GUARD_LOCK:
-        locked_until = _PORTAL_LOGIN_LOCKOUTS.get(key, 0)
-        if locked_until <= now:
-            _PORTAL_LOGIN_LOCKOUTS.pop(key, None)
-            return False
-        return True
+    return login_lockout.is_locked('portal', key)
 
 
 def _register_portal_login_failure(key: str):
-    now = time.time()
-    window_sec = int(current_app.config.get('PORTAL_LOGIN_LOCKOUT_WINDOW_SEC', 600) or 600)
-    threshold = int(current_app.config.get('PORTAL_LOGIN_LOCKOUT_THRESHOLD', 10) or 10)
-    lockout_sec = int(current_app.config.get('PORTAL_LOGIN_LOCKOUT_DURATION_SEC', 900) or 900)
-    with _PORTAL_LOGIN_GUARD_LOCK:
-        bucket = _PORTAL_LOGIN_FAILURES[key]
-        window_start = now - float(window_sec)
-        while bucket and bucket[0] < window_start:
-            bucket.popleft()
-        bucket.append(now)
-        if len(bucket) >= threshold:
-            _PORTAL_LOGIN_LOCKOUTS[key] = now + float(lockout_sec)
-            bucket.clear()
-            logger.warning("Portal login lockout activated for key=%s", key)
+    login_lockout.register_failure('portal', key)
 
 
 def _reset_portal_login_guard(key: str):
-    with _PORTAL_LOGIN_GUARD_LOCK:
-        _PORTAL_LOGIN_FAILURES.pop(key, None)
-        _PORTAL_LOGIN_LOCKOUTS.pop(key, None)
+    login_lockout.clear('portal', key)
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -181,6 +154,58 @@ def portal_login():
             return render_template('portal/login.html', error='Неверные данные для входа')
     
     return render_template('portal/login.html')
+
+
+@bp.route('/set-password', methods=['GET', 'POST'])
+@rate_limit_if_available("10 per minute")
+@rate_limit_if_available("30 per hour")
+def portal_set_password():
+    """Задать пароль ЛК по одноразовой ссылке из письма (без текущего пароля)."""
+    token = (request.values.get('token') or '').strip()
+    if not token or len(token) > 200:
+        return render_template(
+            'portal/set_password.html',
+            error='Ссылка недействительна или устарела.',
+        ), 400
+    info = CustomerPortalService.validate_token(token)
+    if not info:
+        return render_template(
+            'portal/set_password.html',
+            error='Ссылка недействительна или устарела. Попросите сервис выслать новую.',
+        ), 400
+    if request.method == 'GET':
+        return render_template(
+            'portal/set_password.html',
+            token=token,
+            name=info.get('name') or '',
+        )
+    password = request.form.get('password', '')
+    confirm = request.form.get('password_confirm', '')
+    if not password or len(password) < 6:
+        return render_template(
+            'portal/set_password.html',
+            token=token,
+            name=info.get('name') or '',
+            error='Пароль должен быть не менее 6 символов.',
+        )
+    if password != confirm:
+        return render_template(
+            'portal/set_password.html',
+            token=token,
+            name=info.get('name') or '',
+            error='Пароли не совпадают.',
+        )
+    if CustomerPortalService.set_portal_password(
+        info['customer_id'], password, reset_change_flag=False
+    ):
+        CustomerPortalService.revoke_token(token)
+        return render_template('portal/set_password.html', success=True)
+    return render_template(
+        'portal/set_password.html',
+        token=token,
+        name=info.get('name') or '',
+        error='Не удалось сохранить пароль. Попробуйте ещё раз.',
+    )
 
 
 @bp.route('/logout', methods=['POST'])

@@ -422,12 +422,19 @@ def api_create_customer():
         data = request.get_json(silent=True) or {}
         
         customer = CustomerService.create_customer(data)
-        
-        return jsonify({
-            'success': True, 
+        payload = {
+            'success': True,
             'customer': customer.to_dict(),
-            'message': 'Клиент успешно создан'
-        }), 201
+            'message': 'Клиент успешно создан',
+        }
+        temp = getattr(customer, '_portal_temp_password', None)
+        if temp:
+            payload['portal_temp_password'] = temp
+            payload['portal_password_note'] = (
+                'Покажите пароль клиенту один раз. В базе хранится только хеш; '
+                'повторно открыть его нельзя — только сбросить.'
+            )
+        return jsonify(payload), 201
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
@@ -558,57 +565,27 @@ def api_remove_portal_password(client_id):
 @login_required
 @permission_required('view_customers')
 def api_show_portal_password(client_id):
-    """API для получения сгенерированного пароля из action_logs."""
+    """Пароль ЛК в открытом виде не хранится — только сброс."""
     try:
-        # Проверяем, что пароль не был изменен клиентом
         customer = CustomerService.get_customer(client_id)
         if not customer:
             return jsonify({'success': False, 'error': 'Клиент не найден'}), 404
-        
+
         if customer.portal_password_changed:
             return jsonify({
-                'success': False, 
-                'error': 'Пароль был изменен клиентом. Невозможно показать оригинальный пароль.'
+                'success': False,
+                'error': 'Клиент уже сменил пароль. Задайте новый в карточке, если нужен повторный доступ.',
             }), 400
-        
-        # Ищем пароль в action_logs
-        from app.services.action_log_service import ActionLogService
-        from app.database.connection import get_db_connection
-        import sqlite3
-        import json
-        
-        with get_db_connection(row_factory=sqlite3.Row) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT details, created_at
-                FROM action_logs
-                WHERE entity_type = 'customer_portal_password'
-                AND entity_id = ?
-                ORDER BY created_at DESC
-                LIMIT 1
-            ''', (client_id,))
-            
-            row = cursor.fetchone()
-            if row and row['details']:
-                try:
-                    details = json.loads(row['details']) if isinstance(row['details'], str) else row['details']
-                    password = details.get('generated_password')
-                    if password:
-                        return jsonify({
-                            'success': True,
-                            'password': password,
-                            'generated_at': row['created_at'],
-                            'note': 'Этот пароль был автоматически сгенерирован при создании клиента. При первом входе клиент должен сменить его.'
-                        })
-                except (json.JSONDecodeError, KeyError):
-                    pass
-        
+
         return jsonify({
             'success': False,
-            'error': 'Пароль не найден в истории. Возможно, клиент был создан до внедрения этой функции.'
-        }), 404
+            'error': (
+                'Пароль в открытом виде не хранится. '
+                'Задайте новый пароль в карточке клиента или попросите клиента ссылку из письма.'
+            ),
+        }), 400
     except Exception as e:
-        logger.exception("Ошибка при получении пароля портала")
+        logger.exception("Ошибка при запросе пароля портала")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/api/clients/<int:client_id>/devices', methods=['POST'])

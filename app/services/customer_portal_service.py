@@ -6,8 +6,6 @@ from app.database.connection import get_db_connection
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 import sqlite3
 import logging
-import uuid
-import hashlib
 import secrets
 import string
 from datetime import timedelta
@@ -41,11 +39,9 @@ class CustomerPortalService:
     
     @staticmethod
     def generate_token(customer_id: int, expires_days: int = 90) -> str:
-        """Генерирует токен доступа для клиента."""
-        token = str(uuid.uuid4())
-        
+        """Генерирует токен доступа для клиента (ссылка задать пароль / вход)."""
+        token = secrets.token_urlsafe(32)
         expires_at = get_moscow_now_naive() + timedelta(days=expires_days)
-        
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
@@ -53,16 +49,33 @@ class CustomerPortalService:
                     INSERT INTO customer_tokens 
                     (customer_id, token, expires_at, created_at)
                     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (customer_id, token, expires_at.isoformat()))
+                ''', (customer_id, token, expires_at.isoformat(sep=' ', timespec='seconds')))
                 conn.commit()
                 return token
         except sqlite3.Error as e:
             logger.error(f"Ошибка БД при создании токена: {e}")
             raise DatabaseError(f"Ошибка базы данных: {e}")
+
+    @staticmethod
+    def _token_not_expired(expires_at) -> bool:
+        if expires_at is None:
+            return True
+        from datetime import datetime
+        if isinstance(expires_at, datetime):
+            exp = expires_at.replace(tzinfo=None) if expires_at.tzinfo else expires_at
+        else:
+            raw = str(expires_at).replace('T', ' ').replace('Z', '')
+            try:
+                exp = datetime.fromisoformat(raw[:19])
+            except ValueError:
+                return False
+        return exp > get_moscow_now_naive()
     
     @staticmethod
     def validate_token(token: str) -> Optional[Dict]:
         """Проверяет токен и возвращает данные клиента."""
+        if not token or len(token) > 200:
+            return None
         try:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
@@ -76,28 +89,26 @@ class CustomerPortalService:
                         c.portal_enabled
                     FROM customer_tokens ct
                     JOIN customers c ON c.id = ct.customer_id
-                    WHERE ct.token = ? 
-                    AND (ct.expires_at IS NULL OR ct.expires_at > datetime('now'))
+                    WHERE ct.token = ?
                     AND c.portal_enabled = 1
                 ''', (token,))
                 row = cursor.fetchone()
-                
-                if row:
-                    # Обновляем last_used_at
-                    cursor.execute('''
-                        UPDATE customer_tokens
-                        SET last_used_at = CURRENT_TIMESTAMP
-                        WHERE token = ?
-                    ''', (token,))
-                    conn.commit()
-                    
-                    return {
-                        'customer_id': row['customer_id'],
-                        'name': row['name'],
-                        'phone': row['phone'],
-                        'email': row['email']
-                    }
-                return None
+                if not row:
+                    return None
+                if not CustomerPortalService._token_not_expired(row['expires_at']):
+                    return None
+                cursor.execute('''
+                    UPDATE customer_tokens
+                    SET last_used_at = CURRENT_TIMESTAMP
+                    WHERE token = ?
+                ''', (token,))
+                conn.commit()
+                return {
+                    'customer_id': row['customer_id'],
+                    'name': row['name'],
+                    'phone': row['phone'],
+                    'email': row['email']
+                }
         except Exception as e:
             logger.error(f"Ошибка при проверке токена: {e}")
             return None
@@ -229,6 +240,39 @@ class CustomerPortalService:
         except Exception as e:
             logger.error(f"Ошибка при генерации пароля портала: {e}")
             return None
+
+    @staticmethod
+    def log_portal_password_generated(customer_id: int, customer_name: str = '', customer_phone: str = '') -> None:
+        """Аудит выдачи пароля ЛК без plaintext."""
+        logger.info("Сгенерирован пароль портала для клиента %s (plaintext не сохраняется)", customer_id)
+        try:
+            from flask_login import current_user
+            from app.services.action_log_service import ActionLogService
+
+            current_user_id = None
+            current_username = None
+            try:
+                if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+                    current_user_id = current_user.id
+                    current_username = current_user.username
+            except Exception:
+                pass
+            ActionLogService.log_action(
+                user_id=current_user_id,
+                username=current_username,
+                action_type='create',
+                entity_type='customer_portal_password',
+                entity_id=customer_id,
+                description=f"Сгенерирован пароль портала для клиента {customer_name or customer_id}",
+                details={
+                    'customer_id': customer_id,
+                    'customer_name': customer_name,
+                    'customer_phone': customer_phone,
+                    'note': 'Plaintext пароля не хранится. Staff видит его один раз при создании/сбросе.',
+                }
+            )
+        except Exception as e:
+            logger.warning("Не удалось записать аудит пароля портала: %s", e)
     
     @staticmethod
     def enable_portal(customer_id: int) -> bool:

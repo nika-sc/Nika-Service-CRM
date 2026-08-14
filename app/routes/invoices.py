@@ -40,7 +40,7 @@ STATUS_LABELS = {
     "cancelled": "Отменён",
 }
 
-ALLOWED_UPLOAD_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
+ALLOWED_UPLOAD_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 
 @bp.before_request
@@ -260,7 +260,7 @@ def api_upload_asset():
         return jsonify({"success": False, "error": "Файл не выбран"}), 400
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_UPLOAD_EXT:
-        return jsonify({"success": False, "error": "Допустимы изображения: png, jpg, webp, gif, svg"}), 400
+        return jsonify({"success": False, "error": "Допустимы изображения: png, jpg, webp, gif"}), 400
     upload_dir = os.path.join(current_app.static_folder, "uploads", "invoices")
     os.makedirs(upload_dir, exist_ok=True)
     safe = secure_filename(file.filename) or f"{kind}{ext}"

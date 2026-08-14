@@ -12,11 +12,13 @@ from app.services.staff_chat_service import (
     StaffChatValidationError,
     _sanitize_actor_name,
     _sanitize_client_instance_id,
+    _UPLOAD_ROOT as STAFF_CHAT_UPLOAD_ROOT,
 )
 from app.services.staff_chat_web_push_service import (
     StaffChatWebPushService,
     web_push_library_available,
 )
+from app.utils.safe_files import confined_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -405,8 +407,8 @@ def api_staff_chat_get_file(attachment_id: int):
         item = StaffChatService.get_attachment(attachment_id)
         if not item:
             return jsonify({"success": False, "error": "Файл не найден"}), 404
-        path = item["abs_path"]
-        if not os.path.exists(path):
+        path = confined_file_path(item.get("abs_path"), STAFF_CHAT_UPLOAD_ROOT)
+        if not path or not os.path.exists(path):
             return jsonify({"success": False, "error": "Файл не найден на диске"}), 404
         return send_file(
             path,
