@@ -162,6 +162,36 @@ def test_login_security_headers():
     assert "frame-ancestors 'none'" in csp
 
 
+def test_outbound_mail_blocked_on_demo_banner():
+    from app.services.notification_service import outbound_mail_blocked
+
+    class _Demo:
+        config = {"DEMO_LOGIN_BANNER": True, "MAIL_SENDING_ENABLED": True}
+
+    class _Work:
+        config = {"DEMO_LOGIN_BANNER": False, "MAIL_SENDING_ENABLED": True}
+
+    class _ExplicitOff:
+        config = {"DEMO_LOGIN_BANNER": False, "MAIL_SENDING_ENABLED": False}
+
+    assert outbound_mail_blocked(_Demo()) is True
+    assert outbound_mail_blocked(_Work()) is False
+    assert outbound_mail_blocked(_ExplicitOff()) is True
+
+
+def test_send_mail_retry_skips_smtp_when_blocked():
+    from app.services import notification_service as ns
+
+    class _Demo:
+        config = {"DEMO_LOGIN_BANNER": True, "MAIL_TIMEOUT": 5}
+
+    class _Mail:
+        def send(self, _msg):
+            raise AssertionError("SMTP must not be called on demo")
+
+    assert ns._send_mail_with_retry(_Mail(), object(), _Demo()) is False
+
+
 def test_show_portal_password_does_not_read_logs():
     from app.routes import customers as customers_mod
 

@@ -274,10 +274,32 @@ def _resolve_portal_setup_url(token: str) -> str:
     return f"{login_url.rstrip('/')}/set-password?token={token}"
 
 
+def outbound_mail_blocked(app=None) -> bool:
+    """True, если SMTP нельзя вызывать (публичное демо или явный запрет)."""
+    cfg = None
+    if app is not None:
+        cfg = getattr(app, "config", None)
+    if cfg is None:
+        try:
+            from flask import current_app, has_app_context
+            if has_app_context():
+                cfg = current_app.config
+        except Exception:
+            cfg = None
+    if not cfg:
+        return False
+    if cfg.get("DEMO_LOGIN_BANNER"):
+        return True
+    return not bool(cfg.get("MAIL_SENDING_ENABLED", True))
+
+
 def _send_mail_with_retry(mail_client, message, app, max_attempts: int = 2) -> bool:
     """
     Отправка письма с повторной попыткой при временных SMTP-сбоях.
     """
+    if outbound_mail_blocked(app):
+        logger.info("SMTP пропущен: исходящая почта отключена (демо или MAIL_SENDING_ENABLED=false)")
+        return False
     attempt = 0
     while attempt < max_attempts:
         attempt += 1
@@ -1117,6 +1139,8 @@ class NotificationService:
         recipient = _normalize_email_address(recipient_email or '')
         if not recipient:
             return 0, 4, None, "Невалидный email получателя."
+        if outbound_mail_blocked():
+            return 0, 4, None, "На публичном демо исходящая почта отключена (защита от спама)."
 
         order_id = None
         try:
@@ -1315,6 +1339,8 @@ class NotificationService:
 
             with current_app.app_context():
                 app = current_app._get_current_object()
+                if outbound_mail_blocked(app):
+                    return False, "На публичном демо исходящая почта отключена (защита от спама)."
                 _apply_mail_config_from_settings(app)
                 mail_server = (app.config.get('MAIL_SERVER') or '').strip()
                 if not mail_server or mail_server.lower() in ('localhost', '127.0.0.1'):

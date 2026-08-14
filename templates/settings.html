@@ -444,6 +444,16 @@
 
                         <hr class="my-4" id="mail-smtp">
                         <h5 class="mb-3"><i class="fas fa-envelope me-2"></i>Почта (SMTP)</h5>
+                        {% if outbound_mail_blocked %}
+                        <div class="alert alert-warning border-warning mb-3" role="status">
+                            <div class="fw-semibold mb-1"><i class="fas fa-ban me-1"></i>Исходящая почта на демо отключена</div>
+                            <p class="mb-0 small">
+                                На публичном демо (<code>service.nika-crm.ru</code>) письма из CRM не отправляются —
+                                защита от спама посетителями. SMTP-поля и кнопки теста не работают.
+                                На своей установке и на рабочем CRM почта остаётся доступной.
+                            </p>
+                        </div>
+                        {% endif %}
                         <div class="alert alert-warning border-warning mb-3" role="note">
                             <div class="fw-semibold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Важно для Mail.ru / Яндекс / Gmail</div>
                             <p class="mb-2 small">
@@ -505,6 +515,7 @@
                             <strong>«Nika CRM — Перезапуск службы»</strong> (Restart service), иначе служба может ещё держать старые настройки SMTP.
                             Затем повторите тест письма.
                         </div>
+                        <fieldset class="border-0 p-0 m-0" {% if outbound_mail_blocked %}disabled{% endif %}>
                         <div class="row g-3" id="mail-smtp-fields">
                             <div class="col-md-6">
                                 <label class="form-label" for="mailServer">SMTP-сервер</label>
@@ -581,6 +592,7 @@
                                 <input type="number" class="form-control" id="mailTimeout" name="mail_timeout" value="{{ settings.mail_timeout if settings.mail_timeout is not none else 15 }}" min="1" max="60">
                             </div>
                         </div>
+                        </fieldset>
                         <script>
                         (function () {
                             const userEl = document.getElementById('mailUsername');
@@ -1493,15 +1505,18 @@
                                 <hr class="my-3">
                                 <h6 class="mb-2"><i class="fas fa-vial me-1"></i>Тест письма директору</h6>
                                 <p class="text-muted small mb-2">Не сохраняет настройки — только отправка на указанный адрес.</p>
+                                {% if outbound_mail_blocked %}
+                                <p class="text-warning small mb-2"><i class="fas fa-ban me-1"></i>На публичном демо тест отключён.</p>
+                                {% endif %}
                                 <form method="POST" action="/settings" class="row g-2 align-items-end mb-0">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <div class="col-md-6">
                                         <label class="form-label" for="directorTestEmail">Куда отправить тест</label>
                                         <input type="email" class="form-control" id="directorTestEmail" name="director_test_email"
-                                               value="" placeholder="you@mail.ru" required>
+                                               value="" placeholder="you@mail.ru" required {% if outbound_mail_blocked %}disabled{% endif %}>
                                     </div>
                                     <div class="col-md-auto">
-                                        <button type="submit" name="director_notifications_test" value="1" class="btn btn-outline-secondary">
+                                        <button type="submit" name="director_notifications_test" value="1" class="btn btn-outline-secondary" {% if outbound_mail_blocked %}disabled{% endif %}>
                                             <i class="fas fa-paper-plane me-1"></i>Отправить тест
                                         </button>
                                     </div>
@@ -1665,17 +1680,20 @@
                                     Если в базе есть заявка с клиентом — подставит её данные, иначе уйдёт синтетический тест SMTP.
                                     Нужны настроенный SMTP во вкладке «Общие».
                                 </p>
+                                {% if outbound_mail_blocked %}
+                                <p class="text-warning small mb-2"><i class="fas fa-ban me-1"></i>На публичном демо тест отключён.</p>
+                                {% endif %}
                                 <form method="POST" action="/settings" class="row g-2 align-items-end">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <div class="col-md-6">
                                         <label class="form-label" for="clientTestEmail">Куда отправить тест</label>
                                         <input type="email" class="form-control" id="clientTestEmail" name="client_test_email"
                                                value="{{ client_test_email or '' }}"
-                                               placeholder="you@mail.ru" required autocomplete="off">
+                                               placeholder="you@mail.ru" required autocomplete="off" {% if outbound_mail_blocked %}disabled{% endif %}>
                                         <div class="form-text">Независимо от Email директора. Не сохраняет настройки каналов.</div>
                                     </div>
                                     <div class="col-md-auto">
-                                        <button type="submit" name="client_email_test" value="1" class="btn btn-outline-info">
+                                        <button type="submit" name="client_email_test" value="1" class="btn btn-outline-info" {% if outbound_mail_blocked %}disabled{% endif %}>
                                             <i class="fas fa-envelope me-1"></i>Тест писем клиенту
                                         </button>
                                     </div>

@@ -810,6 +810,7 @@ def settings():
             if 'org_name' in request.form:
                 current_settings = SettingsService.get_general_settings()
                 payload = dict(current_settings or {})
+                from app.services.notification_service import outbound_mail_blocked
                 # Только поля вкладки «Общие» / почта. Чекбоксы «Уведомления клиентам»
                 # живут в отдельной форме — иначе при сохранении SMTP они сбрасываются в off.
                 payload.update({
@@ -836,6 +837,12 @@ def settings():
                     'print_page_size': request.form.get('print_page_size', 'A4'),
                     'print_margin_mm': int(request.form.get('print_margin_mm') or 3),
                 })
+                if outbound_mail_blocked():
+                    for mail_key in (
+                        'mail_server', 'mail_port', 'mail_use_tls', 'mail_use_ssl',
+                        'mail_username', 'mail_password', 'mail_default_sender', 'mail_timeout',
+                    ):
+                        payload[mail_key] = (current_settings or {}).get(mail_key)
                 if 'signature_name' in request.form:
                     payload['signature_name'] = request.form.get('signature_name', '')
                 if 'signature_position' in request.form:
@@ -923,31 +930,43 @@ def settings():
                 )
                 flash('Автоматизации и каналы успешно сохранены!', 'success')
             elif 'director_notifications_test' in request.form:
-                # Тест не сохраняет чекбоксы/настройки — только отправка на введённый адрес.
-                recipient = (request.form.get('director_test_email') or '').strip()
-                from app.services.notification_service import NotificationService, _is_placeholder_sender_email
-                _, recipient_box = parseaddr(recipient)
-                settings = SettingsService.get_general_settings()
-                if not _is_valid_ascii_email(recipient) or _is_placeholder_sender_email(recipient_box):
-                    flash(
-                        'Тест не отправлен: укажите реальный Email (не @example.com из демо).',
-                        'error',
-                    )
+                from app.services.notification_service import (
+                    NotificationService,
+                    _is_placeholder_sender_email,
+                    outbound_mail_blocked,
+                )
+                if outbound_mail_blocked():
+                    flash('На публичном демо исходящая почта отключена (защита от спама).', 'warning')
                     success = False
-                    director_test_result = {'ok': False, 'message': 'Последняя проверка: email получателя невалиден.'}
+                    director_test_result = {'ok': False, 'message': 'Исходящая почта на демо отключена.'}
                 else:
-                    sent, err_msg = NotificationService.send_director_test_email(recipient)
-                    success = bool(sent)
-                    if sent:
-                        flash(f'Тестовое письмо отправлено на {recipient}.', 'success')
-                        director_test_result = {'ok': True, 'message': f'Последняя проверка: письмо отправлено на {recipient}.'}
+                    recipient = (request.form.get('director_test_email') or '').strip()
+                    _, recipient_box = parseaddr(recipient)
+                    settings = SettingsService.get_general_settings()
+                    if not _is_valid_ascii_email(recipient) or _is_placeholder_sender_email(recipient_box):
+                        flash(
+                            'Тест не отправлен: укажите реальный Email (не @example.com из демо).',
+                            'error',
+                        )
+                        success = False
+                        director_test_result = {'ok': False, 'message': 'Последняя проверка: email получателя невалиден.'}
                     else:
-                        flash(f'Не удалось отправить тестовое письмо директору: {err_msg or "неизвестная ошибка"}', 'error')
-                        director_test_result = {'ok': False, 'message': f'Последняя проверка: ошибка отправки на {recipient}. {err_msg or ""}'.strip()}
+                        sent, err_msg = NotificationService.send_director_test_email(recipient)
+                        success = bool(sent)
+                        if sent:
+                            flash(f'Тестовое письмо отправлено на {recipient}.', 'success')
+                            director_test_result = {'ok': True, 'message': f'Последняя проверка: письмо отправлено на {recipient}.'}
+                        else:
+                            flash(f'Не удалось отправить тестовое письмо директору: {err_msg or "неизвестная ошибка"}', 'error')
+                            director_test_result = {'ok': False, 'message': f'Последняя проверка: ошибка отправки на {recipient}. {err_msg or ""}'.strip()}
             elif 'client_email_test' in request.form:
+                from app.services.notification_service import outbound_mail_blocked
                 recipient = (request.form.get('client_test_email') or '').strip()
                 client_test_email = recipient
-                if not _is_valid_ascii_email(recipient):
+                if outbound_mail_blocked():
+                    flash('На публичном демо исходящая почта отключена (защита от спама).', 'warning')
+                    success = False
+                elif not _is_valid_ascii_email(recipient):
                     flash(
                         'Тест писем клиенту не отправлен: укажите корректный Email получателя (ASCII).',
                         'error',
@@ -1270,9 +1289,12 @@ def settings():
         logger.error(f"Ошибка при получении настроек НДС: {e}")
         vat_settings = {'vat_enabled': False, 'vat_rate': 20.0}
 
+    from app.services.notification_service import outbound_mail_blocked as mail_outbound_blocked
+
     return render_template(
         'settings.html',
         settings=settings,
+        outbound_mail_blocked=mail_outbound_blocked(),
         vat_settings=vat_settings,
         statuses=statuses,
         device_types=device_types,

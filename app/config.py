@@ -157,6 +157,14 @@ class Config:
         "yes",
         "on",
     )
+    # Исходящая почта. На публичном демо (DEMO_LOGIN_BANNER) всегда выключена.
+    # Для self-hosted можно выключить явно: MAIL_SENDING_ENABLED=false
+    MAIL_SENDING_ENABLED = os.environ.get("MAIL_SENDING_ENABLED", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     # Реферальная ссылка на VPS (панель демо-входа; можно переопределить в .env)
     REFERRAL_VPS_PROVIDER_LABEL = (os.environ.get("REFERRAL_VPS_PROVIDER_LABEL") or "FirstVDS").strip()
