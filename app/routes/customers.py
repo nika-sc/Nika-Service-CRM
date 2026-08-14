@@ -528,9 +528,15 @@ def api_set_portal_password(client_id):
         
         if not password:
             return jsonify({'success': False, 'error': 'Пароль обязателен'}), 400
-        
-        if len(password) < 6:
-            return jsonify({'success': False, 'error': 'Пароль должен быть не менее 6 символов'}), 400
+
+        from app.utils.validators import password_meets_policy, PASSWORD_MAX_LEN, PASSWORD_MIN_LEN
+        if not password_meets_policy(password):
+            if len(password) > PASSWORD_MAX_LEN:
+                return jsonify({'success': False, 'error': 'Пароль слишком длинный'}), 400
+            return jsonify({
+                'success': False,
+                'error': f'Пароль должен быть не менее {PASSWORD_MIN_LEN} символов',
+            }), 400
         
         from app.services.customer_portal_service import CustomerPortalService
         # Администратор устанавливает пароль - сбрасываем флаг смены пароля

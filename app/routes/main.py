@@ -48,7 +48,8 @@ logger = logging.getLogger(__name__)
 
 
 def _login_client_ip() -> str:
-    return (request.headers.get('X-Forwarded-For', '') or request.remote_addr or 'unknown').split(',')[0].strip()
+    from app.utils.request_ip import client_ip
+    return client_ip()
 
 
 def _login_guard_key(username: str) -> str:
@@ -393,6 +394,12 @@ def login():
         
         if not username or not password:
             flash('Введите имя пользователя и пароль', 'error')
+            return _login_error_response()
+
+        from app.utils.validators import password_eligible_for_verify
+        if not password_eligible_for_verify(password):
+            _register_login_failure(login_key)
+            flash('Неверное имя пользователя или пароль', 'error')
             return _login_error_response()
         
         user_dict = UserService.get_user_by_username(username)

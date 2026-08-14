@@ -76,6 +76,35 @@ def phone_lookup_variants(phone: str) -> list:
     return seen
 
 
+PASSWORD_MIN_LEN = 6
+PASSWORD_MAX_LEN = 256
+
+
+def password_meets_policy(password: str) -> bool:
+    """True if password length is allowed for create/change (server-side, not HTML)."""
+    n = len(password or "")
+    return PASSWORD_MIN_LEN <= n <= PASSWORD_MAX_LEN
+
+
+def validate_new_password(password: str) -> str:
+    """
+    Проверка нового пароля на сервере (создание / смена).
+    HTML minlength не граница.
+    """
+    n = len(password or "")
+    if n < PASSWORD_MIN_LEN:
+        raise ValidationError("Пароль должен быть не менее 6 символов")
+    if n > PASSWORD_MAX_LEN:
+        raise ValidationError("Пароль слишком длинный")
+    return password
+
+
+def password_eligible_for_verify(password: str) -> bool:
+    """Вход: не хешировать пустой или слишком длинный пароль."""
+    n = len(password or "")
+    return 1 <= n <= PASSWORD_MAX_LEN
+
+
 def validate_phone(phone: str) -> str:
     """
     Валидирует и нормализует номер телефона.

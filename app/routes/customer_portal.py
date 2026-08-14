@@ -56,7 +56,8 @@ def login_required(f):
 
 
 def _portal_client_ip() -> str:
-    return (request.headers.get('X-Forwarded-For', '') or request.remote_addr or 'unknown').split(',')[0].strip()
+    from app.utils.request_ip import client_ip
+    return client_ip()
 
 
 def _portal_login_guard_key(phone: str) -> str:
@@ -104,6 +105,11 @@ def portal_login():
         
         if not normalized_phone or len(normalized_phone) < 10:
             return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
+
+        from app.utils.validators import password_eligible_for_verify, password_meets_policy
+        if not password_eligible_for_verify(password):
+            _register_portal_login_failure(login_key)
+            return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
         
         # Аутентификация по паролю
         customer_data = CustomerPortalService.authenticate_by_password(phone, password)
@@ -113,9 +119,15 @@ def portal_login():
             session.clear()
             # Если требуется смена пароля
             if change_password and customer_data.get('needs_password_change'):
-                if not new_password or len(new_password) < 6:
+                from app.utils.validators import password_meets_policy, PASSWORD_MAX_LEN
+                if not password_meets_policy(new_password):
+                    err = (
+                        'Пароль слишком длинный'
+                        if len(new_password or '') > PASSWORD_MAX_LEN
+                        else 'Новый пароль должен быть не менее 6 символов'
+                    )
                     return render_template('portal/login.html', 
-                                         error='Новый пароль должен быть не менее 6 символов',
+                                         error=err,
                                          needs_password_change=True,
                                          phone=phone)
                 if new_password != new_password_confirm:
@@ -185,12 +197,18 @@ def portal_set_password():
         )
     password = request.form.get('password', '')
     confirm = request.form.get('password_confirm', '')
-    if not password or len(password) < 6:
+    from app.utils.validators import password_meets_policy, PASSWORD_MAX_LEN
+    if not password_meets_policy(password):
+        err = (
+            'Пароль слишком длинный.'
+            if len(password or '') > PASSWORD_MAX_LEN
+            else 'Пароль должен быть не менее 6 символов.'
+        )
         return render_template(
             'portal/set_password.html',
             token=token,
             name=info.get('name') or '',
-            error='Пароль должен быть не менее 6 символов.',
+            error=err,
         )
     if password != confirm:
         return render_template(

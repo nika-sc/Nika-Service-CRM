@@ -66,11 +66,8 @@ class DemoVisitorService:
 
     @staticmethod
     def client_ip() -> str:
-        if not has_request_context():
-            return "unknown"
-        return (
-            request.headers.get("X-Forwarded-For", "") or request.remote_addr or "unknown"
-        ).split(",")[0].strip() or "unknown"
+        from app.utils.request_ip import client_ip as _client_ip
+        return _client_ip()
 
     @staticmethod
     def client_user_agent() -> str:

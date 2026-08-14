@@ -245,7 +245,7 @@
                         <label for="employeePassword" class="form-label">Пароль <span id="passwordRequired">*</span></label>
                         <input type="password" class="form-control" id="employeePassword" 
                                placeholder="Оставьте пустым, чтобы не менять">
-                        <small class="text-muted" id="passwordHint">Минимум 4 символа</small>
+                        <small class="text-muted" id="passwordHint">Минимум 6 символов</small>
                     </div>
 
                     <div class="mb-3">
@@ -515,7 +515,7 @@ function openEmployeeModal() {
     document.getElementById('employeeType').value = '';
     document.getElementById('employeeActive').checked = true;
     document.getElementById('passwordRequired').style.display = 'inline';
-    document.getElementById('passwordHint').textContent = 'Минимум 4 символа';
+    document.getElementById('passwordHint').textContent = 'Минимум 6 символов';
     
     // Обновляем доступные роли
     const roleSelect = document.getElementById('employeeRole');

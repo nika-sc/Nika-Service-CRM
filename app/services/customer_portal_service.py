@@ -132,6 +132,10 @@ class CustomerPortalService:
             
             if not customer.portal_password_hash:
                 return None
+
+            from app.utils.validators import password_eligible_for_verify
+            if not password_eligible_for_verify(password):
+                return None
             
             if not check_password_hash(customer.portal_password_hash, password):
                 return None
@@ -196,7 +200,8 @@ class CustomerPortalService:
             reset_change_flag: Если True, сбрасывает флаг смены пароля (для админа)
         """
         try:
-            if not password or len(password) < 6:
+            from app.utils.validators import password_meets_policy
+            if not password_meets_policy(password):
                 return False
             from werkzeug.security import generate_password_hash
             

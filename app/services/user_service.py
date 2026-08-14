@@ -77,6 +77,10 @@ class UserService:
         """
         if not password_hash:
             return False
+
+        from app.utils.validators import password_eligible_for_verify
+        if not password_eligible_for_verify(password):
+            return False
         
         # Сначала пробуем проверить через werkzeug (работает для всех форматов werkzeug: pbkdf2, scrypt, argon2)
         try:
@@ -188,8 +192,8 @@ class UserService:
         if not username or not username.strip():
             raise ValidationError("Имя пользователя обязательно")
         
-        if not password or len(password) < 4:
-            raise ValidationError("Пароль должен быть не менее 4 символов")
+        from app.utils.validators import validate_new_password
+        validate_new_password(password)
         
         if role not in ['viewer', 'master', 'manager', 'admin']:
             raise ValidationError("Неверная роль пользователя")
@@ -575,8 +579,8 @@ class UserService:
         if not user_id or user_id <= 0:
             raise ValidationError("Неверный ID пользователя")
         
-        if not new_password or len(new_password) < 4:
-            raise ValidationError("Пароль должен быть не менее 4 символов")
+        from app.utils.validators import validate_new_password
+        validate_new_password(new_password)
         
         password_hash = UserService.hash_password(new_password)
         

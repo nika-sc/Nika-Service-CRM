@@ -2948,7 +2948,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mb-3" id="userPasswordGroup">
                         <label for="userPassword" class="form-label">Пароль <span class="text-danger">*</span></label>
                         <input type="password" class="form-control" id="userPassword" name="password" required>
-                        <div class="form-text">Минимум 4 символа</div>
+                        <div class="form-text">Минимум 6 символов</div>
                     </div>
                     <div class="mb-3">
                         <label for="userRole" class="form-label">Роль <span class="text-danger">*</span></label>
@@ -2997,7 +2997,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mb-3" id="masterPasswordGroup">
                         <label for="masterPassword" class="form-label">Пароль <span class="text-danger">*</span></label>
                         <input type="password" class="form-control" id="masterPassword" required>
-                        <div class="form-text">Пароль для входа в систему (минимум 4 символа)</div>
+                        <div class="form-text">Пароль для входа в систему (минимум 6 символов)</div>
                     </div>
 
                     <div class="mb-3">
@@ -3071,7 +3071,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mb-3" id="managerPasswordGroup">
                         <label for="managerPassword" class="form-label">Пароль <span class="text-danger">*</span></label>
                         <input type="password" class="form-control" id="managerPassword" required>
-                        <div class="form-text">Пароль для входа в систему (минимум 4 символа)</div>
+                        <div class="form-text">Пароль для входа в систему (минимум 6 символов)</div>
                     </div>
 
                     <div class="mb-3">
@@ -4223,8 +4223,8 @@ let editingPartId = null;
         const newPassword = prompt('Введите новый пароль:');
         if (!newPassword) return;
         
-        if (newPassword.length < 4) {
-            alert('Пароль должен быть не менее 4 символов');
+        if (newPassword.length < 6) {
+            alert('Пароль должен быть не менее 6 символов');
             return;
         }
 

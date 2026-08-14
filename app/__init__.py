@@ -257,7 +257,8 @@ def create_app(config_class=Config):
         ):
             limit = int(app.config.get('WRITE_API_RATE_LIMIT_PER_MIN', 120) or 120)
             now = time.time()
-            key = (request.headers.get('X-Forwarded-For', '') or request.remote_addr or 'unknown').split(',')[0].strip()
+            from app.utils.request_ip import client_ip
+            key = client_ip()
             bucket = _write_api_buckets[key]
             window_start = now - 60.0
             while bucket and bucket[0] < window_start:
