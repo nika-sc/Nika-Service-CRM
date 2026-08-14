@@ -475,7 +475,7 @@
                         <label class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email"
                                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                               placeholder="email@example.com" autocomplete="off">
+                               placeholder="email@example.com" autocomplete="section-order email">
                     </div>
                 </div>
             </div>
@@ -508,9 +508,9 @@
                                placeholder="SN123456789">
                     </div>
                     <div class="col-md-3">
-                        <label for="password" class="form-label">Пароль</label>
-                        <input type="password" class="form-control" id="password" name="password"
-                               placeholder="Необязательно">
+                        <label for="devicePassword" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="devicePassword" name="device_password"
+                               placeholder="Необязательно" autocomplete="new-password" inputmode="text">
                     </div>
                     <div class="col-md-3 required">
                         <label for="model" class="form-label">Модель</label>
@@ -1868,7 +1868,7 @@
             if (prepaymentInput) prepaymentInput.value = order.prepayment || '0';
             // Обновляем состояние поля способа предоплаты
             updatePrepaymentMethodState();
-            const passwordInput = document.getElementById('password');
+            const passwordInput = document.getElementById('devicePassword');
             if (passwordInput) passwordInput.value = order.password || '';
             const managerInput = document.getElementById('manager');
             if (managerInput) managerInput.value = order.manager_id || '';
@@ -2069,8 +2069,8 @@
 
         bindEnterNext('#clientName', '#phone');
         bindEnterNext('#phone', tomDeviceType);
-        bindEnterNext('#serialNumber', '#password');
-        bindEnterNext('#password', tomModel);
+        bindEnterNext('#serialNumber', '#devicePassword');
+        bindEnterNext('#devicePassword', tomModel);
         bindEnterNext('#estimated_cost', '#prepayment');
         bindEnterNext('#prepayment', '#manager');
         bindEnterNext('#manager', '#master');

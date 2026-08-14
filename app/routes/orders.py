@@ -532,7 +532,7 @@ def add_order():
             if prepayment_method not in ('cash', 'card', 'transfer'):
                 prepayment_method = 'cash'
             
-            password = request.form.get('password', '').strip()
+            password = request.form.get('device_password', '').strip()
             model_raw = request.form.get('model', '').strip()
             if not model_raw:
                 raise ValidationError("Модель устройства обязательна")
