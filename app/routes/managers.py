@@ -7,6 +7,7 @@ from app.routes.main import permission_required
 from app.services.manager_service import ManagerService
 from app.services.action_log_service import ActionLogService
 from app.utils.exceptions import ValidationError, NotFoundError
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def get_managers():
         return jsonify({'success': True, 'managers': managers})
     except Exception as e:
         logger.error(f"Ошибка при получении менеджеров: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:manager_id>', methods=['GET'])
@@ -41,7 +42,7 @@ def get_manager(manager_id):
         return jsonify({'success': True, 'manager': manager})
     except Exception as e:
         logger.error(f"Ошибка при получении менеджера {manager_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('', methods=['POST'])
@@ -167,7 +168,7 @@ def create_manager():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании менеджера: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:manager_id>', methods=['PATCH'])
@@ -294,7 +295,7 @@ def update_manager(manager_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении менеджера {manager_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:manager_id>', methods=['DELETE'])
@@ -331,7 +332,7 @@ def delete_manager(manager_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении менеджера {manager_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 

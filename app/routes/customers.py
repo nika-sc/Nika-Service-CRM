@@ -10,6 +10,7 @@ from app.services.device_service import DeviceService
 from app.services.reference_service import ReferenceService
 from app.utils.validators import normalize_phone
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
+from app.utils.error_handlers import api_internal_error
 import logging
 import html as _html
 import json as _json
@@ -438,7 +439,7 @@ def api_create_customer():
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.exception("Ошибка при создании клиента")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
@@ -476,7 +477,7 @@ def api_update_client(client_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.exception("Ошибка при обновлении клиента")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
@@ -625,7 +626,7 @@ def api_add_device_to_client(client_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 @bp.route('/api/clients/<int:client_id>/devices/<int:device_id>', methods=['PUT', 'DELETE'])
 @login_required
@@ -671,7 +672,7 @@ def api_device_detail(client_id, device_id):
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
             logger.error(f"Ошибка БД при обновлении устройства {device_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
         except Exception as e:
             logger.exception(f"Неожиданная ошибка при обновлении устройства {device_id}")
             return jsonify({'success': False, 'error': 'Внутренняя ошибка сервера'}), 500
@@ -699,8 +700,8 @@ def api_device_detail(client_id, device_id):
             return jsonify({'success': False, 'error': str(e)}), 404
         except DatabaseError as e:
             logger.error(f"Ошибка БД при удалении устройства {device_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
         except Exception as e:
             logger.exception(f"Неожиданная ошибка при удалении устройства {device_id}: {e}")
-            return jsonify({'success': False, 'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
+            return api_internal_error(e)
 

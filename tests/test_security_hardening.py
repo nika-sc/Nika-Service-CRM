@@ -2,14 +2,22 @@
 import inspect
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
 from app import create_app
 from app.config import Config, ProductionConfig
+from app.utils.error_handlers import API_INTERNAL_ERROR_MESSAGE, api_internal_error
 from app.utils.login_lockout import clear, is_locked, register_failure, reset_memory_for_tests
-from app.utils.safe_files import confined_file_path
+from app.utils.rbac import can_assign_user_role, can_create_role
+from app.utils.safe_files import (
+    confined_file_path,
+    is_forbidden_upload_extension,
+    mime_from_filename,
+)
 from app.services.salary_dashboard_service import _normalize_date_iso, _safe_sql_date
+from app.services.settings_service import SettingsService
 
 
 class _LanConfig(Config):
@@ -199,3 +207,74 @@ def test_show_portal_password_does_not_read_logs():
     assert "generated_password" not in src
     assert "action_logs" not in src
     assert "plaintext" in src.lower() or "не хранится" in src.lower() or "сброс" in src.lower() or "Задайте" in src
+
+
+def test_can_create_role_matrix():
+    assert can_create_role("admin", "admin")
+    assert can_create_role("admin", "manager")
+    assert can_create_role("admin", "master")
+    assert can_create_role("admin", "viewer")
+    assert not can_create_role("manager", "admin")
+    assert can_create_role("manager", "master")
+    assert not can_create_role("manager", "viewer")
+    assert can_create_role("manager_12", "master")
+    assert not can_create_role("master", "master")
+    assert not can_create_role("viewer", "viewer")
+
+
+def test_can_assign_user_role_blocks_self_admin_escalation():
+    assert can_assign_user_role(
+        actor_role="manager",
+        target_role="master",
+        target_user_id=5,
+        actor_user_id=5,
+    )
+    assert not can_assign_user_role(
+        actor_role="manager",
+        target_role="admin",
+        target_user_id=5,
+        actor_user_id=5,
+    )
+
+
+def test_mime_from_filename_ignores_client_type():
+    assert mime_from_filename("photo.jpg") == "image/jpeg"
+    assert mime_from_filename("doc.pdf") == "application/pdf"
+    assert is_forbidden_upload_extension("icon.svg")
+    assert mime_from_filename("icon.svg") == "application/octet-stream"
+
+
+def test_save_print_template_refuses_without_sanitizer(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _fake_import(name, *args, **kwargs):
+        if name == "app.utils.template_html_sanitizer":
+            raise ImportError("no bleach")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _fake_import)
+    assert SettingsService.save_print_template("customer", "<script>x</script>") is False
+
+
+def test_api_internal_error_hides_exception_text():
+    app = create_app(_CsrfOffConfig)
+    secret = "super-secret-db-password-leak"
+    with app.app_context():
+        resp, code = api_internal_error(RuntimeError(secret), "unit test")
+    payload = resp.get_json()
+    assert code == 500
+    assert payload["error"] == API_INTERNAL_ERROR_MESSAGE
+    assert secret not in payload["error"]
+
+
+def test_routes_do_not_return_str_e_on_500():
+    routes_dir = Path(__file__).resolve().parents[1] / "app" / "routes"
+    offenders = []
+    for path in routes_dir.glob("*.py"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "str(e)" in line and ", 500" in line:
+                offenders.append(f"{path.name}:{line.strip()}")
+                break
+    assert offenders == []

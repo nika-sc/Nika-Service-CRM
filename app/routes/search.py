@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required
 from app.services.search_service import SearchService
 import logging
+from app.utils.error_handlers import api_internal_error
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def autocomplete():
         return jsonify({'success': True, 'results': results})
     except Exception as e:
         logger.error(f"Ошибка автодополнения: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api', methods=['GET'])
@@ -80,4 +81,4 @@ def search_api():
         return jsonify({'success': True, 'results': results})
     except Exception as e:
         logger.error(f"Ошибка поиска: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)

@@ -9,6 +9,8 @@ from app.services.master_service import MasterService
 from app.services.manager_service import ManagerService
 from app.services.action_log_service import ActionLogService
 from app.utils.exceptions import ValidationError, NotFoundError
+from app.utils.rbac import can_create_role
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,28 +35,6 @@ def get_default_permission_ids_for_role(role: str) -> list:
     if role_data:
         return [p['id'] for p in role_data['permissions']]
     return []
-
-
-def can_create_role(current_user_role: str, target_role: str) -> bool:
-    """
-    Проверяет, может ли текущий пользователь создать пользователя с указанной ролью.
-    
-    Args:
-        current_user_role: Роль текущего пользователя
-        target_role: Роль, которую нужно создать
-        
-    Returns:
-        True если может создать
-    """
-    # Главный admin может создавать всех
-    if current_user_role == 'admin':
-        return target_role in ['admin', 'manager', 'master']
-    
-    # Менеджер может создавать только мастеров
-    if current_user_role == 'manager' or current_user_role.startswith('manager_'):
-        return target_role == 'master'
-    
-    return False
 
 
 @bp.route('', methods=['GET'])
@@ -163,7 +143,7 @@ def get_employees():
         return jsonify({'success': True, 'employees': result})
     except Exception as e:
         logger.error(f"Ошибка при получении сотрудников: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('', methods=['POST'])
@@ -341,7 +321,7 @@ def create_employee():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании сотрудника: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:employee_id>', methods=['PATCH'])
@@ -547,7 +527,7 @@ def update_employee(employee_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при обновлении сотрудника {employee_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:employee_id>', methods=['DELETE'])
@@ -628,4 +608,4 @@ def deactivate_employee(employee_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при деактивации сотрудника {employee_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)

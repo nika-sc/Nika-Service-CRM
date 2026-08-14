@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from app.services.status_service import StatusService
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
+from app.utils.error_handlers import api_internal_error
 from app.routes.main import permission_required
 import logging
 
@@ -71,7 +72,7 @@ def get_statuses():
         return jsonify({'success': True, 'statuses': statuses_list})
     except Exception as e:
         logger.error(f"Ошибка при получении статусов: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:status_id>', methods=['GET'])
@@ -86,7 +87,7 @@ def get_status(status_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при получении статуса {status_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('', methods=['POST'])
@@ -239,7 +240,7 @@ def update_status(status_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении статуса {status_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:status_id>/archive', methods=['POST'])
@@ -257,7 +258,7 @@ def archive_status(status_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при архивации статуса {status_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:status_id>/unarchive', methods=['POST'])
@@ -275,7 +276,7 @@ def unarchive_status(status_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при разархивации статуса {status_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:status_id>', methods=['DELETE'])
@@ -295,7 +296,7 @@ def delete_status(status_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении статуса {status_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/reorder', methods=['POST'])
@@ -316,6 +317,6 @@ def reorder_statuses():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при изменении порядка статусов: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 

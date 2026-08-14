@@ -24,6 +24,8 @@ from email.utils import parseaddr
 from collections import defaultdict, deque
 from app.database.connection import get_db_connection
 from app.utils import login_lockout
+from app.utils.rbac import can_assign_user_role
+from app.utils.error_handlers import api_internal_error
 
 
 def log_main_action(action_type: str, entity_type: str, entity_id: int = None, description: str = None, details: dict = None):
@@ -1346,7 +1348,7 @@ def api_get_users():
         return jsonify({'success': True, 'users': users})
     except Exception as e:
         logger.error(f"Ошибка при получении списка пользователей: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/users', methods=['POST'])
@@ -1366,6 +1368,17 @@ def api_create_user():
         
         if not password:
             return jsonify({'success': False, 'error': 'Пароль обязателен'}), 400
+
+        actor_role = getattr(current_user, 'role', 'viewer')
+        if not can_assign_user_role(
+            actor_role=actor_role,
+            target_role=role,
+            actor_user_id=getattr(current_user, 'id', None),
+        ):
+            return jsonify({
+                'success': False,
+                'error': f'У вас нет прав для создания пользователя с ролью {role}',
+            }), 403
         
         user_id = UserService.create_user(username, password, role)
         
@@ -1378,7 +1391,7 @@ def api_create_user():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании пользователя: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/users/<int:user_id>', methods=['GET'])
@@ -1396,7 +1409,7 @@ def api_get_user(user_id):
         return jsonify({'success': True, 'user': user})
     except Exception as e:
         logger.error(f"Ошибка при получении пользователя: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/users/<int:user_id>', methods=['PATCH'])
@@ -1409,6 +1422,19 @@ def api_update_user(user_id):
         username = data.get('username')
         role = data.get('role')
         is_active = data.get('is_active')
+
+        actor_role = getattr(current_user, 'role', 'viewer')
+        if role is not None:
+            if not can_assign_user_role(
+                actor_role=actor_role,
+                target_role=role,
+                target_user_id=user_id,
+                actor_user_id=getattr(current_user, 'id', None),
+            ):
+                return jsonify({
+                    'success': False,
+                    'error': f'У вас нет прав для назначения роли {role}',
+                }), 403
         
         UserService.update_user(
             user_id,
@@ -1422,7 +1448,7 @@ def api_update_user(user_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении пользователя: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/users/<int:user_id>/change-password', methods=['POST'])
@@ -1444,7 +1470,7 @@ def api_change_password(user_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при смене пароля: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/users/<int:user_id>', methods=['DELETE'])
@@ -1469,7 +1495,7 @@ def api_delete_user(user_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении пользователя: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/permissions', methods=['GET'])
@@ -1482,7 +1508,7 @@ def api_get_permissions():
         return jsonify({'success': True, 'permissions': permissions})
     except Exception as e:
         logger.error(f"Ошибка при получении списка прав: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/permissions/<int:permission_id>', methods=['PATCH'])
@@ -1501,7 +1527,7 @@ def api_update_permission(permission_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении права: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/roles', methods=['GET'])
@@ -1514,7 +1540,7 @@ def api_get_roles():
         return jsonify({'success': True, 'roles': roles})
     except Exception as e:
         logger.error(f"Ошибка при получении списка ролей: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/roles', methods=['POST'])
@@ -1537,7 +1563,7 @@ def api_create_role():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании роли: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/roles/<role>', methods=['GET'])
@@ -1553,7 +1579,7 @@ def api_get_role(role):
         return jsonify({'success': True, 'role': role_data})
     except Exception as e:
         logger.error(f"Ошибка при получении роли {role}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/roles/<role>', methods=['PATCH'])
@@ -1572,7 +1598,7 @@ def api_update_role(role):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении роли: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/settings/roles/<role>', methods=['DELETE'])
@@ -1587,5 +1613,5 @@ def api_delete_role(role):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении роли: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 

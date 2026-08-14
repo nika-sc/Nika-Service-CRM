@@ -7,6 +7,7 @@ from app.routes.main import permission_required
 from app.services.master_service import MasterService
 from app.services.action_log_service import ActionLogService
 from app.utils.exceptions import ValidationError, NotFoundError
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def get_masters():
         return jsonify({'success': True, 'masters': masters})
     except Exception as e:
         logger.error(f"Ошибка при получении мастеров: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:master_id>', methods=['GET'])
@@ -41,7 +42,7 @@ def get_master(master_id):
         return jsonify({'success': True, 'master': master})
     except Exception as e:
         logger.error(f"Ошибка при получении мастера {master_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('', methods=['POST'])
@@ -167,7 +168,7 @@ def create_master():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании мастера: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:master_id>', methods=['PATCH'])
@@ -294,7 +295,7 @@ def update_master(master_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении мастера {master_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:master_id>', methods=['DELETE'])
@@ -331,7 +332,7 @@ def delete_master(master_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении мастера {master_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 

@@ -7,7 +7,8 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from app.database.connection import get_db_connection
-from app.utils.safe_files import confined_file_path
+from app.utils.safe_files import confined_file_path, is_forbidden_upload_extension, mime_from_filename
+from app.utils.error_handlers import api_internal_error
 import sqlite3
 import logging
 
@@ -47,6 +48,9 @@ def upload_attachment():
         
         if not allowed_file(file.filename):
             return jsonify({'success': False, 'error': 'Недопустимый тип файла'}), 400
+
+        if is_forbidden_upload_extension(file.filename):
+            return jsonify({'success': False, 'error': 'Недопустимый тип файла'}), 400
         
         # Проверяем размер файла
         file.seek(0, os.SEEK_END)
@@ -63,7 +67,8 @@ def upload_attachment():
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4()}_{filename}"
         file_path = os.path.join(upload_dir, unique_filename)
-        
+        stored_mime = mime_from_filename(filename)
+
         file.save(file_path)
         
         # Сохраняем информацию о файле в БД
@@ -73,7 +78,7 @@ def upload_attachment():
                 INSERT INTO comment_attachments 
                 (filename, file_path, file_size, mime_type, created_at)
                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ''', (filename, file_path, file_size, file.content_type))
+            ''', (filename, file_path, file_size, stored_mime))
             conn.commit()
             attachment_id = cursor.lastrowid
         
@@ -85,7 +90,7 @@ def upload_attachment():
         }), 201
     except Exception as e:
         logger.error(f"Ошибка при загрузке файла: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/attachment/<int:attachment_id>', methods=['GET'])
@@ -109,12 +114,14 @@ def get_attachment(attachment_id):
             if not file_path or not os.path.exists(file_path):
                 return jsonify({'success': False, 'error': 'Файл не найден на диске'}), 404
             
-            return send_file(
+            response = send_file(
                 file_path,
-                mimetype=row['mime_type'] or 'application/octet-stream',
+                mimetype=mime_from_filename(row['filename']),
                 as_attachment=True,
                 download_name=row['filename']
             )
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
     except Exception as e:
         logger.error(f"Ошибка при получении файла: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)

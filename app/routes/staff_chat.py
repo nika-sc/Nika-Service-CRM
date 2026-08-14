@@ -18,7 +18,7 @@ from app.services.staff_chat_web_push_service import (
     StaffChatWebPushService,
     web_push_library_available,
 )
-from app.utils.safe_files import confined_file_path
+from app.utils.safe_files import confined_file_path, mime_from_filename
 
 logger = logging.getLogger(__name__)
 
@@ -410,12 +410,16 @@ def api_staff_chat_get_file(attachment_id: int):
         path = confined_file_path(item.get("abs_path"), STAFF_CHAT_UPLOAD_ROOT)
         if not path or not os.path.exists(path):
             return jsonify({"success": False, "error": "Файл не найден на диске"}), 404
-        return send_file(
+        mime_type = mime_from_filename(item.get("original_name") or "")
+        inline = mime_type.startswith("image/") and mime_type != "image/svg+xml"
+        response = send_file(
             path,
-            mimetype=item["mime_type"] or "application/octet-stream",
-            as_attachment=False,
+            mimetype=mime_type,
+            as_attachment=not inline,
             download_name=item["original_name"],
         )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
     except Exception as e:
         logger.error("Ошибка выдачи файла чата %s: %s", attachment_id, e, exc_info=True)
         return jsonify({"success": False, "error": "Не удалось открыть файл"}), 500

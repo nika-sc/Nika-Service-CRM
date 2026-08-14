@@ -10,6 +10,7 @@ from app.services.action_log_service import ActionLogService
 from app.services.user_service import UserService
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now
+from app.utils.error_handlers import api_internal_error
 import logging
 
 bp = Blueprint('warehouse', __name__)
@@ -174,7 +175,7 @@ def new_part():
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
             logger.error(f"Ошибка при создании товара: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+            return api_internal_error(e)
 
 
 @bp.route('/warehouse/parts/<int:part_id>')
@@ -307,7 +308,7 @@ def edit_part(part_id):
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
             logger.error(f"Ошибка при обновлении товара: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+            return api_internal_error(e)
 
 
 @bp.route('/warehouse/parts/<int:part_id>/delete', methods=['POST'])
@@ -352,7 +353,7 @@ def delete_part(part_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении товара: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/parts/<int:part_id>/restore', methods=['POST'])
@@ -367,7 +368,7 @@ def restore_part(part_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при восстановлении товара: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 # ========== Роуты для категорий ==========
@@ -405,7 +406,7 @@ def api_part_stock(part_id):
         })
     except Exception as e:
         logger.error(f"Ошибка получения остатка товара {part_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/api/parts', methods=['GET'])
@@ -463,7 +464,7 @@ def create_category():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при создании категории: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/categories/<int:category_id>', methods=['PUT'])
@@ -493,7 +494,7 @@ def update_category(category_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при обновлении категории: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/categories/<int:category_id>', methods=['DELETE'])
@@ -508,7 +509,7 @@ def delete_category(category_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при удалении категории: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 # ========== Роуты для приходов/расходов ==========
@@ -534,7 +535,7 @@ def part_income(part_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при приходе товара: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/parts/<int:part_id>/expense', methods=['POST'])
@@ -558,7 +559,7 @@ def part_expense(part_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при расходе товара: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 # ========== Роут для логов ==========
@@ -710,7 +711,7 @@ def new_purchase():
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
             logger.error(f"POST /warehouse/purchases/new - Ошибка при создании закупки: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+            return api_internal_error(e)
 
 
 @bp.route('/warehouse/purchases/<int:purchase_id>')
@@ -783,7 +784,7 @@ def edit_purchase(purchase_id):
             return jsonify({'success': False, 'error': str(e)}), 404
         except Exception as e:
             logger.error(f"POST /warehouse/purchases/{purchase_id}/edit - Ошибка при обновлении закупки: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+            return api_internal_error(e)
     
     # GET запрос - показываем форму редактирования
     parts = ReferenceService.get_parts()
@@ -818,7 +819,7 @@ def delete_purchase(purchase_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"POST /warehouse/purchases/{purchase_id}/delete - Ошибка при удалении закупки: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/purchases/<int:purchase_id>/complete', methods=['POST'])
@@ -834,7 +835,7 @@ def complete_purchase(purchase_id):
             purchase = WarehouseService.get_purchase_by_id(purchase_id)
         except Exception as e:
             logger.error(f"Ошибка при получении закупки {purchase_id}: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Ошибка при получении данных закупки: {str(e)}'}), 500
+            return api_internal_error(e)
         
         if not purchase:
             logger.warning(f"Закупка {purchase_id} не найдена")
@@ -872,13 +873,13 @@ def complete_purchase(purchase_id):
             return jsonify({'success': False, 'error': str(e)}), 404
         except Exception as e:
             logger.error(f"Ошибка в complete_purchase для закупки {purchase_id}: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Ошибка при завершении закупки: {str(e)}'}), 500
+            return api_internal_error(e)
         
         logger.info(f"Закупка {purchase_id} успешно завершена")
         return jsonify({'success': True, 'message': 'Закупка успешно завершена'})
     except Exception as e:
         logger.error(f"Неожиданная ошибка при завершении закупки {purchase_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/movements')
@@ -993,7 +994,7 @@ def new_supplier():
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"POST /warehouse/suppliers/new - Ошибка при создании поставщика: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/warehouse/suppliers/<int:supplier_id>')

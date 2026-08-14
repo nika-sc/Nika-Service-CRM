@@ -14,6 +14,7 @@ from app.services.user_service import UserService
 from app.utils.report_period import normalize_date_range
 from app.utils.datetime_utils import get_moscow_now
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
+from app.utils.error_handlers import api_internal_error
 import logging
 
 bp = Blueprint('reports', __name__)
@@ -432,7 +433,7 @@ def api_dashboard():
         return jsonify({'success': True, 'data': data})
     except Exception as e:
         logger.error(f"API Dashboard error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/dashboard/send-to-director', methods=['POST'])

@@ -2,7 +2,6 @@
 Сервис внутреннего чата сотрудников.
 """
 import logging
-import mimetypes
 import os
 import sqlite3
 import uuid
@@ -15,7 +14,7 @@ from werkzeug.utils import secure_filename
 
 from app.database.connection import get_db_connection
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_naive
-from app.utils.safe_files import confined_file_path
+from app.utils.safe_files import confined_file_path, file_extension, is_forbidden_upload_extension, mime_from_filename
 
 logger = logging.getLogger(__name__)
 
@@ -49,37 +48,24 @@ _ALLOWED_EXTENSIONS = {
     "rar",
     "7z",
 }
-_ALLOWED_MIME_PREFIXES = ("image/", "text/")
-_ALLOWED_MIME_EXACT = {
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/zip",
-    "application/x-rar-compressed",
-    "application/x-7z-compressed",
-}
 
 
 class StaffChatValidationError(ValueError):
     """Ошибки валидации входных данных чата."""
 
 
-def _is_allowed_file(filename: str, mime_type: str) -> bool:
-    ext = ""
-    if filename and "." in filename:
-        ext = filename.rsplit(".", 1)[1].lower()
+def _is_image_mime(mime_type: str) -> bool:
     mime = (mime_type or "").lower()
-    if ext in ("svg", "svgz") or mime == "image/svg+xml":
+    if not mime.startswith("image/"):
         return False
-    if ext in _ALLOWED_EXTENSIONS:
-        return True
-    if not mime:
+    return mime != "image/svg+xml"
+
+
+def _is_allowed_file(filename: str) -> bool:
+    if is_forbidden_upload_extension(filename):
         return False
-    if mime in _ALLOWED_MIME_EXACT:
-        return True
-    return any(mime.startswith(prefix) for prefix in _ALLOWED_MIME_PREFIXES)
+    ext = file_extension(filename)
+    return ext in _ALLOWED_EXTENSIONS
 
 
 def _sanitize_text(text: Optional[str]) -> str:
@@ -406,8 +392,7 @@ class StaffChatService:
             original_name = os.path.basename((file_obj.filename or "").strip())
             if not original_name:
                 continue
-            mime_type = (file_obj.mimetype or "").strip().lower()
-            if not _is_allowed_file(original_name, mime_type):
+            if not _is_allowed_file(original_name):
                 raise StaffChatValidationError(f"Недопустимый тип файла: {original_name}")
 
             file_obj.stream.seek(0, os.SEEK_END)
@@ -425,17 +410,15 @@ class StaffChatService:
             abs_path = os.path.join(target_dir, stored_name)
             rel_path = os.path.relpath(abs_path, _PROJECT_ROOT).replace("\\", "/")
             file_obj.save(abs_path)
-            if not mime_type:
-                guessed, _ = mimetypes.guess_type(original_name)
-                mime_type = guessed or "application/octet-stream"
+            mime_type = mime_from_filename(original_name)
             attachments_to_insert.append(
                 {
                     "original_name": original_name,
                     "stored_name": stored_name,
-                    "mime_type": mime_type or "application/octet-stream",
+                    "mime_type": mime_type,
                     "size_bytes": int(file_size),
                     "file_path": rel_path,
-                    "is_image": 1 if (mime_type or "").startswith("image/") else 0,
+                    "is_image": 1 if _is_image_mime(mime_type) else 0,
                 }
             )
 

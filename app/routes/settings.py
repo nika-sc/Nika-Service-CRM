@@ -7,6 +7,7 @@ from app.services.reference_service import ReferenceService
 from app.services.action_log_service import ActionLogService
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.cache_helpers import clear_reference_cache
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ def api_device_type_detail(type_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
     
     if request.method == 'DELETE':
         try:
@@ -155,7 +156,7 @@ def api_device_type_detail(type_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 @bp.route('/device-types/update-sort-order', methods=['POST'])
 @login_required
@@ -251,7 +252,7 @@ def api_device_brand_detail(brand_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
     
     if request.method == 'DELETE':
         try:
@@ -275,7 +276,7 @@ def api_device_brand_detail(brand_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 # Order Models
 @bp.route('/order-tags', methods=['GET'])
@@ -579,7 +580,7 @@ def api_symptom_detail(symptom_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
     
     if request.method == 'DELETE':
         try:
@@ -603,7 +604,7 @@ def api_symptom_detail(symptom_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 @bp.route('/symptoms/update-sort-order', methods=['POST'])
 @login_required
@@ -678,7 +679,7 @@ def api_appearance_tag_detail(tag_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
     
     if request.method == 'DELETE':
         try:
@@ -702,7 +703,7 @@ def api_appearance_tag_detail(tag_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 @bp.route('/appearance-tags/update-sort-order', methods=['POST'])
 @login_required
@@ -800,7 +801,7 @@ def api_service_detail(service_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
     
     if request.method == 'DELETE':
         try:
@@ -823,7 +824,7 @@ def api_service_detail(service_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 @bp.route('/services/update-sort-order', methods=['POST'])
 @login_required

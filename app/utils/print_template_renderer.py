@@ -2,8 +2,11 @@
 Рендеринг HTML-шаблонов печати (Товарный чек, Квитанция, Акт).
 Используется в заявках и в продажах магазина.
 """
+import logging
 import re
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 def strip_page_at_rules(html: str) -> str:
@@ -131,6 +134,9 @@ def render_print_template(
 
         rendered_html = sanitize_print_template_html(rendered_html)
     except ImportError:
-        pass
+        logger.error(
+            "sanitize_print_template_html unavailable; refusing to render unsanitized print template"
+        )
+        return "<p>Не удалось подготовить шаблон для печати.</p>"
 
     return rendered_html

@@ -16,6 +16,7 @@ from app.services.settings_service import SettingsService
 from app.database.connection import get_db_connection
 from app.database.queries.warehouse_queries import WarehouseQueries
 from app.utils.exceptions import ValidationError
+from app.utils.error_handlers import api_internal_error
 from datetime import timedelta
 
 bp = Blueprint('shop', __name__, url_prefix='/shop')
@@ -457,7 +458,7 @@ def api_recalculate_shop_sale_salary(sale_id: int):
         created_ids = SalaryService.accrue_salary_for_shop_sale(sale_id)
         return jsonify({'success': True, 'accruals_count': len(created_ids)})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/catalog')

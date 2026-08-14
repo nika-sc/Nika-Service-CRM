@@ -693,13 +693,14 @@ class SettingsService:
             DatabaseError: Если произошла ошибка БД
         """
         try:
-            # Санитизация HTML контента (если установлен bleach)
             try:
                 from app.utils.template_html_sanitizer import sanitize_print_template_html
                 cleaned_content = sanitize_print_template_html(html_content)
             except ImportError:
-                # Если bleach не установлен, используем оригинальный контент
-                cleaned_content = html_content
+                logger.error(
+                    "sanitize_print_template_html unavailable; refusing to save unsanitized print template"
+                )
+                return False
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()

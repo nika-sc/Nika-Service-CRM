@@ -28,6 +28,7 @@ from app.utils.validators import normalize_phone, parse_non_negative_money, mone
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str, get_moscow_now_naive, convert_to_moscow
 from app.utils.cache import clear_cache, cache_result
+from app.utils.error_handlers import api_internal_error
 from app.database.connection import get_db_connection
 from app.database.queries.order_queries import OrderQueries
 from app.database.queries.warehouse_queries import WarehouseQueries
@@ -3119,12 +3120,12 @@ def update_order_status_api(order_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
         logger.error(f"Database error при обновлении статуса {order_id}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.exception(f"Неожиданная ошибка при обновлении статуса заявки {order_id}: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+        return api_internal_error(e)
 
 @bp.route('/api/order/<int:order_id>/comment', methods=['POST'])
 @login_required
@@ -3203,7 +3204,7 @@ def add_comment(order_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 @bp.route('/api/order/comment/<int:comment_id>', methods=['DELETE'])
 @login_required
@@ -3245,7 +3246,7 @@ def delete_comment(comment_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 @bp.route('/api/order/<int:order_id>/toggle-visibility', methods=['POST'])
 @login_required
@@ -3263,7 +3264,7 @@ def toggle_order_visibility_api(order_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/orders/<int:order_id>/assignees', methods=['POST'])
@@ -3302,7 +3303,7 @@ def api_update_order_assignees(order_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.error("Ошибка смены исполнителей заявки %s: %s", order_id, e, exc_info=True)
         return jsonify({'success': False, 'error': 'Не удалось сменить исполнителей'}), 500
@@ -3383,7 +3384,7 @@ def soft_delete_order_api(order_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 @bp.route('/api/orders/<int:order_id>/services', methods=['GET', 'POST'])
 @login_required
@@ -3497,7 +3498,7 @@ def api_order_services(order_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 
 @bp.route('/api/orders/items/price-history', methods=['GET'])
@@ -3636,7 +3637,7 @@ def api_delete_order_service(order_service_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/order-services/<int:order_service_id>', methods=['PATCH'])
@@ -3703,7 +3704,7 @@ def api_update_order_service(order_service_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении услуги {order_service_id}: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
@@ -3781,7 +3782,7 @@ def api_order_payments(order_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 @bp.route('/api/orders/<int:order_id>/parts', methods=['GET', 'POST'])
 @login_required
@@ -3917,7 +3918,7 @@ def api_order_parts(order_id):
         except (ValidationError, NotFoundError) as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except DatabaseError as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return api_internal_error(e)
 
 
 @bp.route('/api/order-parts/<int:order_part_id>', methods=['DELETE'])
@@ -4002,7 +4003,7 @@ def api_delete_order_part(order_part_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/order-parts/<int:order_part_id>', methods=['PATCH'])
@@ -4069,7 +4070,7 @@ def api_update_order_part(order_part_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении товара {order_part_id}: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
@@ -4113,7 +4114,7 @@ def api_payment_receipts(payment_id: int):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/payments/<int:payment_id>/refund', methods=['POST'])
@@ -4179,7 +4180,7 @@ def api_refund_payment(payment_id: int):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/api/orders/<int:order_id>/wallet', methods=['GET', 'POST'])
@@ -4323,7 +4324,7 @@ def api_sell_items(order_id):
     except (ValidationError, NotFoundError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.error(f"Ошибка при объединенной продаже для заявки {order_id}: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500

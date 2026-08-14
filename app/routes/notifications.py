@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from app.routes.main import permission_required
 from app.services.notification_service import NotificationService
 from app.utils.exceptions import ValidationError, NotFoundError
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def get_notifications():
         return jsonify({'success': True, 'notifications': notifications})
     except Exception as e:
         logger.error(f"Ошибка при получении уведомлений: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/unread-count', methods=['GET'])
@@ -67,7 +68,7 @@ def get_unread_count():
         return jsonify({'success': True, 'count': count})
     except Exception as e:
         logger.error(f"Ошибка при получении количества непрочитанных уведомлений: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/<int:notification_id>/read', methods=['POST'])
@@ -82,7 +83,7 @@ def mark_as_read(notification_id):
             return jsonify({'success': False, 'error': 'Уведомление не найдено'}), 404
     except Exception as e:
         logger.error(f"Ошибка при отметке уведомления как прочитанного: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/read-all', methods=['POST'])
@@ -94,7 +95,7 @@ def mark_all_as_read():
         return jsonify({'success': True, 'count': count})
     except Exception as e:
         logger.error(f"Ошибка при отметке всех уведомлений как прочитанных: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/preferences', methods=['GET'])
@@ -106,7 +107,7 @@ def get_preferences():
         return jsonify({'success': True, 'preferences': preferences})
     except Exception as e:
         logger.error(f"Ошибка при получении настроек уведомлений: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/preferences', methods=['POST'])
@@ -142,4 +143,4 @@ def set_preferences():
             return jsonify({'success': False, 'error': 'Не удалось сохранить настройки'}), 500
     except Exception as e:
         logger.error(f"Ошибка при установке настроек уведомлений: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)

@@ -21,6 +21,21 @@ from flask_wtf.csrf import CSRFError
 
 logger = logging.getLogger(__name__)
 
+API_INTERNAL_ERROR_MESSAGE = "Внутренняя ошибка сервера. Пожалуйста, попробуйте позже."
+
+
+def api_internal_error(exc: Exception, log_message: str = "Внутренняя ошибка API"):
+    """
+    JSON-ответ 500 без утечки текста исключения клиенту.
+    Полный traceback пишется в лог.
+    """
+    logger.error("%s: %s", log_message, exc, exc_info=True)
+    return jsonify({
+        "success": False,
+        "error": API_INTERNAL_ERROR_MESSAGE,
+        "error_type": "internal_server_error",
+    }), 500
+
 
 def register_error_handlers(app):
     """
@@ -116,7 +131,7 @@ def register_error_handlers(app):
         if has_request_context() and (request.is_json or request.path.startswith('/api/')):
             return jsonify({
                 'success': False,
-                'error': str(error),
+                'error': API_INTERNAL_ERROR_MESSAGE,
                 'error_type': 'application'
             }), 500
         
@@ -150,7 +165,7 @@ def register_error_handlers(app):
         if has_request_context() and (request.is_json or request.path.startswith('/api/')):
             return jsonify({
                 'success': False,
-                'error': 'Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.',
+                'error': API_INTERNAL_ERROR_MESSAGE,
                 'error_type': 'internal_server_error'
             }), 500
         

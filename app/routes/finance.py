@@ -14,6 +14,7 @@ from app.database.connection import get_db_connection
 from app.utils.report_period import normalize_date_range
 from datetime import datetime, date, timedelta
 from app.utils.datetime_utils import get_moscow_now
+from app.utils.error_handlers import api_internal_error
 import logging
 
 bp = Blueprint('finance', __name__, url_prefix='/finance')
@@ -391,10 +392,10 @@ def api_delete_transaction(transaction_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except DatabaseError as e:
         logger.error(f"Ошибка БД при отмене транзакции {transaction_id}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
     except Exception as e:
         logger.exception(f"Неожиданная ошибка при отмене транзакции {transaction_id}: {e}")
-        return jsonify({'success': False, 'error': f'Произошла ошибка при отмене операции: {str(e)}'}), 500
+        return api_internal_error(e)
 
 
 # ===========================================

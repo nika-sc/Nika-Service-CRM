@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from app.services.salary_service import SalaryService
 from app.utils.exceptions import ValidationError, NotFoundError
+from app.utils.error_handlers import api_internal_error
 import logging
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def get_salary_report():
         return jsonify({'success': True, 'report': report})
     except Exception as e:
         logger.error(f"Ошибка при получении отчета по зарплате: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/recalculate/<int:order_id>', methods=['POST'])
@@ -109,7 +110,7 @@ def recalculate_salary(order_id):
         return jsonify({'success': False, 'error': str(e)}), 404
     except Exception as e:
         logger.error(f"Ошибка при пересчете зарплаты для заявки {order_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/order/<int:order_id>/details', methods=['GET'])
@@ -126,7 +127,7 @@ def get_order_accrual_details(order_id):
         return jsonify({'success': True, 'details': details})
     except Exception as e:
         logger.error(f"Ошибка при получении детализации заявки {order_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 @bp.route('/order/<int:order_id>', methods=['GET'])
@@ -138,7 +139,7 @@ def get_order_accruals(order_id):
         return jsonify({'success': True, 'accruals': accruals})
     except Exception as e:
         logger.error(f"Ошибка при получении начислений для заявки {order_id}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return api_internal_error(e)
 
 
 # Отдельный blueprint для страниц (без /api префикса) - больше не используется
