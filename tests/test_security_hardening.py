@@ -8,7 +8,12 @@ import pytest
 
 from app import create_app
 from app.config import Config, ProductionConfig
-from app.utils.error_handlers import API_INTERNAL_ERROR_MESSAGE, api_internal_error
+from app.utils.error_handlers import (
+    API_INTERNAL_ERROR_MESSAGE,
+    LOGIN_RATE_LIMIT_MESSAGE,
+    api_internal_error,
+    rate_limit_http_response,
+)
 from app.utils.login_lockout import clear, is_locked, register_failure, reset_memory_for_tests
 from app.utils.rbac import can_assign_user_role, can_create_role
 from app.utils.safe_files import (
@@ -278,3 +283,12 @@ def test_routes_do_not_return_str_e_on_500():
                 offenders.append(f"{path.name}:{line.strip()}")
                 break
     assert offenders == []
+
+
+def test_login_rate_limit_renders_staff_form():
+    app = create_app(_CsrfOffConfig)
+    with app.test_request_context("/login", method="POST", data={"username": "tester"}):
+        response = rate_limit_http_response()
+        body = response.get_data(as_text=True)
+        assert response.status_code == 429
+        assert LOGIN_RATE_LIMIT_MESSAGE in body

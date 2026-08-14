@@ -5,7 +5,7 @@
 """
 from functools import wraps
 from typing import Callable, Any, Optional
-from flask import jsonify, render_template, request, flash, redirect, url_for
+from flask import jsonify, render_template, request, flash, redirect, url_for, make_response
 from flask_login import current_user
 import logging
 import traceback
@@ -22,6 +22,9 @@ from flask_wtf.csrf import CSRFError
 logger = logging.getLogger(__name__)
 
 API_INTERNAL_ERROR_MESSAGE = "Внутренняя ошибка сервера. Пожалуйста, попробуйте позже."
+LOGIN_RATE_LIMIT_MESSAGE = (
+    "Слишком много попыток входа. Подождите минуту и попробуйте снова."
+)
 
 
 def api_internal_error(exc: Exception, log_message: str = "Внутренняя ошибка API"):
@@ -35,6 +38,70 @@ def api_internal_error(exc: Exception, log_message: str = "Внутренняя 
         "error": API_INTERNAL_ERROR_MESSAGE,
         "error_type": "internal_server_error",
     }), 500
+
+
+def rate_limit_http_response():
+    """HTTP 429 с понятным текстом для входа staff/portal или JSON для API."""
+    from flask import has_request_context
+
+    if not has_request_context():
+        resp = make_response(LOGIN_RATE_LIMIT_MESSAGE)
+        resp.status_code = 429
+        return resp
+
+    path = request.path or ""
+
+    if path == "/login":
+        flash(LOGIN_RATE_LIMIT_MESSAGE, "error")
+        try:
+            from app.routes.main import _login_page_extra, _public_landing_enabled
+
+            if _public_landing_enabled() and request.form.get("from_landing") == "1":
+                resp = redirect(url_for("main.home", login=1))
+            else:
+                resp = make_response(render_template("auth/login.html", **_login_page_extra()))
+        except Exception as exc:
+            logger.warning("rate limit login page fallback: %s", exc)
+            resp = make_response(render_template("auth/login.html"))
+        resp.status_code = 429
+        return resp
+
+    if path == "/portal/login":
+        phone = (request.form.get("phone") or request.args.get("phone") or "").strip()[:32]
+        resp = make_response(render_template(
+            "portal/login.html",
+            error=LOGIN_RATE_LIMIT_MESSAGE,
+            phone=phone,
+        ))
+        resp.status_code = 429
+        return resp
+
+    if path == "/portal/set-password":
+        resp = make_response(render_template(
+            "portal/set_password.html",
+            error=LOGIN_RATE_LIMIT_MESSAGE,
+        ))
+        resp.status_code = 429
+        return resp
+
+    if request.is_json or path.startswith("/api/") or path.startswith("/portal/api/"):
+        resp = jsonify({
+            "success": False,
+            "error": LOGIN_RATE_LIMIT_MESSAGE,
+            "error_type": "rate_limit",
+        })
+        resp.status_code = 429
+        return resp
+
+    flash(LOGIN_RATE_LIMIT_MESSAGE, "error")
+    referrer = request.referrer
+    if referrer:
+        resp = redirect(referrer)
+        resp.status_code = 429
+        return resp
+    resp = make_response(LOGIN_RATE_LIMIT_MESSAGE)
+    resp.status_code = 429
+    return resp
 
 
 def register_error_handlers(app):
@@ -189,6 +256,23 @@ def register_error_handlers(app):
         flash('Ошибка безопасности. Пожалуйста, обновите страницу и попробуйте снова.', 'error')
         referrer = request.referrer if has_request_context() else None
         return redirect(referrer or url_for('main.home')), 400
+
+    try:
+        from flask_limiter.errors import RateLimitExceeded
+    except ImportError:
+        RateLimitExceeded = None
+
+    if RateLimitExceeded is not None:
+        @app.errorhandler(RateLimitExceeded)
+        def handle_rate_limit_exceeded(error):
+            from flask import has_request_context
+            if has_request_context():
+                logger.warning(
+                    "Rate limit exceeded: %s %s",
+                    request.method,
+                    request.path,
+                )
+            return rate_limit_http_response()
 
 
 def handle_service_error(func: Callable) -> Callable:
