@@ -132,16 +132,24 @@ class Customer(BaseModel):
             Customer или None
         """
         try:
+            from app.utils.validators import phone_lookup_variants
+            variants = phone_lookup_variants(phone)
+            if not variants:
+                return None
+            placeholders = ",".join("?" * len(variants))
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute(
+                    f'''
                     SELECT 
                         c.*,
                         COALESCE(c.portal_enabled, 0) as portal_enabled,
                         COALESCE(c.portal_password_changed, 0) as portal_password_changed
                     FROM customers c
-                    WHERE c.phone = ?
-                ''', (phone,))
+                    WHERE c.phone IN ({placeholders})
+                    ''',
+                    tuple(variants),
+                )
                 row = cursor.fetchone()
                 if row:
                     return cls.from_dict(dict(row))

@@ -85,22 +85,25 @@ def portal_login():
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
         password = request.form.get('password', '')
-        login_key = _portal_login_guard_key(phone)
+        from app.utils.validators import normalize_phone
+        normalized_phone = normalize_phone(phone)
+        login_key = _portal_login_guard_key(normalized_phone or phone)
 
         if _is_portal_login_locked(login_key):
-            return render_template('portal/login.html', error='Слишком много попыток входа. Повторите позже.')
+            return render_template(
+                'portal/login.html',
+                error='Слишком много попыток входа. Повторите позже.',
+                phone=phone,
+            )
         new_password = request.form.get('new_password', '').strip()
         new_password_confirm = request.form.get('new_password_confirm', '').strip()
         change_password = request.form.get('change_password') == 'true'
         
         if not phone or not password:
-            return render_template('portal/login.html', error='Введите телефон и пароль')
+            return render_template('portal/login.html', error='Введите телефон и пароль', phone=phone)
         
-        # Защита от пустого/некорректного телефона (normalize может вернуть "")
-        from app.utils.validators import normalize_phone
-        normalized_phone = normalize_phone(phone)
         if not normalized_phone or len(normalized_phone) < 10:
-            return render_template('portal/login.html', error='Неверные данные для входа')
+            return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
         
         # Аутентификация по паролю
         customer_data = CustomerPortalService.authenticate_by_password(phone, password)
@@ -151,9 +154,10 @@ def portal_login():
             return redirect(url_for('customer_portal.portal_dashboard'))
         else:
             _register_portal_login_failure(login_key)
-            return render_template('portal/login.html', error='Неверные данные для входа')
-    
-    return render_template('portal/login.html')
+            return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
+
+    prefill = (request.args.get('phone') or '').strip()[:32]
+    return render_template('portal/login.html', phone=prefill)
 
 
 @bp.route('/set-password', methods=['GET', 'POST'])
@@ -199,7 +203,11 @@ def portal_set_password():
         info['customer_id'], password, reset_change_flag=False
     ):
         CustomerPortalService.revoke_token(token)
-        return render_template('portal/set_password.html', success=True)
+        return render_template(
+            'portal/set_password.html',
+            success=True,
+            phone=info.get('phone') or '',
+        )
     return render_template(
         'portal/set_password.html',
         token=token,

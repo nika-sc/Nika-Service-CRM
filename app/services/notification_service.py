@@ -888,6 +888,14 @@ class NotificationService:
             portal_temp_password = ''
             portal_setup_url = ''
             portal_url = _resolve_portal_login_url()
+            try:
+                from urllib.parse import quote
+                from app.utils.validators import normalize_phone as _norm_portal_phone
+                login_digits = _norm_portal_phone(portal_login)
+                if login_digits and portal_url:
+                    portal_url = f"{portal_url}?phone={quote(login_digits)}"
+            except Exception:
+                pass
             if template_type == 'order_accepted':
                 has_portal = bool(getattr(customer, 'portal_enabled', 0))
                 has_password = bool(getattr(customer, 'portal_password_hash', None))

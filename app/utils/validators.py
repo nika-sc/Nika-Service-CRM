@@ -12,28 +12,68 @@ logger = logging.getLogger(__name__)
 def normalize_phone(phone: str) -> str:
     """
     Нормализует номер телефона (без валидации).
-    
-    Args:
-        phone: Номер телефона
-        
+
+    Принимает российские номера с +7, 7 или 8 в начале, с пробелами/скобками,
+    и случай «+7» + вставка номера, который уже начинается с 7/8.
+
     Returns:
-        Нормализованный номер телефона (только цифры, начинается с 7)
+        Только цифры, для РФ обычно 11 знаков начиная с 7.
     """
     if not phone:
         return ""
-    
-    # Удаляем все нецифровые символы
-    digits = re.sub(r'\D', '', phone)
-    
-    # Если начинается с 8, заменяем на 7
-    if digits.startswith('8'):
-        digits = '7' + digits[1:]
-    
-    # Если не начинается с 7 и есть цифры, добавляем 7
-    if digits and not digits.startswith('7'):
-        digits = '7' + digits
-    
+
+    digits = re.sub(r"\D", "", str(phone))
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if not digits:
+        return ""
+
+    # +7 / 8, затем вставили номер, который уже с 7 или 8 (12 цифр, дальше мобильный 9…)
+    if (
+        len(digits) == 12
+        and digits[0] in "78"
+        and digits[1] in "78"
+        and digits[2] == "9"
+    ):
+        digits = "7" + digits[2:]
+
+    if digits.startswith("8"):
+        digits = "7" + digits[1:]
+
+    if digits and not digits.startswith("7"):
+        digits = "7" + digits
+
     return digits
+
+
+def phone_lookup_variants(phone: str) -> list:
+    """Варианты записи одного РФ-номера для поиска в БД (7 / 8 / +7 / 10 цифр)."""
+    raw = (phone or "").strip()
+    digits = re.sub(r"\D", "", raw)
+    normalized = normalize_phone(raw)
+    seen = []
+    for item in (
+        raw,
+        digits,
+        normalized,
+    ):
+        if item and item not in seen:
+            seen.append(item)
+    if normalized.startswith("7") and len(normalized) >= 11:
+        rest = normalized[1:]
+        extra = [
+            "8" + rest,
+            rest,
+            "+" + normalized,
+            "+7" + rest,
+            f"+7({rest[0:3]}){rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
+            f"+7 ({rest[0:3]}) {rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
+            f"8 ({rest[0:3]}) {rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
+        ]
+        for item in extra:
+            if item and item not in seen:
+                seen.append(item)
+    return seen
 
 
 def validate_phone(phone: str) -> str:
