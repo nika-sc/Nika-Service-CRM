@@ -57,6 +57,14 @@ class Config:
             os.environ.get('CSP_ENFORCE_PATH_PREFIXES', '/login,/portal/login,/api/,/portal/api/') or ''
         ).split(',') if p.strip()
     ]
+    # strict CSP with nonce: off | report | enforce
+    CSP_NONCE_MODE = (os.environ.get('CSP_NONCE_MODE') or 'report').strip().lower()
+    if CSP_NONCE_MODE not in ('off', 'report', 'enforce'):
+        CSP_NONCE_MODE = 'report'
+    # Email OTP after password (deferred release — disabled by default)
+    STAFF_EMAIL_OTP_ENABLED = os.environ.get('STAFF_EMAIL_OTP_ENABLED', 'false').strip().lower() in (
+        '1', 'true', 'yes', 'on',
+    )
     # Lockout защита от brute-force (staff login)
     LOGIN_LOCKOUT_THRESHOLD = int(os.environ.get('LOGIN_LOCKOUT_THRESHOLD', '8'))
     LOGIN_LOCKOUT_WINDOW_SEC = int(os.environ.get('LOGIN_LOCKOUT_WINDOW_SEC', '600'))

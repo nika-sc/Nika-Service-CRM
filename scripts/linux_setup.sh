@@ -3,7 +3,7 @@
 #
 #   sudo bash scripts/linux_setup.sh
 #   sudo bash scripts/linux_setup.sh --with-nginx
-#   sudo bash scripts/linux_setup.sh --lan
+#   sudo bash scripts/linux_setup.sh --harden
 #   DEST=/opt/nika-crm REPO_URL=https://github.com/nika-sc/Nika-Service-CRM.git sudo bash scripts/linux_setup.sh
 #   sudo bash scripts/linux_setup.sh --from-dir /path/to/already/cloned
 #
@@ -14,6 +14,7 @@ set -euo pipefail
 
 WITH_NGINX=0
 WITH_LAN=0
+WITH_HARDEN=0
 FROM_DIR=""
 REPO_URL="${REPO_URL:-https://github.com/nika-sc/Nika-Service-CRM.git}"
 BRANCH="${BRANCH:-main}"
@@ -23,6 +24,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --with-nginx) WITH_NGINX=1; shift ;;
     --lan) WITH_LAN=1; shift ;;
+    --harden) WITH_HARDEN=1; shift ;;
     --from-dir) FROM_DIR="${2:-}"; shift 2 ;;
     --dest) DEST="${2:-}"; shift 2 ;;
     --repo) REPO_URL="${2:-}"; shift 2 ;;
@@ -72,7 +74,7 @@ else
 fi
 
 [[ -f "$DEST/scripts/ubuntu_2404_bootstrap.sh" ]] || die "нет scripts/ubuntu_2404_bootstrap.sh в $DEST"
-chmod +x "$DEST/scripts/ubuntu_2404_bootstrap.sh" "$DEST/scripts/linux_upgrade.sh" 2>/dev/null || true
+chmod +x "$DEST/scripts/ubuntu_2404_bootstrap.sh" "$DEST/scripts/linux_upgrade.sh" "$DEST/scripts/linux_hardening.sh" 2>/dev/null || true
 
 LOG "Bootstrap (зависимости, PostgreSQL, демо-дамп если БД пустая)..."
 DEST="$DEST" bash "$DEST/scripts/ubuntu_2404_bootstrap.sh"
@@ -129,6 +131,11 @@ EOF
   rm -f /etc/nginx/sites-enabled/default
   nginx -t && systemctl enable --now nginx && systemctl reload nginx
   LOG "nginx: proxy :80 → 127.0.0.1:5000"
+fi
+
+if [[ "$WITH_HARDEN" == "1" ]]; then
+  LOG "Hardening VPS (ufw, fail2ban, unattended-upgrades)..."
+  CRM_DIR="$DEST" bash "$DEST/scripts/linux_hardening.sh" || LOG "WARN: linux_hardening.sh завершился с ошибкой"
 fi
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"

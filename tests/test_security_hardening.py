@@ -366,3 +366,27 @@ def test_security_headers_include_coop_corp():
     assert resp.headers.get("Cross-Origin-Opener-Policy") == "same-origin"
     assert resp.headers.get("Cross-Origin-Resource-Policy") == "same-site"
     assert resp.headers.get("X-Permitted-Cross-Domain-Policies") == "none"
+
+
+def test_csp_nonce_mode_report_includes_strict_report_only():
+    class _CspReportConfig(_LanConfig):
+        CSP_NONCE_MODE = "report"
+        CSP_REPORT_ONLY = True
+
+    app = create_app(_CspReportConfig)
+    client = app.test_client()
+    resp = client.get("/login")
+    ro = resp.headers.get("Content-Security-Policy-Report-Only") or ""
+    assert "script-src 'self' 'nonce-" in ro
+    assert "script-src 'self' 'unsafe-inline'" not in ro
+    assert "script-src-attr 'none'" in ro
+
+
+def test_csp_nonce_injected_on_request():
+    app = create_app(_LanConfig)
+    with app.test_request_context("/login"):
+        app.preprocess_request()
+        from flask import g
+        nonce = getattr(g, "csp_nonce", None)
+        assert nonce
+        assert len(nonce) >= 8

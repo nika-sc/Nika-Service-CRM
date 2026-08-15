@@ -268,6 +268,12 @@ def create_app(config_class=Config):
             bucket.append(now)
 
     @app.before_request
+    def _assign_csp_nonce():
+        import secrets
+        from flask import g
+        g.csp_nonce = secrets.token_urlsafe(16)
+
+    @app.before_request
     def _staff_idle_session_timeout():
         """Сброс staff-сессии после PERMANENT_SESSION_LIFETIME неактивности."""
         from flask import session, redirect, url_for, flash
@@ -510,27 +516,64 @@ def create_app(config_class=Config):
         response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
         response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-site')
         response.headers.setdefault('X-Permitted-Cross-Domain-Policies', 'none')
-        csp_parts = [
-            "default-src 'self'",
-            "base-uri 'self'",
-            "object-src 'none'",
-            "frame-ancestors 'none'",
-            "img-src 'self' data: https:",
-            "font-src 'self' data:",
-            "style-src 'self' 'unsafe-inline'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-            "connect-src 'self' ws: wss: https:"
-        ]
+
+        nonce = getattr(g, 'csp_nonce', None) or ''
         csp_report_uri = app.config.get('CSP_REPORT_URI')
-        if csp_report_uri:
-            csp_parts.append(f"report-uri {csp_report_uri}")
-        csp_value = '; '.join(csp_parts)
         enforce_prefixes = app.config.get('CSP_ENFORCE_PATH_PREFIXES') or []
         force_enforce_on_path = any((request.path or '').startswith(prefix) for prefix in enforce_prefixes)
-        if app.config.get('CSP_REPORT_ONLY', True):
-            response.headers.setdefault('Content-Security-Policy-Report-Only', csp_value)
-        if force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
-            response.headers.setdefault('Content-Security-Policy', csp_value)
+        nonce_mode = (app.config.get('CSP_NONCE_MODE') or 'off').strip().lower()
+
+        def _legacy_csp_parts():
+            parts = [
+                "default-src 'self'",
+                "base-uri 'self'",
+                "object-src 'none'",
+                "frame-ancestors 'none'",
+                "img-src 'self' data: https:",
+                "font-src 'self' data:",
+                "style-src 'self' 'unsafe-inline'",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                "connect-src 'self' ws: wss: https:",
+            ]
+            if csp_report_uri:
+                parts.append(f"report-uri {csp_report_uri}")
+            return parts
+
+        def _strict_csp_parts():
+            n = nonce
+            parts = [
+                "default-src 'self'",
+                "base-uri 'self'",
+                "object-src 'none'",
+                "frame-ancestors 'none'",
+                "frame-src 'self'",
+                "worker-src 'self'",
+                "img-src 'self' data: https:",
+                "font-src 'self' data:",
+                f"style-src 'self' 'nonce-{n}'",
+                f"script-src 'self' 'nonce-{n}'",
+                "script-src-attr 'none'",
+                "style-src-attr 'unsafe-inline'",
+                "connect-src 'self' ws: wss: https:",
+            ]
+            if csp_report_uri:
+                parts.append(f"report-uri {csp_report_uri}")
+            return parts
+
+        legacy_value = '; '.join(_legacy_csp_parts())
+        strict_value = '; '.join(_strict_csp_parts()) if nonce else legacy_value
+
+        if nonce_mode == 'enforce':
+            response.headers.setdefault('Content-Security-Policy', strict_value)
+        elif nonce_mode == 'report':
+            response.headers.setdefault('Content-Security-Policy-Report-Only', strict_value)
+            if force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
+                response.headers.setdefault('Content-Security-Policy', legacy_value)
+        else:
+            if app.config.get('CSP_REPORT_ONLY', True):
+                response.headers.setdefault('Content-Security-Policy-Report-Only', legacy_value)
+            if force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
+                response.headers.setdefault('Content-Security-Policy', legacy_value)
         # Включаем HSTS только при HTTPS
         if app.config.get('SESSION_COOKIE_SECURE'):
             response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
@@ -672,6 +715,7 @@ def create_app(config_class=Config):
             "has_permission": has_permission,
             "has_any_permission": has_any_permission,
             "get_user_display_name": get_user_display_name,
+            "csp_nonce": lambda: getattr(g, "csp_nonce", "") or "",
         }
     
     # Регистрация кастомных фильтров для шаблонов (до инициализации БД и Blueprint'ов)

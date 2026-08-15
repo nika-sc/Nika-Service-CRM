@@ -153,3 +153,24 @@ docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" >
 ```
 
 Локальные скрипты экспорта (если есть в приватном репо) — в `scripts/`; на DEMO/OSS сверяйтесь с публичным набором файлов.
+
+## Production hardening (optional)
+
+После `docker compose up -d` или `linux_setup.sh` для доступа из интернета рекомендуется:
+
+1. **Host nginx + TLS** — proxy `:443` → `127.0.0.1:8080` (Docker) или `:5000` (systemd). Пример merge: [`deploy/hardening/nginx/host-proxy.conf.example`](../deploy/hardening/nginx/host-proxy.conf.example), TLS — [`nginx-crm-ssl.conf`](../nginx-crm-ssl.conf). Не перезаписывайте существующий `crm.conf` целиком.
+
+2. **Firewall и fail2ban** — скрипт (идемпотентный):
+
+   ```bash
+   sudo bash scripts/linux_hardening.sh
+   sudo bash scripts/linux_hardening.sh --confirm-ssh-key   # только после проверки SSH-ключа
+   sudo bash scripts/linux_hardening.sh --install-backup-cron
+   sudo bash scripts/linux_hardening.sh --install-modsecurity
+   ```
+
+   Шаблоны: [`deploy/hardening/`](../deploy/hardening/) (fail2ban, ModSecurity DetectionOnly).
+
+3. **Strict CSP** — в `.env`: `CSP_NONCE_MODE=report` (сбор нарушений), затем `enforce`. См. `.env.example`.
+
+4. **Redis** — для multi-worker gunicorn задайте `REDIS_URL` / `RATELIMIT_STORAGE_URI=redis://…` (иначе lockout/rate-limit in-memory на процесс).

@@ -5364,6 +5364,7 @@ let editingPartId = null;
             rte.init({
                 selector: selectors.join(','),
                 license_key: 'gpl',
+                content_security_policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'",
                 menubar: true,
                 height: 320,
                 plugins: 'link lists table code fullscreen preview',

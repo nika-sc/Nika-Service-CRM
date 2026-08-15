@@ -1,0 +1,10 @@
+# Minimal CRS setup overlay — copy ideas from modsecurity-crs crs-setup.conf
+# After DetectionOnly audit, whitelist false positives for /api/, /socket.io/
+
+SecAction \
+ "id:900000,\
+  phase:1,\
+  nolog,\
+  pass,\
+  t:none,\
+  setvar:tx.blocking_paranoia_level=1"

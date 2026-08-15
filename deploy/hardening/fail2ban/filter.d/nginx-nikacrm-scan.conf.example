@@ -1,0 +1,4 @@
+# Fail2ban filter: типовые scan paths (см. nginx/nginx.conf location ~* \.env)
+[Definition]
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /(?:\.env|\.git|wp-login\.php|phpinfo\.php).*" (403|404)
+ignoreregex =

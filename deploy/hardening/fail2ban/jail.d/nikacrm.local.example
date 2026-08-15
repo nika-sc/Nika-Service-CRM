@@ -1,0 +1,16 @@
+# Nika CRM — дополнительные jails (merge в /etc/fail2ban/jail.d/)
+[sshd]
+enabled = true
+maxretry = 5
+bantime = 1h
+findtime = 10m
+
+[nginx-nikacrm-scan]
+enabled = true
+filter = nginx-nikacrm-scan
+port = http,https
+logpath = /var/log/nginx/access.log
+          /var/log/nginx/*access*.log
+maxretry = 10
+findtime = 10m
+bantime = 1h

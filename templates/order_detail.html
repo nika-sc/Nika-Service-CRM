@@ -8,66 +8,9 @@
     <!-- Order Detail CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/order_detail.css') }}">
     
-    <!-- Глобальная функция copyToClipboard (должна быть определена рано) -->
-    <script>
-        // Определяем функцию сразу, чтобы она была доступна при парсинге HTML
-        window.copyToClipboard = async function(text, event) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            
-            try {
-                await navigator.clipboard.writeText(text);
-                
-                // Показываем уведомление
-                const btn = event ? event.target.closest('button, a') : null;
-                if (btn) {
-                    // Сохраняем оригинальные дочерние элементы
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-check"></i>';
-                    btn.style.color = '#28a745';
-                    
-                    setTimeout(() => {
-                        btn.innerHTML = originalHTML;
-                        btn.style.color = '';
-                    }, 1000);
-                } else {
-                    // Fallback: показываем toast или alert
-                    if (window.showToast) {
-                        window.showToast('Скопировано в буфер обмена', 'success', null, 2000);
-                    } else {
-                        alert('Скопировано: ' + text);
-                    }
-                }
-            } catch (err) {
-                // Fallback для старых браузеров
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    if (window.showToast) {
-                        window.showToast('Скопировано в буфер обмена', 'success', null, 2000);
-                    } else {
-                        alert('Скопировано: ' + text);
-                    }
-                } catch (e) {
-                    if (window.showToast) {
-                        window.showToast('Не удалось скопировать. Скопируйте вручную', 'error', 'Ошибка копирования', 5000);
-                    } else {
-                        alert('Не удалось скопировать. Скопируйте вручную: ' + text);
-                    }
-                }
-                document.body.removeChild(textArea);
-            }
-        };
-    </script>
-    
-    <style>
+    <script src="{{ url_for('static', filename='js/order_detail/copy_clipboard.js') }}"></script>
+
+    <style nonce="{{ csp_nonce() }}">
         /* Современный светло-серый полупрозрачный дизайн - улучшенная версия */
         /* Повышаем специфичность для переопределения base.html */
         body .normal-view .info-card,
@@ -4437,7 +4380,7 @@
     <!-- Utils for safe DOM manipulation -->
     <script src="{{ url_for('static', filename='js/order_detail/api_client.js') }}"></script>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         // ===== КОНСТАНТЫ =====
         const ORDER_ID = {{ order.id }};
 
@@ -5020,7 +4963,7 @@
         });
     </script>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         const editSymptomHidden = document.getElementById('editSymptomTagsInput');
         const editAppearanceHidden = document.getElementById('editAppearanceInput');
 
@@ -5201,7 +5144,7 @@
         }
     </script>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         // Инициализация динамического dropdown статуса
         // Пробуем несколько способов инициализации для надежности
         function initStatusDropdown() {
