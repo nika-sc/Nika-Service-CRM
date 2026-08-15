@@ -1288,7 +1288,10 @@ def order_detail(order_id):
                 # Храним как строку числа (как create_order / TEXT column)
                 prepayment = str(prepayment)
                 estimated_cost = str(estimated_cost)
-                password = request.form.get('password', '').strip()
+                password = (
+                    request.form.get('device_password', '').strip()
+                    or request.form.get('password', '').strip()
+                )
                 # Статус теперь не редактируется через форму - используется выпадающий список в интерфейсе
                 # Не обновляем статус через форму редактирования заявки
                 status_id = None  # Статус не обновляется через форму редактирования

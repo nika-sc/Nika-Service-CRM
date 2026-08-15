@@ -77,6 +77,36 @@ def _block_key(scope: str, identity_key: str) -> str:
     return f"nikacrm:lockout:{scope}:block:{identity_key}"
 
 
+def seconds_until_unlock(scope: str, identity_key: str) -> int:
+    """Секунд до снятия lockout; 0 если блокировки нет."""
+    if not identity_key:
+        return 0
+    client = _redis_client()
+    if client is not None:
+        try:
+            ttl = client.ttl(_block_key(scope, identity_key))
+            if ttl is None or ttl < 0:
+                return 0
+            return int(ttl)
+        except Exception as exc:
+            logger.debug("login lockout redis ttl failed: %s", exc)
+    now = time.time()
+    with _memory_lock:
+        locked_until = _memory_lockouts.get((scope, identity_key), 0)
+        if locked_until <= now:
+            return 0
+        return max(0, int(locked_until - now))
+
+
+def user_lockout_message(scope: str, identity_key: str) -> str:
+    """Текст lockout с оставшимся временем (не путать с HTTP 429)."""
+    secs = seconds_until_unlock(scope, identity_key)
+    if secs <= 0:
+        return "Слишком много ошибок входа. Повторите позже."
+    minutes = max(1, (secs + 59) // 60)
+    return f"Слишком много ошибок входа. Повторите через {minutes} мин."
+
+
 def is_locked(scope: str, identity_key: str) -> bool:
     if not identity_key:
         return False

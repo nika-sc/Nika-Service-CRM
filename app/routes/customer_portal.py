@@ -10,6 +10,7 @@ from app.services.order_service import OrderService
 from app.services.device_service import DeviceService
 from app.utils.exceptions import ValidationError, NotFoundError
 from app.utils import login_lockout
+from app.utils.login_lockout import user_lockout_message
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ def portal_login():
         if _is_portal_login_locked(login_key):
             return render_template(
                 'portal/login.html',
-                error='Слишком много попыток входа. Повторите позже.',
+                error=user_lockout_message('portal', login_key),
                 phone=phone,
             )
         new_password = request.form.get('new_password', '').strip()

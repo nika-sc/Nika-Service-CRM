@@ -9,6 +9,7 @@ import uuid
 from app.database.connection import get_db_connection
 from app.utils.safe_files import confined_file_path, is_forbidden_upload_extension, mime_from_filename
 from app.utils.error_handlers import api_internal_error
+from app.services.user_service import UserService
 import sqlite3
 import logging
 
@@ -29,6 +30,21 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def user_may_access_attachment(cursor, attachment_row, user_id: int) -> bool:
+    """RBAC: вложение только при праве на заявку (или edit_orders для «сирот» до привязки)."""
+    comment_id = attachment_row['comment_id']
+    if comment_id:
+        if not UserService.check_permission(user_id, 'view_orders'):
+            return False
+        cursor.execute(
+            'SELECT order_id FROM order_comments WHERE id = ?',
+            (comment_id,),
+        )
+        order_row = cursor.fetchone()
+        return bool(order_row)
+    return UserService.check_permission(user_id, 'edit_orders')
+
+
 @bp.route('/upload', methods=['POST'])
 @login_required
 def upload_attachment():
@@ -39,6 +55,9 @@ def upload_attachment():
         JSON с attachment_id и file_path
     """
     try:
+        if not UserService.check_permission(current_user.id, 'edit_orders'):
+            return jsonify({'success': False, 'error': 'Недостаточно прав'}), 403
+
         if 'file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не загружен'}), 400
         
@@ -101,7 +120,7 @@ def get_attachment(attachment_id):
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT filename, file_path, mime_type
+                SELECT id, comment_id, filename, file_path, mime_type
                 FROM comment_attachments
                 WHERE id = ?
             ''', (attachment_id,))
@@ -109,6 +128,9 @@ def get_attachment(attachment_id):
             
             if not row:
                 return jsonify({'success': False, 'error': 'Файл не найден'}), 404
+
+            if not user_may_access_attachment(cursor, row, current_user.id):
+                return jsonify({'success': False, 'error': 'Недостаточно прав'}), 403
             
             file_path = confined_file_path(row['file_path'], COMMENTS_UPLOAD_DIR)
             if not file_path or not os.path.exists(file_path):

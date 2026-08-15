@@ -3631,8 +3631,9 @@
                                 <input type="number" class="form-control" name="prepayment" value="{{ order.prepayment }}" min="0" step="1" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Пароль</label>
-                                <input type="text" class="form-control" name="password" value="{{ order.password or '' }}">
+                                <label class="form-label">Пароль устройства</label>
+                                <input type="password" class="form-control" id="devicePassword" name="device_password"
+                                       value="{{ order.password or '' }}" autocomplete="new-password" inputmode="text">
                             </div>
                             <!-- Статус убран из формы редактирования - используется выпадающий список в интерфейсе -->
                             <input type="hidden" name="status" value="{{ order.status_id or '' }}">

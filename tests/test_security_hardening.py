@@ -14,7 +14,14 @@ from app.utils.error_handlers import (
     api_internal_error,
     rate_limit_http_response,
 )
-from app.utils.login_lockout import clear, is_locked, register_failure, reset_memory_for_tests
+from app.utils.login_lockout import (
+    clear,
+    is_locked,
+    register_failure,
+    reset_memory_for_tests,
+    seconds_until_unlock,
+    user_lockout_message,
+)
 from app.utils.rbac import can_assign_user_role, can_create_role
 from app.utils.safe_files import (
     confined_file_path,
@@ -292,3 +299,70 @@ def test_login_rate_limit_renders_staff_form():
         body = response.get_data(as_text=True)
         assert response.status_code == 429
         assert LOGIN_RATE_LIMIT_MESSAGE in body
+
+
+def test_lockout_message_differs_from_rate_limit(monkeypatch):
+    monkeypatch.setattr("app.utils.login_lockout._redis_client", lambda: None)
+    reset_memory_for_tests()
+    key = "203.0.113.9|locked"
+    for _ in range(8):
+        register_failure("staff", key)
+    register_failure("staff", key)
+    assert is_locked("staff", key)
+    msg = user_lockout_message("staff", key)
+    assert "через" in msg
+    assert LOGIN_RATE_LIMIT_MESSAGE not in msg
+
+
+def test_seconds_until_unlock_memory(monkeypatch):
+    monkeypatch.setattr("app.utils.login_lockout._redis_client", lambda: None)
+    reset_memory_for_tests()
+    key = "203.0.113.10|ttl"
+    for _ in range(8):
+        register_failure("staff", key)
+    register_failure("staff", key)
+    assert seconds_until_unlock("staff", key) > 0
+    clear("staff", key)
+    assert seconds_until_unlock("staff", key) == 0
+
+
+def test_comment_attachment_requires_view_orders(monkeypatch):
+    import app.routes.comments as comments_mod
+
+    class FakeUser:
+        id = 7
+
+    class FakeCursor:
+        def execute(self, sql, params):
+            self._sql = sql
+
+        def fetchone(self):
+            if "order_comments" in getattr(self, "_sql", ""):
+                return {"order_id": 42}
+            return None
+
+    class FakeConn:
+        def cursor(self):
+            return FakeCursor()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(
+        "app.routes.comments.UserService.check_permission",
+        lambda user_id, perm: perm != "view_orders",
+    )
+    row = {"comment_id": 5, "filename": "a.pdf", "file_path": "x", "mime_type": "application/pdf"}
+    assert not comments_mod.user_may_access_attachment(FakeCursor(), row, FakeUser.id)
+
+
+def test_security_headers_include_coop_corp():
+    app = create_app(_LanConfig)
+    client = app.test_client()
+    resp = client.get("/login")
+    assert resp.headers.get("Cross-Origin-Opener-Policy") == "same-origin"
+    assert resp.headers.get("Cross-Origin-Resource-Policy") == "same-site"
+    assert resp.headers.get("X-Permitted-Cross-Domain-Policies") == "none"

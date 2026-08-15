@@ -267,6 +267,31 @@ def create_app(config_class=Config):
                 return jsonify({'success': False, 'error': 'too_many_requests'}), 429
             bucket.append(now)
 
+    @app.before_request
+    def _staff_idle_session_timeout():
+        """Сброс staff-сессии после PERMANENT_SESSION_LIFETIME неактивности."""
+        from flask import session, redirect, url_for, flash
+        from flask_login import current_user, logout_user
+
+        if not current_user.is_authenticated:
+            return None
+        if session.get('portal_customer_id'):
+            return None
+        if (request.path or '').startswith('/static/'):
+            return None
+
+        now = time.time()
+        last_active = session.get('_staff_last_active')
+        lifetime = app.permanent_session_lifetime.total_seconds()
+        if last_active and lifetime > 0 and (now - float(last_active)) > lifetime:
+            logout_user()
+            session.clear()
+            flash('Сессия истекла из-за неактивности. Войдите снова.', 'info')
+            return redirect(url_for('main.login'))
+        session['_staff_last_active'] = now
+        session.permanent = True
+        return None
+
     # За nginx/proxy — корректные URL и HTTPS
     if not app.debug:
         from werkzeug.middleware.proxy_fix import ProxyFix
@@ -482,6 +507,9 @@ def create_app(config_class=Config):
                 'noindex, nofollow, noarchive, nosnippet, noimageindex',
             )
         response.headers.setdefault('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
+        response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+        response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-site')
+        response.headers.setdefault('X-Permitted-Cross-Domain-Policies', 'none')
         csp_parts = [
             "default-src 'self'",
             "base-uri 'self'",

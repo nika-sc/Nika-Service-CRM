@@ -62,8 +62,41 @@ def _is_login_locked(key: str) -> bool:
     return login_lockout.is_locked('staff', key)
 
 
-def _register_login_failure(key: str):
-    login_lockout.register_failure('staff', key)
+def _mask_username(username: str) -> str:
+    uname = (username or "").strip()
+    if len(uname) <= 2:
+        return uname or "?"
+    return f"{uname[:2]}***"
+
+
+def _audit_staff_login_failure(username: str, *, locked: bool) -> None:
+    try:
+        from app.services.action_log_service import ActionLogService
+
+        mask = _mask_username(username)
+        ActionLogService.log_action(
+            user_id=None,
+            username=None,
+            action_type="login_lockout" if locked else "login_failed",
+            entity_type="staff_auth",
+            description=(
+                f"Lockout staff ({mask})"
+                if locked
+                else f"Неудачный вход staff ({mask})"
+            ),
+            details={
+                "ip": _login_client_ip(),
+                "username_mask": mask,
+            },
+        )
+    except Exception as exc:
+        logger.debug("staff login audit log failed: %s", exc)
+
+
+def _register_login_failure(key: str, username: str = "") -> bool:
+    locked = login_lockout.register_failure("staff", key)
+    _audit_staff_login_failure(username, locked=locked)
+    return locked
 
 
 def _reset_login_guard(key: str):
@@ -238,51 +271,6 @@ def rate_limit_if_available(limit_str):
     return decorator
 
 
-# Резерв: блокировка по IP (отдельный словарь — не пересекать с _LOGIN_FAILURES / per-user guard выше).
-_IP_LOGIN_FAILURE_LOCK = threading.Lock()
-_IP_LOGIN_FAILURES = {}  # ip -> {"count": int, "blocked_until": float (timestamp)}
-LOGIN_MAX_ATTEMPTS = 3
-LOGIN_BLOCK_MINUTES = 15
-
-
-def _login_failure_blocked(ip: str) -> bool:
-    """Проверяет, заблокирован ли IP из-за неверных попыток входа."""
-    now = time.time()
-    with _IP_LOGIN_FAILURE_LOCK:
-        _prune_login_failures(now)
-        entry = _IP_LOGIN_FAILURES.get(ip)
-        if not entry:
-            return False
-        if entry["blocked_until"] and entry["blocked_until"] > now:
-            return True
-        return False
-
-
-def _prune_login_failures(now: float) -> None:
-    """Удаляет устаревшие записи (уже разблокированные)."""
-    expired = [ip for ip, e in _IP_LOGIN_FAILURES.items() if e.get("blocked_until") and e["blocked_until"] <= now]
-    for ip in expired:
-        del _IP_LOGIN_FAILURES[ip]
-
-
-def _record_login_failure(ip: str) -> None:
-    """Увеличивает счётчик неудачных попыток; при 3+ — блокирует IP на LOGIN_BLOCK_MINUTES."""
-    with _IP_LOGIN_FAILURE_LOCK:
-        entry = _IP_LOGIN_FAILURES.get(ip)
-        if not entry:
-            entry = {"count": 0, "blocked_until": None}
-            _IP_LOGIN_FAILURES[ip] = entry
-        entry["count"] += 1
-        if entry["count"] >= LOGIN_MAX_ATTEMPTS:
-            entry["blocked_until"] = time.time() + LOGIN_BLOCK_MINUTES * 60
-
-
-def _clear_login_failures(ip: str) -> None:
-    """Сбрасывает счётчик после успешного входа."""
-    with _IP_LOGIN_FAILURE_LOCK:
-        _IP_LOGIN_FAILURES.pop(ip, None)
-
-
 def role_required(required_role: str):
     """
     Декоратор для проверки роли пользователя.
@@ -391,7 +379,7 @@ def login():
         login_key = _login_guard_key(username)
 
         if _is_login_locked(login_key):
-            flash('Слишком много попыток входа. Повторите позже.', 'error')
+            flash(login_lockout.user_lockout_message("staff", login_key), "error")
             return _login_error_response()
         
         if not username or not password:
@@ -400,8 +388,11 @@ def login():
 
         from app.utils.validators import password_eligible_for_verify
         if not password_eligible_for_verify(password):
-            _register_login_failure(login_key)
-            flash('Неверное имя пользователя или пароль', 'error')
+            _register_login_failure(login_key, username)
+            if login_lockout.is_locked("staff", login_key):
+                flash(login_lockout.user_lockout_message("staff", login_key), "error")
+            else:
+                flash('Неверное имя пользователя или пароль', 'error')
             return _login_error_response()
         
         user_dict = UserService.get_user_by_username(username)
@@ -437,6 +428,7 @@ def login():
                 user = User(user_dict)
                 remember_me = request.form.get('remember_me') in ('1', 'on', 'true', 'True')
                 session.clear()
+                session.permanent = True
                 login_user(user, remember=remember_me)
                 UserService.update_user_last_login(user.id)
                 try:
@@ -458,8 +450,11 @@ def login():
                 return redirect(next_page)
         
         # Не раскрываем, существует ли пользователь (security best practice)
-        _register_login_failure(login_key)
-        flash('Неверное имя пользователя или пароль', 'error')
+        _register_login_failure(login_key, username)
+        if login_lockout.is_locked("staff", login_key):
+            flash(login_lockout.user_lockout_message("staff", login_key), "error")
+        else:
+            flash('Неверное имя пользователя или пароль', 'error')
         return _login_error_response()
     
     if _public_landing_enabled() and request.method == 'GET' and not request.args.get('next'):
