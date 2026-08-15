@@ -89,6 +89,10 @@
         const input = el("staffChatInput");
 
         if (fab) fab.addEventListener("click", togglePanel);
+        document.querySelectorAll("[data-staff-chat-toggle]").forEach((btn) => {
+            if (btn === fab) return;
+            btn.addEventListener("click", togglePanel);
+        });
         if (closeBtn) closeBtn.addEventListener("click", () => setPanelOpen(false));
         if (saveIdentityBtn) saveIdentityBtn.addEventListener("click", saveIdentity);
         if (sendBtn) sendBtn.addEventListener("click", sendCurrentMessage);
@@ -163,16 +167,22 @@
         state.isOpen = !!open;
         persistPanelState();
         const panel = el("staffChatPanel");
-        const fab = el("staffChatFab");
+        const toggles = document.querySelectorAll("#staffChatFab, [data-staff-chat-toggle]");
         if (panel) {
             panel.classList.toggle("is-hidden", !state.isOpen);
         }
-        if (fab) {
-            // Кнопка в сайдбаре всегда видна; подсвечиваем активное состояние
+        toggles.forEach((fab) => {
             fab.classList.toggle("is-active", state.isOpen);
             fab.setAttribute("aria-pressed", state.isOpen ? "true" : "false");
-        }
+        });
         if (state.isOpen) {
+            const drawer = el("macMobileDrawer");
+            const overlay = el("macMobileOverlay");
+            if (drawer) {
+                drawer.classList.remove("open");
+                drawer.setAttribute("hidden", "");
+            }
+            if (overlay) overlay.classList.remove("show");
             state.unread = 0;
             updateUnreadBadge();
             if (userAttentionOnPage()) {
@@ -190,24 +200,11 @@
     }
 
     function restorePanelState() {
-        if (ALWAYS_OPEN) return true;
-        try {
-            const raw = localStorage.getItem(STORAGE_PANEL_OPEN);
-            if (raw === "1") return true;
-            if (raw === "0") return false;
-        } catch (_) {
-            // localStorage может быть недоступен
-        }
-        return START_OPEN;
+        return false;
     }
 
     function persistPanelState() {
-        if (ALWAYS_OPEN) return;
-        try {
-            localStorage.setItem(STORAGE_PANEL_OPEN, state.isOpen ? "1" : "0");
-        } catch (_) {
-            // localStorage может быть недоступен
-        }
+        return;
     }
 
     function initSocket() {
@@ -311,6 +308,13 @@
             query.set("actor_display_name", state.actorName || "");
             query.set("client_instance_id", state.clientInstanceId || "");
             const resp = await fetch(`/api/staff-chat/history?${query.toString()}`);
+            if (resp.status === 401) {
+                if (state.syncTimer) {
+                    clearInterval(state.syncTimer);
+                    state.syncTimer = null;
+                }
+                return;
+            }
             const data = await resp.json();
             if (!data || !data.success) return;
             const list = Array.isArray(data.messages) ? data.messages : [];
@@ -341,6 +345,7 @@
             query.set("actor_display_name", state.actorName || "");
             query.set("client_instance_id", state.clientInstanceId || "");
             const resp = await fetch(`/api/staff-chat/history?${query.toString()}`);
+            if (resp.status === 401) return;
             const data = await resp.json();
             if (!data.success) throw new Error(data.error || "history_failed");
             const messages = Array.isArray(data.messages) ? data.messages : [];
@@ -1106,10 +1111,10 @@
     }
 
     function updateUnreadBadge() {
-        const badge = el("staffChatFabBadge");
-        const fab = el("staffChatFab");
+        const badges = document.querySelectorAll(".staff-chat-fab-badge");
+        const fabs = document.querySelectorAll("#staffChatFab, [data-staff-chat-toggle]");
         const hasUnread = state.unread > 0;
-        if (badge) {
+        badges.forEach((badge) => {
             if (hasUnread) {
                 badge.style.display = "inline-block";
                 badge.textContent = state.unread > 99 ? "99+" : String(state.unread);
@@ -1119,11 +1124,11 @@
                 badge.textContent = "0";
                 badge.removeAttribute("aria-label");
             }
-        }
-        if (fab) {
+        });
+        fabs.forEach((fab) => {
             fab.classList.toggle("has-unread", hasUnread);
             fab.setAttribute("data-unread", hasUnread ? String(state.unread) : "0");
-        }
+        });
     }
 
     function isOwnMessage(message) {
@@ -1293,6 +1298,7 @@
             query.set("actor_display_name", state.actorName || "");
             query.set("client_instance_id", state.clientInstanceId || "");
             const resp = await fetch(`/api/staff-chat/history?${query.toString()}`, { credentials: "same-origin" });
+            if (resp.status === 401) return;
             const data = await resp.json();
             if (!data || !data.success || !Array.isArray(data.messages)) return;
             data.messages.forEach((m) => {

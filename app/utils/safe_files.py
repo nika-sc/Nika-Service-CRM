@@ -29,6 +29,24 @@ def mime_from_filename(filename: str, default: str = "application/octet-stream")
     return mime
 
 
+def sniff_client_upload(header: bytes, filename: str) -> Optional[str]:
+    """
+    Разрешённые вложения диагностики: jpeg/png/pdf.
+    Возвращает серверный MIME или None, если тип не совпал с содержимым.
+    """
+    if is_forbidden_upload_extension(filename):
+        return None
+    ext = file_extension(filename)
+    data = header or b""
+    if ext in ("jpg", "jpeg") and data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if ext == "png" and data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if ext == "pdf" and data[:5] == b"%PDF-":
+        return "application/pdf"
+    return None
+
+
 def is_forbidden_upload_extension(filename: str) -> bool:
     ext = file_extension(filename)
     if ext in _FORBIDDEN_EXTENSIONS:

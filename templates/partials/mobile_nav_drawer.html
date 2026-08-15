@@ -77,9 +77,16 @@
         </li>
         {% endif %}
         {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders', 'view_finance', 'manage_finance', 'view_warehouse', 'manage_warehouse', 'manage_shop', 'salary.view') %}
-        <li>
-            <button type="button" class="mac-mobile-drawer-link w-100 border-0 bg-transparent text-start" id="staffChatMobileOpen">
-                <i class="fas fa-comments"></i><span>Чат сотрудников</span>
+        <li class="mt-2 pt-2 border-top">
+            <button type="button"
+                    class="mac-mobile-drawer-link staff-chat-sidebar-btn w-100 border-0"
+                    data-staff-chat-toggle
+                    title="Чат сотрудников"
+                    aria-label="Чат сотрудников"
+                    aria-pressed="false">
+                <i class="fas fa-comments"></i>
+                <span>Чат</span>
+                <span class="staff-chat-fab-badge" style="display: none;">0</span>
             </button>
         </li>
         {% endif %}

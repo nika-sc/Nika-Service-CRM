@@ -466,7 +466,8 @@ class OrderService:
                 # Проверка баланса при переходе в закрывающий статус (accrues_salary или is_final)
                 if status_changed:
                     cursor.execute('''
-                        SELECT accrues_salary, COALESCE(is_final, 0), COALESCE(triggers_payment_modal, 0)
+                        SELECT accrues_salary, COALESCE(is_final, 0), COALESCE(triggers_payment_modal, 0),
+                               COALESCE(blocks_edit, 0)
                         FROM order_statuses WHERE id = ?
                     ''', (status_id,))
                     new_status_row = cursor.fetchone()
@@ -474,6 +475,16 @@ class OrderService:
                         accrues_salary_new = bool(new_status_row[0])
                         is_final_new = bool(new_status_row[1])
                         triggers_payment_new = bool(new_status_row[2])
+                        blocks_edit_new = bool(new_status_row[3]) if len(new_status_row) > 3 else False
+                        from app.services.order_diagnostics_service import OrderDiagnosticsService
+                        cursor.execute('SELECT diagnostics FROM orders WHERE id = ?', (order_id,))
+                        diag_row = cursor.fetchone()
+                        diag_text = diag_row[0] if diag_row else None
+                        diag_block = OrderDiagnosticsService.closing_blocked_message(
+                            blocks_edit_new, is_final_new, diag_text
+                        )
+                        if diag_block:
+                            raise ValidationError(diag_block)
                         if accrues_salary_new or is_final_new:
                             totals = OrderService.get_order_totals(order_id)
                             debt = float(totals.get('debt', 0) or 0)

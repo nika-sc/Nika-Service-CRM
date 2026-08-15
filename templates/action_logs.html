@@ -75,6 +75,8 @@
                                 <option value="add_payment" {% if action_type == 'add_payment' %}selected{% endif %}>Добавление оплаты</option>
                                 <option value="delete_payment" {% if action_type == 'delete_payment' %}selected{% endif %}>Удаление оплаты</option>
                                 <option value="add_comment" {% if action_type == 'add_comment' %}selected{% endif %}>Добавление комментария</option>
+                                <option value="add_diagnostics_file" {% if action_type == 'add_diagnostics_file' %}selected{% endif %}>Файл диагностики</option>
+                                <option value="delete_diagnostics_file" {% if action_type == 'delete_diagnostics_file' %}selected{% endif %}>Удаление файла диагностики</option>
                                 <option value="delete_comment" {% if action_type == 'delete_comment' %}selected{% endif %}>Удаление комментария</option>
                                 <option value="restore" {% if action_type == 'restore' %}selected{% endif %}>Восстановление</option>
                                 <option value="create_shop_sale" {% if action_type == 'create_shop_sale' %}selected{% endif %}>Продажа в магазине</option>
@@ -170,6 +172,8 @@
                                         'delete': ('Удаление', 'bg-danger'),
                                         'view': ('Просмотр', 'bg-info'),
                                         'add_comment': ('Комментарий', 'bg-info'),
+                                        'add_diagnostics_file': ('Файл диагностики', 'bg-info'),
+                                        'delete_diagnostics_file': ('Удаление файла диагностики', 'bg-danger'),
                                         'add_payment': ('Оплата', 'bg-success'),
                                         'add_service': ('Услуга', 'bg-warning text-dark'),
                                         'delete_comment': ('Удаление комментария', 'bg-danger'),

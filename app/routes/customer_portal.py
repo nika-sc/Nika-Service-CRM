@@ -1,7 +1,7 @@
 """
 Blueprint для публичного личного кабинета клиента.
 """
-from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify
+from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify, send_file
 from functools import wraps
 from flask_login import current_user
 from app.services.customer_portal_service import CustomerPortalService
@@ -25,7 +25,7 @@ def init_limiter(app_limiter):
     global limiter
     limiter = app_limiter
 
-def rate_limit_if_available(limit_str):
+def rate_limit_if_available(limit_str, methods=None):
     """
     Декоратор для rate limiting, который работает только если limiter инициализирован.
     """
@@ -34,6 +34,8 @@ def rate_limit_if_available(limit_str):
         def wrapper(*args, **kwargs):
             # Проверяем limiter во время выполнения, а не во время декорирования.
             if limiter:
+                if methods and request.method not in methods:
+                    return f(*args, **kwargs)
                 return limiter.limit(limit_str)(f)(*args, **kwargs)
             return f(*args, **kwargs)
         return wrapper
@@ -80,8 +82,8 @@ def _reset_portal_login_guard(key: str):
 @bp.route('/login', methods=['GET', 'POST'])
 # Первый вход может включать несколько POST (логин + смена пароля),
 # поэтому повышаем лимит, чтобы избежать ложных 429.
-@rate_limit_if_available("20 per minute")
-@rate_limit_if_available("120 per hour")
+@rate_limit_if_available("20 per minute", methods=("POST",))
+@rate_limit_if_available("120 per hour", methods=("POST",))
 def portal_login():
     """Вход в личный кабинет."""
     if request.method == 'POST':
@@ -286,6 +288,19 @@ def portal_dashboard():
         )
 
 
+def _portal_public_order(order_data: dict) -> dict:
+    """Поля заявки для ЛК: без пароля устройства и staff-комментариев."""
+    drop = {
+        "password",
+        "device_password",
+        "comment",
+        "manager_id",
+        "master_id",
+        "prepayment_method",
+    }
+    return {k: v for k, v in (order_data or {}).items() if k not in drop}
+
+
 @bp.route('/api/order/<int:order_id>', methods=['GET'])
 @login_required
 @rate_limit_if_available("120 per minute")
@@ -302,14 +317,21 @@ def portal_api_order(order_id):
         order_data = full.get('order') or {}
         if order_data.get('customer_id') != customer_id:
             return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
-        # Удаляем комментарии
+        order_public = _portal_public_order(order_data)
+        files = []
+        try:
+            from app.services.order_diagnostics_service import OrderDiagnosticsService
+            files = OrderDiagnosticsService.get_payload(order_data.get('id') or order_id).get('files') or []
+        except Exception:
+            files = []
         out = {
-            'order': full.get('order'),
+            'order': order_public,
             'device': full.get('device'),
             'services': full.get('services', []),
             'parts': full.get('parts', []),
             'payments': full.get('payments', []),
             'totals': full.get('totals', {}),
+            'diagnostics_files': files,
         }
         # Сериализуем даты
         def _serialize(obj):
@@ -328,6 +350,37 @@ def portal_api_order(order_id):
     except Exception as e:
         logger.warning(f"portal api order {order_id}: {e}")
         return jsonify({'success': False, 'error': 'Ошибка загрузки данных'}), 500
+
+
+@bp.route('/api/order/<int:order_id>/file/<int:file_id>', methods=['GET'])
+@login_required
+@rate_limit_if_available("60 per minute")
+def portal_order_file(order_id, file_id):
+    customer_id = session.get('portal_customer_id')
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'unauthorized', 'error_type': 'auth'}), 401
+    try:
+        full = OrderService.get_order_full_data(order_id)
+        order_data = full.get('order') or {}
+        if order_data.get('customer_id') != customer_id:
+            return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
+        from app.services.order_diagnostics_service import OrderDiagnosticsService
+        from app.utils.safe_files import mime_from_filename
+        info = OrderDiagnosticsService.get_file_for_order(order_data.get('id') or order_id, file_id)
+        inline = (info['mime_type'] or '').startswith('image/')
+        resp = send_file(
+            info['abs_path'],
+            mimetype=mime_from_filename(info['filename']),
+            as_attachment=not inline,
+            download_name=info['filename'],
+        )
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
+    except NotFoundError:
+        return jsonify({'success': False, 'error': 'Файл не найден'}), 404
+    except Exception as e:
+        logger.warning("portal file %s/%s: %s", order_id, file_id, e)
+        return jsonify({'success': False, 'error': 'Ошибка загрузки файла'}), 500
 
 
 @bp.route('/orders', methods=['GET'])

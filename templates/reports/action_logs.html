@@ -50,6 +50,8 @@
 
                                 <!-- Заявки -->
                                 <option value="add_comment" {% if action_type == 'add_comment' %}selected{% endif %}>Комментарий</option>
+                                <option value="add_diagnostics_file" {% if action_type == 'add_diagnostics_file' %}selected{% endif %}>Файл диагностики</option>
+                                <option value="delete_diagnostics_file" {% if action_type == 'delete_diagnostics_file' %}selected{% endif %}>Удаление файла диагностики</option>
                                 <option value="add_payment" {% if action_type == 'add_payment' %}selected{% endif %}>Оплата</option>
                                 <option value="delete_payment" {% if action_type == 'delete_payment' %}selected{% endif %}>Удаление оплаты</option>
                                 <option value="add_service" {% if action_type == 'add_service' %}selected{% endif %}>Услуга</option>
@@ -208,6 +210,8 @@
                                         'update': ('Обновление', 'bg-primary'),
                                         'delete': ('Удаление', 'bg-danger'),
                                         'add_comment': ('Комментарий', 'bg-info'),
+                                        'add_diagnostics_file': ('Файл диагностики', 'bg-info'),
+                                        'delete_diagnostics_file': ('Удаление файла диагностики', 'bg-danger'),
                                         'add_payment': ('Оплата', 'bg-success'),
                                         'add_service': ('Услуга', 'bg-warning text-dark'),
                                         'delete_comment': ('Удаление комментария', 'bg-danger'),

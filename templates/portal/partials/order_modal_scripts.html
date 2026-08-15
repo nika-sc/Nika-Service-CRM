@@ -127,6 +127,24 @@
         if (symptomsEl) symptomsEl.textContent = o.symptom_tags || '—';
         var appearanceEl = document.getElementById('modalAppearance');
         if (appearanceEl) appearanceEl.textContent = o.appearance || '—';
+        var diagEl = document.getElementById('modalDiagnostics');
+        if (diagEl) diagEl.textContent = o.diagnostics || '—';
+        var filesEl = document.getElementById('modalDiagnosticsFiles');
+        if (filesEl) {
+            var files = data.diagnostics_files || [];
+            if (!files.length) {
+                filesEl.innerHTML = '';
+            } else {
+                filesEl.innerHTML = files.map(function(f) {
+                    var url = '/portal/api/order/' + (o.id || '') + '/file/' + f.id;
+                    var isImg = String(f.mime_type || '').indexOf('image/') === 0;
+                    if (isImg) {
+                        return '<a href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" alt="" style="max-width:120px;max-height:120px;object-fit:cover;border-radius:8px;"></a>';
+                    }
+                    return '<a class="btn btn-sm btn-outline-secondary" href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(f.filename || 'PDF') + '</a>';
+                }).join('');
+            }
+        }
         var servicesEl = document.getElementById('modalServices');
         if (servicesEl) {
             if (services.length) servicesEl.innerHTML = '<ul class="list-unstyled mb-0">' + services.map(function(s) {

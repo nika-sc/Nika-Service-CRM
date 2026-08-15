@@ -621,22 +621,13 @@ class NotificationService:
         title: str,
         message: str,
         entity_type: Optional[str] = None,
-        entity_id: Optional[int] = None
+        entity_id: Optional[int] = None,
+        actor_client_instance_id: Optional[str] = None,
     ) -> int:
         """
-        Создает in-app уведомление.
-        
-        Args:
-            user_id: ID пользователя
-            title: Заголовок уведомления
-            message: Текст уведомления
-            entity_type: Тип связанной сущности
-            entity_id: ID связанной сущности
-            
-        Returns:
-            ID созданного уведомления
+        Создает in-app уведомление и пушит в Socket.IO комнату user_{id}.
         """
-        return NotificationService.create_notification(
+        notification_id = NotificationService.create_notification(
             user_id=user_id,
             notification_type='in_app',
             title=title,
@@ -644,6 +635,52 @@ class NotificationService:
             entity_type=entity_type,
             entity_id=entity_id
         )
+        NotificationService.emit_in_app_realtime(
+            user_id=user_id,
+            title=title,
+            message=message,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            actor_client_instance_id=actor_client_instance_id,
+            notification_id=notification_id,
+        )
+        return notification_id
+
+    @staticmethod
+    def emit_in_app_realtime(
+        user_id: int,
+        title: str,
+        message: str,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[int] = None,
+        actor_client_instance_id: Optional[str] = None,
+        notification_id: Optional[int] = None,
+    ) -> None:
+        """Мгновенный колокольчик на других вкладках/ПК того же user_id."""
+        try:
+            from flask import current_app
+            from app.utils.datetime_utils import get_moscow_now_str
+
+            socketio = current_app.extensions.get("socketio")
+            if not socketio:
+                return
+            payload = {
+                "id": notification_id,
+                "title": title,
+                "message": message,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "actor_client_instance_id": (actor_client_instance_id or "")[:80],
+                "created_at": get_moscow_now_str(),
+            }
+            socketio.emit(
+                "notification",
+                payload,
+                room=f"user_{int(user_id)}",
+                namespace="/notifications",
+            )
+        except Exception as exc:
+            logger.debug("in-app realtime emit skipped: %s", exc)
 
     @staticmethod
     def _render_html_template(html_content: str, values: Dict[str, Any]) -> str:
@@ -1497,7 +1534,8 @@ class NotificationService:
         order_id: int,
         new_status: str,
         customer_id: Optional[int] = None,
-        changed_by_user_id: Optional[int] = None
+        changed_by_user_id: Optional[int] = None,
+        actor_client_instance_id: Optional[str] = None,
     ):
         """
         Отправляет уведомления о смене статуса заявки.
@@ -1531,13 +1569,14 @@ class NotificationService:
             # Уведомляем пользователя, изменившего статус (всегда видит подтверждение в колокольчике)
             if changed_by_user_id:
                 title = f"Статус заявки #{oid} изменён"
-                message = f"Вы изменили статус заявки #{oid} на: {new_status}"
+                message = f"Статус заявки #{oid} изменён на: {new_status}"
                 NotificationService.send_in_app_notification(
                     user_id=changed_by_user_id,
                     title=title,
                     message=message,
                     entity_type='order',
-                    entity_id=oid
+                    entity_id=oid,
+                    actor_client_instance_id=actor_client_instance_id,
                 )
                 notified_user_ids.add(changed_by_user_id)
             
@@ -1554,7 +1593,8 @@ class NotificationService:
                             title=title,
                             message=message,
                             entity_type='order',
-                            entity_id=oid
+                            entity_id=oid,
+                            actor_client_instance_id=actor_client_instance_id,
                         )
                         NotificationService.send_push_notification(
                             user_id=uid,
@@ -1578,7 +1618,8 @@ class NotificationService:
                             title=title,
                             message=message,
                             entity_type='order',
-                            entity_id=oid
+                            entity_id=oid,
+                            actor_client_instance_id=actor_client_instance_id,
                         )
                         notified_user_ids.add(uid)
             

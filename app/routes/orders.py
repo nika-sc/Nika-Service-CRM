@@ -999,6 +999,8 @@ def api_datatables_orders():
             f'<a class="dropdown-item status-dropdown-item" href="#" '
             f'data-status-id="{st_id}" data-status-code="{_html.escape(str(st_code))}" '
             f'data-status-name="{_html.escape(str(st_name))}" data-status-color="{_html.escape(str(st_color))}" '
+            f'data-blocks-edit="{1 if st.get("blocks_edit") else 0}" '
+            f'data-is-final="{1 if st.get("is_final") else 0}" '
             'onclick="return window.selectQuickStatus ? window.selectQuickStatus(this, event) : false;">'
             f'<span class="status-indicator" style="background-color: {_html.escape(str(st_color))};"></span>'
             f'{_html.escape(str(st_name))}'
@@ -2169,6 +2171,25 @@ def order_detail(order_id):
                                     'username': username
                                 })
                     
+                    if details.get('field') == 'diagnostics' or 'diagnostics' in details:
+                        old_val = details.get('old') or '—'
+                        new_val = details.get('new') or '—'
+                        if isinstance(old_val, str) and len(old_val) > 120:
+                            old_val = old_val[:120] + '...'
+                        if isinstance(new_val, str) and len(new_val) > 120:
+                            new_val = new_val[:120] + '...'
+                        order_history.append({
+                            'date_str': date_str,
+                            'time_str': time_str,
+                            'datetime': log_created_at,
+                            'type': 'diagnostics_change',
+                            'icon': 'stethoscope',
+                            'color': 'info',
+                            'title': 'Изменена диагностика',
+                            'description': f'С «{old_val}» на «{new_val}»',
+                            'username': username
+                        })
+
                     # Обработка изменения комментария
                     if 'comment' in details or 'Комментарий' in details:
                         comment_info = details.get('comment') or details.get('Комментарий') or {}
@@ -2339,6 +2360,32 @@ def order_detail(order_id):
                         'color': 'danger',
                         'title': 'Удалена оплата',
                         'description': f'Оплата {amount_display} ({payment_type})',
+                        'username': username
+                    })
+                elif action_type == 'add_diagnostics_file':
+                    fname = details.get('filename') or 'файл'
+                    order_history.append({
+                        'date_str': date_str,
+                        'time_str': time_str,
+                        'datetime': log_created_at,
+                        'type': 'diagnostics_file_add',
+                        'icon': 'paperclip',
+                        'color': 'success',
+                        'title': 'Файл диагностики',
+                        'description': f'Добавлен файл: {fname}',
+                        'username': username
+                    })
+                elif action_type == 'delete_diagnostics_file':
+                    fname = details.get('filename') or 'файл'
+                    order_history.append({
+                        'date_str': date_str,
+                        'time_str': time_str,
+                        'datetime': log_created_at,
+                        'type': 'diagnostics_file_delete',
+                        'icon': 'trash',
+                        'color': 'danger',
+                        'title': 'Файл диагностики удалён',
+                        'description': f'Удалён файл: {fname}',
                         'username': username
                     })
                 elif action_type == 'add_comment':
@@ -3081,6 +3128,7 @@ def update_order_status_api(order_id):
                     _order_id = order.id
                     _customer_id = order.customer_id
                     _user_id = user_id
+                    _actor_client = str((data or {}).get("client_instance_id") or "")[:80]
 
                     def _send_notification():
                         try:
@@ -3090,7 +3138,8 @@ def update_order_status_api(order_id):
                                     order_id=_order_id,
                                     new_status=new_status_name,
                                     customer_id=_customer_id,
-                                    changed_by_user_id=_user_id
+                                    changed_by_user_id=_user_id,
+                                    actor_client_instance_id=_actor_client,
                                 )
                         except Exception as ex:
                             logger.warning(f"Не удалось отправить уведомления о смене статуса (фон): {ex}")

@@ -605,6 +605,10 @@ class ActionLogService:
                             description = f"Возврат продажи: {entity_name}"
                         elif action_type == 'status_change':
                             description = f"Изменен статус {entity_name}"
+                        elif action_type == 'add_diagnostics_file':
+                            description = f"Добавлен файл диагностики к {entity_name}"
+                        elif action_type == 'delete_diagnostics_file':
+                            description = f"Удалён файл диагностики у {entity_name}"
 
                     # Сохраняем улучшенное описание
                     item['description'] = description

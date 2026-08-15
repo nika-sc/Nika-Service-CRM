@@ -4,7 +4,7 @@
         <i class="fas fa-tachometer-alt" style="font-size: 1.5rem; display: block; text-align: center;"></i>
         <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Nika CRM</small>
     </a>
-    <ul class="nav nav-pills nav-flush flex-column">
+    <ul class="nav nav-pills nav-flush flex-column flex-grow-1">
         {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
         <li>
             <a href="{{ url_for('orders.all_orders') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}" 
@@ -106,15 +106,17 @@
             </ul>
         </li>
         {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders', 'view_finance', 'manage_finance', 'view_warehouse', 'manage_warehouse', 'manage_shop', 'salary.view') %}
-        <li>
+        <li class="mt-auto">
             <button type="button"
-                    class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center staff-chat-sidebar-btn w-100"
+                    class="nav-link py-2 border-top staff-chat-sidebar-btn d-flex flex-column align-items-center justify-content-center w-100"
                     id="staffChatFab"
+                    data-staff-chat-toggle
                     title="Чат сотрудников"
-                    aria-label="Чат сотрудников">
+                    aria-label="Чат сотрудников"
+                    aria-pressed="false">
                 <span class="staff-chat-sidebar-icon-wrap">
                     <i class="fas fa-comments" style="font-size: 1.25rem; display: block; text-align: center;"></i>
-                    <span class="staff-chat-fab-badge" id="staffChatFabBadge">0</span>
+                    <span class="staff-chat-fab-badge" id="staffChatFabBadge" style="display: none;">0</span>
                 </span>
                 <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Чат</small>
             </button>

@@ -33,7 +33,20 @@ def setup_auth(login_manager: LoginManager):
     login_manager.login_view = 'main.login'
     login_manager.login_message = 'Пожалуйста, войдите в систему для доступа к этой странице.'
     login_manager.login_message_category = 'info'
-    
+
+    @login_manager.unauthorized_handler
+    def _unauthorized():
+        from flask import jsonify, redirect, request, url_for
+
+        path = request.path or ""
+        if path.startswith("/api/") or path.startswith("/portal/api/"):
+            return jsonify({
+                "success": False,
+                "error": "unauthorized",
+                "error_type": "auth",
+            }), 401
+        return redirect(url_for("main.login", next=request.path))
+
     @login_manager.user_loader
     def load_user(user_id):
         """

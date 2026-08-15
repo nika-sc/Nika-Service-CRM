@@ -1248,6 +1248,13 @@
             }
         };
 
+        window.rememberOrderStatusButton = function(buttonEl) {
+            if (!buttonEl || buttonEl.dataset.originalStatusName) return;
+            buttonEl.dataset.originalStatusId = buttonEl.getAttribute('data-status-id') || buttonEl.dataset.statusId || '';
+            buttonEl.dataset.originalStatusName = (buttonEl.textContent || '').trim();
+            buttonEl.dataset.originalStatusColor = buttonEl.getAttribute('data-status-color') || buttonEl.dataset.statusColor || '';
+        };
+
         window.selectQuickStatus = function(itemEl, event) {
             if (event) {
                 event.preventDefault();
@@ -1258,6 +1265,7 @@
             const $item = $(itemEl);
             const $dropdown = $item.closest('.dropdown');
             const $button = $dropdown.find('.quick-status-btn');
+            if ($button[0]) window.rememberOrderStatusButton($button[0]);
 
             const orderId = $button.data('order-id');
             const orderDbId = $button.data('order-db-id');
@@ -1789,6 +1797,7 @@
                     const dropdownItem = $(this);
                     const dropdown = dropdownItem.closest('.dropdown');
                     const button = dropdown.find('.quick-status-btn');
+                    if (button[0]) window.rememberOrderStatusButton(button[0]);
                     
                     const orderId = button.data('order-id');
                     const orderDbId = button.data('order-db-id');
@@ -2100,9 +2109,9 @@
                 }
             }
             
-            const originalStatusId = buttonElement.dataset.statusId || '';
-            const originalStatusName = buttonElement.textContent.trim();
-            const originalStatusColor = buttonElement.dataset.statusColor || '#6c757d';
+            const originalStatusId = buttonElement.dataset.originalStatusId || buttonElement.dataset.statusId || '';
+            const originalStatusName = buttonElement.dataset.originalStatusName || buttonElement.textContent.trim();
+            const originalStatusColor = buttonElement.dataset.originalStatusColor || buttonElement.dataset.statusColor || '#6c757d';
             
             if (window.debugLog) window.debugLog('Оригинальные значения:', {
                 originalStatusId,
@@ -2115,6 +2124,37 @@
                 buttonElement.dataset.originalStatusId = originalStatusId;
                 buttonElement.dataset.originalStatusName = originalStatusName;
                 buttonElement.dataset.originalStatusColor = originalStatusColor;
+            }
+
+            if (window.NikaDiagnostics && window.NikaDiagnostics.guardStatusChange) {
+                const restoreBtn = function() {
+                    buttonElement.textContent = originalStatusName;
+                    buttonElement.style.backgroundColor = originalStatusColor;
+                    buttonElement.style.borderColor = originalStatusColor;
+                    buttonElement.dataset.statusId = originalStatusId;
+                    buttonElement.dataset.statusColor = originalStatusColor;
+                    if (window.jQuery) {
+                        window.jQuery(buttonElement).data('status-id', originalStatusId);
+                        window.jQuery(buttonElement).data('status-color', originalStatusColor);
+                    }
+                    buttonElement.disabled = false;
+                    buttonElement.style.opacity = '1';
+                };
+                const shouldProceed = await window.NikaDiagnostics.guardStatusChange({
+                    numericId: orderDbId,
+                    orderId: orderId,
+                    orderDbId: orderDbId,
+                    statusId: statusId,
+                    statusName: statusName,
+                    statusColor: statusColor,
+                    statusCode: statusCode,
+                    buttonElement: buttonElement,
+                    restore: restoreBtn,
+                });
+                if (!shouldProceed) {
+                    restoreBtn();
+                    return;
+                }
             }
             
             // Визуальная индикация загрузки
@@ -2145,7 +2185,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        status_id: statusIdValue
+                        status_id: statusIdValue,
+                        client_instance_id: window.nikaStaffClientInstanceId || ''
                     })
                 });
                 
@@ -2296,7 +2337,21 @@
                         response: data,
                         error: errorMsg
                     });
-                    alert('Ошибка обновления статуса: ' + errorMsg);
+                    if (window.NikaDiagnostics && window.NikaDiagnostics.isMissingDiagnosticsError(errorMsg)) {
+                        window.NikaDiagnostics.openForOrder(orderDbId, {
+                            pendingStatus: {
+                                buttonElement: buttonElement,
+                                orderId: orderId,
+                                orderDbId: orderDbId,
+                                statusId: statusId,
+                                statusName: statusName,
+                                statusColor: statusColor,
+                                statusCode: statusCode,
+                            },
+                        });
+                    } else {
+                        alert('Ошибка обновления статуса: ' + errorMsg);
+                    }
                 }
             } catch (error) {
                 console.error('Ошибка при обновлении статуса:', error);
@@ -2310,7 +2365,21 @@
                 buttonElement.style.backgroundColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
                 buttonElement.style.borderColor = buttonElement.dataset.originalStatusColor || originalStatusColor;
                 buttonElement.dataset.statusId = buttonElement.dataset.originalStatusId || originalStatusId;
-                alert('Произошла ошибка при обновлении статуса');
+                if (window.NikaDiagnostics && window.NikaDiagnostics.isMissingDiagnosticsError(error.message)) {
+                    window.NikaDiagnostics.openForOrder(orderDbId, {
+                        pendingStatus: {
+                            buttonElement: buttonElement,
+                            orderId: orderId,
+                            orderDbId: orderDbId,
+                            statusId: statusId,
+                            statusName: statusName,
+                            statusColor: statusColor,
+                            statusCode: statusCode,
+                        },
+                    });
+                } else {
+                    alert('Произошла ошибка при обновлении статуса');
+                }
             } finally {
                 // Восстанавливаем элемент
                 buttonElement.disabled = false;

@@ -15,6 +15,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "assets" / "walkthrough"
 
+EXPECTED = {
+    "01-login.png", "02-dashboard.png", "03-add-order.png", "04-order-detail.png",
+    "05-add-service.png", "06-add-part.png", "07-order-items.png", "08-add-payment.png",
+    "09-order-payments.png", "10-change-status.png", "11-close-order.png", "12-print-modal.png",
+    "13-salary-dashboard.png", "14-salary-accruals.png", "15-salary-payout.png",
+    "16-salary-payments-list.png", "17-finance-cash.png", "18-cash-manual.png",
+    "19-report-day.png", "20-report-cash.png", "21-shop.png", "22-purchases.png",
+    "23-staff-chat.png",
+    "24-invoices-list.png", "25-invoice-settings.png", "26-invoice-detail.png",
+    "27-invoice-print-bill.png", "28-invoice-create.png",
+    "46-order-diagnostics.png",
+}
+
+
+def _report(out: Path, shots: list[str]) -> int:
+    missing = sorted(EXPECTED - {p.name for p in out.glob("*.png")})
+    print("Done. Captured this run:", len(shots))
+    if missing:
+        print("Still missing:", ", ".join(missing))
+    else:
+        print("All expected PNGs present.")
+    return 0
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture Nika CRM walkthrough screenshots")
@@ -23,7 +46,27 @@ def main() -> int:
     parser.add_argument("--password", default="111111")
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--order-id", default="", help="Optional order id to open")
+    parser.add_argument(
+        "--only",
+        default="",
+        help="Снять только кадры, чьи имена содержат одну из подстрок через запятую "
+             "(например 46-order-diagnostics). Пусто — снимать всё.",
+    )
     args = parser.parse_args()
+    only = [part.strip() for part in args.only.split(",") if part.strip()]
+
+    # Консоль Windows (cp1251) не должна ронять съёмку на логах Playwright
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+    def want(*names: str) -> bool:
+        """Нужен ли хотя бы один из кадров при текущем --only."""
+        if not only:
+            return True
+        return any(part in name for name in names for part in only)
 
     try:
         from playwright.sync_api import sync_playwright
@@ -47,6 +90,8 @@ def main() -> int:
         page.set_default_timeout(60000)
 
         def shot(name: str) -> None:
+            if only and not any(part in name for part in only):
+                return
             path = out / name
             page.screenshot(path=str(path), full_page=False)
             shots.append(path.name)
@@ -100,9 +145,10 @@ def main() -> int:
         dismiss_flash()
         shot("02-dashboard.png")
 
-        goto("/add_order", wait_ms=1500)
-        dismiss_flash()
-        shot("03-add-order.png")
+        if want("03-add-order.png"):
+            goto("/add_order", wait_ms=1500)
+            dismiss_flash()
+            shot("03-add-order.png")
 
         # Resolve order id
         order_id = (args.order_id or "").strip()
@@ -154,10 +200,11 @@ def main() -> int:
         if order_id:
             goto(f"/order/{order_id}", wait_ms=2500, retries=5)
             # wait for key section (heavy pages)
-            try:
-                page.wait_for_selector("text=Товары и услуги", timeout=90000)
-            except Exception:
-                print("WARN: order page loaded without items marker")
+            if want("04-order-detail.png", "07-order-items.png", "05-add-service.png", "06-add-part.png"):
+                try:
+                    page.wait_for_selector("text=Товары и услуги", timeout=90000)
+                except Exception:
+                    print("WARN: order page loaded without items marker")
             dismiss_flash()
             shot("04-order-detail.png")
 
@@ -170,12 +217,13 @@ def main() -> int:
 
             # Open items editor
             opened_items = False
-            for sel in (
+            item_selectors = (
                 "button:has-text('Добавить')",
                 "#btnAddItems",
                 "[data-action='add-items']",
                 "button.btn-add-item",
-            ):
+            ) if want("05-add-service.png", "06-add-part.png") else ()
+            for sel in item_selectors:
                 btns = page.locator(sel)
                 n = btns.count()
                 for i in range(min(n, 6)):
@@ -212,7 +260,7 @@ def main() -> int:
                 shot("06-add-part.png")
                 page.keyboard.press("Escape")
                 page.wait_for_timeout(300)
-            else:
+            elif item_selectors:
                 print("WARN: items editor not opened (05/06)")
 
             try:
@@ -222,10 +270,14 @@ def main() -> int:
                 pass
             shot("09-order-payments.png")
 
-            pay_btn = page.locator("button:has-text('Добавить оплату')").first
-            if pay_btn.count():
+            pay_btn = (
+                page.locator("button:has-text('Добавить оплату'):not([aria-disabled='true'])").first
+                if want("08-add-payment.png")
+                else None
+            )
+            if pay_btn is not None and pay_btn.count():
                 try:
-                    pay_btn.click()
+                    pay_btn.click(timeout=5000)
                     page.wait_for_timeout(800)
                     shot("08-add-payment.png")
                     page.keyboard.press("Escape")
@@ -237,12 +289,27 @@ def main() -> int:
             page.wait_for_timeout(300)
             shot("10-change-status.png")
 
-            for sel in (
+            diag_btn = page.locator("#openDiagnosticsBtn").first
+            if diag_btn.count():
+                try:
+                    diag_btn.click(timeout=2000)
+                    page.wait_for_selector("#diagnosticsModal.show", timeout=15000)
+                    page.wait_for_timeout(900)
+                    shot("46-order-diagnostics.png")
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(400)
+                except Exception as e:
+                    print("WARN diagnostics modal:", e)
+            else:
+                print("WARN: #openDiagnosticsBtn not found — skipped 46")
+
+            status_selectors = (
                 "button:has-text('Закрыт')",
                 "button:has-text('Закрыта')",
                 ".order-status button",
                 "button.dropdown-toggle",
-            ):
+            ) if want("11-close-order.png") else ()
+            for sel in status_selectors:
                 st = page.locator(sel).first
                 if st.count():
                     try:
@@ -254,7 +321,12 @@ def main() -> int:
                     except Exception:
                         continue
 
-            for sel in ("button:has-text('Печать')", "a:has-text('Печать')", "#printOrderBtn"):
+            print_selectors = (
+                ("button:has-text('Печать')", "a:has-text('Печать')", "#printOrderBtn")
+                if want("12-print-modal.png")
+                else ()
+            )
+            for sel in print_selectors:
                 pr = page.locator(sel).first
                 if pr.count():
                     try:
@@ -268,11 +340,18 @@ def main() -> int:
         else:
             print("WARN: no order id — skipped 04-12")
 
-        goto("/salary", wait_ms=1500)
-        shot("13-salary-dashboard.png")
+        salary_shots = (
+            "13-salary-dashboard.png",
+            "14-salary-accruals.png",
+            "15-salary-payout.png",
+            "16-salary-payments-list.png",
+        )
+        if want(*salary_shots):
+            goto("/salary", wait_ms=1500)
+            shot("13-salary-dashboard.png")
 
-        emp = page.locator("a[href*='/salary/employee/']").first
-        if emp.count():
+        emp = page.locator("a[href*='/salary/employee/']").first if want(*salary_shots) else None
+        if emp is not None and emp.count():
             href = emp.get_attribute("href") or ""
             if href.startswith("/"):
                 goto(href, wait_ms=1200)
@@ -307,10 +386,15 @@ def main() -> int:
                     except Exception as e:
                         print("WARN payout btn:", e)
 
-        goto("/finance/cash", wait_ms=1500)
-        shot("17-finance-cash.png")
-        income = page.locator("button:has-text('Приход')").first
-        if income.count():
+        if want("17-finance-cash.png", "18-cash-manual.png"):
+            goto("/finance/cash", wait_ms=1500)
+            shot("17-finance-cash.png")
+        income = (
+            page.locator("button:has-text('Приход')").first
+            if want("18-cash-manual.png")
+            else None
+        )
+        if income is not None and income.count():
             try:
                 income.click()
                 page.wait_for_timeout(700)
@@ -319,18 +403,20 @@ def main() -> int:
             except Exception as e:
                 print("WARN cash:", e)
 
-        goto("/reports/day", wait_ms=1500)
-        shot("19-report-day.png")
-        goto("/reports/cash", wait_ms=1500)
-        shot("20-report-cash.png")
-        goto("/shop", wait_ms=1200)
-        shot("21-shop.png")
-        goto("/warehouse/purchases", wait_ms=1200)
-        shot("22-purchases.png")
+        for path_, name in (
+            ("/reports/day", "19-report-day.png"),
+            ("/reports/cash", "20-report-cash.png"),
+            ("/shop", "21-shop.png"),
+            ("/warehouse/purchases", "22-purchases.png"),
+        ):
+            if want(name):
+                goto(path_, wait_ms=1400)
+                shot(name)
 
-        goto("/", wait_ms=1200)
-        chat = page.locator("#staffChatFab")
-        if chat.count():
+        if want("23-staff-chat.png"):
+            goto("/", wait_ms=1200)
+        chat = page.locator("#staffChatFab") if want("23-staff-chat.png") else None
+        if chat is not None and chat.count():
             try:
                 chat.click()
                 page.wait_for_timeout(1000)
@@ -339,11 +425,20 @@ def main() -> int:
                 print("WARN chat:", e)
 
         # --- Счета B2B ---
+        invoice_shots = (
+            "24-invoices-list.png",
+            "25-invoice-settings.png",
+            "26-invoice-detail.png",
+            "27-invoice-print-bill.png",
+            "28-invoice-create.png",
+        )
+        if not want(*invoice_shots):
+            browser.close()
+            return _report(out, shots)
         goto("/invoices", wait_ms=1500)
         shot("24-invoices-list.png")
         goto("/invoices/settings", wait_ms=1500)
         shot("25-invoice-settings.png")
-        inv_link = page.locator("a[href*='/invoices/']").filter(has_not=page.locator("[href$='/settings'], [href$='/new']")).first
         invoice_id = ""
         try:
             goto("/invoices", wait_ms=1000)
@@ -367,24 +462,7 @@ def main() -> int:
 
         browser.close()
 
-    names = {
-        "01-login.png", "02-dashboard.png", "03-add-order.png", "04-order-detail.png",
-        "05-add-service.png", "06-add-part.png", "07-order-items.png", "08-add-payment.png",
-        "09-order-payments.png", "10-change-status.png", "11-close-order.png", "12-print-modal.png",
-        "13-salary-dashboard.png", "14-salary-accruals.png", "15-salary-payout.png",
-        "16-salary-payments-list.png", "17-finance-cash.png", "18-cash-manual.png",
-        "19-report-day.png", "20-report-cash.png", "21-shop.png", "22-purchases.png",
-        "23-staff-chat.png",
-        "24-invoices-list.png", "25-invoice-settings.png", "26-invoice-detail.png",
-        "27-invoice-print-bill.png", "28-invoice-create.png",
-    }
-    missing = sorted(names - {p.name for p in out.glob("*.png")})
-    print("Done. Captured this run:", len(shots))
-    if missing:
-        print("Still missing:", ", ".join(missing))
-    else:
-        print("All expected PNGs present.")
-    return 0
+    return _report(out, shots)
 
 
 if __name__ == "__main__":

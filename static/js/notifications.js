@@ -4,6 +4,21 @@
 
 let notificationsSocket = null;
 let unreadCount = 0;
+let unreadPollTimer = null;
+
+function stopUnreadPolling() {
+    if (unreadPollTimer) {
+        clearInterval(unreadPollTimer);
+        unreadPollTimer = null;
+    }
+}
+
+function authLostFromResponse(res) {
+    if (!res) return true;
+    if (res.status === 401) return true;
+    if (res.redirected && String(res.url || '').indexOf('/login') !== -1) return true;
+    return false;
+}
 
 // Инициализация системы уведомлений
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,21 +30,51 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUnreadCount();
     setupNotificationsDropdown();
     
-    // Загружаем уведомления каждые 30 секунд
-    setInterval(loadUnreadCount, 30000);
+    unreadPollTimer = setInterval(loadUnreadCount, 30000);
 });
 
 function initNotifications() {
-    // В production отключено realtime-сокет-подключение:
-    // периодический REST-polling стабильнее и меньше нагружает VPS.
     notificationsSocket = null;
+    if (typeof window.io !== 'function' || !window.currentUserId) {
+        return;
+    }
+    try {
+        notificationsSocket = window.io('/notifications', {
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            reconnection: true,
+            reconnectionDelayMax: 7000,
+        });
+        notificationsSocket.on('notification', function (payload) {
+            var mine = window.nikaStaffClientInstanceId || '';
+            var actor = (payload && payload.actor_client_instance_id) || '';
+            loadUnreadCount();
+            if (actor && mine && actor === mine) {
+                return;
+            }
+            if (payload) {
+                showNotificationToast(payload);
+            }
+        });
+        notificationsSocket.on('connect_error', function () {
+            // Поллинг 30с остаётся запасным каналом.
+        });
+    } catch (e) {
+        notificationsSocket = null;
+    }
 }
 
 function loadUnreadCount() {
-    fetch('/api/notifications/unread-count')
-        .then(res => res.json())
+    fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+        .then(res => {
+            if (authLostFromResponse(res)) {
+                stopUnreadPolling();
+                return null;
+            }
+            return res.ok ? res.json() : null;
+        })
         .then(data => {
-            if (data.success) {
+            if (data && data.success) {
                 unreadCount = data.count;
                 updateNotificationBadge();
             }

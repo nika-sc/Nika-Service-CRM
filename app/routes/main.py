@@ -259,12 +259,14 @@ def init_limiter(app_limiter):
     global limiter
     limiter = app_limiter
 
-def rate_limit_if_available(limit_str):
+def rate_limit_if_available(limit_str, methods=None):
     """Rate limit: проверка limiter в runtime (при импорте модуля он ещё None)."""
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if limiter:
+                if methods and request.method not in methods:
+                    return f(*args, **kwargs)
                 return limiter.limit(limit_str)(f)(*args, **kwargs)
             return f(*args, **kwargs)
         return wrapper
@@ -369,8 +371,8 @@ def _is_safe_redirect_target(target: str) -> bool:
 
 
 @bp.route('/login', methods=['GET', 'POST'])
-@rate_limit_if_available("10 per minute")
-@rate_limit_if_available("60 per hour")
+@rate_limit_if_available("10 per minute", methods=("POST",))
+@rate_limit_if_available("60 per hour", methods=("POST",))
 def login():
     """Страница входа в систему с защитой от brute-force."""
     if request.method == 'POST':

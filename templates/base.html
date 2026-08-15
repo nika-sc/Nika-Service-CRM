@@ -137,6 +137,10 @@
     </div>
     {% endif %}
 
+    {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders') %}
+    {% include 'partials/diagnostics_modal.html' %}
+    {% endif %}
+
     <!-- jQuery (локально) -->
     <script src="{{ url_for('static', filename='cdn/jquery/3.6.0/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
@@ -153,6 +157,9 @@
     <!-- Socket.IO client (локально — без зависимости от внешнего CDN) -->
     <script src="{{ url_for('static', filename='cdn/socket.io/4.7.5/socket.io.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/staff_chat.js') }}"></script>
+    {% if current_user.is_authenticated and has_any_permission('view_orders', 'create_orders', 'edit_orders') %}
+    <script src="{{ url_for('static', filename='js/order_detail/diagnostics.js') }}"></script>
+    {% endif %}
     {% if demo_visitor_stats_enabled and current_user.is_authenticated %}
     <script src="{{ url_for('static', filename='js/demo_presence.js') }}"></script>
     {% endif %}

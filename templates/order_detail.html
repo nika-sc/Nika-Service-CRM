@@ -2497,6 +2497,7 @@
                                data-requires-comment="{{ status.requires_comment or 0 }}"
                                data-requires-warranty="{{ status.requires_warranty or 0 }}"
                                data-blocks-edit="{{ status.blocks_edit or 0 }}"
+                               data-is-final="{{ status.is_final or 0 }}"
                                data-order-id="{{ order.order_id }}"
                                data-order-db-id="{{ order.id }}">
                                 <span class="status-indicator" style="background-color: {{ status.color }};"></span>
@@ -2524,6 +2525,20 @@
         </div>
         </div>
                                             {% endif %}
+                                            <div class="compact-info-item">
+                                                <span class="compact-label"><i class="fas fa-stethoscope me-1"></i>Диагностика:</span>
+                                                <div class="compact-value">
+                                                    {% set diag_filled = (order.diagnostics or '')|trim %}
+                                                    <button type="button"
+                                                            class="btn btn-sm fw-semibold w-100 {% if diag_filled %}btn-success{% else %}btn-warning text-dark{% endif %}"
+                                                            id="openDiagnosticsBtn"
+                                                            data-has-diagnostics="{% if diag_filled %}1{% else %}0{% endif %}"
+                                                            title="{% if diag_filled %}Открыть диагностику{% else %}Заполните диагностику до закрытия заявки{% endif %}">
+                                                        <i class="fas fa-stethoscope me-1"></i>
+                                                        {% if diag_filled %}Диагностика{% else %}Нужна диагностика{% endif %}
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <div class="compact-info-item highlight-item">
                                                 <span class="compact-label"><i class="fas fa-user-tag me-1"></i>ФИО/Компания:</span>
                                                 <div class="compact-value">
@@ -5430,6 +5445,25 @@
                 requiresComment = statusDropdownItem.dataset.requiresComment === '1' || statusDropdownItem.dataset.requiresComment === 'true';
                 // Флаг requires_warranty удален - гарантия берется из карточки товара/услуги
             }
+
+            const blocksEditTarget = statusDropdownItem && (statusDropdownItem.dataset.blocksEdit === '1' || statusDropdownItem.dataset.blocksEdit === 'true');
+            const isFinalTarget = statusDropdownItem && (statusDropdownItem.dataset.isFinal === '1' || statusDropdownItem.dataset.isFinal === 'true');
+            if ((blocksEditTarget || isFinalTarget) && window.NikaDiagnostics && window.NikaDiagnostics.guardStatusChange) {
+                const numericId = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : orderDbId;
+                const shouldProceed = await window.NikaDiagnostics.guardStatusChange({
+                    numericId: numericId,
+                    orderId: orderId,
+                    orderDbId: numericId,
+                    statusId: statusId,
+                    statusName: statusName,
+                    statusColor: statusColor,
+                    statusCode: statusCode,
+                    buttonElement: buttonElement,
+                });
+                if (!shouldProceed) {
+                    return;
+                }
+            }
             
             // Валидация перед сменой статуса
             let comment = '';
@@ -5474,7 +5508,8 @@
                     },
                     body: JSON.stringify({
                         status_id: statusIdValue,
-                        comment: requiresComment ? (comment || '') : (comment || undefined)
+                        comment: requiresComment ? (comment || '') : (comment || undefined),
+                        client_instance_id: window.nikaStaffClientInstanceId || ''
                     })
                 });
                 
@@ -5773,6 +5808,22 @@
                     dropdown.querySelectorAll('.status-dropdown-item').forEach(item => {
                         item.classList.toggle('active', String(item.getAttribute('data-status-id')) === String(prevId));
                     });
+                }
+
+                if (window.NikaDiagnostics && window.NikaDiagnostics.isMissingDiagnosticsError(error.message)) {
+                    const numericId = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : orderDbId;
+                    window.NikaDiagnostics.openForOrder(numericId, {
+                        pendingStatus: {
+                            buttonElement: buttonElement,
+                            orderId: orderId,
+                            orderDbId: numericId,
+                            statusId: statusId,
+                            statusName: statusName,
+                            statusColor: statusColor,
+                            statusCode: statusCode,
+                        },
+                    });
+                    return;
                 }
                 
                 // Показываем ошибку

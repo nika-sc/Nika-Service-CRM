@@ -390,3 +390,89 @@ def test_csp_nonce_injected_on_request():
         nonce = getattr(g, "csp_nonce", None)
         assert nonce
         assert len(nonce) >= 8
+
+
+def test_api_without_login_returns_401_not_login_redirect():
+    app = create_app(_CsrfOffConfig)
+    client = app.test_client()
+    resp = client.get("/api/notifications/unread-count")
+    assert resp.status_code == 401
+    payload = resp.get_json() or {}
+    assert payload.get("success") is False
+    location = resp.headers.get("Location") or ""
+    assert "/login" not in location
+
+
+def test_login_rate_limit_decorator_skips_get():
+    import app.routes.main as main_mod
+
+    calls = []
+
+    class FakeLimiter:
+        def limit(self, limit_str):
+            def deco(f):
+                def wrapped(*args, **kwargs):
+                    calls.append(limit_str)
+                    return f(*args, **kwargs)
+                return wrapped
+            return deco
+
+    @main_mod.rate_limit_if_available("10 per minute", methods=("POST",))
+    def ping():
+        return "ok"
+
+    app = create_app(_CsrfOffConfig)
+    old = main_mod.limiter
+    try:
+        main_mod.limiter = FakeLimiter()
+        with app.test_request_context("/login", method="GET"):
+            assert ping() == "ok"
+            assert calls == []
+        with app.test_request_context("/login", method="POST", data={"username": "x"}):
+            assert ping() == "ok"
+            assert calls == ["10 per minute"]
+    finally:
+        main_mod.limiter = old
+
+
+def test_sniff_client_upload_accepts_jpeg_png_pdf_rejects_mismatch():
+    from app.utils.safe_files import sniff_client_upload
+
+    assert sniff_client_upload(b"\xff\xd8\xff\xe0rest", "photo.jpg") == "image/jpeg"
+    assert sniff_client_upload(b"\x89PNG\r\n\x1a\nrest", "shot.png") == "image/png"
+    assert sniff_client_upload(b"%PDF-1.4 rest", "doc.pdf") == "application/pdf"
+    assert sniff_client_upload(b"\xff\xd8\xff", "doc.pdf") is None
+    assert sniff_client_upload(b"%PDF-1.4", "photo.jpg") is None
+    assert sniff_client_upload(b"<svg></svg>", "x.svg") is None
+
+
+def test_portal_public_order_strips_device_password():
+    from app.routes.customer_portal import _portal_public_order
+
+    out = _portal_public_order({
+        "id": 1,
+        "password": "secret-device",
+        "diagnostics": "ok",
+        "comment": "staff only",
+    })
+    assert "password" not in out
+    assert "comment" not in out
+    assert out["diagnostics"] == "ok"
+
+
+def test_portal_file_forbids_foreign_customer(monkeypatch):
+    app = create_app(_CsrfOffConfig)
+
+    def fake_full(order_id):
+        return {"order": {"id": order_id, "customer_id": 999}}
+
+    monkeypatch.setattr(
+        "app.routes.customer_portal.OrderService.get_order_full_data",
+        fake_full,
+    )
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["portal_customer_id"] = 1
+        sess["portal_customer_name"] = "Client"
+    resp = client.get("/portal/api/order/5/file/1")
+    assert resp.status_code == 403

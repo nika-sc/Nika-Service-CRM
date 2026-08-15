@@ -3,6 +3,10 @@ Capture customer portal screenshots for docs.
 
 Default target is public demo:
   python scripts/capture_portal_screenshots.py
+
+Локально (только новые кадры кабинета):
+  python scripts/capture_portal_screenshots.py --base-url http://127.0.0.1:5000 \
+      --staff-user admin --staff-password 111111 --only 47,48,49
 """
 from __future__ import annotations
 
@@ -27,6 +31,11 @@ CABINET_SHOTS = (
     "38-portal-wallet.png",
 )
 
+# Кадры новых блоков кабинета (диагностика, чек, заявки по устройству)
+DIAG_SHOT = "47-portal-order-diagnostics.png"
+RECEIPT_SHOT = "48-portal-receipt.png"
+DEVICE_ORDERS_SHOT = "49-portal-device-orders.png"
+
 
 def _find_duplicates(out: Path, names: tuple[str, ...]) -> list[list[str]]:
     by_digest: dict[str, list[str]] = {}
@@ -49,11 +58,18 @@ def main() -> int:
         "--customer-id",
         type=int,
         default=None,
-        help="Клиент для съёмки кабинета. По умолчанию первый из /clients, "
-             "но у него может не быть заявок и платежей.",
+        help="Клиент для съёмки кабинета. По умолчанию берётся владелец заявки "
+             "с заполненной диагностикой, иначе первый из /clients.",
     )
     parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument(
+        "--only",
+        default="",
+        help="Снять только кадры, чьи имена содержат одну из подстрок через запятую "
+             "(например 47,48,49). Пусто — снимать всё.",
+    )
     args = parser.parse_args()
+    only = [part.strip() for part in args.only.split(",") if part.strip()]
 
     try:
         from playwright.sync_api import sync_playwright
@@ -76,6 +92,8 @@ def main() -> int:
         page.set_default_timeout(60000)
 
         def shot(name: str) -> None:
+            if only and not any(part in name for part in only):
+                return
             path = out / name
             page.screenshot(path=str(path), full_page=False)
             print("saved", path)
@@ -109,16 +127,55 @@ def main() -> int:
         goto("/clients", wait_ms=1800)
         shot("30-portal-clients-list.png")
 
+        def customer_with_diagnostics() -> str:
+            """Клиент, у которого есть заявка с заполненной диагностикой."""
+            try:
+                resp = page.request.post(
+                    f"{base}/api/datatables/orders",
+                    form={
+                        "draw": "1",
+                        "start": "0",
+                        "length": "40",
+                        "order[0][column]": "0",
+                        "order[0][dir]": "desc",
+                    },
+                )
+                ids = re.findall(r"/order/(\d+)", resp.text())
+                ids += re.findall(r'"DT_RowId"\s*:\s*"?(\d+)"?', resp.text())
+            except Exception as e:
+                print("WARN: orders list for diagnostics failed:", e)
+                return ""
+            seen: list[str] = []
+            for oid in ids:
+                if oid in seen:
+                    continue
+                seen.append(oid)
+                try:
+                    diag = page.request.get(f"{base}/api/order/{oid}/diagnostics")
+                    payload = diag.json() if diag.ok else {}
+                except Exception:
+                    continue
+                if not (payload.get("diagnostics") or "").strip():
+                    continue
+                goto(f"/order/{oid}", wait_ms=1200)
+                m_cust = re.search(r"/clients/(\d+)", page.content())
+                if m_cust:
+                    print("order with diagnostics", oid, "customer", m_cust.group(1))
+                    return f"/clients/{m_cust.group(1)}"
+            return ""
+
         # Open client card
         if args.customer_id:
             href = f"/clients/{args.customer_id}"
         else:
-            href = ""
-            for a in page.locator("a[href*='/clients/']").all():
-                link = a.get_attribute("href") or ""
-                if re.search(r"/clients/\d+$", link):
-                    href = link
-                    break
+            href = customer_with_diagnostics()
+            if not href:
+                goto("/clients", wait_ms=1500)
+                for a in page.locator("a[href*='/clients/']").all():
+                    link = a.get_attribute("href") or ""
+                    if re.search(r"/clients/\d+$", link):
+                        href = link
+                        break
             if not href:
                 raise RuntimeError("Could not find client detail link on /clients")
 
@@ -212,11 +269,77 @@ def main() -> int:
         goto("/portal/orders", wait_ms=1500)
         shot("35-portal-orders.png")
 
+        def open_order_modal() -> bool:
+            row = page.locator(".order-row, .order-link").first
+            if not row.count():
+                return False
+            row.click()
+            try:
+                page.wait_for_selector("#orderModalContent:not(.d-none)", timeout=20000)
+            except Exception:
+                return False
+            page.wait_for_timeout(900)
+            return True
+
+        # 40: детали заявки в кабинете — диагностика с фото
+        if open_order_modal():
+            diag = page.locator("#modalDiagnostics")
+            if diag.count():
+                diag.scroll_into_view_if_needed()
+                page.wait_for_timeout(400)
+            shot(DIAG_SHOT)
+
+            # Чек: window.print() в headless блокирует — собираем HTML и снимаем отдельной страницей
+            page.evaluate("window.print = function () {};")
+            page.locator("#btnPrintReceipt").click()
+            page.wait_for_timeout(600)
+            receipt_html = page.evaluate(
+                """() => {
+                    const area = document.getElementById('printReceiptArea');
+                    return area ? area.innerHTML : '';
+                }"""
+            )
+            if receipt_html and (not only or any(p in RECEIPT_SHOT for p in only)):
+                rec_page = context.new_page()
+                rec_page.set_content(
+                    "<!doctype html><html lang='ru'><head><meta charset='utf-8'>"
+                    "<style>"
+                    "html,body{margin:0;background:#fff;}"
+                    "body{padding:28px;}"
+                    ".portal-receipt{font-family:'Courier New',monospace;font-size:13px;"
+                    "max-width:420px;margin:0 auto;color:#111;}"
+                    ".portal-receipt table{width:100%;border-collapse:collapse;}"
+                    ".portal-receipt td{padding:4px 8px;text-align:left;border-bottom:1px dashed #ccc;}"
+                    ".portal-receipt .receipt-header{text-align:center;font-weight:bold;"
+                    "margin-bottom:12px;border-bottom:2px solid #000;padding-bottom:8px;}"
+                    ".portal-receipt .receipt-footer{margin-top:12px;border-top:2px solid #000;"
+                    "padding-top:8px;text-align:center;font-size:10px;color:#666;}"
+                    "</style></head><body>"
+                    + receipt_html
+                    + "</body></html>"
+                )
+                rec_page.wait_for_timeout(400)
+                rec_page.screenshot(path=str(out / RECEIPT_SHOT), full_page=True)
+                rec_page.close()
+                print("saved", out / RECEIPT_SHOT)
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(400)
+        else:
+            print("WARN: order modal not opened — skipped", DIAG_SHOT, RECEIPT_SHOT)
+
         goto("/portal/payments", wait_ms=1500)
         shot("36-portal-payments.png")
 
         goto("/portal/devices", wait_ms=1500)
         shot("37-portal-devices.png")
+
+        # 42: заявки по устройству — та же карточка заявки открывается из строки
+        if open_order_modal():
+            shot(DEVICE_ORDERS_SHOT)
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(300)
+        else:
+            print("WARN: device order modal not opened — skipped", DEVICE_ORDERS_SHOT)
 
         goto("/portal/wallet", wait_ms=1500)
         shot("38-portal-wallet.png")

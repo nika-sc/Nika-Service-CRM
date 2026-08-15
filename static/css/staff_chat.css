@@ -2,20 +2,34 @@
 .staff-chat-sidebar-btn {
     position: relative;
     border: 0;
-    background: transparent;
-    color: inherit;
+    background: rgba(43, 184, 166, 0.16);
+    color: #178f82;
     cursor: pointer;
     border-radius: 0;
 }
 
+.staff-chat-sidebar-btn i {
+    color: #2bb8a6;
+}
+
+.staff-chat-sidebar-btn small {
+    color: #178f82;
+    font-weight: 700;
+}
+
 .staff-chat-sidebar-btn:hover {
-    background-color: rgba(13, 110, 253, 0.08);
-    color: #0d6efd;
+    background-color: rgba(43, 184, 166, 0.28);
+    color: #12756b;
+}
+
+.staff-chat-sidebar-btn:hover i,
+.staff-chat-sidebar-btn:hover small {
+    color: #12756b;
 }
 
 .staff-chat-sidebar-btn.is-active {
-    background-color: rgba(13, 110, 253, 0.14);
-    color: #0d6efd;
+    background-color: rgba(43, 184, 166, 0.34);
+    color: #0f6a61;
 }
 
 .staff-chat-sidebar-btn.has-unread {
@@ -40,6 +54,22 @@
     width: 1.75rem;
     height: 1.75rem;
     overflow: visible;
+}
+
+.staff-chat-nav-btn {
+    position: relative;
+}
+.staff-chat-nav-btn .staff-chat-fab-badge {
+    top: -2px;
+    right: -2px;
+}
+.staff-chat-nav-btn.has-unread,
+.staff-chat-nav-btn.has-unread i {
+    color: #dc3545;
+}
+.staff-chat-nav-btn.is-active {
+    background-color: rgba(13, 110, 253, 0.14);
+    color: #0d6efd;
 }
 
 .staff-chat-fab-badge {

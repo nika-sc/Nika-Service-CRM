@@ -292,6 +292,13 @@ def create_app(config_class=Config):
         if last_active and lifetime > 0 and (now - float(last_active)) > lifetime:
             logout_user()
             session.clear()
+            path = request.path or ''
+            if path.startswith('/api/') or path.startswith('/portal/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'session_expired',
+                    'error_type': 'auth',
+                }), 401
             flash('Сессия истекла из-за неактивности. Войдите снова.', 'info')
             return redirect(url_for('main.login'))
         session['_staff_last_active'] = now
@@ -934,8 +941,9 @@ def create_app(config_class=Config):
     from app.routes.masters import bp as masters_bp
     from app.routes.managers import bp as managers_bp
     from app.routes.employees import bp as employees_bp
-    from app.routes.notifications import bp as notifications_bp
+    from app.routes.notifications import bp as notifications_bp, init_notifications_socketio
     from app.routes.comments import bp as comments_bp
+    from app.routes.order_diagnostics import bp as order_diagnostics_bp
     from app.routes.templates import bp as templates_bp
     from app.routes.search import bp as search_bp
     from app.routes.customer_portal import bp as customer_portal_bp
@@ -976,6 +984,7 @@ def create_app(config_class=Config):
     app.register_blueprint(employees_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(comments_bp)
+    app.register_blueprint(order_diagnostics_bp)
     app.register_blueprint(templates_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(customer_portal_bp)
@@ -991,6 +1000,10 @@ def create_app(config_class=Config):
             init_staff_chat_socketio(socketio)
         except Exception as e:
             app.logger.error("Не удалось инициализировать websocket staff chat: %s", e, exc_info=True)
+        try:
+            init_notifications_socketio(socketio)
+        except Exception as e:
+            app.logger.error("Не удалось инициализировать websocket уведомлений: %s", e, exc_info=True)
     
     # CSRF включён для state-changing endpoints.
     # Для JS запросов (fetch) токен добавляется автоматически в `templates/base.html` (X-CSRFToken).

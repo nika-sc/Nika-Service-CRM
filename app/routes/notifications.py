@@ -144,3 +144,25 @@ def set_preferences():
     except Exception as e:
         logger.error(f"Ошибка при установке настроек уведомлений: {e}")
         return api_internal_error(e)
+
+
+NOTIF_NAMESPACE = "/notifications"
+
+
+def init_notifications_socketio(socketio):
+    """Комната user_{id} для колокольчика на нескольких ПК одного логина."""
+    if not socketio:
+        return
+    try:
+        from flask_socketio import join_room
+        from flask_login import current_user
+    except Exception:
+        logger.warning("SocketIO недоступен, realtime уведомления не активированы")
+        return
+
+    @socketio.on("connect", namespace=NOTIF_NAMESPACE)
+    def on_notifications_connect():
+        if not getattr(current_user, "is_authenticated", False):
+            return False
+        join_room(f"user_{int(current_user.id)}")
+        return True

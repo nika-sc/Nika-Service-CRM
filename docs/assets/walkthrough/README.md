@@ -13,7 +13,15 @@ python scripts/capture_walkthrough_screenshots.py --base-url http://127.0.0.1:50
 
 SMTP / почта (иллюстрации гайда § 13.5): `39-smtp-mailru-correct.png`, `40-smtp-sender-mismatch.png`, `41-smtp-checklist.png`.
 
-PWA (гайд § 18 и блог): `42-pwa-chrome-install.png` … `45-pwa-mobile-add-home.png` —
+PWA (гайд § 18 и блог): `42-pwa-chrome-install.png` … `45-pwa-mobile-add-home.png`.
+
+Диагностика и кабинет (блог 27–28): `46-order-diagnostics.png`, `47-portal-order-diagnostics.png`, `48-portal-receipt.png`, `49-portal-device-orders.png`.
+
+```bash
+python scripts/seed_blog_shot_order.py
+python scripts/capture_walkthrough_screenshots.py --base-url http://127.0.0.1:5000 --user admin --password 111111 --order-id <order_id> --only 46-order-diagnostics
+python scripts/capture_portal_screenshots.py --base-url http://127.0.0.1:5000 --staff-user admin --staff-password 111111 --customer-id <customer_id> --only 35,36,37,47,48,49
+```
 
 ```bash
 python scripts/capture_pwa_screenshots.py

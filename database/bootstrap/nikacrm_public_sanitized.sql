@@ -5858,6 +5858,8 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 014	invoice_catalog_links	2026-07-28 00:00:00
 015	order_estimated_cost	2026-08-08 00:00:00
 016	receipt_appearance_estimated	2026-08-08 00:00:00
+017	order_diagnostics	2026-08-15 00:00:00
+018	order_diagnostics_history	2026-08-15 00:00:00
 \.
 
 
@@ -10609,3 +10611,31 @@ SET html_content = regexp_replace(
 WHERE template_type = 'customer'
   AND html_content ~ 'Предоплата:\s*##TOTAL_PAID##'
   AND html_content !~ 'Предварительная стоимость:\s*##ESTIMATED_COST##';
+
+-- Post-bootstrap schema: postgres migration 017 (idempotent)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS diagnostics TEXT;
+
+CREATE TABLE IF NOT EXISTS order_client_files (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type TEXT NOT NULL,
+    created_by INTEGER,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_client_files_order_id ON order_client_files(order_id);
+
+-- Post-bootstrap schema: postgres migration 018 (idempotent)
+CREATE TABLE IF NOT EXISTS order_diagnostics_history (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    created_by INTEGER,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_diagnostics_history_order_id
+    ON order_diagnostics_history(order_id);
