@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 class ReferenceService:
     """Сервис для работы со справочниками с кэшированием."""
+
+    DEFAULT_USED_APPEARANCE_TAG = "Бывший в употреблении"
     
     @staticmethod
     @cache_result(timeout=3600, key_prefix='ref_device_types')  # Кэш на 1 час
@@ -596,6 +598,64 @@ class ReferenceService:
             raise ValidationError("Тег с таким названием уже существует")
         except Exception as e:
             logger.error(f"Ошибка при создании тега: {e}")
+            raise DatabaseError(f"Ошибка при создании тега: {e}")
+
+    @staticmethod
+    def ensure_appearance_tag(name: str) -> int:
+        """Return appearance tag id, creating it if the name is missing (case-insensitive)."""
+        label = (name or "").strip()
+        if not label:
+            raise ValidationError("Название тега обязательно")
+
+        def _row_id(row):
+            if row is None:
+                return None
+            if isinstance(row, dict):
+                return int(row.get("id") or row.get("ID"))
+            return int(row[0])
+
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id FROM appearance_tags WHERE LOWER(name) = LOWER(?) LIMIT 1",
+                    (label,),
+                )
+                existing = _row_id(cursor.fetchone())
+                if existing:
+                    return existing
+
+                cursor.execute("SELECT MAX(sort_order) FROM appearance_tags")
+                max_row = cursor.fetchone()
+                max_order = None
+                if max_row is not None:
+                    max_order = max_row[0] if not isinstance(max_row, dict) else next(iter(max_row.values()), None)
+                sort_order = (max_order or 0) + 1
+                cursor.execute(
+                    '''
+                    INSERT INTO appearance_tags (name, sort_order)
+                    VALUES (?, ?)
+                    ''',
+                    (label, sort_order),
+                )
+                conn.commit()
+                clear_cache(key_prefix='ref_appearance_tags')
+                return int(cursor.lastrowid)
+        except sqlite3.IntegrityError:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id FROM appearance_tags WHERE LOWER(name) = LOWER(?) LIMIT 1",
+                    (label,),
+                )
+                existing = _row_id(cursor.fetchone())
+                if existing:
+                    return existing
+            raise ValidationError("Тег с таким названием уже существует")
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error("ensure_appearance_tag: %s", e)
             raise DatabaseError(f"Ошибка при создании тега: {e}")
     
     @staticmethod
@@ -1191,4 +1251,152 @@ class ReferenceService:
         except Exception as e:
             logger.error(f"Ошибка при удалении статуса {status_id}: {e}")
             raise DatabaseError(f"Ошибка при удалении статуса: {e}")
+
+    @staticmethod
+    def _order_models_has_links(cursor) -> bool:
+        try:
+            cursor.execute("PRAGMA table_info(order_models)")
+            cols = {row[1] for row in cursor.fetchall()}
+            return 'device_type_id' in cols and 'device_brand_id' in cols
+        except Exception:
+            return False
+
+    @staticmethod
+    def get_catalog_types() -> List[Dict[str, Any]]:
+        """Типы устройств, популярные сверху (по числу заявок)."""
+        with get_db_connection(row_factory=sqlite3.Row) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT dt.id, dt.name,
+                       COUNT(DISTINCT o.id) AS usage
+                FROM device_types dt
+                LEFT JOIN devices d ON d.device_type_id = dt.id
+                LEFT JOIN orders o ON o.device_id = d.id
+                    AND (o.hidden = 0 OR o.hidden IS NULL)
+                    AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                GROUP BY dt.id, dt.name
+                ORDER BY usage DESC, dt.name
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
+
+    @staticmethod
+    def get_catalog_brands(type_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Бренды: при выбранном типе — чаще встречающиеся с этим типом сверху."""
+        with get_db_connection(row_factory=sqlite3.Row) as conn:
+            cursor = conn.cursor()
+            if type_id:
+                cursor.execute('''
+                    SELECT db.id, db.name,
+                           COUNT(DISTINCT CASE WHEN d.device_type_id = ? THEN o.id END) AS usage
+                    FROM device_brands db
+                    LEFT JOIN devices d ON d.device_brand_id = db.id
+                    LEFT JOIN orders o ON o.device_id = d.id
+                        AND (o.hidden = 0 OR o.hidden IS NULL)
+                        AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                    GROUP BY db.id, db.name
+                    ORDER BY usage DESC, db.name
+                ''', (int(type_id),))
+            else:
+                cursor.execute('''
+                    SELECT db.id, db.name,
+                           COUNT(DISTINCT o.id) AS usage
+                    FROM device_brands db
+                    LEFT JOIN devices d ON d.device_brand_id = db.id
+                    LEFT JOIN orders o ON o.device_id = d.id
+                        AND (o.hidden = 0 OR o.hidden IS NULL)
+                        AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                    GROUP BY db.id, db.name
+                    ORDER BY usage DESC, db.name
+                ''')
+            return [dict(row) for row in cursor.fetchall()]
+
+    @staticmethod
+    def get_catalog_models(
+        type_id: Optional[int] = None,
+        brand_id: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Модели: при типе+марке — только связанные (по заявкам и по полям модели)."""
+        with get_db_connection(row_factory=sqlite3.Row) as conn:
+            cursor = conn.cursor()
+            has_links = ReferenceService._order_models_has_links(cursor)
+            if type_id and brand_id:
+                if has_links:
+                    cursor.execute('''
+                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
+                        FROM order_models om
+                        LEFT JOIN orders o ON o.model_id = om.id
+                            AND (o.hidden = 0 OR o.hidden IS NULL)
+                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                        LEFT JOIN devices d ON d.id = o.device_id
+                        WHERE (d.device_type_id = ? AND d.device_brand_id = ?)
+                           OR (om.device_type_id = ? AND om.device_brand_id = ?)
+                        GROUP BY om.id, om.name
+                        ORDER BY usage DESC, om.name
+                    ''', (int(type_id), int(brand_id), int(type_id), int(brand_id)))
+                else:
+                    cursor.execute('''
+                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
+                        FROM order_models om
+                        JOIN orders o ON o.model_id = om.id
+                            AND (o.hidden = 0 OR o.hidden IS NULL)
+                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                        JOIN devices d ON d.id = o.device_id
+                        WHERE d.device_type_id = ? AND d.device_brand_id = ?
+                        GROUP BY om.id, om.name
+                        ORDER BY usage DESC, om.name
+                    ''', (int(type_id), int(brand_id)))
+            elif type_id:
+                if has_links:
+                    cursor.execute('''
+                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
+                        FROM order_models om
+                        LEFT JOIN orders o ON o.model_id = om.id
+                            AND (o.hidden = 0 OR o.hidden IS NULL)
+                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                        LEFT JOIN devices d ON d.id = o.device_id
+                        WHERE d.device_type_id = ? OR om.device_type_id = ?
+                        GROUP BY om.id, om.name
+                        ORDER BY usage DESC, om.name
+                    ''', (int(type_id), int(type_id)))
+                else:
+                    cursor.execute('''
+                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
+                        FROM order_models om
+                        JOIN orders o ON o.model_id = om.id
+                            AND (o.hidden = 0 OR o.hidden IS NULL)
+                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                        JOIN devices d ON d.id = o.device_id
+                        WHERE d.device_type_id = ?
+                        GROUP BY om.id, om.name
+                        ORDER BY usage DESC, om.name
+                    ''', (int(type_id),))
+            else:
+                cursor.execute('''
+                    SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
+                    FROM order_models om
+                    LEFT JOIN orders o ON o.model_id = om.id
+                        AND (o.hidden = 0 OR o.hidden IS NULL)
+                        AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                    GROUP BY om.id, om.name
+                    ORDER BY usage DESC, om.name
+                ''')
+            return [dict(row) for row in cursor.fetchall()]
+
+    @staticmethod
+    def get_catalog_symptoms() -> List[Dict[str, Any]]:
+        """Симптомы, популярные сверху (по числу заявок)."""
+        with get_db_connection(row_factory=sqlite3.Row) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT s.id, s.name,
+                       COUNT(DISTINCT o.id) AS usage
+                FROM symptoms s
+                LEFT JOIN order_symptoms os ON os.symptom_id = s.id
+                LEFT JOIN orders o ON o.id = os.order_id
+                    AND (o.hidden = 0 OR o.hidden IS NULL)
+                    AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                GROUP BY s.id, s.name
+                ORDER BY usage DESC, s.name
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
 

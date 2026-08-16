@@ -16,6 +16,29 @@ def strip_page_at_rules(html: str) -> str:
     return re.sub(r"@page\s*\{[^}]*\}\s*", "", html, flags=re.IGNORECASE)
 
 
+def cleanup_estimated_cost_print_html(html: str, values: Dict[str, str]) -> str:
+    """Drop accidental literal \\n from SQL replacements; hide empty estimated-cost lines."""
+    if not html:
+        return html
+    html = html.replace("\\n", "\n").replace("\\r", "")
+    estimated = (values.get("ESTIMATED_COST") or "").strip()
+    if estimated:
+        return html
+    html = re.sub(
+        r"<p>\s*(?:<strong>)?\s*Предварительная стоимость:.*?(?:</strong>)?\s*</p>\s*",
+        "",
+        html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    html = re.sub(
+        r"<tr>\s*<td>\s*Предварительная стоимость:\s*</td>\s*<td>.*?</td>\s*</tr>\s*",
+        "",
+        html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return html
+
+
 def render_print_template(
     template_html: str,
     values: Dict[str, str],
@@ -128,6 +151,8 @@ def render_print_template(
             rendered_html,
             flags=re.IGNORECASE,
         )
+
+    rendered_html = cleanup_estimated_cost_print_html(rendered_html, values)
 
     try:
         from app.utils.template_html_sanitizer import sanitize_print_template_html

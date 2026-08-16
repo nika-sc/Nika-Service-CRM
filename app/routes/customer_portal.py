@@ -12,6 +12,7 @@ from app.utils.exceptions import ValidationError, NotFoundError
 from app.utils import login_lockout
 from app.utils.login_lockout import user_lockout_message
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,8 @@ def portal_login():
                 ):
                     session['portal_customer_id'] = customer_data['customer_id']
                     session['portal_customer_name'] = customer_data['name']
+                    session.permanent = True
+                    session['_portal_last_active'] = time.time()
                     _reset_portal_login_guard(login_key)
                     return redirect(url_for('customer_portal.portal_dashboard'))
                 else:
@@ -165,6 +168,8 @@ def portal_login():
             
             session['portal_customer_id'] = customer_data['customer_id']
             session['portal_customer_name'] = customer_data['name']
+            session.permanent = True
+            session['_portal_last_active'] = time.time()
             _reset_portal_login_guard(login_key)
             return redirect(url_for('customer_portal.portal_dashboard'))
         else:
@@ -172,7 +177,12 @@ def portal_login():
             return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
 
     prefill = (request.args.get('phone') or '').strip()[:32]
-    return render_template('portal/login.html', phone=prefill)
+    staff_hint = bool(getattr(current_user, 'is_authenticated', False))
+    return render_template(
+        'portal/login.html',
+        phone=prefill,
+        staff_hint=staff_hint,
+    )
 
 
 @bp.route('/set-password', methods=['GET', 'POST'])
@@ -242,6 +252,7 @@ def portal_logout():
     """Выход из личного кабинета."""
     session.pop('portal_customer_id', None)
     session.pop('portal_customer_name', None)
+    session.pop('_portal_last_active', None)
     return redirect(url_for('customer_portal.portal_login'))
 
 
@@ -270,12 +281,16 @@ def portal_dashboard():
         
         # Предоплата/переплата по заявкам (без депозитов)
         wallet_balance, _ = _get_prepayment_overpayment(customer_id)
+        ready_orders = [o for o in orders if _is_ready_for_pickup(o)]
+        org = _portal_org_card()
 
         return render_template('portal/dashboard.html',
                              customer=customer,
                              orders=orders,
                              payments=payments,
-                             wallet_balance=wallet_balance)
+                             wallet_balance=wallet_balance,
+                             ready_orders=ready_orders,
+                             org=org)
     except Exception as e:
         logger.error(f"Ошибка при загрузке дашборда портала: {e}")
         return render_template(
@@ -284,6 +299,8 @@ def portal_dashboard():
             orders=[],
             payments=[],
             wallet_balance=0.0,
+            ready_orders=[],
+            org=_portal_org_card(),
             error='Ошибка загрузки данных'
         )
 
@@ -297,8 +314,60 @@ def _portal_public_order(order_data: dict) -> dict:
         "manager_id",
         "master_id",
         "prepayment_method",
+        "manager_name",
+        "master_name",
     }
     return {k: v for k, v in (order_data or {}).items() if k not in drop}
+
+
+_PORTAL_LINE_DROP = frozenset({
+    "purchase_price",
+    "cost_price",
+    "executor_id",
+    "executor_username",
+    "executor_user_id",
+    "base_price",
+    "discount_type",
+    "discount_value",
+    "part_id",
+    "service_id",
+    "stock_quantity",
+    "category",
+    "part_number",
+    "salary_rule_type",
+    "salary_rule_value",
+})
+
+
+def sanitize_portal_order_lines(items):
+    """Убирает закупочные цены и исполнителей из позиций заявки для ЛК."""
+    out = []
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        out.append({k: v for k, v in it.items() if k not in _PORTAL_LINE_DROP})
+    return out
+
+
+def _is_ready_for_pickup(order: dict) -> bool:
+    if order.get("is_final"):
+        return False
+    code = str(order.get("status_code") or order.get("status") or "").lower()
+    name = str(order.get("status_name") or "").lower()
+    return ("ready" in code) or ("готов" in name)
+
+
+def _portal_org_card():
+    try:
+        from app.services.settings_service import SettingsService
+        s = SettingsService.get_general_settings() or {}
+        return {
+            "org_name": (s.get("org_name") or "").strip(),
+            "phone": (s.get("phone") or "").strip(),
+            "address": (s.get("address") or "").strip(),
+        }
+    except Exception:
+        return {"org_name": "", "phone": "", "address": ""}
 
 
 @bp.route('/api/order/<int:order_id>', methods=['GET'])
@@ -327,8 +396,8 @@ def portal_api_order(order_id):
         out = {
             'order': order_public,
             'device': full.get('device'),
-            'services': full.get('services', []),
-            'parts': full.get('parts', []),
+            'services': sanitize_portal_order_lines(full.get('services', [])),
+            'parts': sanitize_portal_order_lines(full.get('parts', [])),
             'payments': full.get('payments', []),
             'totals': full.get('totals', {}),
             'diagnostics_files': files,
@@ -488,5 +557,98 @@ def portal_wallet():
     except Exception as e:
         logger.error(f"Ошибка при загрузке кошелька портала: {e}")
         return render_template('portal/wallet.html', balance=0.0, order_rows=[], error='Ошибка загрузки данных')
+
+
+def _warranty_by_order_ids(order_ids):
+    """Макс. гарантия в днях по заявкам (товары + услуги)."""
+    if not order_ids:
+        return {}
+    from app.database.connection import get_db_connection
+    import sqlite3
+    placeholders = ",".join(["?"] * len(order_ids))
+    out = {}
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f"""
+                SELECT order_id, MAX(warranty_days)
+                FROM (
+                    SELECT order_id, warranty_days FROM order_parts
+                    WHERE order_id IN ({placeholders}) AND warranty_days IS NOT NULL
+                    UNION ALL
+                    SELECT order_id, warranty_days FROM order_services
+                    WHERE order_id IN ({placeholders}) AND warranty_days IS NOT NULL
+                ) w
+                GROUP BY order_id
+                """,
+                tuple(order_ids) + tuple(order_ids),
+            )
+            for row in cursor.fetchall():
+                out[int(row[0])] = int(row[1] or 0)
+    except Exception as e:
+        logger.warning("warranty lookup: %s", e)
+    return out
+
+
+@bp.route('/history', methods=['GET'])
+@rate_limit_if_available("60 per minute")
+def portal_history():
+    """История ремонтов: хронология заявок с диагностикой и гарантией."""
+    customer_id = session.get('portal_customer_id')
+    if not customer_id:
+        return redirect(url_for('customer_portal.portal_login'))
+    try:
+        orders = CustomerService.get_customer_orders(customer_id, limit=200)
+        warranty = _warranty_by_order_ids([o['id'] for o in orders])
+        for o in orders:
+            o['warranty_days'] = warranty.get(o['id']) or 0
+            o['ready_pickup'] = _is_ready_for_pickup(o)
+        return render_template('portal/history.html', orders=orders)
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке истории портала: {e}")
+        return render_template('portal/history.html', orders=[], error='Ошибка загрузки данных')
+
+
+@bp.route('/profile', methods=['GET', 'POST'])
+@rate_limit_if_available("20 per minute", methods=("POST",))
+def portal_profile():
+    """Профиль клиента: контакты СЦ и смена пароля."""
+    customer_id = session.get('portal_customer_id')
+    if not customer_id:
+        return redirect(url_for('customer_portal.portal_login'))
+    customer = CustomerService.get_customer(customer_id)
+    org = _portal_org_card()
+    success = None
+    error = None
+    if request.method == 'POST':
+        current_password = request.form.get('current_password') or ''
+        new_password = request.form.get('new_password') or ''
+        confirm = request.form.get('new_password_confirm') or ''
+        from app.utils.validators import password_meets_policy, PASSWORD_MAX_LEN
+        if new_password != confirm:
+            error = 'Новые пароли не совпадают.'
+        elif not password_meets_policy(new_password):
+            error = (
+                'Пароль слишком длинный.'
+                if len(new_password) > PASSWORD_MAX_LEN
+                else 'Новый пароль должен быть не менее 6 символов.'
+            )
+        elif not CustomerPortalService.change_own_password(customer_id, current_password, new_password):
+            error = 'Неверный текущий пароль.'
+        else:
+            success = 'Пароль обновлён.'
+            session.clear()
+            session['portal_customer_id'] = customer_id
+            session['portal_customer_name'] = (customer.name if customer else None) or session.get('portal_customer_name')
+            session.permanent = True
+            session['_portal_last_active'] = time.time()
+    return render_template(
+        'portal/profile.html',
+        customer=customer,
+        org=org,
+        success=success,
+        error=error,
+    )
 
 

@@ -275,6 +275,18 @@ class PaymentService:
                     )
                     
                     logger.info(f"Создана кассовая операция для оплаты {payment_id} заявки {order_id}")
+                    try:
+                        FinanceService.sync_order_direct_cogs(
+                            order_id,
+                            user_id=user_id,
+                            username=username,
+                            payment_method=payment_method,
+                        )
+                    except Exception as cogs_err:
+                        logger.warning(
+                            "Не удалось провести разовую себестоимость заявки %s: %s",
+                            order_id, cogs_err,
+                        )
                 except Exception as e:
                     # Логируем ошибку, но не прерываем создание оплаты
                     logger.error(f"Ошибка при создании кассовой операции для оплаты {payment_id}: {e}")

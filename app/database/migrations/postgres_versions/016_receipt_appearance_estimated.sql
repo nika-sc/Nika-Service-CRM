@@ -50,7 +50,7 @@ UPDATE print_templates
 SET html_content = regexp_replace(
         html_content,
         '(<p><strong>)Предоплата:\s*##TOTAL_PAID##',
-        '<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\n\1Предоплата: ##TOTAL_PAID##',
+        E'<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\n\\1Предоплата: ##TOTAL_PAID##',
         'g'
     ),
     updated_at = CURRENT_TIMESTAMP
@@ -63,7 +63,7 @@ UPDATE print_templates
 SET html_content = regexp_replace(
         html_content,
         '(<tr>\s*<td>Предоплата:</td>\s*<td><strong>)##PREPAYMENT##(\s*##CURRENCY##</strong></td>\s*</tr>)',
-        E'<tr><td>Предварительная стоимость:</td><td><strong>##ESTIMATED_COST## ##CURRENCY##</strong></td></tr>\\n\\1##PREPAYMENT##\\2',
+        E'<tr><td>Предварительная стоимость:</td><td><strong>##ESTIMATED_COST## ##CURRENCY##</strong></td></tr>\n\\1##PREPAYMENT##\\2',
         'g'
     ),
     updated_at = CURRENT_TIMESTAMP

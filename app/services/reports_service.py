@@ -373,8 +373,8 @@ class ReportsService:
                 # Объединяем продажи из заявок и из магазина
                 # Используем UNION ALL для объединения данных
                 
-                # 1. Продажи из заявок (order_parts)
-                where_clauses_order = ["(o.hidden = 0 OR o.hidden IS NULL)", "p.is_deleted = 0"]
+                # 1. Продажи из заявок (order_parts): склад и разовые без part_id
+                where_clauses_order = ["(o.hidden = 0 OR o.hidden IS NULL)"]
                 params_order = []
                 
                 if date_from:
@@ -389,20 +389,21 @@ class ReportsService:
                 
                 query_order = f'''
                     SELECT 
-                        p.id AS part_id,
-                        p.name AS part_name,
-                        p.part_number,
-                        COALESCE(pc.name, p.category) AS category,
+                        op.part_id AS part_id,
+                        COALESCE(p.name, op.name, 'Разовый товар') AS part_name,
+                        COALESCE(p.part_number, '') AS part_number,
+                        COALESCE(pc.name, p.category, 'Разовый') AS category,
                         SUM(op.quantity) AS total_sold,
                         SUM(op.quantity * op.price) AS total_revenue,
                         AVG(COALESCE(op.purchase_price, p.purchase_price, 0)) AS avg_purchase_price,
                         AVG(op.price) AS avg_retail_price
                     FROM order_parts AS op
                     JOIN orders AS o ON o.id = op.order_id
-                    JOIN parts AS p ON p.id = op.part_id
+                    LEFT JOIN parts AS p ON p.id = op.part_id AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
                     LEFT JOIN part_categories AS pc ON pc.id = p.category_id
                     {where_sql_order}
-                    GROUP BY p.id, p.name, p.part_number, COALESCE(pc.name, p.category)
+                    GROUP BY op.part_id, COALESCE(p.name, op.name, 'Разовый товар'),
+                             COALESCE(p.part_number, ''), COALESCE(pc.name, p.category, 'Разовый')
                     HAVING SUM(op.quantity) > 0
                 '''
                 
@@ -492,8 +493,9 @@ class ReportsService:
                 total_margin = total_revenue - total_cost
                 total_margin_percent = (total_margin / total_revenue * 100) if total_revenue > 0 else 0
 
-                # Выручка по услугам (заявки + магазин)
+                # Выручка и себестоимость услуг (заявки + магазин)
                 services_revenue = 0.0
+                services_cost = 0.0
                 try:
                     svc_params = []
                     svc_where_order = []
@@ -524,12 +526,23 @@ class ReportsService:
                         WHERE ssi.item_type = 'service'{svc_where_shop_sql}
                     ''', svc_params)
                     shop_services_total = cursor.fetchone()['total'] or 0
-                    
                     services_revenue = float(order_services_total) + float(shop_services_total)
+
+                    cursor.execute(f'''
+                        SELECT COALESCE(SUM(COALESCE(os.cost_price, 0) * COALESCE(os.quantity, 1)), 0) AS total
+                        FROM order_services os
+                        JOIN orders o ON o.id = os.order_id
+                        WHERE (o.hidden = 0 OR o.hidden IS NULL){svc_where_order_sql}
+                    ''', svc_params)
+                    cost_row = cursor.fetchone()
+                    services_cost = float((cost_row['total'] if cost_row else 0) or 0)
                 except Exception as e:
                     logger.warning(f"Не удалось посчитать выручку по услугам: {e}")
                 
+                total_cost = total_cost + services_cost
                 total_revenue_all = total_revenue + services_revenue
+                total_margin = (total_revenue + services_revenue) - total_cost
+                total_margin_percent = (total_margin / total_revenue_all * 100) if total_revenue_all > 0 else 0
                 
                 return {
                     'items': items,
@@ -538,6 +551,7 @@ class ReportsService:
                     'total_margin': total_margin,
                     'total_margin_percent': total_margin_percent,
                     'services_revenue': services_revenue,
+                    'services_cost': services_cost,
                     'total_revenue_all': total_revenue_all,
                     'date_from': date_from,
                     'date_to': date_to

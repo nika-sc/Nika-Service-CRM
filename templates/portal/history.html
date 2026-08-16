@@ -1,0 +1,57 @@
+{% extends "portal/base.html" %}
+
+{% block title %}История ремонта{% endblock %}
+
+{% block content %}
+<h4 class="mb-2"><i class="fas fa-history me-2"></i>История ремонта</h4>
+<p class="text-muted mb-4">Все обращения в сервис: диагностика, статус и гарантия. Список устройств — во вкладке «Мои устройства».</p>
+
+{% if orders %}
+<div class="timeline">
+    {% for o in orders %}
+    <div class="card mb-3 border-0 shadow-sm order-row" data-order-id="{{ o.id }}" style="cursor: pointer;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <div class="fw-semibold">
+                        Заявка #{{ o.order_id or o.id }}
+                        {% if o.ready_pickup %}
+                        <span class="badge bg-success ms-1">Можно забирать</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">
+                        {{ o.created_at|format_date(true) if o.created_at else '—' }}
+                        · {{ o.device_type or '—' }} {{ o.device_brand or '' }}
+                        {% if o.model %} · {{ o.model }}{% endif %}
+                        {% if o.serial_number %} · № {{ o.serial_number }}{% endif %}
+                    </div>
+                </div>
+                <span class="badge" style="background-color: {{ o.status_color or '#6c757d' }}; color: white;">
+                    {{ o.status_name or 'Без статуса' }}
+                </span>
+            </div>
+            {% if o.symptom_tags %}
+            <p class="mb-1 mt-2 small"><i class="fas fa-wrench me-1 text-muted"></i>{{ o.symptom_tags }}</p>
+            {% endif %}
+            {% if o.diagnostics %}
+            <p class="mb-1 small"><i class="fas fa-stethoscope me-1 text-muted"></i>{{ o.diagnostics[:280] }}{% if o.diagnostics|length > 280 %}…{% endif %}</p>
+            {% endif %}
+            <div class="d-flex flex-wrap gap-3 mt-2 small text-muted">
+                <span>Оплачено: {{ "%.2f"|format(o.total_paid|default(0)) }} ₽</span>
+                {% if o.warranty_days %}
+                <span>Гарантия: {{ o.warranty_days }} дн. с даты приёма</span>
+                {% endif %}
+                {% if o.estimated_cost and o.estimated_cost|string != '0' %}
+                <span>Оценка: {{ o.estimated_cost }} ₽</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>Пока нет заявок в этом кабинете
+</div>
+{% endif %}
+{% endblock %}

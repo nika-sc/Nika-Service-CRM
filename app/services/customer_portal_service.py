@@ -228,6 +228,24 @@ class CustomerPortalService:
         except Exception as e:
             logger.error(f"Ошибка при установке пароля портала: {e}")
             return False
+
+    @staticmethod
+    def change_own_password(customer_id: int, current_password: str, new_password: str) -> bool:
+        """Клиент меняет пароль ЛК, зная текущий. Без логирования паролей."""
+        from app.utils.validators import password_eligible_for_verify, password_meets_policy
+        from werkzeug.security import check_password_hash
+        from app.models.customer import Customer
+
+        if not password_eligible_for_verify(current_password) or not password_meets_policy(new_password):
+            return False
+        customer = Customer.get_by_id(customer_id)
+        if not customer or not customer.portal_password_hash:
+            return False
+        if not check_password_hash(customer.portal_password_hash, current_password):
+            return False
+        return CustomerPortalService.set_portal_password(
+            customer_id, new_password, reset_change_flag=False
+        )
     
     @staticmethod
     def generate_and_set_portal_password(customer_id: int) -> Optional[str]:

@@ -40,3 +40,37 @@ def test_keeps_safe_styles_only_by_property_name():
     out = sanitize_print_template_html(html)
     assert "font-size: 12px" in out
     assert "position" not in out.lower()
+
+
+def test_empty_estimated_cost_hides_line_and_literal_newline():
+    from app.utils.print_template_renderer import render_print_template
+
+    html = (
+        '<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\\n'
+        '<p><strong>Предоплата: ##TOTAL_PAID##</strong></p>'
+    )
+    out = render_print_template(
+        html,
+        {"ESTIMATED_COST": "", "CURRENCY": "RUB", "TOTAL_PAID": "0.00"},
+        [],
+    )
+    assert "\\n" not in out
+    assert "Предварительная стоимость" not in out
+    assert "Предоплата: 0.00" in out
+
+
+def test_estimated_cost_shown_when_set():
+    from app.utils.print_template_renderer import render_print_template
+
+    html = (
+        '<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\\n'
+        '<p><strong>Предоплата: ##TOTAL_PAID##</strong></p>'
+    )
+    out = render_print_template(
+        html,
+        {"ESTIMATED_COST": "1500.00", "CURRENCY": "RUB", "TOTAL_PAID": "0.00"},
+        [],
+    )
+    assert "\\n" not in out
+    assert "1500.00" in out
+    assert "Предварительная стоимость" in out

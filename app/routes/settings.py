@@ -58,6 +58,49 @@ def rate_limit_if_available(limit_str):
         return wrapper
     return decorator
 
+@bp.route('/catalog/types', methods=['GET'])
+@login_required
+def api_catalog_types():
+    try:
+        return jsonify(ReferenceService.get_catalog_types())
+    except Exception as e:
+        logger.error("catalog types: %s", e)
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@bp.route('/catalog/brands', methods=['GET'])
+@login_required
+def api_catalog_brands():
+    try:
+        type_id = request.args.get('type_id', type=int)
+        return jsonify(ReferenceService.get_catalog_brands(type_id=type_id))
+    except Exception as e:
+        logger.error("catalog brands: %s", e)
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@bp.route('/catalog/models', methods=['GET'])
+@login_required
+def api_catalog_models():
+    try:
+        type_id = request.args.get('type_id', type=int)
+        brand_id = request.args.get('brand_id', type=int)
+        return jsonify(ReferenceService.get_catalog_models(type_id=type_id, brand_id=brand_id))
+    except Exception as e:
+        logger.error("catalog models: %s", e)
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@bp.route('/catalog/symptoms', methods=['GET'])
+@login_required
+def api_catalog_symptoms():
+    try:
+        return jsonify(ReferenceService.get_catalog_symptoms())
+    except Exception as e:
+        logger.error("catalog symptoms: %s", e)
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
 # Device Types
 @bp.route('/device-types', methods=['GET', 'POST'])
 @login_required
@@ -354,6 +397,8 @@ def api_order_models():
         try:
             data = request.get_json(silent=True) or {}
             name = data.get('name', '').strip()
+            type_id = data.get('device_type_id') or data.get('type_id')
+            brand_id = data.get('device_brand_id') or data.get('brand_id')
             
             if not name:
                 return jsonify({'success': False, 'error': 'Название обязательно'}), 400
@@ -369,10 +414,34 @@ def api_order_models():
                 cursor.execute('SELECT id FROM order_models WHERE name = ?', (normalized,))
                 existing = cursor.fetchone()
                 if existing:
-                    return jsonify({'success': True, 'id': existing[0], 'name': normalized})
+                    model_id = existing[0]
+                    try:
+                        if type_id and brand_id:
+                            cursor.execute(
+                                '''
+                                UPDATE order_models
+                                SET device_type_id = COALESCE(device_type_id, ?),
+                                    device_brand_id = COALESCE(device_brand_id, ?)
+                                WHERE id = ?
+                                ''',
+                                (int(type_id), int(brand_id), model_id),
+                            )
+                            conn.commit()
+                    except Exception:
+                        pass
+                    return jsonify({'success': True, 'id': model_id, 'name': normalized})
                 
-                # Создаем новую модель
-                cursor.execute('INSERT INTO order_models (name) VALUES (?)', (normalized,))
+                try:
+                    cursor.execute(
+                        'INSERT INTO order_models (name, device_type_id, device_brand_id) VALUES (?, ?, ?)',
+                        (
+                            normalized,
+                            int(type_id) if type_id else None,
+                            int(brand_id) if brand_id else None,
+                        ),
+                    )
+                except Exception:
+                    cursor.execute('INSERT INTO order_models (name) VALUES (?)', (normalized,))
                 conn.commit()
                 model_id = cursor.lastrowid
                 log_settings_action('create', 'order_model', model_id,

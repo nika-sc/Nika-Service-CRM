@@ -3,6 +3,28 @@
 {% block title %}Главная{% endblock %}
 
 {% block content %}
+{% if ready_orders %}
+<div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+        <i class="fas fa-box-open me-2"></i>
+        {% if ready_orders|length == 1 %}
+        Устройство по заявке <strong>#{{ ready_orders[0].order_id or ready_orders[0].id }}</strong> готово — можно забирать.
+        {% else %}
+        Готово к выдаче: {{ ready_orders|length }} заявок.
+        {% endif %}
+    </div>
+    <a class="btn btn-sm btn-success" href="{{ url_for('customer_portal.portal_history') }}">История ремонта</a>
+</div>
+{% endif %}
+
+{% if org and (org.phone or org.address) %}
+<div class="alert alert-light border mb-4">
+    <strong>{{ org.org_name or 'Сервисный центр' }}</strong>
+    {% if org.phone %} · <a href="tel:{{ org.phone }}">{{ org.phone }}</a>{% endif %}
+    {% if org.address %} · {{ org.address }}{% endif %}
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-md-4 mb-4">
         <div class="card border-primary">

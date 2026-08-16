@@ -5387,8 +5387,15 @@
         }
 
         function runAutoPrintFromQueryIfNeeded() {
-            // Авто-печать по параметру auto_print отключена (не открываем диалог печати при загрузке/перезагрузке)
-            return;
+            const url = new URL(window.location.href);
+            const flag = (url.searchParams.get('print') || url.searchParams.get('auto_print') || '').toLowerCase();
+            const shouldPrint = flag === '1' || flag === 'true' || flag === 'yes' || flag === 'customer' || flag === 'receipt';
+            if (!shouldPrint) return;
+            url.searchParams.delete('print');
+            url.searchParams.delete('auto_print');
+            const qs = url.searchParams.toString();
+            history.replaceState(null, '', url.pathname + (qs ? '?' + qs : '') + url.hash);
+            setTimeout(() => { window.print(); }, 250);
         }
 
         let pendingClosedPrintAfterPayment = false;
@@ -8422,12 +8429,19 @@
                     id: s.id,
                     name: s.name,
                     price: Number(s.price || 0),
-                    sort_order: s.sort_order
+                    sort_order: s.sort_order,
+                    usage_count: Number(s.usage_count || 0)
                 }))
                 .filter(s => s.id && s.name);
-            if (hasSort) {
-                list.sort((a, b) => (Number(a.sort_order || 0) - Number(b.sort_order || 0)) || a.name.localeCompare(b.name, 'ru'));
-            }
+            list.sort((a, b) => {
+                const usageDiff = (Number(b.usage_count || 0) - Number(a.usage_count || 0));
+                if (usageDiff) return usageDiff;
+                if (hasSort) {
+                    const so = (Number(a.sort_order || 0) - Number(b.sort_order || 0));
+                    if (so) return so;
+                }
+                return a.name.localeCompare(b.name, 'ru');
+            });
             return list;
         }
 

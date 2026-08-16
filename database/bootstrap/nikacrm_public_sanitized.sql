@@ -5859,7 +5859,8 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 015	order_estimated_cost	2026-08-08 00:00:00
 016	receipt_appearance_estimated	2026-08-08 00:00:00
 017	order_diagnostics	2026-08-15 00:00:00
-018	order_diagnostics_history	2026-08-15 00:00:00
+019	order_model_catalog_links	2026-08-16 00:00:00
+020	receipt_estimated_literal_newline	2026-08-16 00:00:00
 \.
 
 
@@ -10604,7 +10605,7 @@ UPDATE print_templates
 SET html_content = regexp_replace(
         html_content,
         '(<p><strong>)Предоплата:\s*##TOTAL_PAID##',
-        '<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\n\1Предоплата: ##TOTAL_PAID##',
+        E'<p><strong>Предварительная стоимость: ##ESTIMATED_COST## ##CURRENCY##</strong></p>\n\\1Предоплата: ##TOTAL_PAID##',
         'g'
     ),
     updated_at = CURRENT_TIMESTAMP
@@ -10639,3 +10640,15 @@ CREATE TABLE IF NOT EXISTS order_diagnostics_history (
 
 CREATE INDEX IF NOT EXISTS idx_order_diagnostics_history_order_id
     ON order_diagnostics_history(order_id);
+
+-- Post-bootstrap schema: postgres migration 019 (idempotent)
+ALTER TABLE order_models ADD COLUMN IF NOT EXISTS device_type_id BIGINT;
+ALTER TABLE order_models ADD COLUMN IF NOT EXISTS device_brand_id BIGINT;
+CREATE INDEX IF NOT EXISTS idx_order_models_type_brand
+    ON order_models(device_type_id, device_brand_id);
+
+-- Post-bootstrap schema: postgres migration 020 (idempotent)
+UPDATE print_templates
+SET html_content = replace(html_content, E'\\n', E'\n'),
+    updated_at = CURRENT_TIMESTAMP
+WHERE position(E'\\n' in html_content) > 0;

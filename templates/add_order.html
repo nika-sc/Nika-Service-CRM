@@ -387,6 +387,17 @@
             color: #fff !important;
         }
 
+        .ts-dropdown .optgroup-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #6c757d;
+            padding: 6px 8px 2px;
+        }
+        html[data-bs-theme="dark"] .ts-dropdown .optgroup-header,
+        body.dark .ts-dropdown .optgroup-header {
+            color: #adb5bd;
+        }
+
         /* Вид "одного тега" для single TomSelect (Тип/Бренд/Модель) */
         .ts-chip-single {
             display: inline-flex;
@@ -718,6 +729,133 @@
             };
         }
 
+        const CATALOG_TOP_N = 10;
+        const DEFAULT_APPEARANCE_TAG = 'Бывший в употреблении';
+        const CATALOG_OPTGROUPS = [
+            {value: 'frequent', label: 'Частые'},
+            {value: 'other', label: 'Остальные'}
+        ];
+
+        function catalogTomSelectExtras() {
+            return {
+                sortField: [
+                    {field: 'pin', direction: 'asc'},
+                    {field: 'usage', direction: 'desc'},
+                    {field: 'text', direction: 'asc'}
+                ],
+                optgroups: CATALOG_OPTGROUPS,
+                optgroupField: 'optgroup',
+                lockOptgroupOrder: true,
+                maxOptions: null
+            };
+        }
+
+        function pinCatalogItems(items, valueKey, textKey, topN) {
+            const ranked = (items || []).map(it => ({
+                value: String(it[valueKey] == null ? '' : it[valueKey]),
+                text: String(it[textKey] == null ? '' : it[textKey]),
+                usage: Number(it.usage || 0)
+            })).filter(it => it.value);
+            ranked.sort((a, b) => (b.usage - a.usage) || a.text.localeCompare(b.text, 'ru'));
+            const frequent = ranked.slice(0, topN);
+            const frequentIds = new Set(frequent.map(it => it.value));
+            const rest = ranked.filter(it => !frequentIds.has(it.value));
+            rest.sort((a, b) => a.text.localeCompare(b.text, 'ru'));
+            const hasSplit = rest.length > 0;
+            return frequent.map(it => ({
+                ...it,
+                pin: 0,
+                optgroup: hasSplit ? 'frequent' : undefined
+            })).concat(rest.map(it => ({
+                ...it,
+                pin: 1,
+                optgroup: hasSplit ? 'other' : undefined
+            })));
+        }
+
+        function fillTomOptions(instance, selectId, items, valueKey, textKey, preserveExtras) {
+            if (!instance || !Array.isArray(items)) return;
+            const current = instance.getValue();
+            const currentValues = Array.isArray(current)
+                ? current.map(String).filter(Boolean)
+                : (current ? [String(current)] : []);
+            const pinned = pinCatalogItems(items, valueKey, textKey, CATALOG_TOP_N);
+            const keep = new Set(pinned.map(it => it.value));
+            const hasSplit = pinned.some(it => it.optgroup === 'other');
+
+            if (preserveExtras) {
+                Object.keys(instance.options || {}).forEach(val => {
+                    if (!val || keep.has(String(val))) return;
+                    const opt = instance.options[val] || {};
+                    pinned.push({
+                        value: String(val),
+                        text: opt.text || String(val),
+                        usage: Number(opt.usage || 0),
+                        pin: 1,
+                        optgroup: hasSplit ? 'other' : undefined
+                    });
+                    keep.add(String(val));
+                });
+            }
+
+            const selectElement = document.getElementById(selectId);
+            let emptyText = '';
+            if (selectElement) {
+                const emptyOpt = Array.from(selectElement.options).find(opt => opt.value === '');
+                emptyText = emptyOpt ? emptyOpt.textContent : '';
+            }
+
+            if (typeof instance.clearOptions === 'function') {
+                instance.clearOptions();
+            } else {
+                Object.keys(instance.options || {}).forEach(val => {
+                    try { instance.removeOption(val); } catch (e) {}
+                });
+            }
+
+            if (typeof instance.addOptionGroup === 'function') {
+                instance.addOptionGroup('frequent', {label: 'Частые'});
+                instance.addOptionGroup('other', {label: 'Остальные'});
+            }
+
+            if (selectElement) {
+                selectElement.innerHTML = '';
+                if (instance.settings && instance.settings.allowEmptyOption) {
+                    selectElement.add(new Option(emptyText || 'Выберите...', ''));
+                }
+                pinned.forEach(it => selectElement.add(new Option(it.text, it.value)));
+            }
+
+            if (instance.settings && instance.settings.allowEmptyOption) {
+                instance.addOption({
+                    value: '',
+                    text: emptyText || 'Выберите...',
+                    pin: -1,
+                    usage: -1
+                });
+            }
+            pinned.forEach(it => {
+                instance.addOption({
+                    value: it.value,
+                    text: it.text,
+                    usage: it.usage,
+                    pin: it.pin,
+                    optgroup: it.optgroup
+                });
+            });
+
+            if (currentValues.length) {
+                const still = currentValues.filter(v => keep.has(v));
+                if (Array.isArray(current)) {
+                    instance.setValue(still, true);
+                } else if (still.length) {
+                    instance.setValue(still[0], true);
+                } else {
+                    instance.clear(true);
+                }
+            }
+        }
+
         function hideClientNameSuggest() {
             if (!clientNameSuggest) return;
             clientNameSuggest.innerHTML = '';
@@ -955,34 +1093,17 @@
                         });
                 });
             },
-            sortField: {
-                field: 'text',
-                direction: 'asc'
-            },
+            ...catalogTomSelectExtras(),
             placeholder: 'Выберите или впишите тип устройства...',
-            maxOptions: null,
             hideSelected: false,
             allowEmptyOption: true,
             plugins: ['input_autogrow']
         });
         
-        // Загружаем все существующие типы устройств из API (на случай, если были добавлены новые)
-        fetch('/api/device-types')
+        // Загружаем типы по популярности (топ-10 сверху)
+        fetch('/api/catalog/types')
             .then(res => res.json())
-            .then(types => {
-                if (Array.isArray(types)) {
-                    types.forEach(type => {
-                        const selectElement = document.getElementById('deviceType');
-                        // Проверяем, нет ли уже такой опции
-                        const exists = Array.from(selectElement.options).some(opt => opt.value == type.id);
-                        if (!exists) {
-                            const option = new Option(type.name, type.id);
-                            selectElement.add(option);
-                            tomDeviceType.addOption({ value: String(type.id), text: type.name });
-                        }
-                    });
-                }
-            })
+            .then(types => fillTomOptions(tomDeviceType, 'deviceType', types, 'id', 'name'))
             .catch(error => {
                 console.error('Ошибка при загрузке типов устройств:', error);
             });
@@ -1087,34 +1208,17 @@
                         });
                 });
             },
-            sortField: {
-                field: 'text',
-                direction: 'asc'
-            },
+            ...catalogTomSelectExtras(),
             placeholder: 'Выберите или впишите бренд...',
-            maxOptions: null,
             hideSelected: false,
             allowEmptyOption: true,
             plugins: ['input_autogrow']
         });
         
-        // Загружаем все существующие бренды устройств из API (на случай, если были добавлены новые)
-        fetch('/api/device-brands')
+        // Загружаем бренды по популярности (топ-10 сверху; фильтр типа — при выборе)
+        fetch('/api/catalog/brands')
             .then(res => res.json())
-            .then(brands => {
-                if (Array.isArray(brands)) {
-                    brands.forEach(brand => {
-                        const selectElement = document.getElementById('deviceBrand');
-                        // Проверяем, нет ли уже такой опции
-                        const exists = Array.from(selectElement.options).some(opt => opt.value == brand.id);
-                        if (!exists) {
-                            const option = new Option(brand.name, brand.id);
-                            selectElement.add(option);
-                            tomDeviceBrand.addOption({ value: String(brand.id), text: brand.name });
-                        }
-                    });
-                }
-            })
+            .then(brands => fillTomOptions(tomDeviceBrand, 'deviceBrand', brands, 'id', 'name'))
             .catch(error => {
                 console.error('Ошибка при загрузке брендов устройств:', error);
             });
@@ -1135,7 +1239,11 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ name: normalized })
+                    body: JSON.stringify({
+                        name: normalized,
+                        type_id: tomDeviceType ? tomDeviceType.getValue() : null,
+                        brand_id: tomDeviceBrand ? tomDeviceBrand.getValue() : null
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -1159,40 +1267,53 @@
                     callback({ value: normalized, text: normalized });
                 });
             },
-            sortField: {
-                field: 'text',
-                direction: 'asc'
-            },
+            ...catalogTomSelectExtras(),
             placeholder: 'Выберите или введите модель...',
-            maxOptions: null,
             hideSelected: false,
             allowEmptyOption: true,
             plugins: ['input_autogrow']
         });
         
-        // Загружаем существующие модели
-        fetch('/api/order-models')
-            .then(res => res.json())
-            .then(models => {
-                if (Array.isArray(models)) {
-                    models.forEach(model => {
-                        const selectElement = document.getElementById('model');
-                        // Проверяем, нет ли уже такой опции
-                        const exists = Array.from(selectElement.options).some(opt => opt.value === model.name);
-                        if (!exists) {
-                            const option = new Option(model.name, model.name);
-                            selectElement.add(option);
-                            tomModel.addOption({ value: model.name, text: model.name });
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при загрузке моделей:', error);
-            });
-        
         // Убеждаемся, что по умолчанию ничего не выбрано
         tomModel.clear();
+
+        async function reloadCatalogBrands() {
+            const typeId = tomDeviceType ? tomDeviceType.getValue() : '';
+            const url = typeId ? `/api/catalog/brands?type_id=${encodeURIComponent(typeId)}` : '/api/catalog/brands';
+            const res = await fetch(url);
+            const brands = await res.json();
+            fillTomOptions(tomDeviceBrand, 'deviceBrand', brands, 'id', 'name');
+        }
+
+        async function reloadCatalogModels() {
+            const typeId = tomDeviceType ? tomDeviceType.getValue() : '';
+            const brandId = tomDeviceBrand ? tomDeviceBrand.getValue() : '';
+            let url = '/api/catalog/models';
+            if (typeId && brandId) {
+                url += `?type_id=${encodeURIComponent(typeId)}&brand_id=${encodeURIComponent(brandId)}`;
+            } else if (typeId) {
+                url += `?type_id=${encodeURIComponent(typeId)}`;
+            }
+            const res = await fetch(url);
+            const models = await res.json();
+            fillTomOptions(tomModel, 'model', models, 'name', 'name');
+        }
+
+        if (tomDeviceType && typeof tomDeviceType.on === 'function') {
+            tomDeviceType.on('change', () => {
+                reloadCatalogBrands().then(reloadCatalogModels).catch(() => {});
+            });
+        }
+        if (tomDeviceBrand && typeof tomDeviceBrand.on === 'function') {
+            tomDeviceBrand.on('change', () => {
+                reloadCatalogModels().catch(() => {});
+            });
+        }
+
+        fetch('/api/catalog/models')
+            .then(res => res.json())
+            .then(models => fillTomOptions(tomModel, 'model', models, 'name', 'name'))
+            .catch(error => console.error('Ошибка при загрузке моделей:', error));
 
         // На некоторых окружениях TomSelect всё равно наследует тёмный текст из bootstrap-скина.
         // Делаем runtime-fix инлайн-стилями для полей Тип/Бренд/Модель в dark theme.
@@ -1304,7 +1425,8 @@
             symptomTagsInput,
             CUSTOM_SYMPTOM_KEY,
             'Выберите или впишите симптом',
-            6
+            6,
+            true
         );
 
         const tomAppearanceTags = createPersistentTagSelect(
@@ -1312,7 +1434,8 @@
             intakeChecklistInput,
             CUSTOM_APPEARANCE_KEY,
             'Выберите внешний вид/комплект',
-            8
+            8,
+            false
         );
         bindTildeSelect(tomSymptomTags, () => tomAppearanceTags);
         bindTildeSelect(tomAppearanceTags, '#estimated_cost');
@@ -1326,6 +1449,37 @@
         tomAppearanceTags.on('change', syncAppearanceHidden);
         syncAppearanceHidden();
         }
+
+        function applyDefaultAppearanceTag() {
+            if (!tomAppearanceTags) return;
+            const current = tomAppearanceTags.getValue();
+            const empty = !current || (Array.isArray(current) && current.length === 0);
+            if (!empty) return;
+            const wanted = DEFAULT_APPEARANCE_TAG.toLowerCase();
+            const existingLabel = Object.keys(tomAppearanceTags.options || {}).find(
+                v => v && v.toLowerCase() === wanted
+            );
+            const label = existingLabel || DEFAULT_APPEARANCE_TAG;
+            if (!tomAppearanceTags.options[label]) {
+                tomAppearanceTags.addOption({
+                    value: label,
+                    text: label
+                });
+            }
+            tomAppearanceTags.addItem(label, true);
+            if (typeof syncAppearanceHidden === 'function') {
+                syncAppearanceHidden();
+            }
+        }
+
+        fetch('/api/catalog/symptoms')
+            .then(res => res.json())
+            .then(symptoms => fillTomOptions(tomSymptomTags, 'symptomTags', symptoms, 'name', 'name', true))
+            .catch(error => {
+                console.error('Ошибка при загрузке симптомов:', error);
+            });
+
+        applyDefaultAppearanceTag();
         
         // УДАЛЕНО: loadTagsFromOrders() загружала теги из истории заявок,
         // но это добавляло мусорные значения (типа "123", "zxc").
@@ -1367,7 +1521,7 @@
             return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
         }
 
-        function createPersistentTagSelect(selector, hiddenInput, storageKey, placeholder, maxItems) {
+        function createPersistentTagSelect(selector, hiddenInput, storageKey, placeholder, maxItems, catalogPin) {
             hydrateCustomOptions(selector, storageKey);
 
             const instance = new TomSelect(selector, {
@@ -1375,6 +1529,7 @@
                 persist: false,
                 maxItems,
                 placeholder,
+                ...(catalogPin ? catalogTomSelectExtras() : {}),
                 create: (input, callback) => {
                     const normalized = normalizeTagLabel(input);
                     if (!normalized) return;
@@ -1387,7 +1542,13 @@
                         }
                     }
                     // Добавляем опцию в TomSelect
-                    instance.addOption({ value: normalized, text: normalized });
+                    instance.addOption({
+                        value: normalized,
+                        text: normalized,
+                        pin: 1,
+                        usage: 0,
+                        optgroup: catalogPin ? 'other' : undefined
+                    });
                     callback({ value: normalized, text: normalized });
                     persistCustomOption(storageKey, normalized);
                 },
@@ -1945,8 +2106,7 @@
                     if (tomSymptomTags) tomSymptomTags.clear();
                     if (symptomTagsInput) symptomTagsInput.value = '';
                     if (tomAppearanceTags) tomAppearanceTags.clear();
-                    if (intakeChecklistInput) intakeChecklistInput.value = '';
-                    if (appearanceHiddenInput) appearanceHiddenInput.value = '';
+                    applyDefaultAppearanceTag();
             }, 0);
         });
         }

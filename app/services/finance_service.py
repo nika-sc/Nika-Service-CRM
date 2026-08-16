@@ -29,6 +29,10 @@ def _cash_next_day(date_str: Optional[str]) -> Optional[str]:
 
 class FinanceService:
     """Сервис для работы с финансами."""
+
+    # Закупка «под заявку» без склада (разовый товар/услуга). В кассе это расход,
+    # в отчёте прибыли не дублируем: сумма уже в COGS по строкам заявки.
+    DIRECT_COGS_CATEGORY = "Себестоимость (разовая)"
     
     # ===========================================
     # СТАТЬИ ДОХОДОВ/РАСХОДОВ
@@ -1848,7 +1852,96 @@ class FinanceService:
             sale['items'] = [dict(zip(item_columns, row)) for row in cursor.fetchall()]
             
             return sale
-    
+
+    @staticmethod
+    def get_shop_popular_catalog(limit: int = 10) -> Dict[str, List[Dict[str, Any]]]:
+        """Top services/parts by sold quantity (shop receipts + repair orders)."""
+        top_n = max(1, min(int(limit or 10), 20))
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT s.id, s.name, s.price, SUM(u.qty) AS usage
+                FROM (
+                    SELECT ssi.service_id AS sid, ssi.quantity AS qty
+                    FROM shop_sale_items ssi
+                    JOIN shop_sales ss ON ss.id = ssi.shop_sale_id
+                    WHERE ssi.item_type = 'service'
+                      AND ssi.service_id IS NOT NULL
+                      AND COALESCE(ss.final_amount, 0) > 0
+                    UNION ALL
+                    SELECT os.service_id, os.quantity
+                    FROM order_services os
+                    JOIN orders o ON o.id = os.order_id
+                    WHERE os.service_id IS NOT NULL
+                      AND (o.hidden = 0 OR o.hidden IS NULL)
+                      AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                ) u
+                JOIN services s ON s.id = u.sid
+                GROUP BY s.id, s.name, s.price
+                ORDER BY usage DESC, s.name
+                LIMIT ?
+                ''',
+                (top_n,),
+            )
+            services = []
+            for row in cursor.fetchall():
+                price = float(row[2] or 0)
+                services.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'price': price,
+                    'usage': float(row[3] or 0),
+                    'type': 'service',
+                    'label': f"{row[1]} — {price:.0f} ₽",
+                })
+
+            cursor.execute(
+                '''
+                SELECT p.id, p.name, p.part_number, p.price, p.purchase_price,
+                       COALESCE(p.stock_quantity, 0), SUM(u.qty) AS usage
+                FROM (
+                    SELECT ssi.part_id AS pid, ssi.quantity AS qty
+                    FROM shop_sale_items ssi
+                    JOIN shop_sales ss ON ss.id = ssi.shop_sale_id
+                    WHERE ssi.item_type = 'part'
+                      AND ssi.part_id IS NOT NULL
+                      AND COALESCE(ss.final_amount, 0) > 0
+                    UNION ALL
+                    SELECT op.part_id, op.quantity
+                    FROM order_parts op
+                    JOIN orders o ON o.id = op.order_id
+                    WHERE op.part_id IS NOT NULL
+                      AND (o.hidden = 0 OR o.hidden IS NULL)
+                      AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                ) u
+                JOIN parts p ON p.id = u.pid
+                WHERE (p.is_deleted = 0 OR p.is_deleted IS NULL)
+                GROUP BY p.id, p.name, p.part_number, p.price, p.purchase_price, p.stock_quantity
+                ORDER BY usage DESC, p.name
+                LIMIT ?
+                ''',
+                (top_n,),
+            )
+            parts = []
+            for row in cursor.fetchall():
+                sku = row[2] or ''
+                price = float(row[3] or 0)
+                stock = int(row[5] or 0)
+                parts.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'sku': sku,
+                    'price': price,
+                    'purchase_price': float(row[4] or 0),
+                    'stock_quantity': stock,
+                    'usage': float(row[6] or 0),
+                    'type': 'part',
+                    'label': f"{row[1]} — {price:.0f} ₽",
+                    'out_of_stock': stock <= 0,
+                })
+            return {'services': services, 'parts': parts}
+
     @staticmethod
     @handle_service_error
     def get_payment(payment_id: int) -> Optional[Dict[str, Any]]:
@@ -1947,6 +2040,153 @@ class FinanceService:
             
             return payment
     
+    @staticmethod
+    def order_direct_cogs_amount(order_id: int) -> float:
+        """Себестоимость разовых позиций заявки (без склада / без услуги из справочника)."""
+        if not order_id:
+            return 0.0
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(COALESCE(purchase_price, 0) * COALESCE(quantity, 1)), 0)
+                FROM order_parts
+                WHERE order_id = ? AND part_id IS NULL
+                """,
+                (order_id,),
+            )
+            parts = float((cursor.fetchone() or [0])[0] or 0)
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(COALESCE(cost_price, 0) * COALESCE(quantity, 1)), 0)
+                FROM order_services
+                WHERE order_id = ? AND service_id IS NULL
+                """,
+                (order_id,),
+            )
+            services = float((cursor.fetchone() or [0])[0] or 0)
+        return round(parts + services, 2)
+
+    @staticmethod
+    def _order_ready_for_direct_cogs(order_id: int) -> bool:
+        """Проводка в кассу: есть оплата или заявка уже в финальном/зарплатном статусе."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM payments
+                WHERE order_id = ?
+                  AND (is_cancelled IS NULL OR is_cancelled = 0)
+                """,
+                (order_id,),
+            )
+            paid = float((cursor.fetchone() or [0])[0] or 0)
+            if paid > 0:
+                return True
+            cursor.execute(
+                """
+                SELECT COALESCE(os.is_final, 0), COALESCE(os.accrues_salary, 0)
+                FROM orders o
+                LEFT JOIN order_statuses os ON os.id = o.status_id
+                WHERE o.id = ?
+                """,
+                (order_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False
+            return bool(row[0]) or bool(row[1])
+
+    @staticmethod
+    def _find_direct_cogs_transaction(order_id: int) -> Optional[Dict[str, Any]]:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT ct.id, ct.amount
+                FROM cash_transactions ct
+                JOIN transaction_categories tc ON tc.id = ct.category_id
+                WHERE ct.order_id = ?
+                  AND ct.transaction_type = 'expense'
+                  AND tc.name = ?
+                  AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)
+                  AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)
+                  AND ct.id NOT IN (
+                      SELECT storno_of_id FROM cash_transactions
+                      WHERE storno_of_id IS NOT NULL AND storno_of_id != 0
+                  )
+                ORDER BY ct.id DESC
+                LIMIT 1
+                """,
+                (order_id, FinanceService.DIRECT_COGS_CATEGORY),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {'id': int(row[0]), 'amount': float(row[1] or 0)}
+
+    @staticmethod
+    @handle_service_error
+    def sync_order_direct_cogs(
+        order_id: int,
+        user_id: Optional[int] = None,
+        username: Optional[str] = None,
+        payment_method: str = 'cash',
+    ) -> Optional[int]:
+        """
+        Синхронизирует расход в кассе на себестоимость разовых позиций заявки.
+        Не дублирует: если сумма совпадает — ничего не делает.
+        """
+        if not order_id:
+            return None
+        amount = FinanceService.order_direct_cogs_amount(order_id)
+        existing = FinanceService._find_direct_cogs_transaction(order_id)
+        ready = FinanceService._order_ready_for_direct_cogs(order_id)
+
+        if amount <= 0:
+            if existing:
+                try:
+                    FinanceService.cancel_transaction(
+                        existing['id'],
+                        reason='Разовые позиции без себестоимости',
+                        user_id=user_id,
+                        username=username,
+                    )
+                except Exception as e:
+                    logger.warning("Не удалось сторнировать разовую себестоимость заявки %s: %s", order_id, e)
+            return None
+
+        if not ready and not existing:
+            return None
+
+        if existing and abs(existing['amount'] - amount) < 0.009:
+            return existing['id']
+
+        if existing:
+            try:
+                FinanceService.cancel_transaction(
+                    existing['id'],
+                    reason='Пересчёт себестоимости разовых позиций',
+                    user_id=user_id,
+                    username=username,
+                )
+            except Exception as e:
+                logger.warning("Не удалось сторнировать старую себестоимость заявки %s: %s", order_id, e)
+
+        tx_id = FinanceService.create_transaction(
+            amount=amount,
+            transaction_type='expense',
+            category_name=FinanceService.DIRECT_COGS_CATEGORY,
+            payment_method=payment_method or 'cash',
+            description=f"Себестоимость разовых позиций по заявке #{order_id}",
+            order_id=order_id,
+            created_by_id=user_id,
+            created_by_username=username,
+        )
+        clear_cache(key_prefix='finance')
+        return tx_id
+
     # ===========================================
     # ОТЧЕТЫ И АНАЛИТИКА
     # ===========================================
@@ -1980,8 +2220,15 @@ class FinanceService:
                 eff_filter += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
                 eff_filter += " AND ct.id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
 
-            # Внутренние переводы не считаем ни в доходах, ни в расходах (виртуальное движение между кассами)
-            internal_cat_filter = " AND tc.name NOT IN ('Внутренний перевод (списание)', 'Внутренний перевод (зачисление)')"
+            # Внутренние переводы не считаем ни в доходах, ни в расходах (виртуальное движение между кассами).
+            # Разовая себестоимость заявки — это COGS, не операционный расход (иначе двойной вычет).
+            internal_cat_filter = (
+                " AND tc.name NOT IN ("
+                "'Внутренний перевод (списание)', "
+                "'Внутренний перевод (зачисление)', "
+                "'Себестоимость (разовая)'"
+                ")"
+            )
 
             # Доходы по категориям (только приход, без внутренних переводов)
             cursor.execute(f'''
@@ -2073,8 +2320,8 @@ class FinanceService:
             ct_eff = eff_filter  # те же исключения (отменённые, сторно) в подзапросах
 
             cursor.execute(f'''
-                SELECT 
-                    COALESCE(SUM(op.purchase_price * op.quantity), 0) as cogs
+                SELECT
+                    COALESCE(SUM(COALESCE(op.purchase_price, 0) * COALESCE(op.quantity, 1)), 0) as cogs
                 FROM order_parts op
                 WHERE op.order_id IN (
                     SELECT DISTINCT ct.order_id
@@ -2086,7 +2333,23 @@ class FinanceService:
                 )
             ''', order_params)
             
-            cogs_orders = float(cursor.fetchone()[0] or 0)
+            cogs_orders_parts = float(cursor.fetchone()[0] or 0)
+
+            cursor.execute(f'''
+                SELECT
+                    COALESCE(SUM(COALESCE(os.cost_price, 0) * COALESCE(os.quantity, 1)), 0) as cogs
+                FROM order_services os
+                WHERE os.order_id IN (
+                    SELECT DISTINCT ct.order_id
+                    FROM cash_transactions ct
+                    WHERE ct.transaction_type = 'income'
+                      AND ct.order_id IS NOT NULL
+                      {ct_eff}
+                      {order_payment_filter}
+                )
+            ''', order_params)
+            cogs_orders_services = float(cursor.fetchone()[0] or 0)
+            cogs_orders = cogs_orders_parts + cogs_orders_services
             
             total_cogs = cogs_shop + cogs_orders
             
@@ -2212,19 +2475,19 @@ class FinanceService:
                     
                     UNION ALL
                     
-                    -- Продажи из заявок
+                    -- Продажи из заявок (склад + разовые без part_id)
                     SELECT 
                         op.part_id,
-                        p.name as part_name,
+                        COALESCE(p.name, op.name, 'Разовый товар') as part_name,
                         SUM(op.quantity) as total_qty,
                         SUM(op.price * op.quantity) as total_revenue,
                         SUM(COALESCE(op.purchase_price, p.purchase_price, 0) * op.quantity) as total_cost,
                         SUM(op.price * op.quantity) - SUM(COALESCE(op.purchase_price, p.purchase_price, 0) * op.quantity) as profit
                     FROM order_parts op
                     JOIN orders o ON o.id = op.order_id
-                    JOIN parts p ON p.id = op.part_id
-                    WHERE (o.hidden = 0 OR o.hidden IS NULL) AND p.is_deleted = 0 {order_parts_date_filter}
-                    GROUP BY op.part_id, p.name
+                    LEFT JOIN parts p ON p.id = op.part_id AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
+                    WHERE (o.hidden = 0 OR o.hidden IS NULL) {order_parts_date_filter}
+                    GROUP BY op.part_id, COALESCE(p.name, op.name, 'Разовый товар')
                 ) AS combined_sales
                 GROUP BY part_id, part_name
                 ORDER BY total_revenue DESC
@@ -2255,17 +2518,17 @@ class FinanceService:
                     
                     UNION ALL
                     
-                    -- Услуги из заявок
+                    -- Услуги из заявок (справочник + разовые)
                     SELECT 
                         os.service_id,
-                        s.name as service_name,
+                        COALESCE(s.name, os.name, 'Разовая услуга') as service_name,
                         SUM(os.quantity) as total_qty,
                         SUM(os.price * os.quantity) as total_revenue
                     FROM order_services os
                     JOIN orders o ON o.id = os.order_id
-                    JOIN services s ON s.id = os.service_id
+                    LEFT JOIN services s ON s.id = os.service_id
                     WHERE (o.hidden = 0 OR o.hidden IS NULL) {order_services_date_filter}
-                    GROUP BY os.service_id, s.name
+                    GROUP BY os.service_id, COALESCE(s.name, os.name, 'Разовая услуга')
                 ) AS combined_services
                 GROUP BY service_id, service_name
                 ORDER BY total_revenue DESC

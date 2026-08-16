@@ -274,6 +274,37 @@ def create_app(config_class=Config):
         g.csp_nonce = secrets.token_urlsafe(16)
 
     @app.before_request
+    def _portal_idle_session_timeout():
+        """Сброс сессии личного кабинета после PERMANENT_SESSION_LIFETIME неактивности."""
+        from flask import session, redirect, url_for
+
+        if not session.get('portal_customer_id'):
+            return None
+        if (request.path or '').startswith('/static/'):
+            return None
+
+        now = time.time()
+        last_active = session.get('_portal_last_active')
+        lifetime = app.permanent_session_lifetime.total_seconds()
+        if last_active and lifetime > 0 and (now - float(last_active)) > lifetime:
+            session.pop('portal_customer_id', None)
+            session.pop('portal_customer_name', None)
+            session.pop('_portal_last_active', None)
+            path = request.path or ''
+            if path.startswith('/portal/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'session_expired',
+                    'error_type': 'auth',
+                }), 401
+            if path.startswith('/portal'):
+                return redirect(url_for('customer_portal.portal_login'))
+            return None
+        session['_portal_last_active'] = now
+        session.permanent = True
+        return None
+
+    @app.before_request
     def _staff_idle_session_timeout():
         """Сброс staff-сессии после PERMANENT_SESSION_LIFETIME неактивности."""
         from flask import session, redirect, url_for, flash

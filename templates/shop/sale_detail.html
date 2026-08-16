@@ -87,14 +87,16 @@
                         <div class="col-md-4">
                             <small class="text-muted d-block">Способ оплаты</small>
                             <strong>
-                                {% if sale.payment_method == 'cash' %}
+                                {% if sale.payment_method_label %}
+                                {{ sale.payment_method_label }}
+                                {% elif sale.payment_method == 'cash' %}
                                 <i class="fas fa-money-bill-wave text-success me-1"></i>Наличные
                                 {% elif sale.payment_method == 'card' %}
                                 <i class="fas fa-credit-card text-primary me-1"></i>Карта
                                 {% elif sale.payment_method == 'transfer' %}
                                 <i class="fas fa-exchange-alt text-info me-1"></i>Перевод
                                 {% else %}
-                                {{ sale.payment_method }}
+                                {{ sale.payment_method or '—' }}
                                 {% endif %}
                             </strong>
                         </div>
@@ -312,6 +314,12 @@ function recalculateSalary(saleId) {
     })
     .catch(() => alert('Ошибка запроса'));
 }
+
+{% if auto_print %}
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() { printSalesReceipt(); }, 200);
+});
+{% endif %}
 </script>
 {% endblock %}
 

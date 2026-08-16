@@ -722,6 +722,9 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
+
+                if status_changed and (is_final or accrues_salary):
+                    OrderService._sync_direct_cogs_safe(order_id)
                 
                 return {
                     'success': True,
@@ -1245,7 +1248,32 @@ class OrderService:
             log_error(e, context=f"Создание заявки для клиента {customer_name}", 
                      user_id=user_id)
             raise DatabaseError("Произошла ошибка при создании заявки")
-    
+
+    @staticmethod
+    def _sync_direct_cogs_safe(order_id: Optional[int]) -> None:
+        """Касса: расход на себестоимость разовых позиций (ошибка не ломает заявку)."""
+        if not order_id:
+            return
+        try:
+            from flask_login import current_user
+            from app.services.finance_service import FinanceService
+            user_id = None
+            username = None
+            try:
+                if getattr(current_user, 'is_authenticated', False):
+                    user_id = getattr(current_user, 'id', None)
+                    username = getattr(current_user, 'username', None)
+            except Exception:
+                pass
+            FinanceService.sync_order_direct_cogs(
+                int(order_id), user_id=user_id, username=username
+            )
+        except Exception as e:
+            logger.warning(
+                "Не удалось синхронизировать разовую себестоимость заявки %s: %s",
+                order_id, e,
+            )
+
     @staticmethod
     def add_order_service(
         order_id: int,
@@ -1342,6 +1370,13 @@ class OrderService:
                     warranty_days = int((SettingsService.get_general_settings() or {}).get('default_warranty_days') or 30)
                 except Exception:
                     warranty_days = 30
+
+            try:
+                cost_price = float(cost_price) if cost_price is not None and cost_price != '' else None
+            except (TypeError, ValueError):
+                cost_price = None
+            if cost_price is not None and cost_price < 0:
+                cost_price = 0.0
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()
@@ -1364,12 +1399,9 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
-                
+
+                OrderService._sync_direct_cogs_safe(order_id)
                 return cursor.lastrowid
-        except (ValidationError, NotFoundError):
-            raise
-        except sqlite3.Error as e:
-            logger.error(f"Ошибка БД при добавлении услуги к заявке {order_id}: {e}")
             raise DatabaseError(f"Ошибка базы данных: {e}")
         except Exception as e:
             logger.error(f"Неожиданная ошибка при добавлении услуги: {e}")
@@ -1400,6 +1432,9 @@ class OrderService:
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
+                cursor.execute('SELECT order_id FROM order_services WHERE id = ?', (order_service_id,))
+                row = cursor.fetchone()
+                order_id = row[0] if row else None
                 cursor.execute('DELETE FROM order_services WHERE id = ?', (order_service_id,))
                 conn.commit()
                 
@@ -1409,7 +1444,7 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
-                
+                OrderService._sync_direct_cogs_safe(order_id)
                 return True
         except (ValidationError, NotFoundError):
             raise
@@ -1587,6 +1622,13 @@ class OrderService:
                 if base_price is None:
                     base_price = float(price or 0)
 
+                try:
+                    purchase_price = float(purchase_price) if purchase_price is not None and purchase_price != '' else None
+                except (TypeError, ValueError):
+                    purchase_price = None
+                if purchase_price is not None and purchase_price < 0:
+                    purchase_price = 0.0
+
                 if warranty_days is None:
                     try:
                         from app.services.settings_service import SettingsService
@@ -1631,7 +1673,8 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
-                
+
+                OrderService._sync_direct_cogs_safe(order_id)
                 return order_part_id
         except (ValidationError, NotFoundError, DatabaseError):
             raise
@@ -1704,6 +1747,7 @@ class OrderService:
 
             from app.utils.cache import clear_cache
             clear_cache(key_prefix='order')
+            OrderService._sync_direct_cogs_safe(order_id)
             return order_id
         except (ValidationError, NotFoundError, DatabaseError):
             raise
@@ -1841,6 +1885,7 @@ class OrderService:
 
             from app.utils.cache import clear_cache
             clear_cache(key_prefix='order')
+            OrderService._sync_direct_cogs_safe(order_id)
             return order_id
         except (ValidationError, NotFoundError, DatabaseError):
             raise
@@ -2011,8 +2056,8 @@ class OrderService:
                 cursor.execute('DELETE FROM order_parts WHERE id = ?', (order_part_id,))
                 conn.commit()
                 
-                # Возвращаем на склад через WarehouseService
-                if order_id:
+                # Возвращаем на склад только складские позиции
+                if order_id and part_id:
                     from app.services.warehouse_service import WarehouseService
                     from flask_login import current_user
                     user_id = current_user.id if hasattr(current_user, 'id') and current_user.is_authenticated else None
@@ -2027,7 +2072,7 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
-                
+                OrderService._sync_direct_cogs_safe(order_id)
                 return True
         except (ValidationError, NotFoundError):
             raise

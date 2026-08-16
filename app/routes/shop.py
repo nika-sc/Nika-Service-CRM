@@ -21,6 +21,48 @@ from datetime import timedelta
 
 bp = Blueprint('shop', __name__, url_prefix='/shop')
 
+_PAYMENT_FALLBACKS = {
+    'cash': 'Наличные',
+    'card': 'Карта',
+    'transfer': 'Перевод',
+}
+
+
+def get_shop_payment_method_options() -> list:
+    """Способы оплаты из настроек (для магазина)."""
+    import logging
+    try:
+        pm_settings = SettingsService.get_payment_method_settings()
+        cash_label = (pm_settings.get('cash_label') or '').strip()
+        transfer_label = (pm_settings.get('transfer_label') or '').strip()
+        custom_methods = pm_settings.get('custom_methods') or []
+        options = []
+        if cash_label:
+            options.append({'value': 'cash', 'label': cash_label})
+        if transfer_label:
+            options.append({'value': 'transfer', 'label': transfer_label})
+        for name in custom_methods:
+            name = str(name).strip()
+            if name:
+                options.append({'value': name, 'label': name})
+        if not options:
+            options = [{'value': 'cash', 'label': 'Наличные'}]
+        return options
+    except Exception as e:
+        logging.error("shop payment methods: %s", e)
+        return [{'value': 'cash', 'label': 'Наличные'}]
+
+
+def payment_label_for(value, options=None) -> str:
+    """Human-readable payment method for shop list/detail."""
+    raw = str(value or '').strip()
+    if not raw:
+        return '—'
+    for pm in options or []:
+        if str(pm.get('value')) == raw:
+            return (pm.get('label') or '').strip() or _PAYMENT_FALLBACKS.get(raw, raw)
+    return _PAYMENT_FALLBACKS.get(raw, raw)
+
 
 @bp.before_request
 def _shop_api_permission_gate():
@@ -185,26 +227,9 @@ def index():
         ('year', 'Год'),
     ]
     
-    # Способы оплаты из настроек (Общие настройки → Названия способов оплаты)
-    payment_method_options = []
-    try:
-        pm_settings = SettingsService.get_payment_method_settings()
-        cash_label = (pm_settings.get('cash_label') or '').strip()
-        transfer_label = (pm_settings.get('transfer_label') or '').strip()
-        custom_methods = pm_settings.get('custom_methods') or []
-        if cash_label:
-            payment_method_options.append({'value': 'cash', 'label': cash_label})
-        if transfer_label:
-            payment_method_options.append({'value': 'transfer', 'label': transfer_label})
-        for name in custom_methods:
-            name = str(name).strip()
-            if name:
-                payment_method_options.append({'value': name, 'label': name})
-        if not payment_method_options:
-            payment_method_options = [{'value': 'cash', 'label': 'Наличные'}]
-    except Exception as e:
-        logging.error(f"Ошибка при получении способов оплаты: {e}")
-        payment_method_options = [{'value': 'cash', 'label': 'Наличные'}]
+    payment_method_options = get_shop_payment_method_options()
+    payment_labels = dict(_PAYMENT_FALLBACKS)
+    payment_labels.update({pm['value']: pm['label'] for pm in payment_method_options})
     
     return render_template(
         'shop/index.html',
@@ -216,6 +241,7 @@ def index():
         statistics=statistics,
         masters=masters,
         payment_method_options=payment_method_options,
+        payment_labels=payment_labels,
         show_refunds=show_refunds
     )
 
@@ -230,6 +256,9 @@ def sale_detail(sale_id):
         return render_template('errors/404.html'), 404
 
     settings = SettingsService.get_general_settings() or {}
+    payment_method_options = get_shop_payment_method_options()
+    sale['payment_method_label'] = payment_label_for(sale.get('payment_method'), payment_method_options)
+    auto_print = request.args.get('print') in ('1', 'true', 'yes')
     sales_receipt_template_rendered = None
     try:
         sales_tpl = SettingsService.get_print_template_fresh('sales_receipt')
@@ -344,6 +373,7 @@ def sale_detail(sale_id):
         sale=sale,
         settings=settings,
         sales_receipt_template_rendered=sales_receipt_template_rendered,
+        auto_print=auto_print,
     )
 
 
@@ -498,8 +528,10 @@ def api_catalog():
                 'sku': sku,
                 'price': price,
                 'purchase_price': row[4] or 0,
+                'stock_quantity': qty,
                 'type': 'part',
-                'label': f"📦 {row[1]}{sku_part} - {price:.2f} ₽ [ост: {qty}]"
+                'label': f"📦 {row[1]}{sku_part} - {price:.2f} ₽ [ост: {qty}]",
+                'out_of_stock': qty <= 0,
             })
         return jsonify({'success': True, 'services': services, 'parts': parts})
 
@@ -623,6 +655,20 @@ def api_search():
             })
         
         return jsonify({'success': True, 'results': results})
+
+
+@bp.route('/api/popular')
+@login_required
+@permission_required('view_shop')
+def api_popular():
+    """Частые услуги и товары для быстрой продажи."""
+    try:
+        data = FinanceService.get_shop_popular_catalog(limit=10)
+        return jsonify({'success': True, **data})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("shop popular: %s", e)
+        return jsonify({'success': False, 'services': [], 'parts': []}), 500
 
 
 @bp.route('/api/customers/search')

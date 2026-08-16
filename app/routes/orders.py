@@ -438,6 +438,7 @@ def add_order():
             prefill_customer = customer.to_dict()
     
     if request.method == 'GET':
+        ReferenceService.ensure_appearance_tag(ReferenceService.DEFAULT_USED_APPEARANCE_TAG)
         # Используем сервис справочников с кэшированием
         refs = ReferenceService.get_all_references()
         
@@ -612,8 +613,8 @@ def add_order():
             except Exception as e:
                 logger.warning(f"Не удалось запустить отправку письма 'Заказ принят': {e}")
 
-            # После создания заявки переходим на страницу заявки (без авто-печати квитанции)
-            return redirect(url_for('orders.order_detail', order_id=result['order_id']))
+            # После создания заявки — карточка + сразу диалог печати квитанции
+            return redirect(url_for('orders.order_detail', order_id=result['order_id'], print=1))
         except (ValidationError, DatabaseError) as e:
             flash(f"Ошибка при сохранении заявки: {e}", 'error')
             refs = ReferenceService.get_all_references()
@@ -1224,6 +1225,23 @@ def order_detail(order_id):
         
         # Получаем справочники для формы (нужны и для POST, и для GET)
         refs = ReferenceService.get_all_references()
+        try:
+            usage = ReferenceService.get_all_usage_counts().get('services') or {}
+            annotated = []
+            for svc in refs.get('services') or []:
+                row = dict(svc)
+                row['usage_count'] = int(usage.get(str(svc.get('id')), 0) or 0)
+                annotated.append(row)
+            annotated.sort(
+                key=lambda s: (
+                    -int(s.get('usage_count') or 0),
+                    int(s.get('sort_order') or 0),
+                    str(s.get('name') or ''),
+                )
+            )
+            refs['services'] = annotated
+        except Exception:
+            pass
         
         # Если POST - обновление заявки
         if request.method == 'POST':

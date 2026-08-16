@@ -114,6 +114,10 @@
                    class="{% if request.endpoint == 'customer_portal.portal_orders' %}active{% endif %}">
                     <i class="fas fa-file-alt me-1"></i>Мои заявки
                 </a>
+                <a href="{{ url_for('customer_portal.portal_history') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_history' %}active{% endif %}">
+                    <i class="fas fa-history me-1"></i>История ремонта
+                </a>
                 <a href="{{ url_for('customer_portal.portal_devices') }}"
                    class="{% if request.endpoint == 'customer_portal.portal_devices' %}active{% endif %}">
                     <i class="fas fa-mobile-alt me-1"></i>Мои устройства
@@ -125,6 +129,10 @@
                 <a href="{{ url_for('customer_portal.portal_wallet') }}"
                    class="{% if request.endpoint == 'customer_portal.portal_wallet' %}active{% endif %}">
                     <i class="fas fa-wallet me-1"></i>Кошелёк
+                </a>
+                <a href="{{ url_for('customer_portal.portal_profile') }}"
+                   class="{% if request.endpoint == 'customer_portal.portal_profile' %}active{% endif %}">
+                    <i class="fas fa-user-cog me-1"></i>Профиль
                 </a>
             </div>
         </nav>

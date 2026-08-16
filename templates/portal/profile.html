@@ -1,0 +1,66 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-user-cog me-2"></i>Профиль и безопасность</h4>
+
+{% if success %}
+<div class="alert alert-success"><i class="fas fa-check me-2"></i>{{ success }}</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Ваши данные</h5>
+                <p class="mb-1"><strong>Имя:</strong> {{ customer.name if customer else '—' }}</p>
+                <p class="mb-1"><strong>Телефон:</strong> {{ customer.phone if customer else '—' }}</p>
+                {% if customer and customer.email %}
+                <p class="mb-0"><strong>Email:</strong> {{ customer.email }}</p>
+                {% endif %}
+                <p class="text-muted small mt-3 mb-0">Имя и телефон меняет сотрудник сервиса. Здесь можно сменить только пароль входа.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Сервисный центр</h5>
+                {% if org.org_name %}<p class="mb-1 fw-semibold">{{ org.org_name }}</p>{% endif %}
+                {% if org.phone %}
+                <p class="mb-1"><i class="fas fa-phone me-1"></i><a href="tel:{{ org.phone }}">{{ org.phone }}</a></p>
+                {% endif %}
+                {% if org.address %}
+                <p class="mb-0"><i class="fas fa-map-marker-alt me-1"></i>{{ org.address }}</p>
+                {% endif %}
+                {% if not org.org_name and not org.phone and not org.address %}
+                <p class="text-muted mb-0">Контакты сервиса появятся, когда их укажет администратор.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title">Смена пароля</h5>
+        <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+                <label class="form-label" for="current_password">Текущий пароль</label>
+                <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="current-password" minlength="6" maxlength="256">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="new_password">Новый пароль</label>
+                <input type="password" class="form-control" id="new_password" name="new_password" required autocomplete="new-password" minlength="6" maxlength="256">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="new_password_confirm">Повтор нового пароля</label>
+                <input type="password" class="form-control" id="new_password_confirm" name="new_password_confirm" required autocomplete="new-password" minlength="6" maxlength="256">
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить пароль</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

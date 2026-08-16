@@ -64,17 +64,22 @@ class CustomerService:
             with get_db_connection(row_factory=sqlite3.Row) as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    SELECT 
+                    SELECT
                         o.id,
                         o.order_id,
                         o.created_at,
+                        o.updated_at,
                         o.model,
                         o.symptom_tags,
                         o.appearance,
+                        o.diagnostics,
+                        o.estimated_cost,
                         d.device_type_id,
                         d.device_brand_id,
                         d.serial_number,
                         COALESCE(os.code, o.status) AS status,
+                        os.code AS status_code,
+                        COALESCE(os.is_final, 0) AS is_final,
                         o.prepayment,
                         dt.name AS device_type,
                         db.name AS device_brand,
