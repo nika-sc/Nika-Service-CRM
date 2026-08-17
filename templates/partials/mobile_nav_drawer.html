@@ -15,7 +15,7 @@
         </li>
         {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
         <li>
-            <a href="{{ url_for('orders.all_orders') }}" class="mac-mobile-drawer-link{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}">
+            <a href="{{ url_for('orders.all_orders', view='registry', status='in_progress') }}" class="mac-mobile-drawer-link{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}">
                 <i class="fas fa-file-alt"></i><span>Заявки</span>
             </a>
         </li>

@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
+        "slug": "all-orders-default-in-progress",
+        "file": "blog/32-all-orders-default-in-progress.md",
+        "date": "2026-08-17 16:45",
+        "title": "Список заявок сразу открывается «Все в работе» — Nika Service CRM",
+        "description": (
+            "17 августа 2026: раздел Заявки по умолчанию показывает фильтр «Все в работе», "
+            "а не весь архив. Полный список — по бейджу «Все»."
+        ),
+        "heading": "Заявки: сразу «Все в работе»",
+        "teaser": "Меню Заявки открывает живые заказы; полный реестр — бейдж «Все».",
+    },
+    {
         "slug": "receipt-print-guides",
         "file": "blog/31-receipt-print-guides.md",
         "date": "2026-08-16 22:50",

@@ -588,12 +588,12 @@
                         <div class="col-12">
                             <ul class="nav nav-pills">
                                 <li class="nav-item">
-                                    <a href="{{ url_for('orders.all_orders', view='registry') }}" class="nav-link {% if view == 'registry' %}active{% endif %}">
+                                    <a href="{{ url_for('orders.all_orders', view='registry', status=status_filter or 'all') }}" class="nav-link {% if view == 'registry' %}active{% endif %}">
                                         <i class="fas fa-list"></i> Реестр
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ url_for('orders.all_orders', view='kanban') }}" class="nav-link {% if view == 'kanban' %}active{% endif %}">
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_filter or 'all') }}" class="nav-link {% if view == 'kanban' %}active{% endif %}">
                                         <i class="fas fa-columns"></i> Канбан
                                     </a>
                                 </li>
@@ -642,7 +642,7 @@
                                             <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
                                                 <i class="fas fa-filter"></i> Применить
                                             </button>
-                                            <a href="/all_orders?view=registry" class="btn btn-default btn-sm" style="white-space: nowrap;">
+                                            <a href="/all_orders?view=registry&status=in_progress" class="btn btn-default btn-sm" style="white-space: nowrap;">
                                                 <i class="fas fa-times"></i> Сбросить
                                             </a>
                                         </form>
@@ -660,7 +660,7 @@
                                                 Все в работе: {{ in_progress_orders_count }}
                                             </span>
                                         </a>
-                                        <a href="{{ url_for('orders.all_orders', view='registry') }}" class="ms-2">
+                                        <a href="{{ url_for('orders.all_orders', view='registry', status='all') }}" class="ms-2">
                                             <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
                                                 Все: {{ total_orders }}
                                             </span>
@@ -888,7 +888,7 @@
                                             <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
                                                 <i class="fas fa-filter"></i> Применить
                                             </button>
-                                            <a href="/all_orders?view=kanban" class="btn btn-default btn-sm" style="white-space: nowrap;">
+                                            <a href="/all_orders?view=kanban&status=in_progress" class="btn btn-default btn-sm" style="white-space: nowrap;">
                                                 <i class="fas fa-times"></i> Сбросить
                                             </a>
                                         </form>
@@ -910,7 +910,7 @@
                                         Все в работе: {{ in_progress_orders_count }}
                                     </span>
                                 </a>
-                                <a href="{{ url_for('orders.all_orders', view='kanban', date_from=date_from, date_to=date_to) }}" class="ms-2">
+                                <a href="{{ url_for('orders.all_orders', view='kanban', status='all', date_from=date_from, date_to=date_to) }}" class="ms-2">
                                     <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
                                         За период: {{ total }}
                                     </span>

@@ -2387,7 +2387,7 @@
                             </span>
                         </div>
                         <div class="action-toolbar d-flex justify-content-end gap-1 flex-wrap">
-                            <a href="{{ url_for('orders.all_orders') }}" class="btn btn-light btn-sm" title="К списку заявок" aria-label="К списку заявок" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                            <a href="{{ url_for('orders.all_orders', view='registry', status='in_progress') }}" class="btn btn-light btn-sm" title="К списку заявок" aria-label="К списку заявок" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                             <a href="{{ url_for('orders.add_order') }}" class="btn btn-light btn-sm" title="Создать новую заявку" aria-label="Создать новую заявку" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
@@ -4911,7 +4911,7 @@
                             // Если заявка скрыта, перенаправляем на список заявок
                             if (newHidden === 0) {
                                 setTimeout(() => {
-                                    window.location.href = '/all_orders';
+                                    window.location.href = '/all_orders?view=registry&status=in_progress';
                                 }, 1000);
                             }
                         } else {
@@ -4965,7 +4965,7 @@
 
                         showToast(`Заявка #${orderUuid || orderId} удалена`, 'success');
                         setTimeout(() => {
-                            window.location.href = '{{ url_for("orders.all_orders") }}';
+                            window.location.href = '{{ url_for("orders.all_orders", view="registry", status="in_progress") }}';
                         }, 900);
                     } catch (error) {
                         console.error('Ошибка при удалении заявки:', error);

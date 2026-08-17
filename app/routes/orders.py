@@ -658,16 +658,36 @@ def add_order():
                 order_models=order_models
             )
 
+def _redirect_all_orders_default_status():
+    """Bare /all_orders opens «Все в работе»; DataTables reads status from the query string."""
+    if 'status' in request.args:
+        return None
+    args = request.args.to_dict(flat=True)
+    args['view'] = (args.get('view') or 'registry').strip() or 'registry'
+    args['status'] = 'in_progress'
+    return redirect(url_for('orders.all_orders', **args))
+
+
+def _parse_all_orders_status(raw) -> Optional[str]:
+    value = (raw or '').strip()
+    if not value or value == 'all':
+        return None
+    return value
+
+
 @bp.route('/all_orders')
 @login_required
 @permission_required('view_orders')
 def all_orders():
     """Список всех заявок."""
     try:
+        default_status_redirect = _redirect_all_orders_default_status()
+        if default_status_redirect:
+            return default_status_redirect
         # Получаем параметры из запроса
         sort_by = request.args.get('sort_by', 'created_at')
         sort_order = request.args.get('sort_order', 'DESC').upper()
-        status_filter = request.args.get('status')
+        status_filter = _parse_all_orders_status(request.args.get('status'))
         view = request.args.get('view', 'registry')  # registry | kanban | log
         search_query = request.args.get('q', '').strip()
         manager_filter = request.args.get('manager')
@@ -903,7 +923,7 @@ def api_datatables_orders():
     page = (start // length) + 1
 
     # Фильтры со страницы (обычно в query при POST-AJAX)
-    status_filter = rv.get('status') or None
+    status_filter = _parse_all_orders_status(rv.get('status'))
     manager_filter = rv.get('manager') or None
     master_filter = rv.get('master') or None
     date_from = rv.get('date_from') or None

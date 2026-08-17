@@ -7,7 +7,7 @@
     <ul class="nav nav-pills nav-flush flex-column flex-grow-1">
         {% if has_any_permission('view_orders', 'create_orders', 'edit_orders', 'delete_orders') %}
         <li>
-            <a href="{{ url_for('orders.all_orders') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}" 
+            <a href="{{ url_for('orders.all_orders', view='registry', status='in_progress') }}" class="nav-link py-2 border-bottom d-flex flex-column align-items-center justify-content-center{% if request.path == '/all_orders' or '/order/' in request.path %} active{% endif %}" 
                title="Заявки">
                 <i class="fas fa-file-alt" style="font-size: 1.25rem; display: block; text-align: center;"></i>
                 <small class="mt-1" style="font-size: 0.65rem; line-height: 1; display: block; text-align: center;">Заявки</small>
