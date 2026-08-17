@@ -1450,6 +1450,18 @@
         syncAppearanceHidden();
         }
 
+        function syncAppearanceFromSelect() {
+            if (!tomAppearanceTags) return;
+            const values = tomAppearanceTags.getValue();
+            const joined = Array.isArray(values) ? values.join(', ') : (values || '');
+            if (intakeChecklistInput) {
+                intakeChecklistInput.value = joined;
+            }
+            if (typeof syncAppearanceHidden === 'function') {
+                syncAppearanceHidden();
+            }
+        }
+
         function applyDefaultAppearanceTag() {
             if (!tomAppearanceTags) return;
             const current = tomAppearanceTags.getValue();
@@ -1460,16 +1472,18 @@
                 v => v && v.toLowerCase() === wanted
             );
             const label = existingLabel || DEFAULT_APPEARANCE_TAG;
-            if (!tomAppearanceTags.options[label]) {
-                tomAppearanceTags.addOption({
-                    value: label,
-                    text: label
-                });
+            if (typeof tomAppearanceTags.setFromString === 'function') {
+                tomAppearanceTags.setFromString(label);
+            } else {
+                if (!tomAppearanceTags.options[label]) {
+                    tomAppearanceTags.addOption({
+                        value: label,
+                        text: label
+                    });
+                }
+                tomAppearanceTags.addItem(label, true);
             }
-            tomAppearanceTags.addItem(label, true);
-            if (typeof syncAppearanceHidden === 'function') {
-                syncAppearanceHidden();
-            }
+            syncAppearanceFromSelect();
         }
 
         fetch('/api/catalog/symptoms')
@@ -2190,6 +2204,16 @@
                 alert('Укажите модель устройства.');
                 if (tomModel && tomModel.focus) tomModel.focus(); else if (modelSelect) modelSelect.focus();
                 return;
+            }
+
+            // Silent Tom Select updates (default «Бывший в употреблении») skip 'change'
+            // and would otherwise submit empty appearance / intake_checklist.
+            syncAppearanceFromSelect();
+            if (tomSymptomTags && symptomTagsInput) {
+                const symptomVals = tomSymptomTags.getValue();
+                symptomTagsInput.value = Array.isArray(symptomVals)
+                    ? symptomVals.join(', ')
+                    : (symptomVals || '');
             }
             
                 if (symptomTagsInput && !symptomTagsInput.value.trim()) {

@@ -148,6 +148,8 @@ def test_add_order_pins_popular_and_default_bu():
     assert "Частые" in html
     assert "Остальные" in html
     assert "Бывший в употреблении" in html
+    assert "setFromString(label)" in html
+    assert "syncAppearanceFromSelect" in html
     assert "/api/catalog/symptoms" in html
     assert "CATALOG_TOP_N = 10" in html
     settings_src = (root / "app" / "routes" / "settings.py").read_text(encoding="utf-8")

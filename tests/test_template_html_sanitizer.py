@@ -34,6 +34,22 @@ def test_strips_javascript_href():
     assert "javascript:" not in out.lower()
 
 
+def test_email_keeps_portal_placeholder_and_tel_href():
+    html = (
+        '<a href="##PORTAL_SETUP_URL##">setup</a>'
+        '<a href="##PORTAL_URL##">login</a>'
+        '<a href="tel:+79384185940">phone</a>'
+        '<a href="mailto:nika-sc@bk.ru">mail</a>'
+        '<a href="javascript:alert(1)">xss</a>'
+    )
+    out = sanitize_email_template_html(html)
+    assert 'href="##PORTAL_SETUP_URL##"' in out
+    assert 'href="##PORTAL_URL##"' in out
+    assert 'href="tel:+79384185940"' in out
+    assert 'href="mailto:nika-sc@bk.ru"' in out
+    assert "javascript:" not in out.lower()
+
+
 def test_keeps_safe_styles_only_by_property_name():
     # CSSSanitizer whitelists property names; unknown props are dropped.
     html = '<div style="font-size: 12px; position: fixed; top: 0;">x</div>'

@@ -271,6 +271,9 @@ def sanitize_email_template_html(html: str) -> str:
         html,
         tags=EMAIL_TEMPLATE_TAGS,
         attributes=EMAIL_TEMPLATE_ATTRIBUTES,
+        # Placeholders like ##PORTAL_URL## have no scheme and stay as relative hrefs.
+        # tel: is used in branded customer emails (call the workshop).
+        protocols=["http", "https", "mailto", "tel"],
     )
 
 
