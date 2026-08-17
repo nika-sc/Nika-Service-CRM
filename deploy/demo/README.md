@@ -51,21 +51,17 @@ systemctl list-timers | grep nikacrm-demo
 
 Таймер можно оставить как резерв (ручные push без Actions, сбои сети).
 
-## Ежедневный бэкап БД + сайта на email
+## Ежедневный бэкап данных на email
 
-Как на WORK CRM: `scripts/backup_and_email.sh` → архив PostgreSQL (`pg_dump -Fc`) + дерево проекта (templates/static/docs — HTML сайта) + nginx/downloads (без крупных `.exe`) → письмо на `smelkov2008@yandex.ru`.
+`scripts/backup_and_email.sh` кладёт в архив **только то, чего нет в git**: PostgreSQL (`pg_dump -Fc`), `.env`, загрузки, nginx/Let’s Encrypt. Исходники (`app/`, `templates/`, скриншоты гайда, `static/cdn`) **не** входят — они уже на GitHub.
 
-На DEMO (systemd + host Postgres, не Docker):
+На DEMO Service+Fitness+хаб ночной снимок — отдельный скрипт на хаб-VPS (`dr_snapshot_nika_crm_ru.sh`): два письма (Service-демо и Fitness+хаб), тоже без исходников.
+
+Для self-hosted (systemd + host Postgres), если нужны доп. файлы:
 
 ```bash
-# SMTP: задать MAIL_* в .env (как на WORK) и/или в Настройки → Почта
-# Cron (уже типичный профиль):
-# 40 3 * * *  backup → smelkov2008@yandex.ru
-# 20 4 * * *  повтор, если ночного архива нет
-
 cd /root/Nika-Service-CRM
 BACKUP_MODE=host BACKUP_XZ_OPTS="-3 -T1" \
-  BACKUP_EXTRA_PATHS="/var/www/nikacrm-downloads /var/www/html /etc/nginx/sites-enabled/nikacrm.conf" \
   /bin/bash scripts/backup_and_email.sh smelkov2008@yandex.ru
 ```
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Название: backup_and_email
-# Назначение: Ежедневный бэкап PostgreSQL + файлов сайта/проекта и отправка архива на email.
+# Назначение: Ежедневный бэкап данных CRM (dump + .env + uploads + nginx/LE), без исходников git.
 # Режимы: Docker Compose (WORK) или host Postgres + systemd (DEMO / self-hosted).
 
 set -euo pipefail
@@ -110,8 +110,7 @@ MODE="$(detect_mode)"
 log "START backup job (recipient=$RECIPIENT_EMAIL, mode=$MODE)"
 
 DB_DUMP_FILE="$TMP_DIR/postgres_${TS}.dump"
-ARCHIVE_FILE="$BACKUP_DIR/crm_full_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
-SITE_BUNDLE="$TMP_DIR/site_extra_${TS}.tar"
+ARCHIVE_FILE="$BACKUP_DIR/crm_data_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
 
 if [[ "$MODE" == "docker" ]]; then
   require_cmd docker
@@ -240,7 +239,44 @@ if [[ -z "${SMTP_SERVER:-}" || -z "${SMTP_USERNAME:-}" || -z "${SMTP_PASSWORD:-}
   exit 3
 fi
 
-# Доп. файлы сайта (html/downloads/nginx), если пути существуют
+# Данные для восстановления, не исходники с GitHub (docs/static/vendor раздувают письмо).
+if [[ "$MODE" == "docker" ]]; then
+  SITE_LABEL="WORK crm.nika-sc.ru"
+else
+  SITE_LABEL="CRM $(hostname -s 2>/dev/null || echo host)"
+fi
+
+STAGE="$TMP_DIR/payload"
+mkdir -p "$STAGE/postgres" "$STAGE/env" "$STAGE/uploads" "$STAGE/nginx" "$STAGE/compose"
+cp -a "$DB_DUMP_FILE" "$STAGE/postgres/"
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  cp -a "$ROOT_DIR/.env" "$STAGE/env/.env"
+  chmod 600 "$STAGE/env/.env"
+fi
+if [[ -d "$ROOT_DIR/data/uploads" ]]; then
+  cp -a "$ROOT_DIR/data/uploads/." "$STAGE/uploads/" 2>/dev/null || true
+fi
+if git -C "$ROOT_DIR" rev-parse HEAD >/dev/null 2>&1; then
+  git -C "$ROOT_DIR" rev-parse HEAD > "$STAGE/GIT_HEAD"
+  git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD > "$STAGE/GIT_BRANCH" 2>/dev/null || true
+  git -C "$ROOT_DIR" remote get-url origin > "$STAGE/GIT_REMOTE" 2>/dev/null || true
+fi
+[[ -f "$ROOT_DIR/docker/docker-compose.yml" ]] && cp -a "$ROOT_DIR/docker/docker-compose.yml" "$STAGE/compose/"
+[[ -f "$ROOT_DIR/docker-compose.yml" ]] && cp -a "$ROOT_DIR/docker-compose.yml" "$STAGE/compose/"
+
+for f in \
+  /etc/nginx/conf.d/crm.conf \
+  /etc/nginx/conf.d/00-crm-timed-log.conf \
+  /etc/nginx/conf.d/00-nika-security-limits.conf \
+  /etc/nginx/conf.d/ssl_servers_inc.conf
+do
+  [[ -f "$f" ]] && cp -a "$f" "$STAGE/nginx/"
+done
+if [[ -d /etc/letsencrypt/live ]]; then
+  mkdir -p "$STAGE/letsencrypt"
+  tar -C /etc -cf - letsencrypt | tar -C "$STAGE" -xf -
+fi
+
 EXTRA_LIST=()
 if [[ -n "${BACKUP_EXTRA_PATHS// }" ]]; then
   # shellcheck disable=SC2206
@@ -253,29 +289,24 @@ if [[ -n "${BACKUP_EXTRA_PATHS// }" ]]; then
     fi
   done
 fi
-# Типовые пути DEMO (host mode), если не заданы явно. На Docker/WORK не цепляем
-# /var/www/html — там чужой сайт хостинга и раздувает архив до сотен МБ.
-if [[ ${#EXTRA_LIST[@]} -eq 0 && "$MODE" == "host" ]]; then
-  for p in /var/www/nikacrm-downloads /var/www/html /etc/nginx/sites-enabled/nikacrm.conf; do
-    [[ -e "$p" ]] && EXTRA_LIST+=("$p")
-  done
-fi
-
 if [[ ${#EXTRA_LIST[@]} -gt 0 ]]; then
-  log "Bundle site extras -> $SITE_BUNDLE (${#EXTRA_LIST[@]} paths)"
-  # Не тащим офлайн-установщики Windows (сотни МБ) — только html/конфиги и мелкие файлы.
-  tar -cf "$SITE_BUNDLE" \
-    --exclude='*.exe' \
-    --exclude='*.EXE' \
-    --exclude='*.msi' \
-    --exclude='*.zip' \
-    "${EXTRA_LIST[@]}"
-else
-  SITE_BUNDLE=""
+  mkdir -p "$STAGE/extra"
+  tar -C / -cf - \
+    --exclude='*.exe' --exclude='*.EXE' --exclude='*.msi' --exclude='*.zip' \
+    "${EXTRA_LIST[@]#/}" 2>/dev/null \
+    | tar -C "$STAGE/extra" -xf - || log "WARN: extra paths pack failed"
 fi
 
-log "Create compressed full archive -> $ARCHIVE_FILE"
-# На малых VPS (DEMO ~1GB) xz -9e убивается OOM; задайте BACKUP_XZ_OPTS при необходимости.
+{
+  echo "label=$SITE_LABEL"
+  echo "created=$(date -Is)"
+  echo "host=$(hostname -f 2>/dev/null || hostname)"
+  echo "mode=$MODE"
+  echo "purpose=restore data only; code from git (GIT_HEAD / GIT_REMOTE)"
+  echo "contents=postgres dump, .env, data/uploads, nginx, letsencrypt"
+} > "$STAGE/MANIFEST.txt"
+
+log "Create compressed data archive -> $ARCHIVE_FILE"
 if [[ -z "${BACKUP_XZ_OPTS:-}" ]]; then
   mem_mb="$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
   if [[ "$mem_mb" -gt 0 && "$mem_mb" -lt 2048 ]]; then
@@ -285,46 +316,22 @@ if [[ -z "${BACKUP_XZ_OPTS:-}" ]]; then
     BACKUP_XZ_OPTS="-9e -T0"
   fi
 fi
-TAR_ARGS=(
-  -I "xz $BACKUP_XZ_OPTS" -cf "$ARCHIVE_FILE"
-  -C "$TMP_DIR" "$(basename "$DB_DUMP_FILE")"
-)
-if [[ -n "$SITE_BUNDLE" && -f "$SITE_BUNDLE" ]]; then
-  TAR_ARGS+=(-C "$TMP_DIR" "$(basename "$SITE_BUNDLE")")
-fi
-TAR_ARGS+=(
-  -C "$ROOT_DIR"
-  --exclude='./.git'
-  --exclude='./.cursor'
-  --exclude='./data/database/backups'
-  --exclude='./data/logs'
-  --exclude='./data/database/*.db'
-  --exclude='./data/database/*.db.*'
-  --exclude='./data/database/*.sqlite'
-  --exclude='./data/database/*.bak'
-  --exclude='./data/database/*.bak.*'
-  --exclude='./database/bootstrap/work_vps_*.sql'
-  --exclude='./__pycache__'
-  --exclude='./.pytest_cache'
-  --exclude='./.venv'
-  --exclude='./venv'
-  --exclude='./packaging/windows/assets'
-  --exclude='./packaging/windows/output'
-  --exclude='./static/cdn'
-  --exclude='*.exe'
-  --exclude='*.EXE'
-  .
-)
-tar "${TAR_ARGS[@]}"
+tar -I "xz $BACKUP_XZ_OPTS" -cf "$ARCHIVE_FILE" -C "$TMP_DIR" payload
 
 ARCHIVE_SIZE_HR="$(du -h "$ARCHIVE_FILE" | awk '{print $1}')"
 log "Archive ready: $ARCHIVE_FILE ($ARCHIVE_SIZE_HR)"
+
+if [[ "${BACKUP_SKIP_EMAIL:-}" == "1" ]]; then
+  log "BACKUP_SKIP_EMAIL=1 — archive kept, no mail"
+  exit 0
+fi
 
 export BACKUP_EMAIL_TO="$RECIPIENT_EMAIL"
 export BACKUP_ARCHIVE_PATH="$ARCHIVE_FILE"
 export BACKUP_TS="$TS"
 export BACKUP_HOST="$HOSTNAME_SHORT"
 export BACKUP_SIZE="$ARCHIVE_SIZE_HR"
+export BACKUP_SITE_LABEL="$SITE_LABEL"
 export BACKUP_ARCHIVE_BASENAME="$(basename "$ARCHIVE_FILE")"
 export SMTP_SERVER SMTP_PORT SMTP_USE_TLS SMTP_USE_SSL SMTP_USERNAME SMTP_PASSWORD SMTP_SENDER
 
@@ -384,17 +391,20 @@ if not archive_path.exists():
     raise FileNotFoundError(f"Archive not found: {archive_path}")
 
 msg = EmailMessage()
-msg["Subject"] = f"[CRM Backup] crm.nika-sc.ru {backup_host} {backup_ts}"
+site_label = os.environ.get("BACKUP_SITE_LABEL") or f"CRM {backup_host}"
+msg["Subject"] = f"[CRM Backup] {site_label} {backup_ts}"
 msg["From"] = smtp_sender
 msg["To"] = email_to
 msg.set_content(
-    f"Автоматический бэкап CRM / сайта.\n"
-    f"Сервер: {backup_host} (crm.nika-sc.ru)\n"
+    f"Автоматический бэкап данных CRM (без исходников с GitHub).\n"
+    f"Сайт: {site_label}\n"
+    f"Сервер: {backup_host}\n"
     f"Время: {backup_ts}\n"
     f"Размер архива: {backup_size}\n"
-    f"Файл: {archive_path.name}\n"
-    f"Содержимое: PostgreSQL dump (-Fc) + дерево проекта (templates/static/docs/…) "
-    f"+ доп. пути сайта (downloads/nginx), если есть.\n"
+    f"Файл: {archive_path.name}\n\n"
+    f"В архиве: PostgreSQL dump, .env, загрузки (фото диагностики и т.п.),\n"
+    f"nginx и Let's Encrypt (если есть на хосте).\n"
+    f"Код приложения — из git (см. GIT_HEAD в архиве).\n"
 )
 
 # Крупные вложения многие SMTP режут — шлём без файла, путь на диске
@@ -441,6 +451,7 @@ if [[ "$MODE" == "docker" ]]; then
       -e BACKUP_TS \
       -e BACKUP_HOST \
       -e BACKUP_SIZE \
+      -e BACKUP_SITE_LABEL \
       -e BACKUP_ARCHIVE_BASENAME \
       -e SMTP_SERVER -e SMTP_PORT -e SMTP_USE_TLS -e SMTP_USE_SSL \
       -e SMTP_USERNAME -e SMTP_PASSWORD -e SMTP_SENDER \
@@ -484,6 +495,6 @@ fi
 log "Email sent successfully"
 
 log "Cleanup old auto backups (> ${RETENTION_DAYS} days)"
-find "$BACKUP_DIR" -maxdepth 1 -type f -name 'crm_full_backup_*.tar.xz' -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'crm_full_backup_*.tar.xz' -o -name 'crm_data_backup_*.tar.xz' \) -mtime +"$RETENTION_DAYS" -delete
 
 log "DONE backup job"
