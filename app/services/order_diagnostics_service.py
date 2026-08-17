@@ -329,7 +329,12 @@ class OrderDiagnosticsService:
         }
 
     @staticmethod
-    def get_file_for_order(order_id: int, file_id: int) -> dict[str, Any]:
+    def get_file_for_order(
+        order_id: int,
+        file_id: int,
+        *,
+        require_on_disk: bool = True,
+    ) -> dict[str, Any]:
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -344,10 +349,11 @@ class OrderDiagnosticsService:
         if not row:
             raise NotFoundError("Файл не найден")
         path = resolve_client_file_path(row["file_path"])
-        if not path or not os.path.exists(path):
+        on_disk = bool(path and os.path.exists(path))
+        if require_on_disk and not on_disk:
             raise NotFoundError("Файл не найден на диске")
         data = dict(row)
-        data["abs_path"] = path
+        data["abs_path"] = path if on_disk else None
         return data
 
     @staticmethod
@@ -365,7 +371,9 @@ class OrderDiagnosticsService:
         )
         if not access["can_delete_files"]:
             raise PermissionError("Удалять фото диагностики может только администратор")
-        info = OrderDiagnosticsService.get_file_for_order(order_id, file_id)
+        info = OrderDiagnosticsService.get_file_for_order(
+            order_id, file_id, require_on_disk=False
+        )
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -373,10 +381,12 @@ class OrderDiagnosticsService:
                 (file_id, order_id),
             )
             conn.commit()
-        try:
-            os.remove(info["abs_path"])
-        except OSError:
-            logger.debug("could not remove diagnostics file %s", info.get("abs_path"))
+        abs_path = info.get("abs_path")
+        if abs_path:
+            try:
+                os.remove(abs_path)
+            except OSError:
+                logger.debug("could not remove diagnostics file %s", abs_path)
         OrderDiagnosticsService._log(
             user_id=user_id,
             username=username,

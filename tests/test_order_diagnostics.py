@@ -101,6 +101,7 @@ def test_save_text_writes_history_and_action_log():
     assert "ActionLogService" in log_src
     assert "add_diagnostics_file" in inspect.getsource(OrderDiagnosticsService.save_file)
     assert "delete_diagnostics_file" in inspect.getsource(OrderDiagnosticsService.delete_file)
+    assert "require_on_disk=False" in inspect.getsource(OrderDiagnosticsService.delete_file)
     save_src = inspect.getsource(OrderDiagnosticsService.save_file)
     assert "stored_name" in save_src
     assert "file_storage.save(confined)" in save_src
