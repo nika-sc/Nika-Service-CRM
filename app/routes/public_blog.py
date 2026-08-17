@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
+        "slug": "diagnostics-uploads-persist",
+        "file": "blog/33-diagnostics-uploads-persist.md",
+        "date": "2026-08-17 16:55",
+        "title": "Фото диагностики сохраняются после обновления сервера — Nika Service CRM",
+        "description": (
+            "17 августа 2026: снимки из окна диагностики пишутся на постоянный диск "
+            "и остаются после обновления CRM; в кабинете клиента они тоже открываются."
+        ),
+        "heading": "Фото диагностики на диске",
+        "teaser": "Снимки диагностики больше не пропадают после обновления сервера.",
+    },
+    {
         "slug": "all-orders-default-in-progress",
         "file": "blog/32-all-orders-default-in-progress.md",
         "date": "2026-08-17 16:45",

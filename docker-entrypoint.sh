@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Каталоги загрузок на томе (диагностика, комментарии, чат, счета)
+mkdir -p /app/uploads/order_client /app/uploads/comments \
+  /app/data/uploads/staff_chat /app/static/uploads/invoices
+
 # Применяем миграции при старте
 echo "Running migrations..."
 python scripts/run_migrations.py || true

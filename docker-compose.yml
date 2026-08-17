@@ -58,6 +58,10 @@ services:
       - ./data/database:/app/database
       - ./data/logs:/app/logs
       - ./data/uploads:/app/static/uploads
+      # Диагностика и комментарии пишут в /app/uploads/… (не static/)
+      - ./data/uploads:/app/uploads
+      # Чат сотрудников: /app/data/uploads/staff_chat
+      - ./data/uploads:/app/data/uploads
     expose:
       - "5000"
     depends_on:

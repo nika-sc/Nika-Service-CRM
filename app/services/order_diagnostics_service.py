@@ -23,6 +23,20 @@ ALLOWED_EXT = frozenset({"jpg", "jpeg", "png", "pdf"})
 _LOG_CLIP = 500
 
 
+def resolve_client_file_path(stored: Optional[str]) -> Optional[str]:
+    """Absolute path inside UPLOAD_DIR; accepts stored relative name or old absolute path."""
+    if not stored:
+        return None
+    seen = []
+    for candidate in (stored, os.path.basename(stored)):
+        path = confined_file_path(candidate, UPLOAD_DIR)
+        if path and path not in seen:
+            seen.append(path)
+            if os.path.exists(path):
+                return path
+    return seen[0] if seen else None
+
+
 def _clip(text: Optional[str], n: int = _LOG_CLIP) -> str:
     body = text or ""
     if len(body) <= n:
@@ -294,7 +308,7 @@ class OrderDiagnosticsService:
                     (order_id, filename, file_path, file_size, mime_type, created_by, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 """,
-                (order_id, filename, confined, size, stored_mime, user_id),
+                (order_id, filename, stored_name, size, stored_mime, user_id),
             )
             conn.commit()
             file_id = cursor.lastrowid
@@ -329,7 +343,7 @@ class OrderDiagnosticsService:
             row = cursor.fetchone()
         if not row:
             raise NotFoundError("Файл не найден")
-        path = confined_file_path(row["file_path"], UPLOAD_DIR)
+        path = resolve_client_file_path(row["file_path"])
         if not path or not os.path.exists(path):
             raise NotFoundError("Файл не найден на диске")
         data = dict(row)

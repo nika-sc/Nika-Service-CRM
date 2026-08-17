@@ -101,3 +101,36 @@ def test_save_text_writes_history_and_action_log():
     assert "ActionLogService" in log_src
     assert "add_diagnostics_file" in inspect.getsource(OrderDiagnosticsService.save_file)
     assert "delete_diagnostics_file" in inspect.getsource(OrderDiagnosticsService.delete_file)
+    save_src = inspect.getsource(OrderDiagnosticsService.save_file)
+    assert "stored_name" in save_src
+    assert "file_storage.save(confined)" in save_src
+
+
+def test_resolve_client_file_path_relative_and_legacy_absolute(tmp_path, monkeypatch):
+    from app.services import order_diagnostics_service as diag
+
+    upload_dir = tmp_path / "order_client"
+    upload_dir.mkdir()
+    monkeypatch.setattr(diag, "UPLOAD_DIR", str(upload_dir))
+    body = b"hello"
+    rel = "abc123_photo.jpg"
+    (upload_dir / rel).write_bytes(body)
+    assert diag.resolve_client_file_path(rel).endswith(rel)
+    legacy = str(upload_dir / rel)
+    assert diag.resolve_client_file_path(legacy) == str((upload_dir / rel).resolve())
+    missing = diag.resolve_client_file_path("no-such.jpg")
+    assert missing is None or not __import__("os").path.exists(missing)
+
+
+def test_docker_compose_persists_app_uploads():
+    from pathlib import Path
+
+    compose = (Path(__file__).resolve().parents[1] / "docker" / "docker-compose.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "../data/uploads:/app/uploads" in compose
+    assert "../data/uploads:/app/static/uploads" in compose
+    entry = (Path(__file__).resolve().parents[1] / "docker" / "docker-entrypoint.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "uploads/order_client" in entry
