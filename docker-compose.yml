@@ -57,7 +57,7 @@ services:
     volumes:
       - ./data/database:/app/database
       - ./data/logs:/app/logs
-      - ./data/uploads:/app/static/uploads
+      - ./data/uploads/invoices:/app/static/uploads/invoices
       # Диагностика и комментарии пишут в /app/uploads/… (не static/)
       - ./data/uploads:/app/uploads
       # Чат сотрудников: /app/data/uploads/staff_chat
@@ -84,7 +84,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./static:/var/www/nika/static:ro
-      - ./data/uploads:/var/www/nika/uploads:ro
+      - ./data/uploads/invoices:/var/www/nika/uploads/invoices:ro
     depends_on:
       postgres:
         condition: service_healthy

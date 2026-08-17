@@ -126,12 +126,25 @@ def test_resolve_client_file_path_relative_and_legacy_absolute(tmp_path, monkeyp
 def test_docker_compose_persists_app_uploads():
     from pathlib import Path
 
-    compose = (Path(__file__).resolve().parents[1] / "docker" / "docker-compose.yml").read_text(
-        encoding="utf-8"
-    )
-    assert "../data/uploads:/app/uploads" in compose
-    assert "../data/uploads:/app/static/uploads" in compose
-    entry = (Path(__file__).resolve().parents[1] / "docker" / "docker-entrypoint.sh").read_text(
-        encoding="utf-8"
-    )
-    assert "uploads/order_client" in entry
+    root = Path(__file__).resolve().parents[1]
+    nginx_conf = (root / "nginx" / "nginx.conf").read_text(encoding="utf-8")
+    assert "location /static/uploads/invoices/" in nginx_conf
+    assert "alias /var/www/nika/uploads/;" not in nginx_conf
+
+    found_compose = False
+    for compose_path in (root / "docker" / "docker-compose.yml", root / "docker-compose.yml"):
+        if not compose_path.is_file():
+            continue
+        text = compose_path.read_text(encoding="utf-8")
+        if "include:" in text and ":/app/uploads" not in text:
+            continue
+        found_compose = True
+        assert ":/app/uploads" in text
+        assert "uploads/invoices:/app/static/uploads/invoices" in text
+        assert "uploads/invoices:/var/www/nika/uploads/invoices" in text
+    assert found_compose
+
+    entry = root / "docker" / "docker-entrypoint.sh"
+    if not entry.is_file():
+        entry = root / "docker-entrypoint.sh"
+    assert "uploads/order_client" in entry.read_text(encoding="utf-8")
