@@ -82,17 +82,17 @@ sudo bash scripts/linux_upgrade.sh
 
 Ручное обновление (если скрипт недоступен):
 
-На WORK (ветка `production`):
+Docker Compose (каталог вашей установки):
 
 ```bash
-cd /root/nikanewcrm   # путь может отличаться
-git pull --ff-only origin production
+cd /opt/nika-service-crm   # ваш путь к клону
+git pull --ff-only
 docker compose build
 docker compose up -d
 docker compose ps
 ```
 
-На DEMO (публичный `main`):
+systemd + host Postgres (типичный self-hosted / демо):
 
 ```bash
 cd /root/Nika-Service-CRM

@@ -62,7 +62,7 @@ systemctl list-timers | grep nikacrm-demo
 ```bash
 cd /root/Nika-Service-CRM
 BACKUP_MODE=host BACKUP_XZ_OPTS="-3 -T1" \
-  /bin/bash scripts/backup_and_email.sh smelkov2008@yandex.ru
+  /bin/bash scripts/backup_and_email.sh you@example.com
 ```
 
 Архивы: `data/database/backups/auto/`. Лог: `data/logs/backup_email.log`. Хранение ~14 дней.

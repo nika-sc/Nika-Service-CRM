@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Название: backup_and_email
 # Назначение: Ежедневный бэкап данных CRM (dump + .env + uploads + nginx/LE), без исходников git.
-# Режимы: Docker Compose (WORK) или host Postgres + systemd (DEMO / self-hosted).
+# Режимы: Docker Compose или host Postgres + systemd (self-hosted).
+# Получатель: argv $1, иначе BACKUP_EMAIL_TO, иначе MAIL_USERNAME из .env.
+# Не зашивать личную почту и IP сервера — скрипт уходит в публичный OSS.
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-RECIPIENT_EMAIL="${1:-smelkov2008@yandex.ru}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 HOSTNAME_SHORT="$(hostname -s 2>/dev/null || echo vps)"
 TS="$(date +%Y%m%d_%H%M%S)"
@@ -43,7 +44,15 @@ require_cmd() {
 require_cmd tar
 require_cmd xz
 require_cmd python3
-# Host pg_dump/psql нужны только в mode=host. На WORK (Docker) dump идёт
+if command -v 7z >/dev/null 2>&1; then
+  SEVENZ_BIN="7z"
+elif command -v 7za >/dev/null 2>&1; then
+  SEVENZ_BIN="7za"
+else
+  log "ERROR: 7z не найден (apt install p7zip-full)"
+  exit 2
+fi
+# Host pg_dump/psql нужны только в mode=host. В Docker dump идёт
 # через `docker compose exec postgres pg_dump` — клиент на хосте не обязателен.
 
 detect_mode() {
@@ -82,6 +91,10 @@ wanted = {
     "BACKUP_EXTRA_PATHS",
     "BACKUP_RETENTION_DAYS",
     "BACKUP_MODE",
+    "BACKUP_ARCHIVE_PASSWORD",
+    "BACKUP_PUSH_PRIVATE",
+    "BACKUP_EMAIL_TO",
+    "BACKUP_SITE_LABEL",
 }
 lines = []
 path = Path(".env")
@@ -107,6 +120,17 @@ PY
 
 load_env_file
 MODE="$(detect_mode)"
+if [[ -n "${1:-}" ]]; then
+  RECIPIENT_EMAIL="$1"
+elif [[ -n "${BACKUP_EMAIL_TO:-}" ]]; then
+  RECIPIENT_EMAIL="$BACKUP_EMAIL_TO"
+else
+  RECIPIENT_EMAIL="${MAIL_USERNAME:-}"
+fi
+if [[ -z "$RECIPIENT_EMAIL" ]]; then
+  log "ERROR: укажите получателя: $0 you@example.com  (или BACKUP_EMAIL_TO / MAIL_USERNAME в .env)"
+  exit 2
+fi
 log "START backup job (recipient=$RECIPIENT_EMAIL, mode=$MODE)"
 
 DB_DUMP_FILE="$TMP_DIR/postgres_${TS}.dump"
@@ -240,11 +264,7 @@ if [[ -z "${SMTP_SERVER:-}" || -z "${SMTP_USERNAME:-}" || -z "${SMTP_PASSWORD:-}
 fi
 
 # Данные для восстановления, не исходники с GitHub (docs/static/vendor раздувают письмо).
-if [[ "$MODE" == "docker" ]]; then
-  SITE_LABEL="WORK crm.nika-sc.ru"
-else
-  SITE_LABEL="CRM $(hostname -s 2>/dev/null || echo host)"
-fi
+SITE_LABEL="${BACKUP_SITE_LABEL:-CRM ${HOSTNAME_SHORT}}"
 
 STAGE="$TMP_DIR/payload"
 mkdir -p "$STAGE/postgres" "$STAGE/env" "$STAGE/uploads" "$STAGE/nginx" "$STAGE/compose"
@@ -255,6 +275,10 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
 fi
 if [[ -d "$ROOT_DIR/data/uploads" ]]; then
   cp -a "$ROOT_DIR/data/uploads/." "$STAGE/uploads/" 2>/dev/null || true
+fi
+if [[ -d "$ROOT_DIR/data/monitoring" ]]; then
+  mkdir -p "$STAGE/monitoring"
+  cp -a "$ROOT_DIR/data/monitoring/." "$STAGE/monitoring/" 2>/dev/null || true
 fi
 if git -C "$ROOT_DIR" rev-parse HEAD >/dev/null 2>&1; then
   git -C "$ROOT_DIR" rev-parse HEAD > "$STAGE/GIT_HEAD"
@@ -303,7 +327,7 @@ fi
   echo "host=$(hostname -f 2>/dev/null || hostname)"
   echo "mode=$MODE"
   echo "purpose=restore data only; code from git (GIT_HEAD / GIT_REMOTE)"
-  echo "contents=postgres dump, .env, data/uploads, nginx, letsencrypt"
+  echo "contents=postgres dump, .env, data/uploads, nginx, letsencrypt, monitoring"
 } > "$STAGE/MANIFEST.txt"
 
 log "Create compressed data archive -> $ARCHIVE_FILE"
@@ -318,8 +342,38 @@ if [[ -z "${BACKUP_XZ_OPTS:-}" ]]; then
 fi
 tar -I "xz $BACKUP_XZ_OPTS" -cf "$ARCHIVE_FILE" -C "$TMP_DIR" payload
 
+if [[ -z "${BACKUP_ARCHIVE_PASSWORD:-}" ]]; then
+  log "ERROR: BACKUP_ARCHIVE_PASSWORD пуст в .env — открытый дамп на почту не шлём"
+  rm -f "$ARCHIVE_FILE"
+  exit 2
+fi
+SEVENZ_FILE="${ARCHIVE_FILE%.tar.xz}.7z"
+log "7z AES-256 + encrypt headers -> $SEVENZ_FILE"
+rm -f "$SEVENZ_FILE"
+set +e
+(
+  cd "$(dirname "$ARCHIVE_FILE")" || exit 2
+  "$SEVENZ_BIN" a -t7z -mx=0 -mhe=on -y \
+    "-p${BACKUP_ARCHIVE_PASSWORD}" "$SEVENZ_FILE" "$(basename "$ARCHIVE_FILE")" >/dev/null
+)
+rc=$?
+set -e
+if [[ $rc -gt 1 || ! -f "$SEVENZ_FILE" ]]; then
+  log "ERROR: 7z failed (rc=$rc)"
+  exit 2
+fi
+rm -f "$ARCHIVE_FILE"
+ARCHIVE_FILE="$SEVENZ_FILE"
+
 ARCHIVE_SIZE_HR="$(du -h "$ARCHIVE_FILE" | awk '{print $1}')"
 log "Archive ready: $ARCHIVE_FILE ($ARCHIVE_SIZE_HR)"
+
+if [[ "${BACKUP_PUSH_PRIVATE:-}" == "1" ]]; then
+  log "Push encrypted snapshot to private branch work-restore"
+  if ! bash "$ROOT_DIR/scripts/backup_push_work_restore.sh" "$ARCHIVE_FILE"; then
+    log "WARN: private git snapshot push failed (disk archive still kept)"
+  fi
+fi
 
 if [[ "${BACKUP_SKIP_EMAIL:-}" == "1" ]]; then
   log "BACKUP_SKIP_EMAIL=1 — archive kept, no mail"
@@ -405,6 +459,9 @@ msg.set_content(
     f"В архиве: PostgreSQL dump, .env, загрузки (фото диагностики и т.п.),\n"
     f"nginx и Let's Encrypt (если есть на хосте).\n"
     f"Код приложения — из git (см. GIT_HEAD в архиве).\n"
+    f"Файл: 7z AES-256, имена внутри тоже зашифрованы.\n"
+    f"Пароль в письме нет: BACKUP_ARCHIVE_PASSWORD в .env на сервере.\n"
+    f"Откройте в 7-Zip и введите пароль. Внутри будет tar.xz с payload/.\n"
 )
 
 # Крупные вложения многие SMTP режут — шлём без файла, путь на диске
@@ -412,18 +469,19 @@ attach_max = int(os.environ.get("BACKUP_ATTACH_MAX_BYTES") or "28000000")
 size_bytes = archive_path.stat().st_size
 if size_bytes <= attach_max:
     with archive_path.open("rb") as f:
+        att_subtype = "x-7z-compressed" if archive_path.name.endswith(".7z") else "octet-stream"
         msg.add_attachment(
             f.read(),
             maintype="application",
-            subtype="xz",
+            subtype=att_subtype,
             filename=archive_path.name,
         )
 else:
     msg.set_content(
         msg.get_content()
         + f"\nВложение НЕ приложено (размер {size_bytes} > {attach_max}).\n"
-        + f"Файл на WORK: {archive_path}\n"
-        + f"scp root@86.110.194.218:{archive_path} .\n"
+        + f"Файл на сервере: {archive_path}\n"
+        + f"scp root@{backup_host}:{archive_path} .\n"
     )
 
 if use_ssl:
@@ -478,7 +536,8 @@ msg["From"] = smtp_sender
 msg["To"] = os.environ["BACKUP_EMAIL_TO"]
 msg.set_content(f"Backup {archive_path.name} size={os.environ.get('BACKUP_SIZE')}\n")
 with archive_path.open("rb") as f:
-    msg.add_attachment(f.read(), maintype="application", subtype="xz", filename=archive_path.name)
+    att_subtype = "x-7z-compressed" if archive_path.name.endswith(".7z") else "octet-stream"
+    msg.add_attachment(f.read(), maintype="application", subtype=att_subtype, filename=archive_path.name)
 if use_ssl:
     with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=120) as s:
         s.login(smtp_user, smtp_password); s.send_message(msg)
@@ -495,6 +554,10 @@ fi
 log "Email sent successfully"
 
 log "Cleanup old auto backups (> ${RETENTION_DAYS} days)"
-find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'crm_full_backup_*.tar.xz' -o -name 'crm_data_backup_*.tar.xz' \) -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -maxdepth 1 -type f \( \
+  -name 'crm_full_backup_*.tar.xz' -o -name 'crm_full_backup_*.tar.xz.enc' \
+  -o -name 'crm_data_backup_*.tar.xz' -o -name 'crm_data_backup_*.tar.xz.enc' \
+  -o -name 'crm_data_backup_*.7z' \
+\) -mtime +"$RETENTION_DAYS" -delete
 
 log "DONE backup job"

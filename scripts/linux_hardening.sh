@@ -4,7 +4,7 @@
 #   sudo bash scripts/linux_hardening.sh
 #   sudo bash scripts/linux_hardening.sh --confirm-ssh-key
 #   sudo bash scripts/linux_hardening.sh --install-backup-cron
-#   CRM_DIR=/root/nikanewcrm sudo bash scripts/linux_hardening.sh
+#   CRM_DIR=/opt/nika-service-crm sudo bash scripts/linux_hardening.sh
 #
 # Не перезаписывает существующие jail/nginx конфиги целиком — только merge шаблонов.
 set -euo pipefail
