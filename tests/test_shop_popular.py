@@ -71,3 +71,47 @@ def test_shop_template_has_popular_chips_and_checkout():
     assert "shop.api_popular" in html
     assert "updatePrice" in html
     assert "print=1" in html
+    assert "Укажите мастера" in html
+    assert "Выберите мастера" in html
+
+
+def test_required_shop_master_id_rejects_empty(monkeypatch):
+    from app.routes.shop import required_shop_master_id
+    from app.utils.exceptions import ValidationError
+
+    for raw in (None, "", 0, "0"):
+        try:
+            required_shop_master_id(raw)
+            assert False, raw
+        except ValidationError as exc:
+            assert "мастера" in str(exc)
+
+
+def test_required_shop_master_id_rejects_unknown(monkeypatch):
+    from app.routes.shop import required_shop_master_id
+    from app.utils.exceptions import ValidationError
+
+    class _Cur:
+        def execute(self, *args, **kwargs):
+            return None
+
+        def fetchone(self):
+            return None
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def cursor(self):
+            return _Cur()
+
+    monkeypatch.setattr("app.routes.shop.get_db_connection", lambda: _Conn())
+    try:
+        required_shop_master_id(99)
+        assert False
+    except ValidationError as exc:
+        assert "списка" in str(exc)
+

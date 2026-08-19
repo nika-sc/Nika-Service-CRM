@@ -53,6 +53,32 @@ def get_shop_payment_method_options() -> list:
         return [{'value': 'cash', 'label': 'Наличные'}]
 
 
+def required_shop_master_id(raw) -> int:
+    """Shop sale must have a master (users.id). Empty or unknown id is rejected."""
+    try:
+        master_id = int(raw)
+    except (TypeError, ValueError):
+        raise ValidationError('Укажите мастера')
+    if master_id <= 0:
+        raise ValidationError('Укажите мастера')
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT u.id
+            FROM users u
+            INNER JOIN masters m ON m.user_id = u.id
+            WHERE u.id = ?
+              AND u.is_active = 1
+              AND (m.active = 1 OR m.active IS NULL)
+            """,
+            (master_id,),
+        )
+        if cursor.fetchone() is None:
+            raise ValidationError('Укажите мастера из списка')
+    return master_id
+
+
 def payment_label_for(value, options=None) -> str:
     """Human-readable payment method for shop list/detail."""
     raw = str(value or '').strip()
@@ -392,15 +418,16 @@ def api_create_sale():
     for item in items:
         if not item.get('price') or float(item.get('price', 0)) <= 0:
             return jsonify({'success': False, 'error': 'Укажите цену для всех позиций'}), 400
-    
+
     try:
+        master_id = required_shop_master_id(data.get('master_id'))
         sale_id, sale_info = FinanceService.create_shop_sale(
             items=items,
             customer_id=data.get('customer_id'),
             customer_name=data.get('customer_name'),
             customer_phone=data.get('customer_phone'),
             manager_id=data.get('manager_id'),
-            master_id=data.get('master_id'),
+            master_id=master_id,
             discount=float(data.get('discount', 0)),
             payment_method=data.get('payment_method', 'cash'),
             paid_amount=float(data.get('paid_amount')) if data.get('paid_amount') else None,

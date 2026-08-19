@@ -664,13 +664,13 @@
                             <h6 class="mb-2">
                                 <i class="fas fa-user-tie me-2"></i>Исполнитель
                             </h6>
-                            <select class="form-select" id="executorSelect">
-                                <option value="">Не выбран</option>
+                            <select class="form-select" id="executorSelect" required>
+                                <option value="" selected disabled>Выберите мастера</option>
                                 {% for master in masters %}
                                 <option value="{{ master.id }}">{{ master.name }}</option>
                                 {% endfor %}
                             </select>
-                            <small class="text-muted">Нужен, чтобы начислить зарплату</small>
+                            <small class="text-muted">Обязательно: без мастера продажа не проводится</small>
                         </div>
 
                         <div class="payment-section" id="paymentSection">
@@ -1098,7 +1098,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const discount = parseFloat(document.getElementById('discountInput').value) || 0;
         const comment = document.getElementById('commentInput').value.trim();
         const executorId = document.getElementById('executorSelect').value;
-        
+        if (!executorId) {
+            alert('Укажите мастера. Без мастера продажа не проводится.');
+            document.getElementById('executorSelect').focus();
+            return;
+        }
+
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const finalAmount = Math.max(0, total - discount);
 

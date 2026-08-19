@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
 _POSTS = [
     {
+        "slug": "shop-master-required",
+        "file": "blog/34-shop-master-required.md",
+        "date": "2026-08-19 22:25",
+        "title": "В магазине обязателен мастер — Nika Service CRM",
+        "description": (
+            "19 августа 2026: продажу в магазине нельзя провести без мастера; "
+            "без исполнителя зарплата не начисляется, система показывает предупреждение."
+        ),
+        "heading": "Магазин: мастер обязателен",
+        "teaser": "Без мастера чек в магазине не проводится — зарплата не теряется.",
+    },
+    {
         "slug": "diagnostics-uploads-persist",
         "file": "blog/33-diagnostics-uploads-persist.md",
         "date": "2026-08-17 16:55",
