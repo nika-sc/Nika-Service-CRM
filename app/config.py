@@ -92,8 +92,8 @@ class Config:
     ITEMS_PER_PAGE = 50
     MAX_ITEMS_PER_PAGE = 200
     
-    # Логирование
-    LOG_FILE = 'app.log'
+    # Логирование (каталог logs должен быть writable для uid 1000 в Docker)
+    LOG_FILE = os.environ.get('LOG_FILE', 'logs/app.log')
     LOG_LEVEL = 'INFO'
     LOG_SLOW_QUERIES = os.environ.get('LOG_SLOW_QUERIES', 'True').lower() == 'true'
     SLOW_QUERY_THRESHOLD_MS = int(os.environ.get('SLOW_QUERY_THRESHOLD_MS', '150'))

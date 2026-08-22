@@ -9,7 +9,9 @@ mkdir -p /app/uploads/order_client /app/uploads/comments \
 echo "Running migrations..."
 python scripts/run_migrations.py || true
 
-# Bind-mounts must be writable by the app user (uid 1000).
+# Bind-mounts and app logs must be writable by uid 1000 (gosu nika).
+mkdir -p /app/logs
+touch /app/logs/app.log
 chown -R nika:nika \
   /app/uploads \
   /app/data \

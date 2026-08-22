@@ -716,6 +716,7 @@ def test_docker_runs_gunicorn_as_nika():
     assert "gosu" in dockerfile
     assert "useradd" in dockerfile
     assert "exec gosu nika gunicorn" in entry
+    assert "touch /app/logs/app.log" in entry
     assert "cap_drop" not in compose
 
 
