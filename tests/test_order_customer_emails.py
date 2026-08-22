@@ -1,7 +1,14 @@
 """Order customer email journal: titles, SQL flags, UI."""
 from pathlib import Path
 
+from app.routes.orders import format_phone_display, normalize_phone
 from app.services.notification_service import NotificationService
+
+
+def test_orders_module_keeps_phone_helpers():
+    """format_phone_display must see module-level normalize_phone (not a replaced import)."""
+    assert normalize_phone("8 (900) 111-22-33") == "79001112233"
+    assert format_phone_display("79001112233") == "+7(900)111-22-33"
 
 
 def test_customer_email_template_titles():

@@ -25,6 +25,7 @@ from app.services.salary_service import SalaryService
 from app.services.user_service import UserService
 from app.services.action_log_service import ActionLogService
 from app.services.notification_service import NotificationService
+from app.utils.validators import normalize_phone, parse_non_negative_money, money_values_equal
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str, get_moscow_now_naive, convert_to_moscow
 from app.utils.cache import clear_cache, cache_result
