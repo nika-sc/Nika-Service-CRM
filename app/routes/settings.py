@@ -790,6 +790,7 @@ def api_diagnostics_template_detail(template_id):
                 return jsonify({'success': False, 'error': 'Название обязательно'}), 400
             if not body:
                 return jsonify({'success': False, 'error': 'Текст шаблона обязателен'}), 400
+            raw_active = data.get('is_active')
             success = ReferenceService.update_diagnostics_template(
                 template_id,
                 name=name,
@@ -797,7 +798,7 @@ def api_diagnostics_template_detail(template_id):
                 device_type_id=data.get('device_type_id'),
                 device_brand_id=data.get('device_brand_id'),
                 model_id=data.get('model_id'),
-                is_active=data.get('is_active'),
+                is_active=None if raw_active is None else ReferenceService._int_flag(raw_active),
                 has_device_type_id=True,
                 has_device_brand_id=True,
                 has_model_id=True,

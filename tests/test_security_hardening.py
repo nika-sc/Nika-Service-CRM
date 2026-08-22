@@ -519,7 +519,7 @@ def test_compose_security_env_and_beszel_bind():
     assert "CSP_NONCE_MODE=${CSP_NONCE_MODE:-report}" in compose
     assert "REDIS_PASSWORD" in compose
     monitoring = (root / "docker" / "docker-compose.monitoring.yml").read_text(encoding="utf-8")
-    assert 'LISTEN: "127.0.0.1:8090"' in monitoring
+    assert "--http=127.0.0.1:8090" in monitoring
 
 
 def test_prod_requirements_exclude_pytest_playwright():

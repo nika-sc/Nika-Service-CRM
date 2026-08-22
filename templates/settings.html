@@ -266,6 +266,12 @@
                         </a>
                     </li>
                     <li class="settings-menu-item">
+                        <a class="settings-menu-link" id="diagnostics-templates-tab" data-bs-toggle="tab" data-bs-target="#diagnostics-templates" role="tab" aria-controls="diagnostics-templates" aria-selected="false">
+                            <i class="fas fa-stethoscope"></i>
+                            <span>Шаблоны диагностики</span>
+                        </a>
+                    </li>
+                    <li class="settings-menu-item">
                         <a class="settings-menu-link" id="services-tab" data-bs-toggle="tab" data-bs-target="#services" role="tab" aria-controls="services" aria-selected="false">
                             <i class="fas fa-cogs"></i>
                             <span>Услуги</span>
@@ -1178,35 +1184,38 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Шаблоны диагностики -->
-                            <div class="col-12">
-                                <div class="card shadow-sm">
-                                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                                        <h6 class="card-title mb-0"><i class="fas fa-stethoscope text-success me-1"></i> Шаблоны диагностики</h6>
-                                        <button type="button" class="btn btn-primary btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#addDiagnosticsTemplateModal">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                    <div class="card-body p-0" style="max-height: 360px; overflow-y: auto;">
-                                        <table class="table table-hover table-sm mb-0 device-data-table sortable-table" id="diagnosticsTemplatesTable">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:30px;"></th>
-                                                    <th>Название</th>
-                                                    <th>Тип / марка / модель</th>
-                                                    <th class="text-end" style="width:100px;"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="diagnosticsTemplatesTableBody">
-                                                <tr class="device-data-placeholder"><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="card-footer py-1 bg-light">
-                                        <small class="text-muted" id="diagnosticsTemplatesCount">—</small>
-                                    </div>
+                    <!-- Шаблоны диагностики -->
+                    <div class="tab-pane fade" id="diagnostics-templates" role="tabpanel">
+                        <div class="card shadow-sm">
+                            <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h3 class="card-title mb-0"><i class="fas fa-stethoscope text-success me-2"></i>Шаблоны диагностики</h3>
+                                    <div class="small text-muted mt-1">Текст подставляется в окне диагностики заявки. Пустые тип / марка / модель — шаблон для любых устройств.</div>
                                 </div>
+                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addDiagnosticsTemplateModal">
+                                    <i class="fas fa-plus me-1"></i>Добавить
+                                </button>
+                            </div>
+                            <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0 device-data-table sortable-table" id="diagnosticsTemplatesTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:30px;"></th>
+                                            <th>Название</th>
+                                            <th>Тип / марка / модель</th>
+                                            <th class="text-end" style="width:100px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="diagnosticsTemplatesTableBody">
+                                        <tr class="device-data-placeholder"><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer py-1 bg-light">
+                                <small class="text-muted" id="diagnosticsTemplatesCount">—</small>
                             </div>
                         </div>
                     </div>
@@ -2477,41 +2486,64 @@ function fillSelectOptions(select, items, placeholder) {
     if (current) select.value = current;
 }
 
-function loadDiagnosticsTemplateCatalog(typeId, brandId) {
+function catalogSelectItems(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (payload && Array.isArray(payload.items)) return payload.items;
+    return [];
+}
+
+function loadDiagnosticsTemplateCatalog(typeId, brandId, modelId) {
     const typeSel = document.getElementById('diagnosticsTemplateType');
     const brandSel = document.getElementById('diagnosticsTemplateBrand');
     const modelSel = document.getElementById('diagnosticsTemplateModel');
-    const typeQ = typeId ? `?type_id=${encodeURIComponent(typeId)}` : '';
-    const brandQ = typeId || brandId
-        ? `?type_id=${encodeURIComponent(typeId || '')}&brand_id=${encodeURIComponent(brandId || '')}`
-        : '';
+    if (!typeSel || !brandSel || !modelSel) {
+        return Promise.resolve();
+    }
     return Promise.all([
-        fetch('/api/catalog/types').then(r => r.json()),
-        fetch('/api/catalog/brands' + typeQ).then(r => r.json()),
-        fetch('/api/catalog/models' + brandQ).then(r => r.json()),
+        fetch('/api/device-types').then(r => r.json()),
+        fetch('/api/device-brands').then(r => r.json()),
+        fetch('/api/order-models').then(r => r.json()),
     ]).then(([types, brands, models]) => {
-        fillSelectOptions(typeSel, Array.isArray(types) ? types : [], 'Любой');
-        fillSelectOptions(brandSel, Array.isArray(brands) ? brands : [], 'Любая');
-        fillSelectOptions(modelSel, Array.isArray(models) ? models : [], 'Любая');
+        fillSelectOptions(typeSel, catalogSelectItems(types), 'Любой');
+        fillSelectOptions(brandSel, catalogSelectItems(brands), 'Любая');
+        fillSelectOptions(modelSel, catalogSelectItems(models), 'Любая');
         if (typeId) typeSel.value = String(typeId);
         if (brandId) brandSel.value = String(brandId);
+        if (modelId) modelSel.value = String(modelId);
+    }).catch(err => {
+        console.error('Ошибка загрузки справочников для шаблона диагностики:', err);
     });
 }
 
-document.getElementById('diagnosticsTemplateType')?.addEventListener('change', function() {
-    const typeId = this.value;
-    const brandId = document.getElementById('diagnosticsTemplateBrand')?.value || '';
-    loadDiagnosticsTemplateCatalog(typeId, brandId);
-});
-document.getElementById('diagnosticsTemplateBrand')?.addEventListener('change', function() {
-    const typeId = document.getElementById('diagnosticsTemplateType')?.value || '';
-    loadDiagnosticsTemplateCatalog(typeId, this.value);
-});
-document.getElementById('addDiagnosticsTemplateModal')?.addEventListener('show.bs.modal', function() {
-    if (!editingItemId) {
-        loadDiagnosticsTemplateCatalog('', '');
+function bindDiagnosticsTemplateCatalog() {
+    const typeSel = document.getElementById('diagnosticsTemplateType');
+    const brandSel = document.getElementById('diagnosticsTemplateBrand');
+    const modal = document.getElementById('addDiagnosticsTemplateModal');
+    if (typeSel && !typeSel.dataset.catalogBound) {
+        typeSel.dataset.catalogBound = '1';
+        typeSel.addEventListener('change', function() {
+            const brandId = brandSel ? brandSel.value : '';
+            const modelId = document.getElementById('diagnosticsTemplateModel')?.value || '';
+            loadDiagnosticsTemplateCatalog(this.value, brandId, modelId);
+        });
     }
-});
+    if (brandSel && !brandSel.dataset.catalogBound) {
+        brandSel.dataset.catalogBound = '1';
+        brandSel.addEventListener('change', function() {
+            const typeId = typeSel ? typeSel.value : '';
+            const modelId = document.getElementById('diagnosticsTemplateModel')?.value || '';
+            loadDiagnosticsTemplateCatalog(typeId, this.value, modelId);
+        });
+    }
+    if (modal && !modal.dataset.catalogBound) {
+        modal.dataset.catalogBound = '1';
+        modal.addEventListener('show.bs.modal', function() {
+            if (!editingItemId) {
+                loadDiagnosticsTemplateCatalog('', '', '');
+            }
+        });
+    }
+}
 
 function initDeviceDataSortables() {
     if (typeof Sortable === 'undefined') return;
@@ -2545,7 +2577,7 @@ function loadDeviceDataTables(force) {
 
     const bodies = [
         'deviceTypesTableBody', 'deviceBrandsTableBody', 'symptomsTableBody',
-        'appearanceTagsTableBody', 'orderModelsTableBody', 'diagnosticsTemplatesTableBody'
+        'appearanceTagsTableBody', 'orderModelsTableBody'
     ];
     bodies.forEach(id => {
         const tb = document.getElementById(id);
@@ -2560,28 +2592,24 @@ function loadDeviceDataTables(force) {
         fetch('/api/symptoms').then(r => r.json()),
         fetch('/api/appearance-tags').then(r => r.json()),
         fetch('/api/order-models').then(r => r.json()),
-        fetch('/api/diagnostics-templates').then(r => r.json()),
-    ]).then(([types, brands, symptoms, tags, models, templates]) => {
+    ]).then(([types, brands, symptoms, tags, models]) => {
         const typesArr = Array.isArray(types) ? types : [];
         const brandsArr = Array.isArray(brands) ? brands : [];
         const symptomsArr = Array.isArray(symptoms) ? symptoms : [];
         const tagsArr = Array.isArray(tags) ? tags : [];
         const modelsArr = Array.isArray(models) ? models : [];
-        const templatesArr = Array.isArray(templates) ? templates : [];
 
         renderSortableDeviceRows(document.getElementById('deviceTypesTableBody'), typesArr, 'data-type-id', 'device-types', 'device-type');
         renderSortableDeviceRows(document.getElementById('deviceBrandsTableBody'), brandsArr, 'data-brand-id', 'device-brands', 'device-brand');
         renderSortableDeviceRows(document.getElementById('symptomsTableBody'), symptomsArr, 'data-symptom-id', 'symptoms', 'symptom');
         renderSortableDeviceRows(document.getElementById('appearanceTagsTableBody'), tagsArr, 'data-tag-id', 'appearance-tags', 'appearance-tag');
         renderOrderModelRows(document.getElementById('orderModelsTableBody'), modelsArr);
-        renderDiagnosticsTemplateRows(document.getElementById('diagnosticsTemplatesTableBody'), templatesArr);
 
         setDeviceCount('deviceTypesCount', typesArr.length);
         setDeviceCount('deviceBrandsCount', brandsArr.length);
         setDeviceCount('symptomsCount', symptomsArr.length);
         setDeviceCount('appearanceTagsCount', tagsArr.length);
         setDeviceCount('orderModelsCount', modelsArr.length);
-        setDeviceCount('diagnosticsTemplatesCount', templatesArr.length);
 
         initDeviceDataSortables();
         deviceDataLoaded = true;
@@ -2600,17 +2628,60 @@ function reloadDeviceDataTables() {
     return loadDeviceDataTables(true);
 }
 
+let diagnosticsTemplatesLoaded = false;
+let diagnosticsTemplatesLoading = false;
+
+function loadDiagnosticsTemplatesTable(force) {
+    if (diagnosticsTemplatesLoading) return Promise.resolve();
+    if (diagnosticsTemplatesLoaded && !force) return Promise.resolve();
+    diagnosticsTemplatesLoading = true;
+    const tb = document.getElementById('diagnosticsTemplatesTableBody');
+    if (tb) {
+        tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Загрузка...</td></tr>';
+    }
+    return fetch('/api/diagnostics-templates').then(r => r.json()).then(templates => {
+        const templatesArr = Array.isArray(templates) ? templates : [];
+        renderDiagnosticsTemplateRows(tb, templatesArr);
+        setDeviceCount('diagnosticsTemplatesCount', templatesArr.length);
+        initDeviceDataSortables();
+        diagnosticsTemplatesLoaded = true;
+    }).catch(err => {
+        console.error('Ошибка загрузки шаблонов диагностики:', err);
+        if (tb) tb.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Ошибка загрузки</td></tr>';
+    }).finally(() => {
+        diagnosticsTemplatesLoading = false;
+    });
+}
+
+function reloadDiagnosticsTemplatesTable() {
+    return loadDiagnosticsTemplatesTable(true);
+}
+
+function isSettingsTabOpen(tabId, hash) {
+    return document.getElementById(tabId)?.classList.contains('active') ||
+        window.location.hash === hash ||
+        localStorage.getItem('settingsActiveTab') === hash;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    bindDiagnosticsTemplateCatalog();
     const deviceDataTab = document.getElementById('device-data-tab');
     if (deviceDataTab) {
         deviceDataTab.addEventListener('shown.bs.tab', function() {
             loadDeviceDataTables();
         });
     }
-    if (document.getElementById('device-data')?.classList.contains('active') ||
-        window.location.hash === '#device-data' ||
-        localStorage.getItem('settingsActiveTab') === '#device-data') {
+    const diagnosticsTab = document.getElementById('diagnostics-templates-tab');
+    if (diagnosticsTab) {
+        diagnosticsTab.addEventListener('shown.bs.tab', function() {
+            loadDiagnosticsTemplatesTable();
+        });
+    }
+    if (isSettingsTabOpen('device-data', '#device-data')) {
         loadDeviceDataTables();
+    }
+    if (isSettingsTabOpen('diagnostics-templates', '#diagnostics-templates')) {
+        loadDiagnosticsTemplatesTable();
     }
 });
 
@@ -2654,11 +2725,7 @@ document.addEventListener('click', function(e) {
             const typeId = row ? row.dataset.typeId : '';
             const brandId = row ? row.dataset.brandId : '';
             const modelId = row ? row.dataset.modelId : '';
-            loadDiagnosticsTemplateCatalog(typeId, brandId).then(() => {
-                document.getElementById('diagnosticsTemplateType').value = typeId || '';
-                document.getElementById('diagnosticsTemplateBrand').value = brandId || '';
-                document.getElementById('diagnosticsTemplateModel').value = modelId || '';
-            });
+            loadDiagnosticsTemplateCatalog(typeId, brandId, modelId);
             new bootstrap.Modal(document.getElementById('addDiagnosticsTemplateModal')).show();
         }
     }
@@ -2678,11 +2745,20 @@ document.addEventListener('click', function(e) {
         else if (type === 'order-model') url = `/api/order-models/${id}`;
         else if (type === 'diagnostics-template') url = `/api/diagnostics-templates/${id}`;
         
-        fetch(url, {method: 'DELETE'})
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+            }
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    reloadDeviceDataTables();
+                    if (type === 'diagnostics-template') {
+                        reloadDiagnosticsTemplatesTable();
+                    } else {
+                        reloadDeviceDataTables();
+                    }
                 } else {
                     alert(data.error || 'Ошибка удаления');
                 }
@@ -2836,7 +2912,10 @@ function saveDiagnosticsTemplate() {
     const method = editingItemId ? 'PUT' : 'POST';
     fetch(url, {
         method: method,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
         body: JSON.stringify({
             name: name,
             body: body,
@@ -2849,7 +2928,7 @@ function saveDiagnosticsTemplate() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addDiagnosticsTemplateModal')).hide();
-            reloadDeviceDataTables();
+            reloadDiagnosticsTemplatesTable();
         } else {
             alert(data.error || 'Ошибка сохранения');
         }
@@ -2857,6 +2936,7 @@ function saveDiagnosticsTemplate() {
 }
 
 // Сброс форм при закрытии модальных окон
+document.addEventListener('DOMContentLoaded', function() {
 ['addDeviceTypeModal', 'addDeviceBrandModal', 'addSymptomModal', 'addAppearanceTagModal', 'addOrderModelModal', 'addDiagnosticsTemplateModal'].forEach(modalId => {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -2879,6 +2959,7 @@ function saveDiagnosticsTemplate() {
         });
     }
 });
+});
 
 // Обработка переключения вкладок по хешу в URL
 function switchTabByHash() {
@@ -2889,6 +2970,7 @@ function switchTabByHash() {
         '#print-templates': 'print-templates-tab',
         '#director-notifications': 'director-notifications-tab',
         '#device-data': 'device-data-tab',
+        '#diagnostics-templates': 'diagnostics-templates-tab',
         '#services': 'services-tab',
         '#users': 'users-tab',
         '#permissions': 'permissions-tab',
@@ -2951,7 +3033,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('hashchange', switchTabByHash);
     
     // Обработка клика по ссылкам с хешем для всех разделов
-    const hashTabs = ['general', 'statuses', 'print-templates', 'director-notifications', 'device-data', 'services', 'users', 'permissions', 'roles', 'notifications', 'client-notifications'];
+    const hashTabs = ['general', 'statuses', 'print-templates', 'director-notifications', 'device-data', 'diagnostics-templates', 'services', 'users', 'permissions', 'roles', 'notifications', 'client-notifications'];
     hashTabs.forEach(tabName => {
         document.querySelectorAll(`a[href="/settings#${tabName}"], a[href*="#${tabName}"]`).forEach(link => {
             link.addEventListener('click', function(e) {
