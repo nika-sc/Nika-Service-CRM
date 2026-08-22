@@ -44,6 +44,14 @@ STATUS_LABELS = {
 
 ALLOWED_UPLOAD_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _INVOICE_SNIFF_EXT = frozenset({"png", "jpg", "jpeg", "webp", "gif"})
+_INVOICE_ASSET_KINDS = frozenset({"logo", "signature", "stamp", "asset"})
+
+
+def _invoice_asset_kind(raw: str | None) -> str | None:
+    kind = (raw or "asset").strip().lower()
+    if kind not in _INVOICE_ASSET_KINDS:
+        return None
+    return kind
 
 
 def register_invoice_static_guard(app):
@@ -297,7 +305,9 @@ def settings_page():
 def api_upload_asset():
     """Upload logo / signature / stamp into static/uploads/invoices."""
     file = request.files.get("file")
-    kind = (request.form.get("kind") or "asset").strip()
+    kind = _invoice_asset_kind(request.form.get("kind") or "asset")
+    if not kind:
+        return jsonify({"success": False, "error": "Некорректный тип файла"}), 400
     if not file or not file.filename:
         return jsonify({"success": False, "error": "Файл не выбран"}), 400
     ext = os.path.splitext(file.filename)[1].lower()
@@ -313,8 +323,11 @@ def api_upload_asset():
     safe = secure_filename(file.filename) or f"{kind}{ext}"
     name = f"{kind}_{uuid.uuid4().hex[:10]}_{safe}"
     path = os.path.join(upload_dir, name)
-    file.save(path)
-    url = url_for("static", filename=f"uploads/invoices/{name}")
+    confined = confined_file_path(path, upload_dir)
+    if not confined:
+        return jsonify({"success": False, "error": "Некорректный путь"}), 400
+    file.save(confined)
+    url = url_for("static", filename=f"uploads/invoices/{os.path.basename(confined)}")
     return jsonify({"success": True, "url": url})
 
 

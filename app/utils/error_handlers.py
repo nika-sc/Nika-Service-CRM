@@ -19,12 +19,24 @@ from app.utils.exceptions import (
 )
 from flask_wtf.csrf import CSRFError
 
+from app.utils.safe_redirect import is_safe_redirect_target
+
 logger = logging.getLogger(__name__)
 
 API_INTERNAL_ERROR_MESSAGE = "Внутренняя ошибка сервера. Пожалуйста, попробуйте позже."
 LOGIN_RATE_LIMIT_MESSAGE = (
     "Слишком много попыток входа. Подождите минуту и попробуйте снова."
 )
+
+
+def _redirect_home_or_safe_referrer():
+    """Redirect to same-host referrer, otherwise home. Never follow an external Referer."""
+    from flask import has_request_context
+
+    referrer = request.referrer if has_request_context() else None
+    if is_safe_redirect_target(referrer):
+        return redirect(referrer)
+    return redirect(url_for("main.home"))
 
 
 def api_internal_error(exc: Exception, log_message: str = "Внутренняя ошибка API"):
@@ -95,7 +107,7 @@ def rate_limit_http_response():
 
     flash(LOGIN_RATE_LIMIT_MESSAGE, "error")
     referrer = request.referrer
-    if referrer:
+    if is_safe_redirect_target(referrer):
         resp = redirect(referrer)
         resp.status_code = 429
         return resp
@@ -128,8 +140,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash(str(error), 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 400
+        return _redirect_home_or_safe_referrer(), 400
     
     @app.errorhandler(NotFoundError)
     def handle_not_found_error(error: NotFoundError):
@@ -147,8 +158,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash(str(error), 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 404
+        return _redirect_home_or_safe_referrer(), 404
     
     @app.errorhandler(PermissionError)
     def handle_permission_error(error: PermissionError):
@@ -166,8 +176,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash(str(error), 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 403
+        return _redirect_home_or_safe_referrer(), 403
     
     @app.errorhandler(DatabaseError)
     def handle_database_error(error: DatabaseError):
@@ -185,8 +194,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash('Произошла ошибка базы данных. Пожалуйста, попробуйте позже.', 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 500
+        return _redirect_home_or_safe_referrer(), 500
     
     @app.errorhandler(BaseAppException)
     def handle_base_app_error(error: BaseAppException):
@@ -204,8 +212,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash(str(error), 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 500
+        return _redirect_home_or_safe_referrer(), 500
     
     @app.errorhandler(404)
     def handle_404(error):
@@ -254,8 +261,7 @@ def register_error_handlers(app):
         
         # Иначе показываем flash сообщение
         flash('Ошибка безопасности. Пожалуйста, обновите страницу и попробуйте снова.', 'error')
-        referrer = request.referrer if has_request_context() else None
-        return redirect(referrer or url_for('main.home')), 400
+        return _redirect_home_or_safe_referrer(), 400
 
     try:
         from flask_limiter.errors import RateLimitExceeded

@@ -33,48 +33,12 @@ from app.utils.error_handlers import api_internal_error
 from app.database.connection import get_db_connection
 from app.database.queries.order_queries import OrderQueries
 from app.database.queries.warehouse_queries import WarehouseQueries
+from app.utils.safe_http_fetch import fetch_public_http
 import sqlite3
 import re
-import socket
-import ipaddress
-from urllib.parse import urljoin, urlparse
-from urllib.request import Request as UrlRequest, urlopen
-from urllib.error import URLError, HTTPError
 
 bp = Blueprint('orders', __name__)
 logger = logging.getLogger(__name__)
-
-
-def _is_safe_public_http_url(raw_url: str) -> bool:
-    """
-    SSRF-защита: разрешаем только http/https на публичные IP-адреса.
-    Блокируем localhost, private, loopback, link-local, multicast и reserved диапазоны.
-    """
-    try:
-        parsed = urlparse(raw_url)
-        if parsed.scheme not in ('http', 'https'):
-            return False
-        hostname = (parsed.hostname or '').strip()
-        if not hostname:
-            return False
-        if hostname.lower() in ('localhost',):
-            return False
-        infos = socket.getaddrinfo(hostname, parsed.port or 80, proto=socket.IPPROTO_TCP)
-        for info in infos:
-            ip = info[4][0]
-            ip_obj = ipaddress.ip_address(ip)
-            if (
-                ip_obj.is_private
-                or ip_obj.is_loopback
-                or ip_obj.is_link_local
-                or ip_obj.is_multicast
-                or ip_obj.is_reserved
-                or ip_obj.is_unspecified
-            ):
-                return False
-        return True
-    except Exception:
-        return False
 
 
 @bp.route('/print/logo-proxy')
@@ -90,38 +54,11 @@ def print_logo_proxy():
         return Response(status=204)
     if not re.match(r'^https?://', logo_url, flags=re.IGNORECASE):
         return Response(status=204)
-    if not _is_safe_public_http_url(logo_url):
+    fetched = fetch_public_http(logo_url, timeout=8, max_bytes=2 * 1024 * 1024)
+    if not fetched:
         return Response(status=204)
-    try:
-        req = UrlRequest(logo_url, headers={'User-Agent': 'Mozilla/5.0'})
-        max_bytes = 2 * 1024 * 1024  # 2MB максимум для проксируемого логотипа
-        with urlopen(req, timeout=8) as resp:
-            # Проверяем финальный URL после редиректов
-            final_url = resp.geturl()
-            if not _is_safe_public_http_url(final_url):
-                return Response(status=204)
-            content_length = resp.headers.get('Content-Length')
-            if content_length:
-                try:
-                    if int(content_length) > max_bytes:
-                        return Response(status=204)
-                except (TypeError, ValueError):
-                    pass
-            chunks = []
-            total = 0
-            while True:
-                chunk = resp.read(65536)
-                if not chunk:
-                    break
-                total += len(chunk)
-                if total > max_bytes:
-                    return Response(status=204)
-                chunks.append(chunk)
-            data = b''.join(chunks)
-            content_type = resp.headers.get('Content-Type', 'image/png')
-        return Response(data, mimetype=content_type)
-    except (HTTPError, URLError, TimeoutError, ValueError, OSError):
-        return Response(status=204)
+    data, content_type = fetched
+    return Response(data, mimetype=content_type or 'image/png')
 
 
 def _orders_not_deleted_clause(cursor, alias: str = 'o') -> str:

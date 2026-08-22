@@ -12,7 +12,7 @@
     <!-- Font Awesome 7 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
     
-    <style>
+    <style nonce="{{ csp_nonce() }}">
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -108,7 +108,7 @@
         </form>
         
         {% if needs_password_change %}
-        <script>
+        <script nonce="{{ csp_nonce() }}">
             document.querySelector('form').addEventListener('submit', function(e) {
                 const newPassword = document.getElementById('new_password').value;
                 const confirmPassword = document.getElementById('new_password_confirm').value;
@@ -138,7 +138,7 @@
     <footer class="text-center text-muted py-3 mt-4" style="font-size: 0.85rem;">
         Nika CRM &copy; 2026
     </footer>
-    <script>
+    <script nonce="{{ csp_nonce() }}">
     (function () {
         const input = document.getElementById('phone');
         if (!input || input.readOnly) return;

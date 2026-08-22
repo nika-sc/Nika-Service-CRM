@@ -1,0 +1,14 @@
+# Пример. На WORK не включать: вход уже режет nika-login по 401/403/429 nginx
+# и lockout Redis. Этот jail читает лог приложения (строка AUTH_FAIL), не access.log.
+#
+# enabled = false — сознательно. Скопировать в /etc/fail2ban/jail.d/ только
+# если нужен отдельный бан по приложению; logpath поправить под docker/journald.
+
+[nika-auth-fail]
+enabled = false
+filter = nika-auth-fail
+port = http,https
+logpath = /var/log/nika-crm-app.log
+maxretry = 25
+findtime = 30m
+bantime = 30m

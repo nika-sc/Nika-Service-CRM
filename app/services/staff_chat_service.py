@@ -44,9 +44,6 @@ _ALLOWED_EXTENSIONS = {
     "xlsx",
     "txt",
     "csv",
-    "zip",
-    "rar",
-    "7z",
 }
 
 

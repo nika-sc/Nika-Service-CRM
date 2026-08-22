@@ -19,11 +19,12 @@ from app.utils.report_period import normalize_date_range
 import sqlite3
 import logging
 import json
-from urllib.parse import urlparse, urljoin
 from email.utils import parseaddr
 from collections import defaultdict, deque
 from app.database.connection import get_db_connection
 from app.utils import login_lockout
+from app.utils.request_ip import client_ip
+from app.utils.safe_redirect import is_safe_redirect_target as _is_safe_redirect_target
 from app.utils.rbac import can_assign_user_role
 from app.utils.error_handlers import api_internal_error
 
@@ -96,6 +97,7 @@ def _audit_staff_login_failure(username: str, *, locked: bool) -> None:
 def _register_login_failure(key: str, username: str = "") -> bool:
     locked = login_lockout.register_failure("staff", key)
     _audit_staff_login_failure(username, locked=locked)
+    logger.warning("AUTH_FAIL ip=%s kind=staff", client_ip())
     return locked
 
 
@@ -356,18 +358,6 @@ def format_phone_display(phone):
     if len(phone) == 11 and phone.startswith('7'):
         return f"+7 ({phone[1:4]}) {phone[4:7]}-{phone[7:9]}-{phone[9:]}"
     return phone
-
-
-def _is_safe_redirect_target(target: str) -> bool:
-    """Проверяет, что redirect-цель указывает на текущий хост."""
-    if not target:
-        return False
-    try:
-        ref_url = urlparse(request.host_url)
-        test_url = urlparse(urljoin(request.host_url, target))
-        return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
-    except Exception:
-        return False
 
 
 @bp.route('/login', methods=['GET', 'POST'])

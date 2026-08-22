@@ -12,7 +12,7 @@
     <!-- Font Awesome 7 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/font-awesome/7.0.0/css/all.min.css') }}">
     
-    <style>
+    <style nonce="{{ csp_nonce() }}">
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;

@@ -9,6 +9,15 @@ mkdir -p /app/uploads/order_client /app/uploads/comments \
 echo "Running migrations..."
 python scripts/run_migrations.py || true
 
+# Bind-mounts must be writable by the app user (uid 1000).
+chown -R nika:nika \
+  /app/uploads \
+  /app/data \
+  /app/logs \
+  /app/database \
+  /app/static/uploads \
+  || true
+
 # Запускаем Gunicorn
 # Default: несколько воркеров для параллельных пользователей.
 # На маленьком VPS (~1 ГБ / 1 CPU) лучше WEB_CONCURRENCY=2 WEB_THREADS=4.
@@ -18,7 +27,7 @@ WEB_THREADS="${WEB_THREADS:-4}"
 GUNICORN_TIMEOUT="${GUNICORN_TIMEOUT:-120}"
 GUNICORN_MAX_REQUESTS="${GUNICORN_MAX_REQUESTS:-1500}"
 GUNICORN_MAX_REQUESTS_JITTER="${GUNICORN_MAX_REQUESTS_JITTER:-150}"
-exec gunicorn \
+exec gosu nika gunicorn \
   --bind 0.0.0.0:5000 \
   --worker-class gthread \
   --workers "${WEB_CONCURRENCY}" \

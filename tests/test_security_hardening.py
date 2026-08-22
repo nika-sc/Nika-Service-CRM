@@ -511,12 +511,15 @@ def test_invoice_nginx_not_public_alias():
     assert "location /static/uploads/invoices/" in nginx
     assert "proxy_pass http://backend;" in nginx
     assert "alias /var/www/nika/uploads/invoices/" not in nginx
+    assert "map $http_x_forwarded_proto $fwd_proto" in nginx
+    assert "X-Forwarded-Proto $fwd_proto" in nginx
 
 
 def test_compose_security_env_and_beszel_bind():
     root = Path(__file__).resolve().parents[1]
     compose = (root / "docker" / "docker-compose.yml").read_text(encoding="utf-8")
     assert "CSP_NONCE_MODE=${CSP_NONCE_MODE:-report}" in compose
+    assert "CSP_STRICT_ENFORCE_PREFIXES=${CSP_STRICT_ENFORCE_PREFIXES:-}" in compose
     assert "REDIS_PASSWORD" in compose
     monitoring = (root / "docker" / "docker-compose.monitoring.yml").read_text(encoding="utf-8")
     assert "--http=127.0.0.1:8090" in monitoring
@@ -562,3 +565,188 @@ def test_portal_file_forbids_foreign_customer(monkeypatch):
         sess["portal_customer_name"] = "Client"
     resp = client.get("/portal/api/order/5/file/1")
     assert resp.status_code == 403
+
+
+def test_portal_api_requires_portal_session_not_staff_cookie():
+    app = create_app(_CsrfOffConfig)
+    resp = app.test_client().get("/portal/api/order/5")
+    assert resp.status_code == 401
+
+
+def test_safe_redirect_rejects_external_host():
+    from app.utils.safe_redirect import is_safe_redirect_target
+
+    app = create_app(_LanConfig)
+    with app.test_request_context("/", headers={"Host": "127.0.0.1"}):
+        assert is_safe_redirect_target("/orders") is True
+        assert is_safe_redirect_target("https://evil.example/phish") is False
+        assert is_safe_redirect_target("//evil.example/phish") is False
+
+
+def test_validation_error_ignores_external_referrer():
+    from app.utils.exceptions import ValidationError
+
+    app = create_app(_CsrfOffConfig)
+
+    def _raise_validation():
+        raise ValidationError("нет")
+
+    app.add_url_rule("/__sec_val", "sec_val_audit", _raise_validation)
+    resp = app.test_client().get(
+        "/__sec_val",
+        headers={"Referer": "https://evil.example/phish"},
+    )
+    loc = resp.headers.get("Location") or ""
+    assert "evil.example" not in loc
+
+
+def test_invoice_asset_kind_whitelist():
+    from app.routes.invoices import _invoice_asset_kind
+
+    assert _invoice_asset_kind("logo") == "logo"
+    assert _invoice_asset_kind("SIGNATURE") == "signature"
+    assert _invoice_asset_kind("../stamp") is None
+    assert _invoice_asset_kind("logo/../../x") is None
+
+
+def test_write_api_limit_memory(monkeypatch):
+    monkeypatch.setattr("app.utils.login_lockout._redis_client", lambda: None)
+    from app.utils.write_api_limit import allow_write, reset_memory_for_tests
+
+    reset_memory_for_tests()
+    ip = "203.0.113.44"
+    assert allow_write(ip, 2) is True
+    assert allow_write(ip, 2) is True
+    assert allow_write(ip, 2) is False
+
+
+def test_staff_chat_disallows_archives():
+    from app.services.staff_chat_service import _ALLOWED_EXTENSIONS
+
+    assert "zip" not in _ALLOWED_EXTENSIONS
+    assert "rar" not in _ALLOWED_EXTENSIONS
+    assert "7z" not in _ALLOWED_EXTENSIONS
+    assert "docx" in _ALLOWED_EXTENSIONS
+    assert "xlsx" in _ALLOWED_EXTENSIONS
+
+
+def test_safe_http_fetch_blocks_loopback_dns(monkeypatch):
+    import socket
+
+    def fake_getaddrinfo(host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port or 80))]
+
+    monkeypatch.setattr("app.utils.safe_http_fetch.socket.getaddrinfo", fake_getaddrinfo)
+    from app.utils.safe_http_fetch import fetch_public_http, is_safe_public_http_url
+
+    assert is_safe_public_http_url("http://example.test/logo.png") is False
+    assert fetch_public_http("http://example.test/logo.png") is None
+
+
+def test_safe_http_fetch_accepts_public_dns(monkeypatch):
+    import socket
+
+    def fake_getaddrinfo(host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 80))]
+
+    monkeypatch.setattr("app.utils.safe_http_fetch.socket.getaddrinfo", fake_getaddrinfo)
+    from app.utils.safe_http_fetch import is_safe_public_http_url
+
+    assert is_safe_public_http_url("http://example.test/logo.png") is True
+    assert is_safe_public_http_url("file:///etc/passwd") is False
+
+
+def test_csp_strict_prefixes_enforce_nonce_on_login():
+    class _StrictLogin(_LanConfig):
+        CSP_NONCE_MODE = "report"
+        CSP_REPORT_ONLY = True
+        CSP_STRICT_ENFORCE_PREFIXES = ["/login"]
+
+    app = create_app(_StrictLogin)
+    resp = app.test_client().get("/login")
+    csp = resp.headers.get("Content-Security-Policy") or ""
+    assert "script-src 'self' 'nonce-" in csp
+    assert "'unsafe-eval'" not in csp
+    assert "'unsafe-inline'" not in csp or "style-src-attr 'unsafe-inline'" in csp
+    # script-src must not keep legacy unsafe-inline
+    assert "script-src 'self' 'unsafe-inline'" not in csp
+
+
+def test_login_pages_include_csp_nonce_attr():
+    root = Path(__file__).resolve().parents[1]
+    staff = (root / "templates" / "auth" / "login.html").read_text(encoding="utf-8")
+    portal = (root / "templates" / "portal" / "login.html").read_text(encoding="utf-8")
+    assert 'nonce="{{ csp_nonce() }}"' in staff
+    assert 'nonce="{{ csp_nonce() }}"' in portal
+
+
+def test_staff_login_auth_fail_keeps_http_200(caplog):
+    import logging
+
+    app = create_app(_CsrfOffConfig)
+    with caplog.at_level(logging.WARNING):
+        resp = app.test_client().post(
+            "/login",
+            data={"username": "no-such-user-xyz", "password": "wrong-password-xyz"},
+        )
+    assert resp.status_code == 200
+    assert "AUTH_FAIL" in caplog.text
+    assert "kind=staff" in caplog.text
+
+
+def test_portal_login_auth_fail_keeps_http_200(caplog):
+    import logging
+
+    app = create_app(_CsrfOffConfig)
+    with caplog.at_level(logging.WARNING):
+        resp = app.test_client().post(
+            "/portal/login",
+            data={"phone": "79001234567", "password": "wrong-password-xyz"},
+        )
+    assert resp.status_code == 200
+    assert "AUTH_FAIL" in caplog.text
+    assert "kind=portal" in caplog.text
+
+
+def test_docker_runs_gunicorn_as_nika():
+    root = Path(__file__).resolve().parents[1]
+    dockerfile = (root / "docker" / "Dockerfile").read_text(encoding="utf-8")
+    entry = (root / "docker" / "docker-entrypoint.sh").read_text(encoding="utf-8")
+    compose = (root / "docker" / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "gosu" in dockerfile
+    assert "useradd" in dockerfile
+    assert "exec gosu nika gunicorn" in entry
+    assert "cap_drop" not in compose
+
+
+def test_auth_fail_fail2ban_example_disabled_and_not_http_200():
+    root = Path(__file__).resolve().parents[1]
+    jail = (root / "deploy" / "hardening" / "fail2ban" / "jail.d" / "nika-auth-fail.local.example").read_text(
+        encoding="utf-8"
+    )
+    filt = (root / "deploy" / "hardening" / "fail2ban" / "filter.d" / "nika-auth-fail.conf.example").read_text(
+        encoding="utf-8"
+    )
+    login_filt = (root / "deploy" / "hardening" / "fail2ban" / "filter.d" / "nika-login.conf.example").read_text(
+        encoding="utf-8"
+    )
+    assert "enabled = false" in jail
+    assert "AUTH_FAIL" in filt
+    assert "200" not in login_filt.split("failregex", 1)[-1]
+    assert "(401|403|429)" in login_filt
+
+
+def test_prod_requirements_pin_direct_security_stack():
+    root = Path(__file__).resolve().parents[1]
+    prod = (root / "requirements.txt").read_text(encoding="utf-8")
+    assert "Flask~=3.1.3" in prod
+    assert "Werkzeug~=3.1.8" in prod
+    assert "bleach[css]~=6.1.0" in prod
+    assert "gunicorn>=21.0.0,<23" in prod
+
+
+def test_security_runtime_blog_is_latest():
+    from app.routes.public_blog import _POSTS
+
+    assert _POSTS[0]["slug"] == "security-runtime"
+    assert _POSTS[0]["file"] == "blog/39-security-runtime.md"

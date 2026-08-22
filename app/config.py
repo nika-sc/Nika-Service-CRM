@@ -61,6 +61,13 @@ class Config:
     CSP_NONCE_MODE = (os.environ.get('CSP_NONCE_MODE') or 'report').strip().lower()
     if CSP_NONCE_MODE not in ('off', 'report', 'enforce'):
         CSP_NONCE_MODE = 'report'
+    # Optional nonce-enforce on these prefixes only (login). Empty = do not switch the whole CRM.
+    # Do not set CSP_NONCE_MODE=enforce on WORK — TinyMCE and order UI need legacy script-src.
+    CSP_STRICT_ENFORCE_PREFIXES = [
+        p.strip() for p in (
+            os.environ.get('CSP_STRICT_ENFORCE_PREFIXES', '') or ''
+        ).split(',') if p.strip()
+    ]
     # Email OTP after password (deferred release — disabled by default)
     STAFF_EMAIL_OTP_ENABLED = os.environ.get('STAFF_EMAIL_OTP_ENABLED', 'false').strip().lower() in (
         '1', 'true', 'yes', 'on',

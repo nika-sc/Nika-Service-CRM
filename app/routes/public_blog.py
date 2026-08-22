@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "security-runtime",
+        "file": "blog/39-security-runtime.md",
+        "date": "2026-08-22 14:20",
+        "title": "Обновили систему безопасности — Nika Service CRM",
+        "description": (
+            "22 августа 2026: обновили систему безопасности — вход, загрузки "
+            "и контейнер приложения."
+        ),
+        "heading": "Система безопасности",
+        "teaser": "Обновили систему безопасности: вход, загрузки и контейнер.",
+    },
+    {
         "slug": "order-customer-emails",
         "file": "blog/37-order-customer-emails.md",
         "date": "2026-08-22 12:53",

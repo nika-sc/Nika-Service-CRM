@@ -24,7 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client-18 \
     pkg-config \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 nika \
+    && useradd --uid 1000 --gid nika --home-dir /app --no-create-home --shell /usr/sbin/nologin nika
 
 COPY requirements.txt .
 

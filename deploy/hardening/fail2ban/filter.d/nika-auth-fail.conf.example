@@ -1,0 +1,5 @@
+[Definition]
+# Application log line from Flask (gunicorn stdout), NOT nginx status 200.
+# Staff/portal login still returns HTTP 200 on a bad password — do not jail on 200.
+failregex = ^.*AUTH_FAIL ip=<HOST> kind=(?:staff|portal)\s*$
+ignoreregex =

@@ -3,7 +3,7 @@ Blueprint для публичного личного кабинета клиен
 """
 from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify, send_file
 from functools import wraps
-from flask_login import current_user
+from flask_login import current_user, logout_user
 from app.services.customer_portal_service import CustomerPortalService
 from app.services.customer_service import CustomerService
 from app.services.order_service import OrderService
@@ -44,15 +44,9 @@ def rate_limit_if_available(limit_str, methods=None):
 
 
 def login_required(f):
-    """
-    Унифицированный login_required для портала:
-    - staff-пользователь (Flask-Login), ИЛИ
-    - клиентская portal-сессия.
-    """
+    """Portal API: only a client portal session (staff cookie is not enough)."""
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if getattr(current_user, 'is_authenticated', False):
-            return f(*args, **kwargs)
         if session.get('portal_customer_id'):
             return f(*args, **kwargs)
         return jsonify({'success': False, 'error': 'Не авторизован'}), 401
@@ -74,6 +68,7 @@ def _is_portal_login_locked(key: str) -> bool:
 
 def _register_portal_login_failure(key: str):
     login_lockout.register_failure('portal', key)
+    logger.warning("AUTH_FAIL ip=%s kind=portal", _portal_client_ip())
 
 
 def _reset_portal_login_guard(key: str):
@@ -119,7 +114,9 @@ def portal_login():
         customer_data = CustomerPortalService.authenticate_by_password(phone, password)
         
         if customer_data:
-            # Защита от session fixation: очищаем сессию перед установкой данных
+            # Staff remember-me must not survive a portal login (logout before session.clear).
+            if getattr(current_user, 'is_authenticated', False):
+                logout_user()
             session.clear()
             # Если требуется смена пароля
             if change_password and customer_data.get('needs_password_change'):

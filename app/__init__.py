@@ -6,7 +6,6 @@ import logging
 import socket
 from fnmatch import fnmatch
 import time
-from collections import defaultdict, deque
 
 from flask import Flask, redirect, url_for, Response, send_from_directory, request, jsonify, g
 from flask_login import LoginManager
@@ -183,7 +182,6 @@ def create_app(config_class=Config):
     
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     app.config.from_object(config_class)
-    _write_api_buckets = defaultdict(deque)  # key: remote_addr, value: timestamps
 
     # Flask/Werkzeug валидирует Host по TRUSTED_HOSTS и не понимает токен @private.
     # Список правил держим в HOST_ALLOWLIST; встроенную проверку Flask отключаем —
@@ -256,16 +254,10 @@ def create_app(config_class=Config):
             request.path.startswith('/api/') or request.path.startswith('/portal/api/')
         ):
             limit = int(app.config.get('WRITE_API_RATE_LIMIT_PER_MIN', 120) or 120)
-            now = time.time()
             from app.utils.request_ip import client_ip
-            key = client_ip()
-            bucket = _write_api_buckets[key]
-            window_start = now - 60.0
-            while bucket and bucket[0] < window_start:
-                bucket.popleft()
-            if len(bucket) >= limit:
+            from app.utils.write_api_limit import allow_write
+            if not allow_write(client_ip(), limit):
                 return jsonify({'success': False, 'error': 'too_many_requests'}), 429
-            bucket.append(now)
 
     @app.before_request
     def _assign_csp_nonce():
@@ -559,6 +551,8 @@ def create_app(config_class=Config):
         csp_report_uri = app.config.get('CSP_REPORT_URI')
         enforce_prefixes = app.config.get('CSP_ENFORCE_PATH_PREFIXES') or []
         force_enforce_on_path = any((request.path or '').startswith(prefix) for prefix in enforce_prefixes)
+        strict_prefixes = app.config.get('CSP_STRICT_ENFORCE_PREFIXES') or []
+        force_strict = any((request.path or '').startswith(prefix) for prefix in strict_prefixes)
         nonce_mode = (app.config.get('CSP_NONCE_MODE') or 'off').strip().lower()
 
         def _legacy_csp_parts():
@@ -605,12 +599,16 @@ def create_app(config_class=Config):
             response.headers.setdefault('Content-Security-Policy', strict_value)
         elif nonce_mode == 'report':
             response.headers.setdefault('Content-Security-Policy-Report-Only', strict_value)
-            if force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
+            if force_strict:
+                response.headers.setdefault('Content-Security-Policy', strict_value)
+            elif force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
                 response.headers.setdefault('Content-Security-Policy', legacy_value)
         else:
             if app.config.get('CSP_REPORT_ONLY', True):
                 response.headers.setdefault('Content-Security-Policy-Report-Only', legacy_value)
-            if force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
+            if force_strict:
+                response.headers.setdefault('Content-Security-Policy', strict_value)
+            elif force_enforce_on_path or not app.config.get('CSP_REPORT_ONLY', True):
                 response.headers.setdefault('Content-Security-Policy', legacy_value)
         # Включаем HSTS только при HTTPS
         if app.config.get('SESSION_COOKIE_SECURE'):
