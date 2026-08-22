@@ -2,6 +2,9 @@
     var currentNumericId = null;
     var pendingStatus = null;
     var savedThisOpen = false;
+    var uploadsInFlight = Promise.resolve();
+    var templateItems = [];
+    var selectedTemplateId = "";
 
     function csrfToken() {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
@@ -59,11 +62,10 @@
         var hint = document.getElementById("diagnosticsTextHint");
         if (ta) ta.readOnly = !canEdit;
         if (saveBtn) saveBtn.classList.toggle("d-none", !canEdit);
-        var tplSel = document.getElementById("diagnosticsTemplateSelect");
-        if (tplSel) {
-            tplSel.disabled = !canEdit;
-            tplSel.classList.toggle("d-none", !canEdit);
-        }
+        var tplWrap = document.getElementById("diagnosticsTemplateWrap");
+        var tplSearch = document.getElementById("diagnosticsTemplateSearch");
+        if (tplSearch) tplSearch.disabled = !canEdit;
+        if (tplWrap) tplWrap.classList.toggle("d-none", !canEdit || !templateItems.length);
         if (fileInput) fileInput.disabled = !canUpload;
         if (fileWrap) fileWrap.classList.toggle("d-none", !canUpload);
         if (hint) {
@@ -151,26 +153,135 @@
     }
 
     function applyDiagnosticsTemplateText(current, body) {
-        var existing = String(current || "").replace(/\r\n/g, "\n");
-        var tpl = String(body || "").replace(/\r\n/g, "\n").replace(/^\n+|\n+$/g, "");
-        if (!existing.trim()) return tpl;
-        return existing.replace(/\s+$/, "") + "\n\n" + tpl;
+        return String(body || "").replace(/\r\n/g, "\n").replace(/^\n+|\n+$/g, "");
+    }
+
+    function templateSearchInput() {
+        return document.getElementById("diagnosticsTemplateSearch");
+    }
+
+    function templateListEl() {
+        return document.getElementById("diagnosticsTemplateList");
+    }
+
+    function selectedTemplate() {
+        if (!selectedTemplateId) return null;
+        for (var i = 0; i < templateItems.length; i++) {
+            if (String(templateItems[i].id) === String(selectedTemplateId)) return templateItems[i];
+        }
+        return null;
+    }
+
+    function normalizeTemplateQuery(s) {
+        return String(s || "").toLowerCase().trim();
+    }
+
+    function filteredTemplates(query) {
+        var q = normalizeTemplateQuery(query);
+        if (!q) return templateItems.slice();
+        return templateItems.filter(function (item) {
+            return normalizeTemplateQuery(item.name).indexOf(q) !== -1
+                || normalizeTemplateQuery(item.body).indexOf(q) !== -1;
+        });
+    }
+
+    function closeTemplateList() {
+        var list = templateListEl();
+        var input = templateSearchInput();
+        if (list) list.classList.remove("show");
+        if (input) input.setAttribute("aria-expanded", "false");
+    }
+
+    function showSelectedTemplateName() {
+        var input = templateSearchInput();
+        if (!input) return;
+        var item = selectedTemplate();
+        input.value = item && item.name ? item.name : "";
+    }
+
+    function renderTemplateList(query) {
+        var list = templateListEl();
+        var input = templateSearchInput();
+        if (!list || !input || input.disabled) return;
+        var items = filteredTemplates(query);
+        if (!items.length) {
+            list.innerHTML = '<span class="dropdown-item-text text-muted small">Ничего не найдено</span>';
+        } else {
+            list.innerHTML = items.map(function (item) {
+                var id = String(item.id);
+                var active = id === String(selectedTemplateId) ? " active" : "";
+                return '<button type="button" class="dropdown-item text-wrap' + active + '" role="option" data-template-id="'
+                    + escapeHtml(id) + '">' + escapeHtml(item.name || ("Шаблон #" + id)) + "</button>";
+            }).join("");
+            list.querySelectorAll("[data-template-id]").forEach(function (btn) {
+                btn.addEventListener("mousedown", function (e) {
+                    e.preventDefault();
+                    pickTemplate(btn.getAttribute("data-template-id"));
+                });
+            });
+        }
+        list.classList.add("show");
+        input.setAttribute("aria-expanded", "true");
+    }
+
+    function pickTemplate(id) {
+        var item = null;
+        for (var i = 0; i < templateItems.length; i++) {
+            if (String(templateItems[i].id) === String(id)) {
+                item = templateItems[i];
+                break;
+            }
+        }
+        if (!item) return;
+        var ta = document.getElementById("diagnosticsText");
+        if (!ta || ta.readOnly) return;
+        selectedTemplateId = String(item.id);
+        showSelectedTemplateName();
+        ta.value = applyDiagnosticsTemplateText(ta.value, item.body || "");
+        closeTemplateList();
     }
 
     function fillTemplateSelect(items) {
-        var sel = document.getElementById("diagnosticsTemplateSelect");
-        if (!sel) return;
+        templateItems = items || [];
+        selectedTemplateId = "";
+        var wrap = document.getElementById("diagnosticsTemplateWrap");
+        var input = templateSearchInput();
         var ta = document.getElementById("diagnosticsText");
-        var canShow = ta && !ta.readOnly;
-        sel.innerHTML = '<option value="">Шаблон диагностики — выберите, чтобы подставить текст</option>';
-        (items || []).forEach(function (item) {
-            var opt = document.createElement("option");
-            opt.value = String(item.id);
-            opt.textContent = item.name || ("Шаблон #" + item.id);
-            opt.dataset.body = item.body || "";
-            sel.appendChild(opt);
+        var canShow = !!(ta && !ta.readOnly && templateItems.length);
+        if (wrap) wrap.classList.toggle("d-none", !canShow);
+        if (input) {
+            input.value = "";
+            input.disabled = !canShow;
+        }
+        closeTemplateList();
+    }
+
+    function templateQueryForList(input) {
+        var item = selectedTemplate();
+        if (item && input.value === item.name) return "";
+        return input.value;
+    }
+
+    function moveTemplateHighlight(delta) {
+        var list = templateListEl();
+        if (!list || !list.classList.contains("show")) return;
+        var btns = Array.prototype.slice.call(list.querySelectorAll("[data-template-id]"));
+        if (!btns.length) return;
+        var idx = -1;
+        btns.forEach(function (b, i) {
+            if (b.classList.contains("active")) idx = i;
         });
-        sel.classList.toggle("d-none", !canShow || !items || !items.length);
+        if (idx < 0) idx = delta > 0 ? -1 : 0;
+        idx = (idx + delta + btns.length) % btns.length;
+        btns.forEach(function (b, i) { b.classList.toggle("active", i === idx); });
+        if (btns[idx] && btns[idx].scrollIntoView) btns[idx].scrollIntoView({ block: "nearest" });
+    }
+
+    function pickHighlightedTemplate() {
+        var list = templateListEl();
+        if (!list) return;
+        var active = list.querySelector("[data-template-id].active") || list.querySelector("[data-template-id]");
+        if (active) pickTemplate(active.getAttribute("data-template-id"));
     }
 
     function loadTemplateOptions(data) {
@@ -186,23 +297,33 @@
             .catch(function () { fillTemplateSelect([]); });
     }
 
-    function loadDiagnostics() {
+    function loadDiagnostics(opts) {
+        opts = opts || {};
+        var preserveDraft = !!opts.preserveDraft;
         var id = orderId();
         if (!id) return Promise.resolve(null);
+        if (!preserveDraft) {
+            templateItems = [];
+            selectedTemplateId = "";
+            showSelectedTemplateName();
+            closeTemplateList();
+        }
+        var ta = document.getElementById("diagnosticsText");
+        var draft = preserveDraft && ta ? ta.value : null;
         return fetch("/api/order/" + id + "/diagnostics", { credentials: "same-origin" })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data || !data.success) return data;
-                var ta = document.getElementById("diagnosticsText");
-                if (ta) ta.value = data.diagnostics || "";
+                if (ta) {
+                    if (draft !== null) ta.value = draft;
+                    else ta.value = data.diagnostics || "";
+                }
                 applyAccess(data);
+                if (preserveDraft && ta && draft !== null) ta.value = draft;
                 renderFiles(data.files || []);
                 renderHistory(data.history || []);
-                loadTemplateOptions(data);
-                var sel = document.getElementById("diagnosticsTemplateSelect");
-                if (sel) {
-                    sel.disabled = !!document.getElementById("diagnosticsText")?.readOnly;
-                    sel.value = "";
+                if (!preserveDraft) {
+                    loadTemplateOptions(data);
                 }
                 return data;
             })
@@ -212,16 +333,23 @@
     function saveText() {
         var id = orderId();
         var ta = document.getElementById("diagnosticsText");
-        var body = ta ? String(ta.value).trim() : "";
-        fetch("/api/order/" + id + "/diagnostics", {
-            method: "PUT",
-            credentials: "same-origin",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken(),
-            },
-            body: JSON.stringify({ diagnostics: ta ? ta.value : "" }),
-        })
+        var snapshot = ta ? String(ta.value) : "";
+        var body = snapshot.trim();
+        var saveBtn = document.getElementById("saveDiagnosticsBtn");
+        if (saveBtn) saveBtn.disabled = true;
+        uploadsInFlight
+            .catch(function () { return null; })
+            .then(function () {
+                return fetch("/api/order/" + id + "/diagnostics", {
+                    method: "PUT",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken(),
+                    },
+                    body: JSON.stringify({ diagnostics: snapshot }),
+                });
+            })
             .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
             .then(function (res) {
                 var data = res.data || {};
@@ -257,7 +385,10 @@
                 savedThisOpen = true;
                 closeModal();
             })
-            .catch(function () {});
+            .catch(function () {})
+            .then(function () {
+                if (saveBtn) saveBtn.disabled = false;
+            });
     }
 
     function uploadFile(file) {
@@ -292,7 +423,7 @@
                 if (!data.success && typeof showToast === "function") {
                     showToast(data.error || "Не удалось удалить файл", "error");
                 }
-                loadDiagnostics();
+                loadDiagnostics({ preserveDraft: true });
             })
             .catch(function () {});
     }
@@ -379,16 +510,45 @@
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveText);
-        var tplSel = document.getElementById("diagnosticsTemplateSelect");
-        if (tplSel) {
-            tplSel.addEventListener("change", function () {
-                var opt = tplSel.options[tplSel.selectedIndex];
-                var body = opt && opt.dataset ? opt.dataset.body : "";
-                if (!body) return;
-                var ta = document.getElementById("diagnosticsText");
-                if (!ta || ta.readOnly) return;
-                ta.value = applyDiagnosticsTemplateText(ta.value, body);
-                tplSel.value = "";
+        var tplSearch = templateSearchInput();
+        if (tplSearch) {
+            tplSearch.addEventListener("focus", function () {
+                if (tplSearch.disabled) return;
+                renderTemplateList(templateQueryForList(tplSearch));
+            });
+            tplSearch.addEventListener("input", function () {
+                renderTemplateList(tplSearch.value);
+            });
+            tplSearch.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") {
+                    e.preventDefault();
+                    closeTemplateList();
+                    showSelectedTemplateName();
+                    return;
+                }
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (!templateListEl() || !templateListEl().classList.contains("show")) {
+                        renderTemplateList(templateQueryForList(tplSearch));
+                    }
+                    moveTemplateHighlight(1);
+                    return;
+                }
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    moveTemplateHighlight(-1);
+                    return;
+                }
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    pickHighlightedTemplate();
+                }
+            });
+            tplSearch.addEventListener("blur", function () {
+                setTimeout(function () {
+                    closeTemplateList();
+                    showSelectedTemplateName();
+                }, 120);
             });
         }
         if (fileInput) {
@@ -396,11 +556,13 @@
                 var picked = fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];
                 fileInput.value = "";
                 if (!picked.length) return;
-                var chain = Promise.resolve();
+                var chain = uploadsInFlight.catch(function () { return null; });
                 picked.forEach(function (file) {
                     chain = chain.then(function () { return uploadFile(file); });
                 });
-                chain.then(function () { loadDiagnostics(); });
+                uploadsInFlight = chain.then(function () {
+                    return loadDiagnostics({ preserveDraft: true });
+                });
             });
         }
         if (modal) {

@@ -24,7 +24,7 @@ from app.services.warehouse_service import WarehouseService
 from app.services.salary_service import SalaryService
 from app.services.user_service import UserService
 from app.services.action_log_service import ActionLogService
-from app.utils.validators import normalize_phone, parse_non_negative_money, money_values_equal
+from app.services.notification_service import NotificationService
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_str, get_moscow_now_naive, convert_to_moscow
 from app.utils.cache import clear_cache, cache_result
@@ -2584,6 +2584,7 @@ def order_detail(order_id):
             order_models=refs.get('order_models', []),  # Модели устройств для поля "Модель"
             order_history=order_history,  # История взаимодействий с заявкой
             history_has_more=history_has_more,
+            customer_emails=NotificationService.list_order_customer_emails(order.id),
             customer_template_rendered=customer_template_rendered,
             sales_receipt_template_rendered=sales_receipt_template_rendered,
             work_act_template_rendered=work_act_template_rendered,

@@ -1,4 +1,4 @@
-"""Diagnostics templates: ranking, append, and modal markup."""
+"""Diagnostics templates: ranking, replace, and modal markup."""
 from pathlib import Path
 
 from app.utils.diagnostics_templates import (
@@ -35,18 +35,59 @@ def test_apply_template_inserts_when_empty():
     assert apply_diagnostics_template_text("", body) == body
 
 
-def test_apply_template_appends_instead_of_overwrite():
-    current = "Клиент жалуется на шум."
-    body = "Чистка, продувка, тестирование."
-    assert apply_diagnostics_template_text(current, body) == (
-        "Клиент жалуется на шум.\n\nЧистка, продувка, тестирование."
-    )
+def test_apply_template_replaces_previous_text():
+    current = "Диагностика подсветки, платы питания и главной платы."
+    body = "Диагностика питания и портов, сброс и настройка."
+    assert apply_diagnostics_template_text(current, body) == body
+    assert apply_diagnostics_template_text("Клиент жалуется на шум.", body) == body
 
 
 def test_diagnostics_modal_has_template_select():
     path = Path(__file__).resolve().parents[1] / "templates" / "partials" / "diagnostics_modal.html"
     html = path.read_text(encoding="utf-8")
-    assert 'id="diagnosticsTemplateSelect"' in html
+    assert 'id="diagnosticsTemplateSearch"' in html
+    assert 'id="diagnosticsTemplateList"' in html
+
+
+def test_diagnostics_js_replaces_template_and_keeps_draft_on_upload():
+    js = (Path(__file__).resolve().parents[1] / "static" / "js" / "order_detail" / "diagnostics.js").read_text(
+        encoding="utf-8"
+    )
+    assert "preserveDraft" in js
+    assert "uploadsInFlight" in js
+    assert "pickTemplate" in js
+    assert "filteredTemplates" in js
+    assert "showSelectedTemplateName" in js
+    assert "existing.replace" not in js
+    assert "selectedIndex = 0" not in js
+
+
+def test_settings_template_loads_device_catalog_after_dom_ready():
+    path = Path(__file__).resolve().parents[1] / "templates" / "settings.html"
+    html = path.read_text(encoding="utf-8")
+    assert "bindDiagnosticsTemplateCatalog" in html
+    assert "fetch('/api/device-types')" in html
+    assert "fetch('/api/order-models')" in html
+    assert 'id="diagnostics-templates-tab"' in html
+    assert 'data-bs-target="#diagnostics-templates"' in html
+    assert "loadDiagnosticsTemplatesTable" in html
+
+
+def test_seed_and_bootstrap_mark_022_023():
+    root = Path(__file__).resolve().parents[1]
+    seed = (root / "app/database/migrations/postgres_versions/023_diagnostics_templates_seed.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "PS5 — чистка с заменой жидкого металла" in seed
+    assert "WHERE NOT EXISTS" in seed
+    alter = (root / "app/database/migrations/postgres_versions/022_diagnostics_templates_is_active_int.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "TYPE BIGINT" in alter
+    dump = (root / "database/bootstrap/nikacrm_public_sanitized.sql").read_text(encoding="utf-8")
+    assert "022\tdiagnostics_templates_is_active_int" in dump
+    assert "023\tdiagnostics_templates_seed" in dump
+    assert "is_active BIGINT NOT NULL DEFAULT 1" in dump
 
 
 def test_is_active_uses_integer_zero_one():

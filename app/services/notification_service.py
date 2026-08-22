@@ -16,6 +16,13 @@ from app.utils.datetime_utils import get_moscow_now_str
 
 logger = logging.getLogger(__name__)
 
+CUSTOMER_EMAIL_TEMPLATE_TITLES = {
+    "order_accepted": "Заказ принят",
+    "order_status_update": "Смена статуса",
+    "order_ready": "Заказ готов",
+    "order_closed_thanks": "Заказ закрыт",
+}
+
 # Демо/заглушки из bootstrap и placeholders — Mail.ru/Яндекс отклоняют как "not local sender".
 _PLACEHOLDER_SENDER_DOMAINS = frozenset({
     'example.com',
@@ -872,6 +879,109 @@ class NotificationService:
         }
 
     @staticmethod
+    def customer_email_template_title(template_type: str) -> str:
+        return CUSTOMER_EMAIL_TEMPLATE_TITLES.get(template_type or "", template_type or "Письмо")
+
+    @staticmethod
+    def record_customer_email(
+        *,
+        order_id: int,
+        customer_id: Optional[int],
+        recipient_email: str,
+        template_type: str,
+        subject: str = "",
+        status_name: Optional[str] = None,
+        success: bool = False,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Пишет факт попытки письма клиенту. Без тела письма (пароль ЛК не хранить)."""
+        recipient = (recipient_email or "").strip()
+        if not order_id or not recipient:
+            return
+        err = (error_message or "").strip()[:500] or None
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO order_customer_emails (
+                        order_id, customer_id, recipient_email, template_type,
+                        subject, status_name, success, error_message, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, CAST(? AS BIGINT), ?, ?)
+                    """,
+                    (
+                        int(order_id),
+                        int(customer_id) if customer_id else None,
+                        recipient,
+                        (template_type or "")[:64],
+                        (subject or "")[:255],
+                        (status_name or "")[:128] or None,
+                        1 if success else 0,
+                        err,
+                        get_moscow_now_str(),
+                    ),
+                )
+                conn.commit()
+        except Exception as e:
+            logger.warning("Не удалось записать журнал письма клиенту по заявке %s: %s", order_id, e)
+
+    @staticmethod
+    def list_order_customer_emails(order_id: int, limit: int = 100) -> List[Dict[str, Any]]:
+        if not order_id:
+            return []
+        cap = max(1, min(int(limit or 100), 200))
+        rows: List[Dict[str, Any]] = []
+        try:
+            with get_db_connection(row_factory=sqlite3.Row) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, order_id, customer_id, recipient_email, template_type,
+                           subject, status_name, success, error_message, created_at
+                    FROM order_customer_emails
+                    WHERE order_id = ?
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (int(order_id), cap),
+                )
+                fetched = cursor.fetchall() or []
+        except Exception as e:
+            logger.warning("Не удалось прочитать журнал писем заявки %s: %s", order_id, e)
+            return []
+        for raw in fetched:
+            item = dict(raw)
+            created = item.get("created_at")
+            date_str = ""
+            time_str = ""
+            if isinstance(created, datetime):
+                date_str = created.strftime("%Y-%m-%d")
+                time_str = created.strftime("%H:%M")
+            elif created:
+                text = str(created).replace("T", " ")
+                date_str = text[:10]
+                time_str = text[11:16] if len(text) >= 16 else ""
+            success_flag = int(item.get("success") or 0)
+            rows.append(
+                {
+                    "id": item.get("id"),
+                    "recipient_email": item.get("recipient_email") or "",
+                    "template_type": item.get("template_type") or "",
+                    "title": NotificationService.customer_email_template_title(
+                        item.get("template_type") or ""
+                    ),
+                    "subject": item.get("subject") or "",
+                    "status_name": item.get("status_name") or "",
+                    "success": success_flag == 1,
+                    "error_message": item.get("error_message") or "",
+                    "created_at": created,
+                    "date_str": date_str,
+                    "time_str": time_str,
+                }
+            )
+        return rows
+
+    @staticmethod
     def send_customer_order_email(
         order_id: int,
         template_type: str,
@@ -891,6 +1001,9 @@ class NotificationService:
             from app.services.customer_portal_service import CustomerPortalService
             from app.utils.datetime_utils import get_moscow_now_str
 
+            def _log_customer_mail(success: bool, error: Optional[str] = None, subject: Optional[str] = None) -> None:
+                return
+
             order = OrderService.get_order(order_id)
             if not order:
                 return False
@@ -905,6 +1018,28 @@ class NotificationService:
             if not recipient_email:
                 return False
 
+            oid_label = getattr(order, 'id', order_id)
+            subject_map = {
+                'order_accepted': f"Заказ принят: #{oid_label}",
+                'order_status_update': f"Изменение статуса: #{oid_label}",
+                'order_ready': f"Заказ готов: #{oid_label}",
+                'order_closed_thanks': f"Заказ закрыт: #{oid_label}",
+            }
+
+            def _log_customer_mail(success: bool, error: Optional[str] = None, subject: Optional[str] = None) -> None:
+                if override_recipient:
+                    return
+                NotificationService.record_customer_email(
+                    order_id=order_id,
+                    customer_id=cid,
+                    recipient_email=recipient_email,
+                    template_type=template_type,
+                    subject=subject or subject_map.get(template_type, f"Обновление заявки #{oid_label}"),
+                    status_name=status_name,
+                    success=success,
+                    error_message=error,
+                )
+
             settings = SettingsService.get_general_settings() or {}
             # При тестовой отправке (override_recipient) игнорируем feature_flags
             if not override_recipient:
@@ -915,6 +1050,7 @@ class NotificationService:
                     'order_closed_thanks': bool(settings.get('auto_email_order_closed', True)),
                 }
                 if feature_flags.get(template_type) is False:
+                    _log_customer_mail(False, "Автоотправка этого письма выключена в настройках")
                     return False
             tpl = SettingsService.get_email_template(template_type)
             html_content = (tpl or {}).get('html_content') if tpl else None
@@ -1047,21 +1183,17 @@ class NotificationService:
 
             html_body = NotificationService._render_html_template(html_content, values)
 
-            subject_map = {
-                'order_accepted': f"Заказ принят: #{getattr(order, 'id', order_id)}",
-                'order_status_update': f"Изменение статуса: #{getattr(order, 'id', order_id)}",
-                'order_ready': f"Заказ готов: #{getattr(order, 'id', order_id)}",
-                'order_closed_thanks': f"Заказ закрыт: #{getattr(order, 'id', order_id)}",
-            }
-            subject = subject_map.get(template_type, f"Обновление заявки #{getattr(order, 'id', order_id)}")
+            subject = subject_map.get(template_type, f"Обновление заявки #{oid_label}")
 
             from flask import current_app
             try:
                 from flask_mail import Message
                 from app import mail, MAIL_AVAILABLE
                 if not MAIL_AVAILABLE or mail is None:
+                    _log_customer_mail(False, "Почта не подключена", subject=subject)
                     return False
             except ImportError:
+                _log_customer_mail(False, "Почта не подключена", subject=subject)
                 return False
 
             with current_app.app_context():
@@ -1069,9 +1201,11 @@ class NotificationService:
                 _apply_mail_config_from_settings(app)
                 if not _resolve_sender_email(app):
                     logger.warning("Email клиенту: не задан корректный отправитель.")
+                    _log_customer_mail(False, "Не задан отправитель SMTP", subject=subject)
                     return False
                 if not (app.config.get('MAIL_PASSWORD') or '').strip():
                     logger.warning("Email клиенту: не задан пароль SMTP.")
+                    _log_customer_mail(False, "Не задан пароль SMTP", subject=subject)
                     return False
                 # Тема с кириллицей — ок для Flask-Mail; From — display name + ASCII mailbox.
                 msg = Message(
@@ -1081,6 +1215,7 @@ class NotificationService:
                     html=html_body
                 )
                 _send_mail_with_retry(mail, msg, app)
+            _log_customer_mail(True, subject=subject)
             return True
         except Exception as e:
             if isinstance(e, (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, TimeoutError, OSError)):
@@ -1092,6 +1227,10 @@ class NotificationService:
                     f"Не удалось отправить клиентский email ({template_type}) для заявки {order_id}: {e}",
                     exc_info=True
                 )
+            try:
+                _log_customer_mail(False, str(e)[:500])
+            except NameError:
+                pass
             return False
 
     @staticmethod

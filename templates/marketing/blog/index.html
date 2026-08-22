@@ -12,7 +12,7 @@
     <div class="ml-docs-cards">
         {% for p in posts %}
         <a class="ml-docs-card" href="{{ p.url }}">
-            <p class="ml-blog-date mb-1"><time datetime="{{ p.date|replace(' ', 'T') }}">{{ p.date }}</time></p>
+            <p class="ml-blog-date mb-1"><time datetime="{{ p.date_iso }}">{{ p.date_display }}</time></p>
             <h2>{{ p.heading }}</h2>
             <p>{{ p.teaser }}</p>
             <span class="ml-docs-card-cta">Читать →</span>

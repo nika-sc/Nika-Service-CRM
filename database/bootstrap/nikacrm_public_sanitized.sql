@@ -5865,6 +5865,7 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 021	diagnostics_templates	2026-08-20 00:00:00
 022	diagnostics_templates_is_active_int	2026-08-22 00:00:00
 023	diagnostics_templates_seed	2026-08-22 00:00:00
+024	order_customer_emails	2026-08-22 00:00:00
 \.
 
 
@@ -10793,4 +10794,20 @@ FROM (
 WHERE NOT EXISTS (
     SELECT 1 FROM diagnostics_templates t WHERE t.name = v.name
 );
+
+-- Post-bootstrap schema: postgres migration 024 (idempotent)
+CREATE TABLE IF NOT EXISTS order_customer_emails (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
+    recipient_email TEXT NOT NULL,
+    template_type TEXT NOT NULL,
+    subject TEXT NOT NULL DEFAULT '',
+    status_name TEXT,
+    success BIGINT NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_order_customer_emails_order
+    ON order_customer_emails(order_id, created_at DESC);
 

@@ -14,8 +14,20 @@ bp = Blueprint("public_blog", __name__)
 logger = logging.getLogger(__name__)
 
 # Новые сверху; slug = имя файла без .md (без числового префикса в URL)
-# date — дата и время публикации (МСК), формат для списка: «2026-08-09 17:45»
+# date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
+    {
+        "slug": "order-customer-emails",
+        "file": "blog/37-order-customer-emails.md",
+        "date": "2026-08-22 12:53",
+        "title": "Письма клиенту на карточке заявки — Nika Service CRM",
+        "description": (
+            "22 августа 2026: во вкладке История заявки видно, какие письма ушли клиенту "
+            "после создания и смены статуса."
+        ),
+        "heading": "Письма клиенту в заявке",
+        "teaser": "История заявки показывает, какие письма ушли клиенту и дошли ли они.",
+    },
     {
         "slug": "security-catalog-invoices",
         "file": "blog/36-security-catalog-invoices.md",
@@ -423,6 +435,33 @@ _POSTS = [
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+def format_blog_date_ru(value: str) -> str:
+    """«2026-08-22 11:30» → «11:30 22.08.2026» (время, затем ДД.ММ.ГГГГ)."""
+    from datetime import datetime
+
+    text = (value or "").strip()
+    if not text:
+        return ""
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(text, fmt)
+            if fmt == "%Y-%m-%d":
+                return dt.strftime("%d.%m.%Y")
+            return dt.strftime("%H:%M %d.%m.%Y")
+        except ValueError:
+            continue
+    return text
+
+
+def _post_view(p: dict) -> dict:
+    raw = (p.get("date") or "").strip()
+    return {
+        **p,
+        "date_iso": raw.replace(" ", "T"),
+        "date_display": format_blog_date_ru(raw),
+    }
+
+
 def _require_public_landing():
     if not _public_landing_enabled():
         abort(404)
@@ -473,7 +512,7 @@ def blog_index():
     _require_public_landing()
     posts = [
         {
-            **p,
+            **_post_view(p),
             "url": url_for("public_blog.blog_post", slug=p["slug"]),
         }
         for p in _POSTS
@@ -514,7 +553,7 @@ def blog_post(slug: str):
             post["title"],
             post["description"],
             content_html=html,
-            post=post,
+            post=_post_view(post),
         ),
     )
 

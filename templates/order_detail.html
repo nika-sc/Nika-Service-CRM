@@ -3243,6 +3243,62 @@
                         
                         <!-- Вкладка: История -->
                         <div class="tab-pane fade" id="history-pane" role="tabpanel" aria-labelledby="history-tab">
+                            <div class="mb-4" id="orderCustomerEmails">
+                                <h6 class="mb-2">
+                                    <i class="fas fa-envelope me-1"></i>Письма клиенту
+                                    {% if customer_emails %}
+                                    <span class="badge bg-secondary">{{ customer_emails|length }}</span>
+                                    {% endif %}
+                                </h6>
+                                {% if not order.email %}
+                                <p class="text-muted small mb-0">У клиента не указана почта — письма о заявке не отправляются. Добавьте email в карточке клиента.</p>
+                                {% elif customer_emails %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 120px;">Дата</th>
+                                                <th style="width: 80px;">Время</th>
+                                                <th>Письмо</th>
+                                                <th>Кому</th>
+                                                <th style="width: 140px;">Результат</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for mail in customer_emails %}
+                                            <tr>
+                                                <td><small>{{ mail.date_str or '—' }}</small></td>
+                                                <td><small class="text-muted">{{ mail.time_str or '—' }}</small></td>
+                                                <td>
+                                                    <div class="fw-semibold" style="font-size: 0.9rem;">{{ mail.title }}</div>
+                                                    {% if mail.subject %}
+                                                    <small class="text-muted">{{ mail.subject }}</small>
+                                                    {% endif %}
+                                                    {% if mail.status_name %}
+                                                    <div><small class="text-muted">Статус: {{ mail.status_name }}</small></div>
+                                                    {% endif %}
+                                                    {% if mail.error_message %}
+                                                    <div><small class="text-danger">{{ mail.error_message }}</small></div>
+                                                    {% endif %}
+                                                </td>
+                                                <td><small>{{ mail.recipient_email }}</small></td>
+                                                <td>
+                                                    {% if mail.success %}
+                                                    <span class="badge bg-success">Отправлено</span>
+                                                    {% else %}
+                                                    <span class="badge bg-warning text-dark">Не ушло</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <p class="text-muted small mb-0">Пока нет записей. Сюда попадают письмо «Заказ принят», письма после смены статуса, «Заказ готов» и «Заказ закрыт». Старые отправки до этого обновления здесь не видны.</p>
+                                {% endif %}
+                            </div>
+                            <h6 class="mb-2"><i class="fas fa-history me-1"></i>События заявки</h6>
                             {% if order_history %}
                             <div class="table-responsive">
                                 <table class="table table-sm">

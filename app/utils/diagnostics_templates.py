@@ -67,9 +67,6 @@ def rank_diagnostics_templates(
 
 
 def apply_diagnostics_template_text(current: Optional[str], template_body: str) -> str:
-    """Empty field → insert template; non-empty → append after a blank line."""
-    body = (template_body or "").replace("\r\n", "\n").strip("\n")
-    existing = (current or "").replace("\r\n", "\n")
-    if not existing.strip():
-        return body
-    return existing.rstrip() + "\n\n" + body
+    """Selecting a template always replaces the field so switching does not stack."""
+    _ = current
+    return (template_body or "").replace("\r\n", "\n").strip("\n")
