@@ -129,6 +129,8 @@ def test_docker_compose_persists_app_uploads():
     root = Path(__file__).resolve().parents[1]
     nginx_conf = (root / "nginx" / "nginx.conf").read_text(encoding="utf-8")
     assert "location /static/uploads/invoices/" in nginx_conf
+    assert "proxy_pass http://backend;" in nginx_conf
+    assert "alias /var/www/nika/uploads/invoices/" not in nginx_conf
     assert "alias /var/www/nika/uploads/;" not in nginx_conf
 
     found_compose = False
@@ -141,7 +143,7 @@ def test_docker_compose_persists_app_uploads():
         found_compose = True
         assert ":/app/uploads" in text
         assert "uploads/invoices:/app/static/uploads/invoices" in text
-        assert "uploads/invoices:/var/www/nika/uploads/invoices" in text
+        assert "uploads/invoices:/var/www/nika/uploads/invoices" not in text
     assert found_compose
 
     entry = root / "docker" / "docker-entrypoint.sh"

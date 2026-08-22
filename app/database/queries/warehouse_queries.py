@@ -2,7 +2,7 @@
 SQL запросы для работы со складом.
 """
 from typing import Dict, List, Optional
-from app.database.connection import get_db_connection
+from app.database.connection import get_db_connection, _get_db_driver
 from app.utils.exceptions import ValidationError
 import sqlite3
 import logging
@@ -53,9 +53,22 @@ class WarehouseQueries:
         
         # Полнотекстовый поиск по всем словам (регистронезависимый)
         if search_query:
-            # Разбиваем поисковый запрос на слова
             search_words = search_query.strip().split()
-            if search_words:
+            if search_words and _get_db_driver() == 'postgres':
+                like_q = f'%{search_query.strip()}%'
+                where_clauses.append(
+                    """(
+                        to_tsvector(
+                            'simple',
+                            COALESCE(p.name, '') || ' ' || COALESCE(p.part_number, '') || ' ' || COALESCE(p.description, '')
+                        ) @@ websearch_to_tsquery('simple', ?)
+                        OR COALESCE(p.name, '') ILIKE ?
+                        OR COALESCE(p.part_number, '') ILIKE ?
+                        OR COALESCE(pc.name, '') ILIKE ?
+                    )"""
+                )
+                params.extend([search_query.strip(), like_q, like_q, like_q])
+            elif search_words:
                 search_conditions = []
                 for word in search_words:
                     # Для регистронезависимого поиска создаем паттерн с оригинальным словом

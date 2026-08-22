@@ -1,0 +1,147 @@
+# NikaNewCrm — Docker Compose (каноническая конфигурация)
+#
+# Запуск из корня репозитория (рекомендуется):
+#   docker compose up -d
+# (корневой docker-compose.yml подключает этот файл через include)
+#
+# Явный вызов:
+#   docker compose -f docker/docker-compose.yml up -d
+#
+# Пути к volume и nginx относительно каталога docker/
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: nikanewcrm-web
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_DRIVER=${DB_DRIVER:-postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://nikacrm:change-me@postgres:5432/nikacrm}
+      - DATABASE_PATH=/app/database/service_center.db
+      - RATELIMIT_STORAGE_URI=${RATELIMIT_STORAGE_URI:-memory://}
+      - TIMEZONE_OFFSET=${TIMEZONE_OFFSET:-3}
+      - MAIL_SERVER=${MAIL_SERVER:-}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-}
+      # Публичный адрес для ссылки на портал в письме «Заказ принят» (##PORTAL_URL##)
+      - PORTAL_PUBLIC_URL=${PORTAL_PUBLIC_URL:-}
+      - STAFF_CHAT_VAPID_PUBLIC_KEY=${STAFF_CHAT_VAPID_PUBLIC_KEY:-}
+      - STAFF_CHAT_VAPID_PRIVATE_KEY=${STAFF_CHAT_VAPID_PRIVATE_KEY:-}
+      - STAFF_CHAT_VAPID_CLAIM_EMAIL=${STAFF_CHAT_VAPID_CLAIM_EMAIL:-mailto:noreply@localhost}
+      # Host allowlist / CSP / rate limits / Socket.IO — из .env на сервере (иначе в контейнер не попадают)
+      - TRUSTED_HOSTS=${TRUSTED_HOSTS:-}
+      - CSP_REPORT_ONLY=${CSP_REPORT_ONLY:-false}
+      - CSP_REPORT_URI=${CSP_REPORT_URI:-}
+      - CSP_ENFORCE_PATH_PREFIXES=${CSP_ENFORCE_PATH_PREFIXES:-}
+      - CSP_NONCE_MODE=${CSP_NONCE_MODE:-report}
+      - WRITE_API_RATE_LIMIT_PER_MIN=${WRITE_API_RATE_LIMIT_PER_MIN:-120}
+      - SOCKETIO_CORS_ALLOWED_ORIGINS=${SOCKETIO_CORS_ALLOWED_ORIGINS:-}
+      - USE_HTTPS=${USE_HTTPS:-false}
+      - LOGIN_LOCKOUT_THRESHOLD=${LOGIN_LOCKOUT_THRESHOLD:-5}
+      - LOGIN_LOCKOUT_WINDOW_SEC=${LOGIN_LOCKOUT_WINDOW_SEC:-600}
+      - LOGIN_LOCKOUT_DURATION_SEC=${LOGIN_LOCKOUT_DURATION_SEC:-1800}
+      - PORTAL_LOGIN_LOCKOUT_THRESHOLD=${PORTAL_LOGIN_LOCKOUT_THRESHOLD:-8}
+      - PORTAL_LOGIN_LOCKOUT_WINDOW_SEC=${PORTAL_LOGIN_LOCKOUT_WINDOW_SEC:-600}
+      - PORTAL_LOGIN_LOCKOUT_DURATION_SEC=${PORTAL_LOGIN_LOCKOUT_DURATION_SEC:-1800}
+      # Gunicorn: параллельные HTTP-запросы (на WORK обычно 3×4; на слабом VPS — 2×4)
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-3}
+      - WEB_THREADS=${WEB_THREADS:-4}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+      - GUNICORN_MAX_REQUESTS=${GUNICORN_MAX_REQUESTS:-1500}
+      - GUNICORN_MAX_REQUESTS_JITTER=${GUNICORN_MAX_REQUESTS_JITTER:-150}
+      - PG_POOL_MINCONN=${PG_POOL_MINCONN:-2}
+      - PG_POOL_MAXCONN=${PG_POOL_MAXCONN:-8}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - RATELIMIT_STORAGE_URI=${RATELIMIT_STORAGE_URI:-redis://redis:6379/1}
+    volumes:
+      - ../data/database:/app/database
+      - ../data/logs:/app/logs
+      # Печать счетов: только invoices, не весь data/uploads (иначе nginx/Flask static отдают чужие фото)
+      - ../data/uploads/invoices:/app/static/uploads/invoices
+      # Диагностика и комментарии пишут в /app/uploads/… (не static/)
+      - ../data/uploads:/app/uploads
+      # Чат сотрудников: /app/data/uploads/staff_chat
+      - ../data/uploads:/app/data/uploads
+    expose:
+      - "5000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    container_name: nikanewcrm-nginx
+    restart: unless-stopped
+    ports:
+      # Публикуем только на localhost: внешний трафик идёт через host nginx :80/:443
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../static:/var/www/nika/static:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: nikanewcrm-redis
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru;
+        else
+          exec redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru;
+        fi
+    expose:
+      - "6379"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: nikanewcrm-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-nikacrm}
+      - POSTGRES_USER=${POSTGRES_USER:-nikacrm}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me}
+    # PG18+ официальный образ: один том на /var/lib/postgresql (не …/data)
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nikacrm} -d ${POSTGRES_DB:-nikacrm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres_data:

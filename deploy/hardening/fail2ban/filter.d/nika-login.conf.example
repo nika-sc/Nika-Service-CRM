@@ -1,0 +1,5 @@
+[Definition]
+# ONLY hard auth failures / rate-limit — NOT 200/302.
+failregex = ^<HOST> \S+ \S+ \[.*\] "POST /(?:login|portal/login)[^"\s]* HTTP/[0-9.]+" (401|403|429) .*$
+ignoreregex =
+datepattern = ^[^\[]*\[({DATE})

@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Any
 from app.utils.cache import cache_result, clear_cache
 from app.database.queries.reference_queries import ReferenceQueries
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
+from app.utils.diagnostics_templates import rank_diagnostics_templates
 from app.utils.types import ReferenceDict
 from app.database.connection import get_db_connection
 import sqlite3
@@ -216,6 +217,7 @@ class ReferenceService:
         return result
     
     @staticmethod
+    @cache_result(timeout=3600, key_prefix='ref_all')
     def get_all_references() -> Dict[str, List[Dict[str, Any]]]:
         """
         Получает все справочники одним вызовом (для форм).
@@ -262,6 +264,8 @@ class ReferenceService:
         clear_cache(key_prefix='ref_order_statuses')
         clear_cache(key_prefix='ref_parts')
         clear_cache(key_prefix='ref_part_categories')
+        clear_cache(key_prefix='ref_all')
+        clear_cache(key_prefix='ref_diagnostics_templates')
         logger.info("Кэш всех справочников очищен")
     
     # CRUD методы для типов устройств
@@ -570,6 +574,214 @@ class ReferenceService:
         except Exception as e:
             logger.error(f"Ошибка при удалении симптома {symptom_id}: {e}")
             raise DatabaseError(f"Ошибка при удалении симптома: {e}")
+
+    @staticmethod
+    def _optional_fk_id(value: Any) -> Optional[int]:
+        if value is None or value == "":
+            return None
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError("Неверный идентификатор справочника")
+        if n <= 0:
+            return None
+        return n
+
+    @staticmethod
+    def _int_flag(value: Any) -> int:
+        """INTEGER 0/1 for Postgres flag columns.
+
+        psycopg2 adapts Python bool as boolean; BIGINT columns reject that.
+        """
+        if value in (False, 0, "0", "false", "False", "no", "off", None, ""):
+            return 0
+        return 1
+
+    @staticmethod
+    def list_diagnostics_templates(active_only: bool = False) -> List[Dict[str, Any]]:
+        """Все шаблоны диагностики для настроек (с названиями типа/марки/модели)."""
+        try:
+            with get_db_connection(row_factory=sqlite3.Row) as conn:
+                cursor = conn.cursor()
+                where = "WHERE t.is_active = 1" if active_only else ""
+                cursor.execute(f'''
+                    SELECT t.id, t.name, t.body, t.device_type_id, t.device_brand_id, t.model_id,
+                           t.sort_order, t.is_active,
+                           dt.name AS device_type_name,
+                           db.name AS device_brand_name,
+                           om.name AS model_name
+                    FROM diagnostics_templates AS t
+                    LEFT JOIN device_types AS dt ON dt.id = t.device_type_id
+                    LEFT JOIN device_brands AS db ON db.id = t.device_brand_id
+                    LEFT JOIN order_models AS om ON om.id = t.model_id
+                    {where}
+                    ORDER BY t.sort_order, t.id
+                ''')
+                rows = []
+                for row in cursor.fetchall():
+                    item = dict(row)
+                    item['is_active'] = bool(item.get('is_active'))
+                    rows.append(item)
+                return rows
+        except Exception as e:
+            msg = str(e).lower()
+            if isinstance(e, sqlite3.OperationalError) or "does not exist" in msg or "no such table" in msg:
+                logger.warning("Таблица diagnostics_templates недоступна: %s", e)
+                return []
+            logger.error("Ошибка при получении шаблонов диагностики: %s", e)
+            raise DatabaseError(f"Ошибка при получении шаблонов диагностики: {e}")
+
+    @staticmethod
+    def get_diagnostics_templates(
+        type_id: Optional[int] = None,
+        brand_id: Optional[int] = None,
+        model_id: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Шаблоны для модалки: сначала модель, затем марка/тип, затем общие."""
+        rows = ReferenceService.list_diagnostics_templates(active_only=True)
+        return rank_diagnostics_templates(rows, type_id, brand_id, model_id)
+
+    @staticmethod
+    def create_diagnostics_template(
+        name: str,
+        body: str,
+        device_type_id: Optional[int] = None,
+        device_brand_id: Optional[int] = None,
+        model_id: Optional[int] = None,
+        sort_order: Optional[int] = None,
+        is_active: bool = True,
+    ) -> int:
+        if not name or not str(name).strip():
+            raise ValidationError("Название шаблона обязательно")
+        if body is None or not str(body).strip():
+            raise ValidationError("Текст шаблона обязателен")
+        type_fk = ReferenceService._optional_fk_id(device_type_id)
+        brand_fk = ReferenceService._optional_fk_id(device_brand_id)
+        model_fk = ReferenceService._optional_fk_id(model_id)
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                if sort_order is None:
+                    cursor.execute("SELECT MAX(sort_order) FROM diagnostics_templates")
+                    max_order = cursor.fetchone()[0]
+                    sort_order = (max_order or 0) + 1
+                cursor.execute('''
+                    INSERT INTO diagnostics_templates
+                        (name, body, device_type_id, device_brand_id, model_id, sort_order, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, CAST(? AS BIGINT))
+                ''', (
+                    str(name).strip(),
+                    str(body).strip(),
+                    type_fk,
+                    brand_fk,
+                    model_fk,
+                    sort_order,
+                    ReferenceService._int_flag(is_active),
+                ))
+                conn.commit()
+                clear_cache(key_prefix='ref_diagnostics_templates')
+                clear_cache(key_prefix='ref_all')
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error("Ошибка при создании шаблона диагностики: %s", e)
+            raise DatabaseError(f"Ошибка при создании шаблона диагностики: {e}")
+
+    @staticmethod
+    def update_diagnostics_template(
+        template_id: int,
+        name: Optional[str] = None,
+        body: Optional[str] = None,
+        device_type_id: Any = None,
+        device_brand_id: Any = None,
+        model_id: Any = None,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = None,
+        *,
+        has_device_type_id: bool = False,
+        has_device_brand_id: bool = False,
+        has_model_id: bool = False,
+    ) -> bool:
+        if not template_id or template_id <= 0:
+            raise ValidationError("Неверный ID шаблона")
+        updates = []
+        params: List[Any] = []
+        if name is not None:
+            if not str(name).strip():
+                raise ValidationError("Название шаблона не может быть пустым")
+            updates.append('name = ?')
+            params.append(str(name).strip())
+        if body is not None:
+            if not str(body).strip():
+                raise ValidationError("Текст шаблона не может быть пустым")
+            updates.append('body = ?')
+            params.append(str(body).strip())
+        if has_device_type_id:
+            updates.append('device_type_id = ?')
+            params.append(ReferenceService._optional_fk_id(device_type_id))
+        if has_device_brand_id:
+            updates.append('device_brand_id = ?')
+            params.append(ReferenceService._optional_fk_id(device_brand_id))
+        if has_model_id:
+            updates.append('model_id = ?')
+            params.append(ReferenceService._optional_fk_id(model_id))
+        if sort_order is not None:
+            updates.append('sort_order = ?')
+            params.append(sort_order)
+        if is_active is not None:
+            updates.append('is_active = CAST(? AS BIGINT)')
+            params.append(ReferenceService._int_flag(is_active))
+        if not updates:
+            return False
+        updates.append('updated_at = CURRENT_TIMESTAMP')
+        params.append(template_id)
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"UPDATE diagnostics_templates SET {', '.join(updates)} WHERE id = ?",
+                    params,
+                )
+                conn.commit()
+                clear_cache(key_prefix='ref_diagnostics_templates')
+                clear_cache(key_prefix='ref_all')
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error("Ошибка при обновлении шаблона диагностики %s: %s", template_id, e)
+            raise DatabaseError(f"Ошибка при обновлении шаблона диагностики: {e}")
+
+    @staticmethod
+    def delete_diagnostics_template(template_id: int) -> bool:
+        if not template_id or template_id <= 0:
+            raise ValidationError("Неверный ID шаблона")
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM diagnostics_templates WHERE id = ?', (template_id,))
+                conn.commit()
+                clear_cache(key_prefix='ref_diagnostics_templates')
+                clear_cache(key_prefix='ref_all')
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error("Ошибка при удалении шаблона диагностики %s: %s", template_id, e)
+            raise DatabaseError(f"Ошибка при удалении шаблона диагностики: {e}")
+
+    @staticmethod
+    def update_diagnostics_templates_sort_order(items: List[Dict]) -> bool:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                for item in items:
+                    cursor.execute(
+                        'UPDATE diagnostics_templates SET sort_order = ? WHERE id = ?',
+                        (item.get('sort_order', 0), item['id']),
+                    )
+                conn.commit()
+                clear_cache(key_prefix='ref_diagnostics_templates')
+                clear_cache(key_prefix='ref_all')
+                return True
+        except Exception as e:
+            logger.error("Ошибка при обновлении порядка шаблонов диагностики: %s", e)
+            raise DatabaseError(f"Ошибка при обновлении порядка сортировки: {e}")
     
     # CRUD методы для тегов внешнего вида
     @staticmethod

@@ -16,6 +16,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     url_for,
 )
 from flask_login import current_user, login_required
@@ -29,6 +30,7 @@ from app.services.settings_service import SettingsService
 from app.services.user_service import UserService
 from app.utils.exceptions import NotFoundError, ValidationError
 from app.utils.money_words import format_money_rub
+from app.utils.safe_files import confined_file_path, mime_from_filename, sniff_staff_upload
 
 bp = Blueprint("invoices", __name__, url_prefix="/invoices")
 logger = logging.getLogger(__name__)
@@ -41,6 +43,46 @@ STATUS_LABELS = {
 }
 
 ALLOWED_UPLOAD_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+_INVOICE_SNIFF_EXT = frozenset({"png", "jpg", "jpeg", "webp", "gif"})
+
+
+def register_invoice_static_guard(app):
+    """Staff-only access to invoice logo/signature/stamp files under /static/uploads/invoices/."""
+
+    @app.before_request
+    def _protect_invoice_static():
+        path = request.path or ""
+        prefix = "/static/uploads/invoices/"
+        if not path.startswith(prefix):
+            return None
+        rel = path[len(prefix):]
+        name = os.path.basename(rel.replace("\\", "/"))
+        if not name or "/" in rel or "\\" in rel or ".." in rel:
+            return jsonify({"success": False, "error": "not_found"}), 404
+        if not current_user.is_authenticated:
+            return jsonify({"success": False, "error": "auth_required"}), 401
+        if not (
+            UserService.check_permission(current_user.id, "view_invoices")
+            or UserService.check_permission(current_user.id, "manage_invoices")
+        ):
+            return jsonify({
+                "success": False,
+                "error": "forbidden",
+                "required_permission": "view_invoices",
+            }), 403
+        root = os.path.join(current_app.static_folder, "uploads", "invoices")
+        confined = confined_file_path(os.path.join(root, name), root)
+        if not confined or not os.path.isfile(confined):
+            return jsonify({"success": False, "error": "not_found"}), 404
+        response = send_file(
+            confined,
+            mimetype=mime_from_filename(name),
+            as_attachment=False,
+            download_name=name,
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
 
 
 @bp.before_request
@@ -261,6 +303,11 @@ def api_upload_asset():
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_UPLOAD_EXT:
         return jsonify({"success": False, "error": "Допустимы изображения: png, jpg, webp, gif"}), 400
+    header = file.read(64)
+    file.seek(0)
+    sniffed = sniff_staff_upload(header, file.filename, allow=_INVOICE_SNIFF_EXT)
+    if not sniffed:
+        return jsonify({"success": False, "error": "Файл не похож на изображение"}), 400
     upload_dir = os.path.join(current_app.static_folder, "uploads", "invoices")
     os.makedirs(upload_dir, exist_ok=True)
     safe = secure_filename(file.filename) or f"{kind}{ext}"

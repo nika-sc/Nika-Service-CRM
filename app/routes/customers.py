@@ -283,27 +283,18 @@ def client_detail(client_id):
     customer_dict['orders_count'] = len(orders) if orders else 0
     customer_dict['devices_count'] = len(devices) if devices else 0
     
-    # Получаем дополнительную информацию о заявках для каждого устройства
+    summaries = DeviceService.get_customer_devices_order_summaries(
+        [device.id for device in (devices or [])]
+    )
     devices_list = []
     for device in devices:
         device_dict = device.to_dict()
-        # Получаем заявки устройства
-        device_orders = DeviceService.get_device_orders(device.id)
-        device_dict['orders_count'] = len(device_orders) if device_orders else 0
-        
-        # Получаем данные последней заявки
-        if device_orders and len(device_orders) > 0:
-            last_order = device_orders[0]  # Уже отсортированы по дате DESC
-            device_dict['last_order_symptom_tags'] = last_order.get('symptom_tags')
-            device_dict['last_order_appearance'] = last_order.get('appearance')
-            device_dict['last_order_date'] = last_order.get('created_at')
-            device_dict['last_order_status'] = last_order.get('status_name')
-        else:
-            device_dict['last_order_symptom_tags'] = None
-            device_dict['last_order_appearance'] = None
-            device_dict['last_order_date'] = None
-            device_dict['last_order_status'] = None
-        
+        info = summaries.get(device.id) or {}
+        device_dict['orders_count'] = info.get('orders_count') or 0
+        device_dict['last_order_symptom_tags'] = info.get('last_order_symptom_tags')
+        device_dict['last_order_appearance'] = info.get('last_order_appearance')
+        device_dict['last_order_date'] = info.get('last_order_date')
+        device_dict['last_order_status'] = info.get('last_order_status')
         devices_list.append(device_dict)
     
     return render_template('client_detail.html',

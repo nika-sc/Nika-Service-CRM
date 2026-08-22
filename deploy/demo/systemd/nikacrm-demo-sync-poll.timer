@@ -1,0 +1,11 @@
+[Unit]
+Description=Периодически синхронизировать демо CRM с публичным репозиторием
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

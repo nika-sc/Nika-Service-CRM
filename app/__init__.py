@@ -690,6 +690,9 @@ def create_app(config_class=Config):
             # Общая шина событий между несколькими gunicorn workers
             socketio_kwargs['message_queue'] = redis_url
             socketio_kwargs['channel'] = 'nikacrm-socketio'
+        if not _is_production:
+            # Werkzeug dev server: websocket upgrade → 500 write() before start_response
+            socketio_kwargs['allow_upgrades'] = False
         socketio.init_app(app, **socketio_kwargs)
     
     # Настройка аутентификации
@@ -982,7 +985,7 @@ def create_app(config_class=Config):
     from app.routes.demo_visitors import bp as demo_visitors_bp
     from app.routes.public_docs import bp as public_docs_bp
     from app.routes.public_blog import bp as public_blog_bp
-    from app.routes.invoices import bp as invoices_bp, inn_bp as inn_lookup_bp
+    from app.routes.invoices import bp as invoices_bp, inn_bp as inn_lookup_bp, register_invoice_static_guard
     
     # Инициализируем limiter для blueprints
     from app.routes.main import init_limiter as init_main_limiter
@@ -1024,6 +1027,7 @@ def create_app(config_class=Config):
     app.register_blueprint(public_docs_bp)
     app.register_blueprint(public_blog_bp)
     app.register_blueprint(invoices_bp)
+    register_invoice_static_guard(app)
     app.register_blueprint(inn_lookup_bp)
 
     if socketio is not None:

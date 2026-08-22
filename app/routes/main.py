@@ -1082,9 +1082,9 @@ def settings():
 
     # Получаем шаблоны печати
     try:
-        customer_template = SettingsService.get_print_template_fresh('customer')
-        sales_receipt_template = SettingsService.get_print_template_fresh('sales_receipt')
-        work_act_template = SettingsService.get_print_template_fresh('work_act')
+        customer_template = SettingsService.get_print_template('customer')
+        sales_receipt_template = SettingsService.get_print_template('sales_receipt')
+        work_act_template = SettingsService.get_print_template('work_act')
 
         # Автосоздание шаблонов "Товарный чек" и "Акт" по образцу квитанции клиента
         customer_html = ((customer_template or {}).get('html_content') or '').strip()

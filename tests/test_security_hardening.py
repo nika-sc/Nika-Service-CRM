@@ -1,5 +1,6 @@
 """Defensive security checks for Nika Service CRM (no exploit payloads, no live WORK)."""
 import inspect
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -458,6 +459,91 @@ def test_portal_public_order_strips_device_password():
     assert "password" not in out
     assert "comment" not in out
     assert out["diagnostics"] == "ok"
+
+
+def test_sniff_staff_upload_matches_magic_and_rejects_mismatch():
+    from app.utils.safe_files import sniff_staff_upload
+
+    assert sniff_staff_upload(b"\xff\xd8\xff\xe0rest", "photo.jpg") == "image/jpeg"
+    assert sniff_staff_upload(b"PK\x03\x04rest", "archive.zip") is not None
+    assert sniff_staff_upload(b"<html>not a jpeg", "photo.jpg") is None
+    assert sniff_staff_upload(b"MZ\x90\x00fake", "notes.zip") is None
+    assert sniff_staff_upload(b"%PDF-1.4 rest", "scan.pdf") == "application/pdf"
+
+
+def test_settings_catalog_writes_use_manage_settings():
+    src = (Path(__file__).resolve().parents[1] / "app" / "routes" / "settings.py").read_text(encoding="utf-8")
+    assert "def catalog_access" in src
+    assert '"manage_settings"' in src
+    assert "@login_required" not in src
+    assert src.count("@catalog_access") >= 25
+
+
+def test_settings_save_error_hides_database_text():
+    from app.routes.settings import settings_save_error
+    from app.utils.exceptions import DatabaseError, ValidationError
+
+    app = create_app(_CsrfOffConfig)
+    with app.app_context():
+        resp, code = settings_save_error(DatabaseError("ОШИБКА: столбец is_active имеет тип boolean"))
+        assert code == 400
+        payload = resp.get_json() or {}
+        assert payload.get("success") is False
+        assert "is_active" not in (payload.get("error") or "")
+        assert "boolean" not in (payload.get("error") or "").lower()
+        resp_ok, code_ok = settings_save_error(ValidationError("Название шаблона обязательно"))
+        assert code_ok == 400
+        assert "Название шаблона обязательно" in (resp_ok.get_json() or {}).get("error", "")
+
+
+def test_invoice_static_requires_staff_session():
+    app = create_app(_CsrfOffConfig)
+    client = app.test_client()
+    resp = client.get("/static/uploads/invoices/signature_audit.jpg")
+    assert resp.status_code == 401
+    payload = resp.get_json() or {}
+    assert payload.get("error") == "auth_required"
+
+
+def test_invoice_nginx_not_public_alias():
+    root = Path(__file__).resolve().parents[1]
+    nginx = (root / "nginx" / "nginx.conf").read_text(encoding="utf-8")
+    assert "location /static/uploads/invoices/" in nginx
+    assert "proxy_pass http://backend;" in nginx
+    assert "alias /var/www/nika/uploads/invoices/" not in nginx
+
+
+def test_compose_security_env_and_beszel_bind():
+    root = Path(__file__).resolve().parents[1]
+    compose = (root / "docker" / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "CSP_NONCE_MODE=${CSP_NONCE_MODE:-report}" in compose
+    assert "REDIS_PASSWORD" in compose
+    monitoring = (root / "docker" / "docker-compose.monitoring.yml").read_text(encoding="utf-8")
+    assert 'LISTEN: "127.0.0.1:8090"' in monitoring
+
+
+def test_prod_requirements_exclude_pytest_playwright():
+    root = Path(__file__).resolve().parents[1]
+    prod = (root / "requirements.txt").read_text(encoding="utf-8")
+    assert "pytest" not in prod
+    assert "playwright" not in prod
+    dev = (root / "requirements-dev.txt").read_text(encoding="utf-8")
+    assert "pytest" in dev
+    assert "-r requirements.txt" in dev
+
+
+def test_vendored_tinymce_is_patched():
+    root = Path(__file__).resolve().parents[1]
+    pkg = json.loads((root / "static" / "cdn" / "tinymce" / "latest" / "package.json").read_text(encoding="utf-8"))
+    parts = [int(x) for x in str(pkg.get("version", "0")).split(".")[:3]]
+    while len(parts) < 3:
+        parts.append(0)
+    assert tuple(parts) >= (8, 5, 1)
+
+
+def test_socketio_disables_websocket_upgrade_outside_production():
+    src = (Path(__file__).resolve().parents[1] / "app" / "__init__.py").read_text(encoding="utf-8")
+    assert "allow_upgrades" in src
 
 
 def test_portal_file_forbids_foreign_customer(monkeypatch):

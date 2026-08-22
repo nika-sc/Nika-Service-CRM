@@ -426,7 +426,7 @@ def api_parts_for_modal():
             category=category,
             low_stock_only=False,
             page=1,
-            per_page=2000,
+            per_page=20 if search_query else 2000,
             sort_by='name',
             sort_order='ASC'
         )
@@ -596,8 +596,14 @@ def warehouse_logs():
     )
     
     # Получаем список товаров для фильтра
-    stock_levels = WarehouseService.get_stock_levels(page=1, per_page=1000)
-    parts = stock_levels.items
+    selected_part_name = ''
+    if part_id:
+        try:
+            part = WarehouseService.get_part_by_id(int(part_id), include_deleted=True)
+            if part:
+                selected_part_name = f"{part.get('name') or ''} ({part.get('part_number') or 'без артикула'})".strip()
+        except Exception:
+            selected_part_name = ''
     
     return render_template('warehouse/logs.html',
         logs=paginator.items,
@@ -609,7 +615,7 @@ def warehouse_logs():
         page=paginator.page,
         pages=paginator.pages,
         total=paginator.total,
-        parts=parts
+        selected_part_name=selected_part_name
     )
 
 

@@ -1,0 +1,5 @@
+# Скопировать в /etc/default/nikacrm-demo-sync (опционально).
+# DEMO_ROOT=/root/Nika-Service-CRM
+# DEMO_BRANCH=main
+# DEMO_REMOTE=origin
+# DEMO_SERVICE=nikacrm

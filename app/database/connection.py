@@ -170,17 +170,21 @@ def _optimize_date_predicates_postgres(sql: str) -> str:
     return out
 
 
+def _log_slow_query(query: str, elapsed_ms: float) -> None:
+    if not _get_log_slow_queries():
+        return
+    threshold = _get_slow_query_threshold_ms()
+    if elapsed_ms < threshold:
+        return
+    preview = " ".join(str(query).split())
+    if len(preview) > 300:
+        preview = preview[:300] + "..."
+    logger.warning("Slow query: %.1fms (threshold=%dms) SQL=%s", elapsed_ms, threshold, preview)
+
+
 class TimedCursor(sqlite3.Cursor):
     def _log_if_slow(self, query: str, elapsed_ms: float):
-        if not _get_log_slow_queries():
-            return
-        threshold = _get_slow_query_threshold_ms()
-        if elapsed_ms < threshold:
-            return
-        preview = " ".join(str(query).split())
-        if len(preview) > 300:
-            preview = preview[:300] + "..."
-        logger.warning("Slow query: %.1fms (threshold=%dms) SQL=%s", elapsed_ms, threshold, preview)
+        _log_slow_query(query, elapsed_ms)
 
     def execute(self, query, parameters=()):
         started = time.perf_counter()
@@ -351,17 +355,25 @@ class PostgresCursorAdapter:
         self._pragma_table_info_mode = False
         self._lastrowid = None
         translated, translated_params = self._translate_special_sql(query, tuple(params or ()))
-        if translated_params:
-            self._cursor.execute(_escape_pyformat_percent(translated), translated_params)
-        else:
-            # В psycopg2 пустой tuple с '%' в SQL приводит к pyformat IndexError.
-            self._cursor.execute(translated)
+        started = time.perf_counter()
+        try:
+            if translated_params:
+                self._cursor.execute(_escape_pyformat_percent(translated), translated_params)
+            else:
+                # В psycopg2 пустой tuple с '%' в SQL приводит к pyformat IndexError.
+                self._cursor.execute(translated)
+        finally:
+            _log_slow_query(translated, (time.perf_counter() - started) * 1000)
         self._resolve_lastrowid_after_insert(translated)
         return self
 
     def executemany(self, query: str, seq_of_parameters: Iterable[Sequence[Any]]):
         translated, _ = self._translate_special_sql(query, ())
-        self._cursor.executemany(translated, [tuple(p) for p in seq_of_parameters])
+        started = time.perf_counter()
+        try:
+            self._cursor.executemany(translated, [tuple(p) for p in seq_of_parameters])
+        finally:
+            _log_slow_query(translated, (time.perf_counter() - started) * 1000)
         return self
 
     def fetchone(self):

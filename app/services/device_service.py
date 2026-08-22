@@ -58,6 +58,10 @@ class DeviceService:
             raise ValidationError("Неверный ID устройства")
         
         return DeviceQueries.get_device_orders(device_id)
+
+    @staticmethod
+    def get_customer_devices_order_summaries(device_ids: List[int]) -> Dict[int, Dict]:
+        return DeviceQueries.get_customer_devices_order_summaries(device_ids)
     
     @staticmethod
     def create_device(customer_id: int, device_type_id: int, device_brand_id: int, 

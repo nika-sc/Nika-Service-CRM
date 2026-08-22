@@ -1178,6 +1178,36 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Шаблоны диагностики -->
+                            <div class="col-12">
+                                <div class="card shadow-sm">
+                                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                        <h6 class="card-title mb-0"><i class="fas fa-stethoscope text-success me-1"></i> Шаблоны диагностики</h6>
+                                        <button type="button" class="btn btn-primary btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#addDiagnosticsTemplateModal">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: 360px; overflow-y: auto;">
+                                        <table class="table table-hover table-sm mb-0 device-data-table sortable-table" id="diagnosticsTemplatesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:30px;"></th>
+                                                    <th>Название</th>
+                                                    <th>Тип / марка / модель</th>
+                                                    <th class="text-end" style="width:100px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="diagnosticsTemplatesTableBody">
+                                                <tr class="device-data-placeholder"><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Откройте вкладку для загрузки</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="card-footer py-1 bg-light">
+                                        <small class="text-muted" id="diagnosticsTemplatesCount">—</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2402,6 +2432,87 @@ function renderOrderModelRows(tbody, items) {
     tbody.appendChild(frag);
 }
 
+function diagnosticsScopeLabel(item) {
+    const parts = [item.device_type_name, item.device_brand_name, item.model_name].filter(Boolean);
+    return parts.length ? parts.join(' / ') : 'Для любых';
+}
+
+function renderDiagnosticsTemplateRows(tbody, items) {
+    const frag = document.createDocumentFragment();
+    (items || []).forEach(item => {
+        const id = item.id;
+        const name = item.name || '';
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-template-id', id);
+        tr.setAttribute('data-sort-order', item.sort_order != null ? item.sort_order : 0);
+        tr.dataset.name = name;
+        tr.dataset.body = item.body || '';
+        tr.dataset.typeId = item.device_type_id || '';
+        tr.dataset.brandId = item.device_brand_id || '';
+        tr.dataset.modelId = item.model_id || '';
+        tr.innerHTML =
+            `<td class="sort-handle ps-2" style="width: 30px; cursor: grab;"><i class="fas fa-grip-vertical text-muted"></i></td>` +
+            `<td class="py-1"><small>${escDeviceHtml(name)}</small></td>` +
+            `<td class="py-1"><small class="text-muted">${escDeviceHtml(diagnosticsScopeLabel(item))}</small></td>` +
+            `<td class="text-end pe-2" style="width: 100px;">` +
+            `<button class="btn btn-sm btn-link p-0 text-warning edit-item" data-id="${escDeviceHtml(id)}" data-name="${escDeviceHtml(name)}" data-type="diagnostics-template" title="Редактировать"><i class="fas fa-edit"></i></button>` +
+            `<button class="btn btn-sm btn-link p-0 text-danger delete-item ms-1" data-id="${escDeviceHtml(id)}" data-type="diagnostics-template" title="Удалить"><i class="fas fa-trash"></i></button>` +
+            `</td>`;
+        frag.appendChild(tr);
+    });
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+}
+
+function fillSelectOptions(select, items, placeholder) {
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = `<option value="">${placeholder}</option>`;
+    (items || []).forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name || '';
+        select.appendChild(opt);
+    });
+    if (current) select.value = current;
+}
+
+function loadDiagnosticsTemplateCatalog(typeId, brandId) {
+    const typeSel = document.getElementById('diagnosticsTemplateType');
+    const brandSel = document.getElementById('diagnosticsTemplateBrand');
+    const modelSel = document.getElementById('diagnosticsTemplateModel');
+    const typeQ = typeId ? `?type_id=${encodeURIComponent(typeId)}` : '';
+    const brandQ = typeId || brandId
+        ? `?type_id=${encodeURIComponent(typeId || '')}&brand_id=${encodeURIComponent(brandId || '')}`
+        : '';
+    return Promise.all([
+        fetch('/api/catalog/types').then(r => r.json()),
+        fetch('/api/catalog/brands' + typeQ).then(r => r.json()),
+        fetch('/api/catalog/models' + brandQ).then(r => r.json()),
+    ]).then(([types, brands, models]) => {
+        fillSelectOptions(typeSel, Array.isArray(types) ? types : [], 'Любой');
+        fillSelectOptions(brandSel, Array.isArray(brands) ? brands : [], 'Любая');
+        fillSelectOptions(modelSel, Array.isArray(models) ? models : [], 'Любая');
+        if (typeId) typeSel.value = String(typeId);
+        if (brandId) brandSel.value = String(brandId);
+    });
+}
+
+document.getElementById('diagnosticsTemplateType')?.addEventListener('change', function() {
+    const typeId = this.value;
+    const brandId = document.getElementById('diagnosticsTemplateBrand')?.value || '';
+    loadDiagnosticsTemplateCatalog(typeId, brandId);
+});
+document.getElementById('diagnosticsTemplateBrand')?.addEventListener('change', function() {
+    const typeId = document.getElementById('diagnosticsTemplateType')?.value || '';
+    loadDiagnosticsTemplateCatalog(typeId, this.value);
+});
+document.getElementById('addDiagnosticsTemplateModal')?.addEventListener('show.bs.modal', function() {
+    if (!editingItemId) {
+        loadDiagnosticsTemplateCatalog('', '');
+    }
+});
+
 function initDeviceDataSortables() {
     if (typeof Sortable === 'undefined') return;
     const configs = [
@@ -2409,6 +2520,7 @@ function initDeviceDataSortables() {
         ['appearanceTagsTableBody', 'appearance-tags'],
         ['deviceTypesTableBody', 'device-types'],
         ['deviceBrandsTableBody', 'device-brands'],
+        ['diagnosticsTemplatesTableBody', 'diagnostics-templates'],
     ];
     configs.forEach(([bodyId, type]) => {
         const el = document.getElementById(bodyId);
@@ -2433,7 +2545,7 @@ function loadDeviceDataTables(force) {
 
     const bodies = [
         'deviceTypesTableBody', 'deviceBrandsTableBody', 'symptomsTableBody',
-        'appearanceTagsTableBody', 'orderModelsTableBody'
+        'appearanceTagsTableBody', 'orderModelsTableBody', 'diagnosticsTemplatesTableBody'
     ];
     bodies.forEach(id => {
         const tb = document.getElementById(id);
@@ -2448,24 +2560,28 @@ function loadDeviceDataTables(force) {
         fetch('/api/symptoms').then(r => r.json()),
         fetch('/api/appearance-tags').then(r => r.json()),
         fetch('/api/order-models').then(r => r.json()),
-    ]).then(([types, brands, symptoms, tags, models]) => {
+        fetch('/api/diagnostics-templates').then(r => r.json()),
+    ]).then(([types, brands, symptoms, tags, models, templates]) => {
         const typesArr = Array.isArray(types) ? types : [];
         const brandsArr = Array.isArray(brands) ? brands : [];
         const symptomsArr = Array.isArray(symptoms) ? symptoms : [];
         const tagsArr = Array.isArray(tags) ? tags : [];
         const modelsArr = Array.isArray(models) ? models : [];
+        const templatesArr = Array.isArray(templates) ? templates : [];
 
         renderSortableDeviceRows(document.getElementById('deviceTypesTableBody'), typesArr, 'data-type-id', 'device-types', 'device-type');
         renderSortableDeviceRows(document.getElementById('deviceBrandsTableBody'), brandsArr, 'data-brand-id', 'device-brands', 'device-brand');
         renderSortableDeviceRows(document.getElementById('symptomsTableBody'), symptomsArr, 'data-symptom-id', 'symptoms', 'symptom');
         renderSortableDeviceRows(document.getElementById('appearanceTagsTableBody'), tagsArr, 'data-tag-id', 'appearance-tags', 'appearance-tag');
         renderOrderModelRows(document.getElementById('orderModelsTableBody'), modelsArr);
+        renderDiagnosticsTemplateRows(document.getElementById('diagnosticsTemplatesTableBody'), templatesArr);
 
         setDeviceCount('deviceTypesCount', typesArr.length);
         setDeviceCount('deviceBrandsCount', brandsArr.length);
         setDeviceCount('symptomsCount', symptomsArr.length);
         setDeviceCount('appearanceTagsCount', tagsArr.length);
         setDeviceCount('orderModelsCount', modelsArr.length);
+        setDeviceCount('diagnosticsTemplatesCount', templatesArr.length);
 
         initDeviceDataSortables();
         deviceDataLoaded = true;
@@ -2530,6 +2646,20 @@ document.addEventListener('click', function(e) {
             document.getElementById('orderModelName').value = name;
             document.getElementById('orderModelModalTitle').textContent = 'Редактировать модель устройства';
             new bootstrap.Modal(document.getElementById('addOrderModelModal')).show();
+        } else if (type === 'diagnostics-template') {
+            const row = btn.closest('tr');
+            document.getElementById('diagnosticsTemplateName').value = (row && row.dataset.name) || name;
+            document.getElementById('diagnosticsTemplateBody').value = (row && row.dataset.body) || '';
+            document.getElementById('diagnosticsTemplateModalTitle').textContent = 'Редактировать шаблон диагностики';
+            const typeId = row ? row.dataset.typeId : '';
+            const brandId = row ? row.dataset.brandId : '';
+            const modelId = row ? row.dataset.modelId : '';
+            loadDiagnosticsTemplateCatalog(typeId, brandId).then(() => {
+                document.getElementById('diagnosticsTemplateType').value = typeId || '';
+                document.getElementById('diagnosticsTemplateBrand').value = brandId || '';
+                document.getElementById('diagnosticsTemplateModel').value = modelId || '';
+            });
+            new bootstrap.Modal(document.getElementById('addDiagnosticsTemplateModal')).show();
         }
     }
     
@@ -2546,6 +2676,7 @@ document.addEventListener('click', function(e) {
         else if (type === 'symptom') url = `/api/symptoms/${id}`;
         else if (type === 'appearance-tag') url = `/api/appearance-tags/${id}`;
         else if (type === 'order-model') url = `/api/order-models/${id}`;
+        else if (type === 'diagnostics-template') url = `/api/diagnostics-templates/${id}`;
         
         fetch(url, {method: 'DELETE'})
             .then(res => res.json())
@@ -2694,8 +2825,39 @@ function saveOrderModel() {
     });
 }
 
+function saveDiagnosticsTemplate() {
+    const name = document.getElementById('diagnosticsTemplateName').value.trim();
+    const body = document.getElementById('diagnosticsTemplateBody').value.trim();
+    if (!name || !body) {
+        alert('Введите название и текст шаблона');
+        return;
+    }
+    const url = editingItemId ? `/api/diagnostics-templates/${editingItemId}` : '/api/diagnostics-templates';
+    const method = editingItemId ? 'PUT' : 'POST';
+    fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            name: name,
+            body: body,
+            device_type_id: document.getElementById('diagnosticsTemplateType').value || null,
+            device_brand_id: document.getElementById('diagnosticsTemplateBrand').value || null,
+            model_id: document.getElementById('diagnosticsTemplateModel').value || null
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addDiagnosticsTemplateModal')).hide();
+            reloadDeviceDataTables();
+        } else {
+            alert(data.error || 'Ошибка сохранения');
+        }
+    });
+}
+
 // Сброс форм при закрытии модальных окон
-['addDeviceTypeModal', 'addDeviceBrandModal', 'addSymptomModal', 'addAppearanceTagModal', 'addOrderModelModal'].forEach(modalId => {
+['addDeviceTypeModal', 'addDeviceBrandModal', 'addSymptomModal', 'addAppearanceTagModal', 'addOrderModelModal', 'addDiagnosticsTemplateModal'].forEach(modalId => {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.addEventListener('hidden.bs.modal', function() {
@@ -2896,6 +3058,54 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="symptomName" class="form-label">Название <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="symptomName" required>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addDiagnosticsTemplateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="diagnosticsTemplateModalTitle">Добавить шаблон диагностики</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="event.preventDefault(); saveDiagnosticsTemplate();">
+                    <div class="mb-3">
+                        <label for="diagnosticsTemplateName" class="form-label">Название <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="diagnosticsTemplateName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="diagnosticsTemplateBody" class="form-label">Текст <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="diagnosticsTemplateBody" rows="6" required placeholder="Чистка, замена жидкого металла, чистка от пыли, продувка, сборка, тестирование. Заключение мастера: перегрева нет, работоспособность восстановлена."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="diagnosticsTemplateType" class="form-label">Тип устройства</label>
+                            <select class="form-select" id="diagnosticsTemplateType">
+                                <option value="">Любой</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="diagnosticsTemplateBrand" class="form-label">Марка</label>
+                            <select class="form-select" id="diagnosticsTemplateBrand">
+                                <option value="">Любая</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="diagnosticsTemplateModel" class="form-label">Модель</label>
+                            <select class="form-select" id="diagnosticsTemplateModel">
+                                <option value="">Любая</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="form-text mb-0">Пустые поля — шаблон подходит для любых устройств. Сначала подставляются шаблоны выбранной модели, затем марки и типа.</p>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -3383,6 +3593,8 @@ function updateSortOrder(type, tbody) {
             id = row.dataset.brandId;
         } else if (type === 'services') {
             id = row.dataset.serviceId;
+        } else if (type === 'diagnostics-templates') {
+            id = row.dataset.templateId;
         }
         return { id: parseInt(id), sort_order: index + 1 };
     });
@@ -3399,6 +3611,8 @@ function updateSortOrder(type, tbody) {
         url = '/api/device-brands/update-sort-order';
     } else if (type === 'services') {
         url = '/api/services/update-sort-order';
+    } else if (type === 'diagnostics-templates') {
+        url = '/api/diagnostics-templates/update-sort-order';
     }
     
     fetch(url, {

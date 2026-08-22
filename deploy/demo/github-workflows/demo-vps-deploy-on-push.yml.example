@@ -1,0 +1,28 @@
+# Скопировать в публичный репозиторий Nika-Service-CRM как:
+#   .github/workflows/demo-vps-deploy.yml
+#
+# Секреты (Settings → Secrets → Actions):
+#   DEMO_VPS_HOST   — IP или hostname демо-сервера (например demo.example.com)
+#   DEMO_VPS_SSH_KEY — приватный ключ (pem), публичная часть в ~/.ssh/authorized_keys на сервере
+#
+# После push в main GitHub запустит тот же сценарий, что и таймер (poll).
+
+name: Deploy demo VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync and restart on demo
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEMO_VPS_HOST }}
+          username: root
+          key: ${{ secrets.DEMO_VPS_SSH_KEY }}
+          script: |
+            set -e
+            /usr/local/sbin/nikacrm-demo-sync.sh poll

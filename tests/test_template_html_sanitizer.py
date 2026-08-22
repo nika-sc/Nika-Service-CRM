@@ -28,6 +28,17 @@ def test_order_render_preserves_font_size():
     assert "font-size: 10px" in out
 
 
+def test_order_print_keeps_image_data_url_strips_html_data_url():
+    html = (
+        '<img src="data:image/png;base64,aaaa">'
+        '<img src="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">'
+        '<a href="data:text/html,hi">x</a>'
+    )
+    out = sanitize_order_print_html(html)
+    assert "data:image/png" in out
+    assert "data:text/html" not in out.lower()
+
+
 def test_strips_javascript_href():
     html = '<a href="javascript:alert(1)">click</a>'
     out = sanitize_print_template_html(html)

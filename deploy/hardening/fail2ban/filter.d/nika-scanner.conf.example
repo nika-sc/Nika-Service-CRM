@@ -1,0 +1,4 @@
+[Definition]
+failregex = ^<HOST> \S+ \S+ \[.*\] "(GET|POST|HEAD) /(?:\.env|\.git|\.svn|\.aws|\.ssh|wp-login\.php|wp-admin|xmlrpc\.php|phpunit|actuator|phpinfo|terraform\.tfstate|vendor/phpunit|autodiscover|owa/|ecp/|cgi-bin)[^"\s]* HTTP/[0-9.]+" (301|302|403|404) .*$
+ignoreregex =
+datepattern = ^[^\[]*\[({DATE})

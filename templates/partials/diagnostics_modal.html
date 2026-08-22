@@ -8,6 +8,9 @@
             <div class="modal-body">
                 <div class="alert alert-warning py-2 px-3 d-none" id="diagnosticsPendingHint" role="status"></div>
                 <label class="form-label">Результат диагностики (видит клиент в ЛК)</label>
+                <select class="form-select mb-2" id="diagnosticsTemplateSelect">
+                    <option value="">Шаблон диагностики — выберите, чтобы подставить текст</option>
+                </select>
                 <textarea class="form-control" id="diagnosticsText" rows="6" maxlength="8000"></textarea>
                 <div class="form-text" id="diagnosticsTextHint">После сохранения текст может изменить только администратор. Без текста нельзя закрыть заявку.</div>
                 <div class="mt-3" id="diagnosticsFileWrap">

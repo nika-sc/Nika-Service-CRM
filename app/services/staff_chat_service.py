@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 
 from app.database.connection import get_db_connection
 from app.utils.datetime_utils import get_moscow_now, get_moscow_now_naive
-from app.utils.safe_files import confined_file_path, file_extension, is_forbidden_upload_extension, mime_from_filename
+from app.utils.safe_files import confined_file_path, file_extension, is_forbidden_upload_extension, mime_from_filename, sniff_staff_upload
 
 logger = logging.getLogger(__name__)
 
@@ -402,6 +402,13 @@ class StaffChatService:
                 max_mb = int(_MAX_FILE_SIZE_BYTES / (1024 * 1024))
                 raise StaffChatValidationError(f"Файл {original_name} слишком большой (до {max_mb} MB)")
 
+            file_obj.stream.seek(0)
+            header = file_obj.stream.read(64)
+            file_obj.stream.seek(0)
+            sniffed = sniff_staff_upload(header, original_name)
+            if not sniffed:
+                raise StaffChatValidationError(f"Недопустимый тип файла: {original_name}")
+
             safe_name = secure_filename(original_name) or "file"
             ext = ""
             if "." in safe_name:
@@ -410,7 +417,7 @@ class StaffChatService:
             abs_path = os.path.join(target_dir, stored_name)
             rel_path = os.path.relpath(abs_path, _PROJECT_ROOT).replace("\\", "/")
             file_obj.save(abs_path)
-            mime_type = mime_from_filename(original_name)
+            mime_type = sniffed
             attachments_to_insert.append(
                 {
                     "original_name": original_name,

@@ -2363,7 +2363,7 @@
                     <p class="mb-0">Заявка переведена в статус «Закрыта». Выберите, что распечатать:</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Квитанция</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="printRenderedTemplate('customer')">Квитанция</button>
                     <button type="button" class="btn btn-outline-primary" onclick="printRenderedTemplate('sales_receipt')">Товарный чек</button>
                     <button type="button" class="btn btn-outline-primary" onclick="printRenderedTemplate('work_act')">Акт</button>
                     <button type="button" class="btn btn-primary" onclick="printRenderedTemplate('both')">Оба документа</button>
@@ -2406,7 +2406,7 @@
                                 <i class="fas fa-edit"></i>
                             </button>
                             <div class="btn-group no-print" role="group">
-                                <button class="btn btn-light btn-sm" type="button" onclick="window.print(); showToast('Подготовка к печати...', 'info', null, 2000);" title="Печать квитанции" aria-label="Печать квитанции" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                <button class="btn btn-light btn-sm" type="button" onclick="printRenderedTemplate('customer'); showToast('Подготовка к печати...', 'info', null, 2000);" title="Печать квитанции" aria-label="Печать квитанции" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                     <i class="fas fa-print"></i>
                                 </button>
                                 <button class="btn btn-light btn-sm" type="button" onclick="printRenderedTemplate('sales_receipt')" title="Печать товарного чека" aria-label="Печать товарного чека" style="background: #ffffff; border: 1px solid #e0e0e0; color: #424242; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
@@ -3324,6 +3324,11 @@
                                     </tbody>
                                 </table>
                             </div>
+                            {% if history_has_more %}
+                            <div class="text-center mt-3">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="loadMoreOrderHistory" data-page="2">Показать ещё</button>
+                            </div>
+                            {% endif %}
                             {% else %}
                             <p class="text-muted text-center py-4">История взаимодействий пока пуста</p>
                             {% endif %}
@@ -3394,7 +3399,7 @@
                         </div>
                         <div class="mb-2" id="commentAttachmentsPreview"></div>
                         <div class="mb-2">
-                            <input type="file" class="form-control form-control-sm" id="commentFileInput" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.zip,.rar">
+                            <input type="file" class="form-control form-control-sm" id="commentFileInput" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt">
                             <small class="text-muted">Максимум 10 MB, можно выбрать несколько файлов</small>
                         </div>
                         <div class="mb-2">
@@ -5295,37 +5300,103 @@
 
         const CLOSED_PRINT_MODE = '{{ settings.close_print_mode or "choice" }}';
 
+        document.getElementById('loadMoreOrderHistory')?.addEventListener('click', function() {
+            const btn = this;
+            const next = Number(btn.dataset.page || '2');
+            const id = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : null;
+            if (!id) return;
+            btn.disabled = true;
+            fetch('/api/order/' + id + '/action-logs?page=' + next, { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.querySelector('#history-pane tbody');
+                    if (data && data.success && tbody) {
+                        (data.items || []).forEach(item => {
+                            const tr = document.createElement('tr');
+                            const when = (item.created_at || '').split(' ');
+                            tr.innerHTML = '<td><small>' + (when[0] || '') + '</small></td>'
+                                + '<td><small class="text-muted">' + ((when[1] || '').slice(0, 5)) + '</small></td>'
+                                + '<td>' + (item.title || '').replace(/</g, '&lt;') + '</td>'
+                                + '<td><small>' + (item.username || '') + '</small></td>';
+                            tbody.appendChild(tr);
+                        });
+                    }
+                    if (data && data.has_more) {
+                        btn.dataset.page = String(next + 1);
+                        btn.disabled = false;
+                    } else {
+                        btn.remove();
+                    }
+                })
+                .catch(() => { btn.disabled = false; });
+        });
+
+        window._orderPrintBundle = window._orderPrintBundle || null;
+        window.ensureOrderPrintBundle = function() {
+            if (window._orderPrintBundle) return Promise.resolve(window._orderPrintBundle);
+            const id = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : null;
+            if (!id) return Promise.resolve(null);
+            return fetch('/api/order/' + id + '/print-html', { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success) return null;
+                    window._orderPrintBundle = data;
+                    if (data.customer) {
+                        const pv = document.querySelector('.print-view');
+                        if (pv) pv.innerHTML = data.customer;
+                    }
+                    if (data.sales_receipt) {
+                        const el = document.getElementById('salesReceiptTemplateRendered');
+                        if (el) el.innerHTML = data.sales_receipt;
+                    }
+                    if (data.work_act) {
+                        const el = document.getElementById('workActTemplateRendered');
+                        if (el) el.innerHTML = data.work_act;
+                    }
+                    return data;
+                })
+                .catch(() => null);
+        };
+
         window.printRenderedTemplate = function(templateType) {
-            if (templateType === 'both') {
-                window.printRenderedTemplate('sales_receipt');
-                setTimeout(() => window.printRenderedTemplate('work_act'), 700);
-                return;
-            }
-            if (!templateType || templateType === 'customer') {
-                window.print();
-                return;
-            }
-            const map = {
-                sales_receipt: 'salesReceiptTemplateRendered',
-                work_act: 'workActTemplateRendered',
+            const run = function() {
+                if (templateType === 'both') {
+                    window.printRenderedTemplate('sales_receipt');
+                    setTimeout(() => window.printRenderedTemplate('work_act'), 700);
+                    return;
+                }
+                if (!templateType || templateType === 'customer') {
+                    window.print();
+                    return;
+                }
+                const map = {
+                    sales_receipt: 'salesReceiptTemplateRendered',
+                    work_act: 'workActTemplateRendered',
+                };
+                const el = document.getElementById(map[templateType] || '');
+                const html = el ? (el.innerHTML || '').trim() : '';
+                if (!html) {
+                    showToast('Шаблон не настроен в /settings', 'warning');
+                    return;
+                }
+                const w = window.open('', '_blank', 'width=1000,height=800');
+                if (!w) {
+                    showToast('Разрешите всплывающие окна для печати', 'warning');
+                    return;
+                }
+                const printPageSize = '{{ settings.print_page_size or "A4" }}';
+                const printMarginMm = Number('{{ settings.print_margin_mm if settings.print_margin_mm is not none else 3 }}') || 3;
+                w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Печать</title><style>@page{size:${printPageSize};margin:${printMarginMm}mm;}html,body{font-family:Arial,sans-serif;margin:0;padding:0;}body{padding:0;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #ddd;padding:6px;}</style></head><body>${html}</body></html>`);
+                w.document.close();
+                w.focus();
+                w.print();
             };
-            const el = document.getElementById(map[templateType] || '');
-            const html = el ? (el.innerHTML || '').trim() : '';
-            if (!html) {
-                showToast('Шаблон не настроен в /settings', 'warning');
+            const printReady = {{ 'true' if print_templates_ready else 'false' }};
+            if (!printReady && !window._orderPrintBundle) {
+                window.ensureOrderPrintBundle().then(function() { run(); });
                 return;
             }
-            const w = window.open('', '_blank', 'width=1000,height=800');
-            if (!w) {
-                showToast('Разрешите всплывающие окна для печати', 'warning');
-                return;
-            }
-            const printPageSize = '{{ settings.print_page_size or "A4" }}';
-            const printMarginMm = Number('{{ settings.print_margin_mm if settings.print_margin_mm is not none else 3 }}') || 3;
-            w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Печать</title><style>@page{size:${printPageSize};margin:${printMarginMm}mm;}html,body{font-family:Arial,sans-serif;margin:0;padding:0;}body{padding:0;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #ddd;padding:6px;}</style></head><body>${html}</body></html>`);
-            w.document.close();
-            w.focus();
-            w.print();
+            run();
         };
 
         function handleClosedPrintFlow() {

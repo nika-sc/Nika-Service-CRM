@@ -27,11 +27,13 @@ def clear_reference_cache(reference_type: str = None):
             'order_statuses': 'ref_order_statuses',
             'parts': 'ref_parts',
             'part_categories': 'ref_part_categories',
+            'diagnostics_templates': 'ref_diagnostics_templates',
         }
         
         if reference_type in cache_prefixes:
             from app.utils.cache import clear_cache
             clear_cache(key_prefix=cache_prefixes[reference_type])
+            clear_cache(key_prefix='ref_all')
             logger.info(f"Кэш справочника '{reference_type}' очищен")
     else:
         # Очищаем все справочники

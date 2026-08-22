@@ -1,0 +1,17 @@
+# Повторчики fail2ban — бан навсегда (bantime = -1). Письмо BAN только отсюда и от nika-login.
+# Копировать в /etc/fail2ban/jail.d/zz-nika-recidive.local
+# ignoreip: офис + loopback, иначе вечный бан своего IP.
+# Не разбанивать «на всякий случай»: fail2ban-client set recidive unbanip IP
+
+[recidive]
+enabled = true
+filter = recidive
+logpath = /var/log/fail2ban.log
+backend = polling
+banaction = %(banaction_allports)s
+bantime = -1
+findtime = 1d
+maxretry = 3
+ignoreip = 127.0.0.1/8 ::1
+action = %(action_)s
+         nika-mail[env=/root/nikanewcrm/.env]

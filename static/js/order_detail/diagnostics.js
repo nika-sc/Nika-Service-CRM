@@ -59,6 +59,11 @@
         var hint = document.getElementById("diagnosticsTextHint");
         if (ta) ta.readOnly = !canEdit;
         if (saveBtn) saveBtn.classList.toggle("d-none", !canEdit);
+        var tplSel = document.getElementById("diagnosticsTemplateSelect");
+        if (tplSel) {
+            tplSel.disabled = !canEdit;
+            tplSel.classList.toggle("d-none", !canEdit);
+        }
         if (fileInput) fileInput.disabled = !canUpload;
         if (fileWrap) fileWrap.classList.toggle("d-none", !canUpload);
         if (hint) {
@@ -145,6 +150,42 @@
         }
     }
 
+    function applyDiagnosticsTemplateText(current, body) {
+        var existing = String(current || "").replace(/\r\n/g, "\n");
+        var tpl = String(body || "").replace(/\r\n/g, "\n").replace(/^\n+|\n+$/g, "");
+        if (!existing.trim()) return tpl;
+        return existing.replace(/\s+$/, "") + "\n\n" + tpl;
+    }
+
+    function fillTemplateSelect(items) {
+        var sel = document.getElementById("diagnosticsTemplateSelect");
+        if (!sel) return;
+        var ta = document.getElementById("diagnosticsText");
+        var canShow = ta && !ta.readOnly;
+        sel.innerHTML = '<option value="">Шаблон диагностики — выберите, чтобы подставить текст</option>';
+        (items || []).forEach(function (item) {
+            var opt = document.createElement("option");
+            opt.value = String(item.id);
+            opt.textContent = item.name || ("Шаблон #" + item.id);
+            opt.dataset.body = item.body || "";
+            sel.appendChild(opt);
+        });
+        sel.classList.toggle("d-none", !canShow || !items || !items.length);
+    }
+
+    function loadTemplateOptions(data) {
+        var params = new URLSearchParams({ match: "1" });
+        if (data && data.device_type_id) params.set("type_id", data.device_type_id);
+        if (data && data.device_brand_id) params.set("brand_id", data.device_brand_id);
+        if (data && data.model_id) params.set("model_id", data.model_id);
+        return fetch("/api/diagnostics-templates?" + params.toString(), { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (items) {
+                fillTemplateSelect(Array.isArray(items) ? items : []);
+            })
+            .catch(function () { fillTemplateSelect([]); });
+    }
+
     function loadDiagnostics() {
         var id = orderId();
         if (!id) return Promise.resolve(null);
@@ -157,6 +198,12 @@
                 applyAccess(data);
                 renderFiles(data.files || []);
                 renderHistory(data.history || []);
+                loadTemplateOptions(data);
+                var sel = document.getElementById("diagnosticsTemplateSelect");
+                if (sel) {
+                    sel.disabled = !!document.getElementById("diagnosticsText")?.readOnly;
+                    sel.value = "";
+                }
                 return data;
             })
             .catch(function () { return null; });
@@ -332,6 +379,18 @@
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveText);
+        var tplSel = document.getElementById("diagnosticsTemplateSelect");
+        if (tplSel) {
+            tplSel.addEventListener("change", function () {
+                var opt = tplSel.options[tplSel.selectedIndex];
+                var body = opt && opt.dataset ? opt.dataset.body : "";
+                if (!body) return;
+                var ta = document.getElementById("diagnosticsText");
+                if (!ta || ta.readOnly) return;
+                ta.value = applyDiagnosticsTemplateText(ta.value, body);
+                tplSel.value = "";
+            });
+        }
         if (fileInput) {
             fileInput.addEventListener("change", function () {
                 var picked = fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];

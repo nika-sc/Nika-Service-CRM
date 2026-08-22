@@ -1,0 +1,12 @@
+# Письмо fail2ban только по важному.
+# Сканеры SSH/nginx банятся без письма — иначе пачка BAN каждую ночь.
+# Копировать в /etc/fail2ban/jail.d/zz-nika-mail.local
+# env: WORK /root/nikanewcrm/.env ; DEMO /root/Nika-Service-CRM/.env
+#
+# Письмо остаётся у:
+#   nika-login  — брут входа CRM
+#   recidive    — повторчик навсегда (см. recidive.local.example)
+
+[nika-login]
+action = %(action_)s
+         nika-mail[env=/root/nikanewcrm/.env]

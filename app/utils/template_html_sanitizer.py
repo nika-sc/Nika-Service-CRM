@@ -8,6 +8,7 @@ whitelist типографики и вёрстки.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Dict, Iterable, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -278,10 +279,29 @@ def sanitize_email_template_html(html: str) -> str:
 
 
 def sanitize_order_print_html(html: str) -> str:
-    return sanitize_template_html(
+    cleaned = sanitize_template_html(
         html,
         tags=ORDER_RENDER_TAGS,
         attributes=ORDER_RENDER_ATTRIBUTES,
         protocols=["http", "https", "data"],
         strip_comments=True,
     )
+    return _strip_non_image_data_urls(cleaned)
+
+
+_UNSAFE_DATA_ATTR = re.compile(
+    r'''(?ix)
+    (\s(?:src|href)\s*=\s*)
+    (["'])
+    data:(?!image/(?:png|jpe?g|gif|webp))
+    [^"']*
+    \2
+    '''
+)
+
+
+def _strip_non_image_data_urls(html: str) -> str:
+    """Keep data:image/*; drop data:text/html and other non-image data URLs."""
+    if not html or "data:" not in html.lower():
+        return html
+    return _UNSAFE_DATA_ATTR.sub(r"\1\2\2", html)

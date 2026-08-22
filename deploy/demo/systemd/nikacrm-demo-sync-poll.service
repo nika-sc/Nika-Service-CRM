@@ -1,0 +1,9 @@
+[Unit]
+Description=Проверить обновления OSS main и перезапустить демо CRM при изменении
+Documentation=file:///root/Nika-Service-CRM/deploy/demo/README.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/nikacrm-demo-sync
+ExecStart=/usr/local/sbin/nikacrm-demo-sync.sh poll

@@ -216,17 +216,14 @@ class OrderService:
         payments = PaymentService.get_order_payments(order_id)
         comments = CommentService.get_order_comments(order_id)
         
-        # Получаем totals через get_order_totals для получения overpayment
-        totals_data = OrderService.get_order_totals(order_id)
-        
         totals = {
-            'services_total': totals_data.get('services_total', 0),
-            'parts_total': totals_data.get('parts_total', 0),
-            'prepayment': totals_data.get('prepayment', 0),
-            'total': totals_data.get('total', 0),
-            'paid': totals_data.get('paid', 0),
-            'debt': totals_data.get('debt', 0),
-            'overpayment': totals_data.get('overpayment', 0)
+            'services_total': float(flat_data.get('services_total') or 0),
+            'parts_total': float(flat_data.get('parts_total') or 0),
+            'prepayment': float(flat_data.get('prepayment') or 0),
+            'total': float(flat_data.get('total') or 0),
+            'paid': float(flat_data.get('paid') or 0),
+            'debt': float(flat_data.get('debt') or 0),
+            'overpayment': float(flat_data.get('overpayment') or 0),
         }
         
         return {
@@ -722,6 +719,7 @@ class OrderService:
                 # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
+                clear_cache(key_prefix='all_orders_header_counters')
 
                 if status_changed and (is_final or accrues_salary):
                     OrderService._sync_direct_cogs_safe(order_id)

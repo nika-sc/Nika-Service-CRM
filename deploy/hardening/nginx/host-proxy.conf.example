@@ -8,6 +8,9 @@
 # ssl_prefer_server_ciphers off;
 # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
+# Не алиасить /static/uploads/invoices/ на хосте: подпись/печать счетов
+# отдаёт приложение (нужна сессия staff). Весь /static/ и invoices — через docker nginx.
+
 location / {
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;

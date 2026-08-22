@@ -1744,8 +1744,9 @@ def order_detail(order_id):
                 logger.exception("Неожиданная ошибка при обновлении заявки")
                 flash("Произошла непредвиденная ошибка при обновлении заявки.", 'error')
         
-        # Получаем обновленные данные после возможного обновления
-        order_data = OrderService.get_order_full_data(order.id)
+        # После POST без редиректа перечитываем; на GET уже есть order_data
+        if request.method == 'POST':
+            order_data = OrderService.get_order_full_data(order.id)
         
         # Форматируем телефон
         if order_data.get('customer') and order_data['customer'].get('phone'):
@@ -1911,14 +1912,17 @@ def order_detail(order_id):
         except Exception as e:
             logger.error(f"Не удалось получить историю статусов из order_status_history для заявки #{order.id}: {e}", exc_info=True)
         
-        # Получаем логи действий для заявки
+        # Получаем логи действий для заявки (сначала 50, остальное — по кнопке)
+        history_has_more = False
         try:
-            action_logs = ActionLogService.get_action_logs(
+            action_logs_page = ActionLogService.get_action_logs(
                 entity_type='order',
                 entity_id=order.id,
                 page=1,
-                per_page=1000
-            ).items
+                per_page=50
+            )
+            action_logs = action_logs_page.items
+            history_has_more = getattr(action_logs_page, 'pages', 1) > 1
             
             for log in action_logs:
                 try:
@@ -2503,352 +2507,26 @@ def order_detail(order_id):
             except Exception as e:
                 logger.warning(f"Не удалось проверить блокировку редактирования для заявки #{order.id}: {e}")
 
-        # ===== Шаблон печати для клиента (из настроек «Формы для печати») =====
-        # Берём шаблон без кэша, чтобы всегда использовать актуальный из /settings
+        print_flag = (request.args.get('print') or request.args.get('auto_print') or '').lower()
+        should_render_print = print_flag in ('1', 'true', 'yes', 'customer', 'receipt')
         customer_template_rendered = None
         sales_receipt_template_rendered = None
         work_act_template_rendered = None
-        try:
-            tpl = SettingsService.get_print_template_fresh('customer')
-            html_content = (tpl or {}).get('html_content') if isinstance(tpl, dict) else None
-            sales_tpl = SettingsService.get_print_template_fresh('sales_receipt')
-            sales_html = (sales_tpl or {}).get('html_content') if isinstance(sales_tpl, dict) else None
-            work_tpl = SettingsService.get_print_template_fresh('work_act')
-            work_html = (work_tpl or {}).get('html_content') if isinstance(work_tpl, dict) else None
-            logger.debug(f"Шаблон печати для заявки #{order.id}: tpl={tpl is not None}, html_content={'есть' if html_content else 'нет'}")
-            if (
-                (html_content and isinstance(html_content, str) and html_content.strip()) or
-                (sales_html and isinstance(sales_html, str) and sales_html.strip()) or
-                (work_html and isinstance(work_html, str) and work_html.strip())
-            ):
-                # Источник переменных — данные заявки/клиента/устройства + общие настройки
-                order_obj = order_data.get('order') or {}
-                customer_obj = order_data.get('customer') or {}
-                device_obj = order_data.get('device') or {}
+        if should_render_print:
+            from app.utils.order_print_bundle import render_order_print_templates
+            bundle = render_order_print_templates(
+                order=order,
+                order_data=order_data,
+                settings=settings,
+                totals=totals,
+                order_services=order_services,
+                order_parts=order_parts,
+                amount_to_words=_amount_to_words_ru,
+            )
+            customer_template_rendered = bundle.get('customer')
+            sales_receipt_template_rendered = bundle.get('sales_receipt')
+            work_act_template_rendered = bundle.get('work_act')
 
-                def _safe(v) -> str:
-                    return _html.escape("" if v is None else str(v))
-
-                try:
-                    logo_max_width = int(settings.get('logo_max_width') or 320)
-                except (TypeError, ValueError):
-                    logo_max_width = 320
-                try:
-                    logo_max_height = int(settings.get('logo_max_height') or 120)
-                except (TypeError, ValueError):
-                    logo_max_height = 120
-
-                raw_logo_url = (settings.get('logo_url') or '').strip()
-                # Печать идет из about:blank, поэтому logo_url нужен абсолютный.
-                if raw_logo_url and re.match(r'^https?://', raw_logo_url, flags=re.IGNORECASE):
-                    logo_url = url_for('orders.print_logo_proxy', _external=True)
-                elif raw_logo_url:
-                    logo_url = urljoin(request.url_root, raw_logo_url.lstrip('/'))
-                else:
-                    logo_url = raw_logo_url
-
-                # Базовые переменные
-                values = {
-                    # Организация
-                    'COMPANY_NAME': _safe(settings.get('org_name') or ''),
-                    'branch.address': _safe(settings.get('address') or ''),
-                    'branch.phone': _safe(settings.get('phone') or ''),
-                    'COMPANY_REQUISITES': _safe(" ".join([p for p in [
-                        f"ИНН: {settings.get('inn')}" if settings.get('inn') else "",
-                        f"ОГРН: {settings.get('ogrn')}" if settings.get('ogrn') else "",
-                    ] if p]).strip()),
-
-                    # Заявка
-                    'ORDER_NUMBER': _safe(f"#{order_obj.get('id')}" if order_obj.get('id') else ''),
-                    'ORDER_ID': _safe(order_obj.get('id') or ''),
-                    'ORDER_UUID': _safe(order_obj.get('order_id') or ''),
-                    'STATUS_NAME': _safe(order_obj.get('status_name') or ''),
-
-                    # Клиент
-                    'CLIENT_NAME': _safe(order_obj.get('client_name') or customer_obj.get('name') or ''),
-                    'CLIENT_PHONE1': _safe(order_obj.get('phone_display') or order_obj.get('phone') or customer_obj.get('phone_display') or customer_obj.get('phone') or ''),
-                    'CLIENT_PHONE': _safe(order_obj.get('phone') or customer_obj.get('phone') or ''),
-                    'CLIENT_EMAIL': _safe(order_obj.get('email') or customer_obj.get('email') or ''),
-
-                    # Оплата (форматируем как денежную сумму)
-                    'TOTAL_PAID': _safe(f"{totals.get('paid', 0):.2f}" if isinstance(totals, dict) and totals.get('paid') else "0.00"),
-
-                    # Мастер
-                    'ENGINEER_NAME': _safe(order_obj.get('master_name') or ''),
-                    'MASTER_NAME': _safe(order_obj.get('master_name') or ''),
-                    
-                    # Менеджер
-                    'MANAGER_NAME': _safe(order_obj.get('manager_name') or ''),
-                    # Валюта и сотрудник для чека
-                    'CURRENCY': _safe('₽'),
-                    'EMPLOYEE_NAME': _safe(order_obj.get('master_name') or order_obj.get('manager_name') or ''),
-                    'COMPANY_LOGO_URL': _safe(logo_url),
-                    'COMPANY_LOGO_STYLE': _safe(
-                        f"max-width: {logo_max_width}px; max-height: {logo_max_height}px; width: auto; height: auto;"
-                    ),
-                }
-
-                # Список позиций для товарного чека (ITEMS): услуги + товары
-                print_items = []
-                total_items_sum = 0.0
-                for idx, s in enumerate(order_services or [], 1):
-                    qty = int(s.get('quantity') or 1)
-                    price = float(s.get('price') or s.get('service_price') or 0)
-                    discount_val = float(s.get('discount_value') or 0)
-                    discount_type = (s.get('discount_type') or '').strip().lower()
-                    if discount_type == 'percent' and discount_val:
-                        discount_amount = round(price * qty * discount_val / 100.0, 2)
-                    elif discount_type == 'fixed':
-                        discount_amount = min(round(discount_val * qty, 2), round(price * qty, 2))
-                    else:
-                        discount_amount = 0.0
-                    row_sum = round(price * qty - discount_amount, 2)
-                    total_items_sum += row_sum
-                    print_items.append({
-                        'INDEX': _safe(str(idx)),
-                        'ITEM_NAME': _safe(s.get('name') or s.get('service_name') or ''),
-                        'ITEM_SKU': _safe(''),
-                        'ITEM_WARRANTY': _safe(str(s.get('warranty_days') or '')),
-                        'ITEM_PRICE': _safe(f"{price:.2f}"),
-                        'ITEM_DISCOUNT': _safe(f"{discount_amount:.2f}"),
-                        'ITEM_QUANTITY': _safe(str(qty)),
-                        'ITEM_SUM': _safe(f"{row_sum:.2f}"),
-                    })
-                for idx, p in enumerate(order_parts or [], len(print_items) + 1):
-                    qty = int(p.get('quantity') or 1)
-                    price = float(p.get('price') or 0)
-                    discount_val = float(p.get('discount_value') or 0)
-                    discount_type = (p.get('discount_type') or '').strip().lower()
-                    if discount_type == 'percent' and discount_val:
-                        discount_amount = round(price * qty * discount_val / 100.0, 2)
-                    elif discount_type == 'fixed':
-                        discount_amount = min(round(discount_val * qty, 2), round(price * qty, 2))
-                    else:
-                        discount_amount = 0.0
-                    row_sum = round(price * qty - discount_amount, 2)
-                    total_items_sum += row_sum
-                    print_items.append({
-                        'INDEX': _safe(str(idx)),
-                        'ITEM_NAME': _safe(p.get('name') or p.get('part_name') or ''),
-                        'ITEM_SKU': _safe(p.get('part_number') or ''),
-                        'ITEM_WARRANTY': _safe(str(p.get('warranty_days') or '')),
-                        'ITEM_PRICE': _safe(f"{price:.2f}"),
-                        'ITEM_DISCOUNT': _safe(f"{discount_amount:.2f}"),
-                        'ITEM_QUANTITY': _safe(str(qty)),
-                        'ITEM_SUM': _safe(f"{row_sum:.2f}"),
-                    })
-                values['TOTAL_ITEMS'] = _safe(f"{total_items_sum:.2f}")
-
-                # Дата/время
-                try:
-                    from datetime import datetime as _dt
-                    now = _dt.now()
-                    # Форматируем дату в читаемый формат ДД.ММ.ГГГГ
-                    values['DATE_TODAY'] = _safe(now.strftime('%d.%m.%Y'))
-                    values['TIME_NOW'] = _safe(now.strftime('%H:%M'))
-                except Exception:
-                    values['DATE_TODAY'] = ''
-                    values['TIME_NOW'] = ''
-
-                # created_at в человекочитаемом виде
-                created_at_val = order_obj.get('created_at')
-                if created_at_val:
-                    try:
-                        from datetime import datetime as _dt
-                        # Пробуем разные форматы
-                        date_str = str(created_at_val).strip()
-                        formatted = None
-                        for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d']:
-                            try:
-                                dt = _dt.strptime(date_str[:19] if len(date_str) >= 19 else date_str, fmt)
-                                if ' ' in date_str or 'T' in date_str:
-                                    formatted = dt.strftime('%d.%m.%Y %H:%M:%S')
-                                else:
-                                    formatted = dt.strftime('%d.%m.%Y')
-                                break
-                            except ValueError:
-                                continue
-                        if not formatted and len(date_str) >= 10:
-                            # Пробуем взять первые 10 символов
-                            try:
-                                dt = _dt.strptime(date_str[:10], '%Y-%m-%d')
-                                formatted = dt.strftime('%d.%m.%Y')
-                            except ValueError:
-                                pass
-                        values['CREATED_AT'] = _safe(formatted or date_str)
-                    except Exception:
-                        values['CREATED_AT'] = _safe(str(created_at_val))
-                else:
-                    values['CREATED_AT'] = ''
-
-                # UUID-теги устройства из UI настроек (в т.ч. Модель — UUID из шаблона настроек)
-                values.update({
-                    '701809f9-23dc-4346-aff4-0aef32523aef': _safe(order_obj.get('device_type_name') or device_obj.get('device_type') or ''),
-                    'b6a8f943-e1b0-46e8-a321-b25fcfaf6976': _safe(order_obj.get('device_brand_name') or device_obj.get('device_brand') or ''),
-                    'c5286c7d-44aa-4579-8258-935b003998cf': _safe(order_obj.get('serial_number') or device_obj.get('serial_number') or ''),
-                    'c76b5bc7-7a68-4672-9542-cabaf2962600': _safe(order_obj.get('model') or ''),  # Модель (UUID из формы настроек)
-                    'bc1ae9b1-7b8b-4da6-add5-26982865629e': _safe(order_obj.get('appearance') or ''),
-                    'f93f4677-15b5-4e57-97e7-a345cb5b0e21': _safe(order_obj.get('symptom_tags') or ''),
-                    'dfd7aa33-fd89-462a-bbbc-39c1550415da': _safe(''),  # Комплектация - пока пусто
-                })
-                
-                # Дополнительные переменные
-                try:
-                    prepayment_val = float(order_obj.get('prepayment', 0) or 0)
-                    values['PREPAYMENT'] = _safe(f"{prepayment_val:.2f}")
-                except (ValueError, TypeError):
-                    values['PREPAYMENT'] = _safe("0.00")
-
-                try:
-                    estimated_val = float(order_obj.get('estimated_cost', 0) or 0)
-                    values['ESTIMATED_COST'] = _safe(f"{estimated_val:.2f}") if estimated_val > 0 else ''
-                except (ValueError, TypeError):
-                    values['ESTIMATED_COST'] = ''
-                
-                values.update({
-                    'MODEL': _safe(order_obj.get('model') or ''),
-                    'COMMENT': _safe(order_obj.get('comment') or ''),
-                    # Именованные алиасы устройства (для шаблонов печати; зеркало email-тегов)
-                    'DEVICE_TYPE': _safe(order_obj.get('device_type_name') or device_obj.get('device_type') or ''),
-                    'DEVICE_BRAND': _safe(order_obj.get('device_brand_name') or device_obj.get('device_brand') or ''),
-                    'SERIAL_NUMBER': _safe(order_obj.get('serial_number') or device_obj.get('serial_number') or ''),
-                    'SYMPTOM_TAGS': _safe(order_obj.get('symptom_tags') or ''),
-                    'APPEARANCE': _safe(order_obj.get('appearance') or ''),
-                    # Пароль — осознанно доступен для внутренних/рабочих бланков
-                    'PASSWORD': _safe(order_obj.get('password') or ''),
-                })
-
-                # Сумма прописью (для шаблона из настроек)
-                try:
-                    paid_val = float(totals.get('paid', 0) or 0)
-                    values['total.paid.words'] = _safe(_amount_to_words_ru(paid_val))
-                    prep_for_words = float(order_obj.get('prepayment', 0) or 0)
-                    values['PREPAYMENT_WORDS'] = _safe(_amount_to_words_ru(prep_for_words))
-                    est_for_words = float(order_obj.get('estimated_cost', 0) or 0)
-                    values['ESTIMATED_COST_WORDS'] = (
-                        _safe(_amount_to_words_ru(est_for_words)) if est_for_words > 0 else ''
-                    )
-                except (ValueError, TypeError):
-                    values['total.paid.words'] = ''
-                    values['PREPAYMENT_WORDS'] = ''
-                    values['ESTIMATED_COST_WORDS'] = ''
-
-                # Ссылка на статус заказа (QR) и штрих-код номера заказа
-                try:
-                    order_uuid = order_obj.get('order_id') or ''
-                    if order_uuid:
-                        values['ticket.status.qrcode'] = _safe(url_for('orders.order_detail', order_id=order_uuid, _external=True))
-                    else:
-                        values['ticket.status.qrcode'] = ''
-                except Exception:
-                    values['ticket.status.qrcode'] = ''
-                values['ticket.numberId.barcode'] = _safe(order_obj.get('order_id') or str(order_obj.get('id') or ''))
-
-                def _render_print_html(template_html: str) -> str:
-                    # Разворачиваем цикл data-for="ITEMS"
-                    data_for_items = re.search(
-                        r'<(\w+)[^>]*\s+data-for\s*=\s*["\']ITEMS["\'][^>]*>(.*?)</\1>',
-                        template_html,
-                        re.IGNORECASE | re.DOTALL
-                    )
-                    if data_for_items:
-                        tag_name = data_for_items.group(1)
-                        row_html = data_for_items.group(2)
-                        rows = []
-                        for item_vals in print_items:
-                            line = row_html
-                            for key, val in item_vals.items():
-                                line = re.sub(
-                                    r'<var-inline[^>]*\s+data-var\s*=\s*["\']' + re.escape(key) + r'["\'][^>]*>.*?</var-inline>',
-                                    (lambda _m, _val=val: _val),
-                                    line,
-                                    flags=re.IGNORECASE | re.DOTALL
-                                )
-                                line = line.replace(f'##{key}##', val)
-                            rows.append(f'<{tag_name}>{line}</{tag_name}>')
-                        replacement = ''.join(rows)
-                        template_html = template_html[:data_for_items.start()] + replacement + template_html[data_for_items.end():]
-
-                    # Рендерим <var-inline data-var="...">...</var-inline>
-                    def _replace_var_inline(m: re.Match) -> str:
-                        var_name = m.group(1)
-                        return values.get(var_name, '')
-
-                    rendered_html = template_html
-                    _var_inline_patterns = [
-                        r'<var-inline[^>]*\s+data-var\s*=\s*"([^"]+)"[^>]*>.*?</var-inline>',
-                        r"<var-inline[^>]*\s+data-var\s*=\s*'([^']+)'[^>]*>.*?</var-inline>",
-                    ]
-                    for _pattern in _var_inline_patterns:
-                        prev = None
-                        while prev != rendered_html:
-                            prev = rendered_html
-                            rendered_html = re.sub(
-                                _pattern,
-                                _replace_var_inline,
-                                rendered_html,
-                                flags=re.IGNORECASE | re.DOTALL
-                            )
-
-                    # Затем заменяем формат ##TAG##
-                    def _replace_hash_tag(m: re.Match) -> str:
-                        var_name = m.group(1)
-                        return values.get(var_name, f'##{var_name}##')
-
-                    rendered_html = re.sub(
-                        r'##([A-Za-z_][A-Za-z0-9_.-]*)##',
-                        _replace_hash_tag,
-                        rendered_html
-                    )
-
-                    uuid_tags_list = [
-                        '701809f9-23dc-4346-aff4-0aef32523aef', 'b6a8f943-e1b0-46e8-a321-b25fcfaf6976',
-                        'c5286c7d-44aa-4579-8258-935b003998cf', 'c76b5bc7-7a68-4672-9542-cabaf2962600',
-                        'bc1ae9b1-7b8b-4da6-add5-26982865629e', 'f93f4677-15b5-4e57-97e7-a345cb5b0e21',
-                        'dfd7aa33-fd89-462a-bbbc-39c1550415da'
-                    ]
-                    for uuid_tag in uuid_tags_list:
-                        if uuid_tag in values:
-                            rendered_html = rendered_html.replace(f'##{uuid_tag}##', values[uuid_tag])
-                            rendered_html = rendered_html.replace(f'##{uuid_tag.upper()}##', values[uuid_tag])
-
-                    # Fallback: если logo img не содержит style, добавим ограничения из настроек.
-                    logo_url_safe = values.get('COMPANY_LOGO_URL', '')
-                    logo_style_safe = values.get('COMPANY_LOGO_STYLE', '')
-                    if logo_url_safe and logo_style_safe:
-                        def _ensure_logo_style(match: re.Match) -> str:
-                            img_tag = match.group(0)
-                            if re.search(r'\sstyle\s*=', img_tag, flags=re.IGNORECASE):
-                                return img_tag
-                            return img_tag[:-1] + f' style="{logo_style_safe}">'
-
-                        rendered_html = re.sub(
-                            r'<img\b[^>]*\bsrc\s*=\s*["\']' + re.escape(logo_url_safe) + r'["\'][^>]*>',
-                            _ensure_logo_style,
-                            rendered_html,
-                            flags=re.IGNORECASE
-                        )
-                    # Санитизация перед выводом (защита от XSS)
-                    try:
-                        from app.utils.template_html_sanitizer import sanitize_order_print_html
-                        rendered_html = sanitize_order_print_html(rendered_html)
-                    except ImportError:
-                        pass
-                    return rendered_html
-
-                if html_content and isinstance(html_content, str) and html_content.strip():
-                    customer_template_rendered = _render_print_html(html_content)
-                    logger.debug(f"Шаблон печати customer отрендерен для заявки #{order.id}, длина: {len(customer_template_rendered)} символов")
-
-                if sales_html and isinstance(sales_html, str) and sales_html.strip():
-                    sales_receipt_template_rendered = _render_print_html(sales_html)
-
-                if work_html and isinstance(work_html, str) and work_html.strip():
-                    work_act_template_rendered = _render_print_html(work_html)
-            else:
-                logger.debug(f"Шаблон печати пуст или отсутствует для заявки #{order.id}")
-        except Exception as e:
-            logger.error(f"Не удалось отрендерить шаблон печати клиента для заявки #{order.id}: {e}", exc_info=True)
 
         order_invoices = []
         try:
@@ -2905,9 +2583,11 @@ def order_detail(order_id):
             all_services=refs['services'],  # Для модального окна добавления услуг
             order_models=refs.get('order_models', []),  # Модели устройств для поля "Модель"
             order_history=order_history,  # История взаимодействий с заявкой
+            history_has_more=history_has_more,
             customer_template_rendered=customer_template_rendered,
             sales_receipt_template_rendered=sales_receipt_template_rendered,
             work_act_template_rendered=work_act_template_rendered,
+            print_templates_ready=should_render_print,
             order_invoices=order_invoices,
         )
     except NotFoundError:
@@ -3137,6 +2817,7 @@ def update_order_status_api(order_id):
                     logger.warning(f"Не удалось залогировать сброс статуса в action_logs: {e}")
                 
                 conn.commit()
+            clear_cache(key_prefix='all_orders_header_counters')
             
             status_info = {'id': None, 'name': 'Не указан', 'color': '#6c757d'}
             return jsonify({
@@ -3215,6 +2896,98 @@ def update_order_status_api(order_id):
         logger.exception(f"Неожиданная ошибка при обновлении статуса заявки {order_id}: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
+        return api_internal_error(e)
+
+def _resolve_order_for_api(order_id):
+    order = None
+    try:
+        order = OrderService.get_order_by_uuid(order_id)
+    except Exception:
+        order = None
+    if not order:
+        try:
+            order = OrderService.get_order(int(order_id))
+        except (ValueError, TypeError):
+            order = None
+    return order
+
+
+@bp.route('/api/order/<order_id>/print-html', methods=['GET'])
+@login_required
+def api_order_print_html(order_id):
+    """Rendered print HTML for AJAX print (not embedded in the order page)."""
+    try:
+        order = _resolve_order_for_api(order_id)
+        if not order:
+            return jsonify({'success': False, 'error': 'Заявка не найдена'}), 404
+        from app.utils.order_print_bundle import render_order_print_templates
+        order_data = OrderService.get_order_full_data(order.id)
+        if order_data.get('customer') and order_data['customer'].get('phone'):
+            order_data['customer']['phone_display'] = format_phone_display(order_data['customer']['phone'])
+        settings = SettingsService.get_general_settings()
+        bundle = render_order_print_templates(
+            order=order,
+            order_data=order_data,
+            settings=settings,
+            totals=order_data.get('totals') or {},
+            order_services=order_data.get('services') or [],
+            order_parts=order_data.get('parts') or [],
+            amount_to_words=_amount_to_words_ru,
+        )
+        return jsonify({
+            'success': True,
+            'customer': bundle.get('customer') or '',
+            'sales_receipt': bundle.get('sales_receipt') or '',
+            'work_act': bundle.get('work_act') or '',
+            'print_page_size': settings.get('print_page_size') or 'A4',
+            'print_margin_mm': settings.get('print_margin_mm') if settings.get('print_margin_mm') is not None else 3,
+        })
+    except (ValidationError, NotFoundError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.exception("print-html: %s", e)
+        return api_internal_error(e)
+
+
+@bp.route('/api/order/<order_id>/action-logs', methods=['GET'])
+@login_required
+def api_order_action_logs(order_id):
+    """Next pages of the order action journal."""
+    try:
+        order = _resolve_order_for_api(order_id)
+        if not order:
+            return jsonify({'success': False, 'error': 'Заявка не найдена'}), 404
+        try:
+            page = int(request.args.get('page', 2))
+        except (TypeError, ValueError):
+            page = 2
+        if page < 2:
+            page = 2
+        paginator = ActionLogService.get_action_logs(
+            entity_type='order',
+            entity_id=order.id,
+            page=page,
+            per_page=50,
+        )
+        items = []
+        for log in paginator.items:
+            created = log.get('created_at')
+            created_s = str(created)[:19] if created is not None else ''
+            items.append({
+                'created_at': created_s,
+                'username': log.get('username') or '',
+                'title': log.get('description') or log.get('action_type') or 'Событие',
+                'action_type': log.get('action_type') or '',
+            })
+        return jsonify({
+            'success': True,
+            'items': items,
+            'page': paginator.page,
+            'pages': paginator.pages,
+            'has_more': paginator.page < paginator.pages,
+        })
+    except Exception as e:
+        logger.exception("action-logs: %s", e)
         return api_internal_error(e)
 
 @bp.route('/api/order/<int:order_id>/comment', methods=['POST'])

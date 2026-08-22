@@ -33,16 +33,12 @@
                                 <option value="category_delete" {% if operation_type == 'category_delete' %}selected{% endif %}>Удаление категории</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Товар</label>
-                            <select name="part_id" class="form-select">
-                                <option value="">Все товары</option>
-                                {% for part in parts %}
-                                <option value="{{ part.id }}" {% if part_id == part.id|string %}selected{% endif %}>
-                                    {{ part.name }} ({{ part.part_number or 'без артикула' }})
-                                </option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-md-3 position-relative">
+                            <input type="hidden" name="part_id" id="logPartId" value="{{ part_id or '' }}">
+                            <input type="text" class="form-control" id="logPartSearch"
+                                   placeholder="Начните вводить название или артикул"
+                                   value="{{ selected_part_name or '' }}" autocomplete="off">
+                            <div id="logPartResults" class="list-group position-absolute shadow-sm" style="z-index: 20; max-height: 240px; overflow-y: auto;"></div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Дата от</label>
@@ -213,5 +209,47 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const input = document.getElementById('logPartSearch');
+    const hidden = document.getElementById('logPartId');
+    const box = document.getElementById('logPartResults');
+    if (!input || !hidden || !box) return;
+    let timer = null;
+    function hide() { box.innerHTML = ''; }
+    input.addEventListener('input', function() {
+        hidden.value = '';
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2) { hide(); return; }
+        timer = setTimeout(function() {
+            fetch('/warehouse/api/parts?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    box.innerHTML = '';
+                    (data.items || []).forEach(function(part) {
+                        const a = document.createElement('button');
+                        a.type = 'button';
+                        a.className = 'list-group-item list-group-item-action py-1';
+                        a.textContent = (part.name || '') + ' (' + (part.part_number || 'без артикула') + ')';
+                        a.addEventListener('click', function() {
+                            hidden.value = part.id;
+                            input.value = a.textContent;
+                            hide();
+                        });
+                        box.appendChild(a);
+                    });
+                })
+                .catch(hide);
+        }, 250);
+    });
+    document.addEventListener('click', function(e) {
+        if (!box.contains(e.target) && e.target !== input) hide();
+    });
+})();
+</script>
 {% endblock %}
 

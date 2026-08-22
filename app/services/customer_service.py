@@ -85,14 +85,18 @@ class CustomerService:
                         db.name AS device_brand,
                         os.name AS status_name,
                         os.color AS status_color,
-                        (SELECT COALESCE(SUM(p.amount), 0)
-                         FROM payments p WHERE p.order_id = o.id
-                         AND (p.is_cancelled = 0 OR p.is_cancelled IS NULL)) AS total_paid
+                        COALESCE(pay.total_paid, 0) AS total_paid
                     FROM orders o
                     LEFT JOIN devices d ON d.id = o.device_id
                     LEFT JOIN device_types dt ON dt.id = d.device_type_id
                     LEFT JOIN device_brands db ON db.id = d.device_brand_id
                     LEFT JOIN order_statuses os ON os.id = o.status_id
+                    LEFT JOIN (
+                        SELECT order_id, COALESCE(SUM(amount), 0) AS total_paid
+                        FROM payments
+                        WHERE (is_cancelled = 0 OR is_cancelled IS NULL)
+                        GROUP BY order_id
+                    ) pay ON pay.order_id = o.id
                     WHERE o.customer_id = ? AND (o.hidden = 0 OR o.hidden IS NULL)
                     ORDER BY o.created_at DESC
                     LIMIT ?

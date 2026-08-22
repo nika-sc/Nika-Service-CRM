@@ -1,10 +1,13 @@
 """
 Blueprint для работы со справочниками (settings API).
 """
+from functools import wraps
+
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.services.reference_service import ReferenceService
 from app.services.action_log_service import ActionLogService
+from app.services.user_service import UserService
 from app.utils.exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.cache_helpers import clear_reference_cache
 from app.utils.error_handlers import api_internal_error
@@ -31,6 +34,36 @@ def log_settings_action(action_type: str, entity_type: str, entity_id: int = Non
         logger.warning(f"Не удалось записать лог действия: {e}")
 
 bp = Blueprint('settings', __name__)
+
+_WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_SAVE_FAIL_MESSAGE = "Не удалось сохранить. Попробуйте ещё раз."
+
+
+def catalog_access(view):
+    """GET: любой сотрудник. Изменения справочника: manage_settings."""
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if request.method in _WRITE_METHODS:
+            if not UserService.check_permission(current_user.id, "manage_settings"):
+                return jsonify({
+                    "success": False,
+                    "error": "forbidden",
+                    "required_permission": "manage_settings",
+                }), 403
+        return view(*args, **kwargs)
+
+    return login_required(wrapped)
+
+
+def settings_save_error(exc: Exception):
+    """Validation — текст клиенту; DatabaseError — только в лог."""
+    if isinstance(exc, ValidationError):
+        return jsonify({"success": False, "error": str(exc)}), 400
+    if isinstance(exc, NotFoundError):
+        return jsonify({"success": False, "error": str(exc)}), 404
+    logger.error("settings save failed: %s", exc, exc_info=True)
+    return jsonify({"success": False, "error": _SAVE_FAIL_MESSAGE}), 400
 
 # Получаем csrf и limiter из текущего приложения
 def get_csrf():
@@ -59,7 +92,7 @@ def rate_limit_if_available(limit_str):
     return decorator
 
 @bp.route('/catalog/types', methods=['GET'])
-@login_required
+@catalog_access
 def api_catalog_types():
     try:
         return jsonify(ReferenceService.get_catalog_types())
@@ -69,7 +102,7 @@ def api_catalog_types():
 
 
 @bp.route('/catalog/brands', methods=['GET'])
-@login_required
+@catalog_access
 def api_catalog_brands():
     try:
         type_id = request.args.get('type_id', type=int)
@@ -80,7 +113,7 @@ def api_catalog_brands():
 
 
 @bp.route('/catalog/models', methods=['GET'])
-@login_required
+@catalog_access
 def api_catalog_models():
     try:
         type_id = request.args.get('type_id', type=int)
@@ -92,7 +125,7 @@ def api_catalog_models():
 
 
 @bp.route('/catalog/symptoms', methods=['GET'])
-@login_required
+@catalog_access
 def api_catalog_symptoms():
     try:
         return jsonify(ReferenceService.get_catalog_symptoms())
@@ -103,7 +136,7 @@ def api_catalog_symptoms():
 
 # Device Types
 @bp.route('/device-types', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_device_types():
     """API для типов устройств."""
     if request.method == 'GET':
@@ -146,13 +179,13 @@ def api_device_types():
                             return jsonify({'success': True, 'id': existing_type['id']}), 200
                 except Exception:
                     pass
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except Exception as e:
             logger.error(f"Ошибка при создании типа устройства: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/device-types/<int:type_id>', methods=['PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_device_type_detail(type_id):
     """API для типа устройства."""
     if request.method == 'PUT':
@@ -173,7 +206,7 @@ def api_device_type_detail(type_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Тип устройства не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
     
@@ -197,12 +230,12 @@ def api_device_type_detail(type_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Тип устройства не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
 
 @bp.route('/device-types/update-sort-order', methods=['POST'])
-@login_required
+@catalog_access
 def api_update_device_types_sort_order():
     """API для обновления порядка сортировки типов устройств."""
     try:
@@ -216,14 +249,14 @@ def api_update_device_types_sort_order():
         clear_reference_cache('device_types')
         return jsonify({'success': True})
     except (ValidationError, DatabaseError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return settings_save_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении порядка сортировки: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 # Device Brands
 @bp.route('/device-brands', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_device_brands():
     """API для брендов устройств."""
     if request.method == 'GET':
@@ -266,13 +299,13 @@ def api_device_brands():
                             return jsonify({'success': True, 'id': existing_brand['id']}), 200
                 except Exception:
                     pass
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except Exception as e:
             logger.error(f"Ошибка при создании бренда: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/device-brands/<int:brand_id>', methods=['PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_device_brand_detail(brand_id):
     """API для бренда устройства."""
     if request.method == 'PUT':
@@ -293,7 +326,7 @@ def api_device_brand_detail(brand_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Бренд не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
     
@@ -317,13 +350,13 @@ def api_device_brand_detail(brand_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Бренд не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
 
 # Order Models
 @bp.route('/order-tags', methods=['GET'])
-@login_required
+@catalog_access
 def api_order_tags():
     """API для получения уникальных симптомов и тегов внешнего вида из всех заявок."""
     try:
@@ -377,7 +410,7 @@ def api_order_tags():
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/order-models', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_order_models():
     """API для моделей устройств."""
     if request.method == 'GET':
@@ -463,7 +496,7 @@ def api_order_models():
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/order-models/<int:model_id>', methods=['PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_order_model_detail(model_id):
     """API для управления конкретной моделью устройства."""
     from app.database.connection import get_db_connection
@@ -538,7 +571,7 @@ def api_order_model_detail(model_id):
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/order-models/<int:model_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 def api_order_model_usage(model_id):
     """API для получения информации об использовании модели устройства."""
     try:
@@ -577,7 +610,7 @@ def api_order_model_usage(model_id):
         return jsonify({'success': False, 'error': error_msg}), 500
 
 @bp.route('/device-brands/update-sort-order', methods=['POST'])
-@login_required
+@catalog_access
 def api_update_device_brands_sort_order():
     """API для обновления порядка сортировки брендов."""
     try:
@@ -591,14 +624,14 @@ def api_update_device_brands_sort_order():
         clear_reference_cache('device_brands')
         return jsonify({'success': True})
     except (ValidationError, DatabaseError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return settings_save_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении порядка сортировки: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 # Symptoms
 @bp.route('/symptoms', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_symptoms():
     """API для симптомов."""
     if request.method == 'GET':
@@ -620,13 +653,13 @@ def api_symptoms():
                 f'Добавлен тег неисправности: {name}', {'name': name})
             return jsonify({'success': True, 'id': symptom_id}), 201
         except (ValidationError, DatabaseError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except Exception as e:
             logger.error(f"Ошибка при создании симптома: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/symptoms/<int:symptom_id>', methods=['PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_symptom_detail(symptom_id):
     """API для симптома."""
     if request.method == 'PUT':
@@ -647,7 +680,7 @@ def api_symptom_detail(symptom_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Симптом не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
     
@@ -671,12 +704,12 @@ def api_symptom_detail(symptom_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Симптом не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
 
 @bp.route('/symptoms/update-sort-order', methods=['POST'])
-@login_required
+@catalog_access
 def api_update_symptoms_sort_order():
     """API для обновления порядка сортировки симптомов."""
     try:
@@ -690,14 +723,143 @@ def api_update_symptoms_sort_order():
         clear_reference_cache('symptoms')
         return jsonify({'success': True})
     except (ValidationError, DatabaseError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return settings_save_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении порядка сортировки: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+
+# Diagnostics templates
+@bp.route('/diagnostics-templates', methods=['GET', 'POST'])
+@catalog_access
+def api_diagnostics_templates():
+    """API для шаблонов диагностики."""
+    if request.method == 'GET':
+        type_id = request.args.get('type_id', type=int)
+        brand_id = request.args.get('brand_id', type=int)
+        model_id = request.args.get('model_id', type=int)
+        if type_id or brand_id or model_id or request.args.get('match') in ('1', 'true', 'yes'):
+            items = ReferenceService.get_diagnostics_templates(
+                type_id=type_id, brand_id=brand_id, model_id=model_id
+            )
+        else:
+            items = ReferenceService.list_diagnostics_templates()
+        return jsonify(items)
+
+    if request.method == 'POST':
+        try:
+            data = request.get_json(silent=True) or {}
+            name = (data.get('name') or '').strip()
+            body = (data.get('body') or '').strip()
+            if not name:
+                return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+            if not body:
+                return jsonify({'success': False, 'error': 'Текст шаблона обязателен'}), 400
+            template_id = ReferenceService.create_diagnostics_template(
+                name=name,
+                body=body,
+                device_type_id=data.get('device_type_id'),
+                device_brand_id=data.get('device_brand_id'),
+                model_id=data.get('model_id'),
+                sort_order=data.get('sort_order'),
+                is_active=ReferenceService._int_flag(data.get('is_active', 1)),
+            )
+            clear_reference_cache('diagnostics_templates')
+            log_settings_action(
+                'create', 'diagnostics_template', template_id,
+                f'Добавлен шаблон диагностики: {name}', {'name': name},
+            )
+            return jsonify({'success': True, 'id': template_id}), 201
+        except (ValidationError, DatabaseError) as e:
+            return settings_save_error(e)
+        except Exception as e:
+            logger.error("Ошибка при создании шаблона диагностики: %s", e)
+            return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@bp.route('/diagnostics-templates/<int:template_id>', methods=['PUT', 'DELETE'])
+@catalog_access
+def api_diagnostics_template_detail(template_id):
+    """API для одного шаблона диагностики."""
+    if request.method == 'PUT':
+        try:
+            data = request.get_json(silent=True) or {}
+            name = (data.get('name') or '').strip()
+            body = (data.get('body') or '').strip()
+            if not name:
+                return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+            if not body:
+                return jsonify({'success': False, 'error': 'Текст шаблона обязателен'}), 400
+            success = ReferenceService.update_diagnostics_template(
+                template_id,
+                name=name,
+                body=body,
+                device_type_id=data.get('device_type_id'),
+                device_brand_id=data.get('device_brand_id'),
+                model_id=data.get('model_id'),
+                is_active=data.get('is_active'),
+                has_device_type_id=True,
+                has_device_brand_id=True,
+                has_model_id=True,
+            )
+            clear_reference_cache('diagnostics_templates')
+            if success:
+                log_settings_action(
+                    'update', 'diagnostics_template', template_id,
+                    f'Изменён шаблон диагностики: {name}', {'name': name},
+                )
+                return jsonify({'success': True})
+            return jsonify({'success': False, 'error': 'Шаблон не найден'}), 404
+        except (ValidationError, NotFoundError) as e:
+            return settings_save_error(e)
+        except DatabaseError as e:
+            return api_internal_error(e)
+
+    if request.method == 'DELETE':
+        try:
+            items = ReferenceService.list_diagnostics_templates()
+            template_name = None
+            for item in items:
+                if item.get('id') == template_id:
+                    template_name = item.get('name')
+                    break
+            success = ReferenceService.delete_diagnostics_template(template_id)
+            clear_reference_cache('diagnostics_templates')
+            if success:
+                log_settings_action(
+                    'delete', 'diagnostics_template', template_id,
+                    f'Удалён шаблон диагностики: {template_name or template_id}',
+                    {'name': template_name},
+                )
+                return jsonify({'success': True})
+            return jsonify({'success': False, 'error': 'Шаблон не найден'}), 404
+        except (ValidationError, NotFoundError) as e:
+            return settings_save_error(e)
+        except DatabaseError as e:
+            return api_internal_error(e)
+
+
+@bp.route('/diagnostics-templates/update-sort-order', methods=['POST'])
+@catalog_access
+def api_update_diagnostics_templates_sort_order():
+    """API для порядка шаблонов диагностики."""
+    try:
+        data = request.get_json(silent=True) or {}
+        items = data.get('items', [])
+        if not items:
+            return jsonify({'success': False, 'error': 'items required'}), 400
+        ReferenceService.update_diagnostics_templates_sort_order(items)
+        clear_reference_cache('diagnostics_templates')
+        return jsonify({'success': True})
+    except (ValidationError, DatabaseError) as e:
+        return settings_save_error(e)
+    except Exception as e:
+        logger.error("Ошибка при обновлении порядка шаблонов диагностики: %s", e)
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
 # Appearance Tags
 @bp.route('/appearance-tags', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_appearance_tags():
     """API для тегов внешнего вида."""
     if request.method == 'GET':
@@ -719,13 +881,13 @@ def api_appearance_tags():
                 f'Добавлен тег внешнего вида: {name}', {'name': name})
             return jsonify({'success': True, 'id': tag_id}), 201
         except (ValidationError, DatabaseError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except Exception as e:
             logger.error(f"Ошибка при создании тега: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/appearance-tags/<int:tag_id>', methods=['PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_appearance_tag_detail(tag_id):
     """API для тега внешнего вида."""
     if request.method == 'PUT':
@@ -746,7 +908,7 @@ def api_appearance_tag_detail(tag_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Тег не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
     
@@ -770,12 +932,12 @@ def api_appearance_tag_detail(tag_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Тег не найден'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
 
 @bp.route('/appearance-tags/update-sort-order', methods=['POST'])
-@login_required
+@catalog_access
 def api_update_appearance_tags_sort_order():
     """API для обновления порядка сортировки тегов."""
     try:
@@ -789,14 +951,14 @@ def api_update_appearance_tags_sort_order():
         clear_reference_cache('appearance_tags')
         return jsonify({'success': True})
     except (ValidationError, DatabaseError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return settings_save_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении порядка сортировки: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 # Services
 @bp.route('/services', methods=['GET', 'POST'])
-@login_required
+@catalog_access
 def api_services():
     """API для услуг."""
     if request.method == 'GET':
@@ -830,13 +992,13 @@ def api_services():
                 f'Добавлена услуга: {name} ({price} ₽)', {'name': name, 'price': price, 'is_default': is_default})
             return jsonify({'success': True, 'id': service_id}), 201
         except (ValidationError, DatabaseError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except Exception as e:
             logger.error(f"Ошибка при создании услуги: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/services/<int:service_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
+@catalog_access
 def api_service_detail(service_id):
     """API для услуги."""
     if request.method == 'GET':
@@ -868,7 +1030,7 @@ def api_service_detail(service_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Услуга не найдена'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
     
@@ -891,12 +1053,12 @@ def api_service_detail(service_id):
                 return jsonify({'success': True})
             return jsonify({'success': False, 'error': 'Услуга не найдена'}), 404
         except (ValidationError, NotFoundError) as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            return settings_save_error(e)
         except DatabaseError as e:
             return api_internal_error(e)
 
 @bp.route('/services/update-sort-order', methods=['POST'])
-@login_required
+@catalog_access
 def api_update_services_sort_order():
     """API для обновления порядка сортировки услуг."""
     try:
@@ -910,14 +1072,14 @@ def api_update_services_sort_order():
         clear_reference_cache('services')
         return jsonify({'success': True})
     except (ValidationError, DatabaseError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return settings_save_error(e)
     except Exception as e:
         logger.error(f"Ошибка при обновлении порядка сортировки: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 # API для получения информации об использовании справочников
 @bp.route('/device-types/<int:type_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 @rate_limit_if_available("1000 per hour")  # Увеличенный лимит для usage endpoints
 def api_device_type_usage(type_id):
     """API для получения информации об использовании типа устройства."""
@@ -980,7 +1142,7 @@ def api_device_type_usage(type_id):
         return jsonify({'success': False, 'error': error_msg}), 500
 
 @bp.route('/device-brands/<int:brand_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 @rate_limit_if_available("1000 per hour")
 def api_device_brand_usage(brand_id):
     """API для получения информации об использовании бренда устройства."""
@@ -1043,7 +1205,7 @@ def api_device_brand_usage(brand_id):
         return jsonify({'success': False, 'error': error_msg}), 500
 
 @bp.route('/symptoms/<int:symptom_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 @rate_limit_if_available("1000 per hour")
 def api_symptom_usage(symptom_id):
     """API для получения информации об использовании симптома."""
@@ -1084,7 +1246,7 @@ def api_symptom_usage(symptom_id):
         return jsonify({'success': False, 'error': error_msg}), 500
 
 @bp.route('/appearance-tags/<int:tag_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 @rate_limit_if_available("1000 per hour")
 def api_appearance_tag_usage(tag_id):
     """API для получения информации об использовании тега внешнего вида."""
@@ -1125,7 +1287,7 @@ def api_appearance_tag_usage(tag_id):
         return jsonify({'success': False, 'error': error_msg}), 500
 
 @bp.route('/services/<int:service_id>/usage', methods=['GET'])
-@login_required
+@catalog_access
 @rate_limit_if_available("1000 per hour")
 def api_service_usage(service_id):
     """API для получения информации об использовании услуги."""

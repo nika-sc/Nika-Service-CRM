@@ -5861,6 +5861,8 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 017	order_diagnostics	2026-08-15 00:00:00
 019	order_model_catalog_links	2026-08-16 00:00:00
 020	receipt_estimated_literal_newline	2026-08-16 00:00:00
+021	diagnostics_templates	2026-08-20 00:00:00
+022	diagnostics_templates_is_active_int	2026-08-22 00:00:00
 \.
 
 
@@ -10652,3 +10654,44 @@ UPDATE print_templates
 SET html_content = replace(html_content, E'\\n', E'\n'),
     updated_at = CURRENT_TIMESTAMP
 WHERE position(E'\\n' in html_content) > 0;
+
+-- Post-bootstrap schema: postgres migration 021 (idempotent)
+CREATE TABLE IF NOT EXISTS diagnostics_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    device_type_id BIGINT REFERENCES device_types(id) ON DELETE SET NULL,
+    device_brand_id BIGINT REFERENCES device_brands(id) ON DELETE SET NULL,
+    model_id BIGINT REFERENCES order_models(id) ON DELETE SET NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostics_templates_device
+    ON diagnostics_templates(device_type_id, device_brand_id, model_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostics_templates_sort
+    ON diagnostics_templates(sort_order, id);
+
+-- Post-bootstrap schema: postgres migration 022 (idempotent)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnostics_templates'
+          AND column_name = 'is_active'
+          AND data_type = 'boolean'
+    ) THEN
+        ALTER TABLE diagnostics_templates
+            ALTER COLUMN is_active DROP DEFAULT;
+        ALTER TABLE diagnostics_templates
+            ALTER COLUMN is_active TYPE BIGINT
+            USING CASE WHEN is_active THEN 1 ELSE 0 END;
+        ALTER TABLE diagnostics_templates
+            ALTER COLUMN is_active SET DEFAULT 1,
+            ALTER COLUMN is_active SET NOT NULL;
+    END IF;
+END $$;
+

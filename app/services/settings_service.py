@@ -36,7 +36,7 @@ class SettingsService:
         )
     
     @staticmethod
-    def get_general_settings() -> Dict:
+    def _load_general_settings() -> Dict:
         """
         Получает актуальные общие настройки организации.
 
@@ -185,6 +185,39 @@ class SettingsService:
             logger.warning(f"Ошибка при получении настроек: {e}")
         
         return default_settings
+
+    @staticmethod
+    @cache_result(timeout=3600, key_prefix='general_settings')
+    def _get_general_settings_public() -> Dict:
+        data = dict(SettingsService._load_general_settings() or {})
+        data['mail_password'] = ''
+        return data
+
+    @staticmethod
+    def get_mail_password() -> str:
+        """SMTP password is never stored in cache."""
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT mail_password FROM general_settings LIMIT 1")
+                row = cursor.fetchone()
+                if not row:
+                    return ''
+                return str(row[0] or '')
+        except Exception:
+            return ''
+
+    @staticmethod
+    def get_general_settings() -> Dict:
+        """
+        Получает актуальные общие настройки организации.
+
+        Публичные поля кэшируются на час. SMTP-пароль читается отдельно
+        и не попадает в Redis / in-memory cache.
+        """
+        data = dict(SettingsService._get_general_settings_public() or {})
+        data['mail_password'] = SettingsService.get_mail_password()
+        return data
     
     @staticmethod
     def save_general_settings(payload: Dict) -> bool:
@@ -428,6 +461,7 @@ class SettingsService:
                 
                 # Очищаем кэш настроек
                 clear_cache(key_prefix='settings')
+                clear_cache(key_prefix='general_settings')
 
                 # Синхронизируем SMTP в .env (Windows ProgramData / Linux корень), если файл есть.
                 # Пустой пароль в форме не затирает MAIL_PASSWORD в файле.

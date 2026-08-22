@@ -3,7 +3,7 @@ SQL запросы для работы с клиентами.
 """
 from typing import Dict, List, Optional
 from datetime import datetime
-from app.database.connection import get_db_connection
+from app.database.connection import get_db_connection, _get_db_driver
 from app.utils.datetime_utils import get_moscow_now_naive
 from app.utils.validators import normalize_phone
 import sqlite3
@@ -94,7 +94,28 @@ class CustomerQueries:
             search_stripped = search_query.strip()
             search_lower = search_stripped.lower()
             words = [w for w in search_lower.split() if w]
-            if words:
+            has_alpha = any(ch.isalpha() for ch in search_stripped)
+            digits_only = ''.join(ch for ch in search_stripped if ch.isdigit())
+            phone_like = (not has_alpha) and len(digits_only) >= 6
+            if words and _get_db_driver() == 'postgres' and has_alpha and not phone_like:
+                like_q = f'%{search_stripped}%'
+                like_lower = f'%{search_lower}%'
+                phone_like_list = _phone_search_like_params(search_stripped)
+                phone_or = " OR ".join(["c.phone LIKE ?"] * len(phone_like_list)) if phone_like_list else "FALSE"
+                where_clauses.append(
+                    f"""(
+                        to_tsvector(
+                            'simple',
+                            COALESCE(c.name, '') || ' ' || COALESCE(c.phone, '') || ' ' || COALESCE(c.email, '')
+                        ) @@ websearch_to_tsquery('simple', ?)
+                        OR COALESCE(c.legal_name, '') ILIKE ?
+                        OR COALESCE(c.inn, '') ILIKE ?
+                        OR COALESCE(c.email, '') ILIKE ?
+                        OR ({phone_or})
+                    )"""
+                )
+                params.extend([search_stripped, like_q, like_q, like_lower, *phone_like_list])
+            elif words:
                 # По имени: все слова должны встречаться; для каждого слова — два варианта (нижний и с заглавной)
                 name_conditions = ' AND '.join(
                     ["(COALESCE(c.name, '') LIKE ? OR COALESCE(c.name, '') LIKE ?"

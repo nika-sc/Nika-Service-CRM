@@ -209,3 +209,58 @@ class DeviceQueries:
             logger.error(f"Ошибка при получении заявок устройства {device_id}: {e}", exc_info=True)
             raise
 
+    @staticmethod
+    def get_customer_devices_order_summaries(device_ids: List[int]) -> Dict[int, Dict]:
+        """Counts and last-order fields for many devices in two queries."""
+        ids = [int(i) for i in (device_ids or []) if i]
+        if not ids:
+            return {}
+        placeholders = ",".join(["?"] * len(ids))
+        try:
+            with get_db_connection(row_factory=sqlite3.Row) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    SELECT device_id, COUNT(*) AS orders_count
+                    FROM orders
+                    WHERE device_id IN ({placeholders})
+                      AND (hidden = 0 OR hidden IS NULL)
+                    GROUP BY device_id
+                    """,
+                    tuple(ids),
+                )
+                counts = {int(r["device_id"]): int(r["orders_count"] or 0) for r in cursor.fetchall()}
+                cursor.execute(
+                    f"""
+                    SELECT o.device_id, o.symptom_tags, o.appearance, o.created_at,
+                           os.name AS status_name
+                    FROM orders o
+                    LEFT JOIN order_statuses os ON os.id = o.status_id
+                    WHERE o.device_id IN ({placeholders})
+                      AND (o.hidden = 0 OR o.hidden IS NULL)
+                      AND o.id IN (
+                          SELECT MAX(id) FROM orders
+                          WHERE device_id IN ({placeholders})
+                            AND (hidden = 0 OR hidden IS NULL)
+                          GROUP BY device_id
+                      )
+                    """,
+                    tuple(ids) + tuple(ids),
+                )
+                last = {int(r["device_id"]): dict(r) for r in cursor.fetchall()}
+            out: Dict[int, Dict] = {}
+            for did in ids:
+                info = last.get(did, {})
+                out[did] = {
+                    "orders_count": counts.get(did, 0),
+                    "last_order_symptom_tags": info.get("symptom_tags"),
+                    "last_order_appearance": info.get("appearance"),
+                    "last_order_date": info.get("created_at"),
+                    "last_order_status": info.get("status_name"),
+                }
+            return out
+        except Exception as e:
+            logger.error("Ошибка сводки заявок по устройствам: %s", e, exc_info=True)
+            return {}
+
+

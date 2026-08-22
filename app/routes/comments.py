@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from app.database.connection import get_db_connection
-from app.utils.safe_files import confined_file_path, is_forbidden_upload_extension, mime_from_filename
+from app.utils.safe_files import confined_file_path, is_forbidden_upload_extension, mime_from_filename, sniff_staff_upload
 from app.utils.error_handlers import api_internal_error
 from app.services.user_service import UserService
 import sqlite3
@@ -21,7 +21,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 COMMENTS_UPLOAD_DIR = os.path.join(_PROJECT_ROOT, 'uploads', 'comments')
 
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -78,7 +78,13 @@ def upload_attachment():
         
         if file_size > MAX_FILE_SIZE:
             return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 10 MB)'}), 400
-        
+
+        header = file.read(64)
+        file.seek(0)
+        sniffed = sniff_staff_upload(header, file.filename)
+        if not sniffed:
+            return jsonify({'success': False, 'error': 'Недопустимый тип файла'}), 400
+
         # Сохраняем файл
         upload_dir = COMMENTS_UPLOAD_DIR
         os.makedirs(upload_dir, exist_ok=True)
@@ -86,7 +92,7 @@ def upload_attachment():
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4()}_{filename}"
         file_path = os.path.join(upload_dir, unique_filename)
-        stored_mime = mime_from_filename(filename)
+        stored_mime = sniffed
 
         file.save(file_path)
         

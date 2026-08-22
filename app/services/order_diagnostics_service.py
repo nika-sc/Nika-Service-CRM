@@ -95,9 +95,11 @@ class OrderDiagnosticsService:
     def _load_state(cursor, order_id: int) -> dict[str, Any]:
         cursor.execute(
             """
-            SELECT o.diagnostics, os.blocks_edit, os.is_final
+            SELECT o.diagnostics, os.blocks_edit, os.is_final,
+                   d.device_type_id, d.device_brand_id, o.model_id
             FROM orders AS o
             LEFT JOIN order_statuses AS os ON os.id = o.status_id
+            LEFT JOIN devices AS d ON d.id = o.device_id
             WHERE o.id = ?
             """,
             (order_id,),
@@ -112,6 +114,9 @@ class OrderDiagnosticsService:
             "diagnostics": diagnostics,
             "order_locked": blocks_edit or is_final,
             "text_set": bool(diagnostics.strip()),
+            "device_type_id": row["device_type_id"],
+            "device_brand_id": row["device_brand_id"],
+            "model_id": row["model_id"],
         }
 
     @staticmethod
@@ -184,6 +189,9 @@ class OrderDiagnosticsService:
             "diagnostics": state["diagnostics"] or "",
             "files": files,
             "history": history,
+            "device_type_id": state.get("device_type_id"),
+            "device_brand_id": state.get("device_brand_id"),
+            "model_id": state.get("model_id"),
             **access,
         }
 
