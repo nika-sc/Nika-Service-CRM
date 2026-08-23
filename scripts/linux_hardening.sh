@@ -150,8 +150,9 @@ if [[ "$INSTALL_BACKUP_CRON" == "1" ]]; then
   BACKUP_SCRIPT="$CRM_DIR/scripts/backup_and_email.sh"
   [[ -x "$BACKUP_SCRIPT" ]] || chmod +x "$BACKUP_SCRIPT" 2>/dev/null || true
   CRON_LINE="30 3 * * * cd $CRM_DIR && bash scripts/backup_and_email.sh >> $CRM_DIR/data/logs/backup_cron.log 2>&1"
-  (crontab -l 2>/dev/null | grep -Fv "backup_and_email.sh"; echo "$CRON_LINE") | crontab -
-  LOG "cron: backup_and_email.sh ~03:30 daily"
+  HEALTH_LINE="15 4 * * * cd $CRM_DIR && python3 scripts/backup_healthcheck.py --max-age-hours 30 >> $CRM_DIR/data/logs/backup_health_cron.log 2>&1 || bash scripts/backup_and_email.sh >> $CRM_DIR/data/logs/backup_health_cron.log 2>&1"
+  (crontab -l 2>/dev/null | grep -Fv "backup_and_email.sh" | grep -Fv "backup_healthcheck.py"; echo "$CRON_LINE"; echo "$HEALTH_LINE") | crontab -
+  LOG "cron: backup_and_email.sh ~03:30; backup_healthcheck.py ~04:15 (retry only if check fails)"
 fi
 
 # --- Redis warning for venv multi-worker ---
