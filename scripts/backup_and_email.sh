@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Название: backup_and_email
-# Назначение: Ежедневный бэкап данных CRM (dump + .env + uploads + nginx/LE), без исходников git.
+# Назначение: Полный снимок CRM в два письма: data (dump + uploads + .env) и files (дерево без git/venv).
 # Режимы: Docker Compose или host Postgres + systemd (self-hosted).
 # Получатель: argv $1, иначе BACKUP_EMAIL_TO, иначе MAIL_USERNAME из .env.
 # Не зашивать личную почту и IP сервера — скрипт уходит в публичный OSS.
+# Вложение ≤ 28 МБ; крупнее — тома 7z по 25 МБ (*_mail.7z.001). Целый .7z остаётся на диске.
 
 set -euo pipefail
 
@@ -55,6 +56,33 @@ fi
 # Host pg_dump/psql нужны только в mode=host. В Docker dump идёт
 # через `docker compose exec postgres pg_dump` — клиент на хосте не обязателен.
 
+assert_pg_custom_dump() {
+  local dump_path="$1"
+  local min_bytes="${2:-512}"
+  if [[ ! -s "$dump_path" ]]; then
+    log "ERROR: PostgreSQL dump missing or empty: $dump_path"
+    exit 2
+  fi
+  if ! python3 -c 'import sys; sys.exit(0 if open(sys.argv[1],"rb").read(5)==b"PGDMP" else 1)' "$dump_path"; then
+    log "ERROR: dump is not pg_dump custom format (-Fc): $dump_path"
+    exit 2
+  fi
+  local dump_bytes
+  dump_bytes="$(wc -c < "$dump_path" | tr -d ' ')"
+  if [[ "$dump_bytes" -lt "$min_bytes" ]]; then
+    log "ERROR: dump too small (${dump_bytes} bytes): $dump_path"
+    exit 2
+  fi
+  log "PostgreSQL dump OK (${dump_bytes} bytes, custom format)"
+}
+
+LOCK_FILE="${BACKUP_LOCK_FILE:-$BACKUP_DIR/backup_and_email.lock}"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  log "Skip: another backup_and_email is running"
+  exit 0
+fi
+
 detect_mode() {
   if [[ -n "${BACKUP_MODE:-}" ]]; then
     echo "$BACKUP_MODE"
@@ -95,6 +123,7 @@ wanted = {
     "BACKUP_PUSH_PRIVATE",
     "BACKUP_EMAIL_TO",
     "BACKUP_SITE_LABEL",
+    "BACKUP_FORCE",
 }
 lines = []
 path = Path(".env")
@@ -133,8 +162,14 @@ if [[ -z "$RECIPIENT_EMAIL" ]]; then
 fi
 log "START backup job (recipient=$RECIPIENT_EMAIL, mode=$MODE)"
 
+STAMP_FILE="${BACKUP_STAMP_FILE:-$BACKUP_DIR/.last_ok_day}"
+TODAY="$(date +%F)"
+if [[ "${BACKUP_FORCE:-}" != "1" && -f "$STAMP_FILE" && "$(tr -d '[:space:]' < "$STAMP_FILE")" == "$TODAY" ]]; then
+  log "Skip: already completed successfully on $TODAY (BACKUP_FORCE=1 to override)"
+  exit 0
+fi
+
 DB_DUMP_FILE="$TMP_DIR/postgres_${TS}.dump"
-ARCHIVE_FILE="$BACKUP_DIR/crm_data_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
 
 if [[ "$MODE" == "docker" ]]; then
   require_cmd docker
@@ -150,6 +185,7 @@ if [[ "$MODE" == "docker" ]]; then
   fi
   log "Create PostgreSQL dump (docker) -> $DB_DUMP_FILE"
   docker compose exec -T postgres pg_dump -U "$PG_USER" -d "$PG_DB" -Fc > "$DB_DUMP_FILE"
+  assert_pg_custom_dump "$DB_DUMP_FILE"
 
   SMTP_LINE="$(
     docker compose exec -T postgres psql -U "$PG_USER" -d "$PG_DB" -At -F $'\t' -c "
@@ -190,6 +226,7 @@ else
   fi
   log "Create PostgreSQL dump (host) -> $DB_DUMP_FILE"
   pg_dump --format=custom --file="$DB_DUMP_FILE" "$DATABASE_URL"
+  assert_pg_custom_dump "$DB_DUMP_FILE"
 
   SMTP_LINE="$(
     psql "$DATABASE_URL" -At -F $'\t' -c "
@@ -263,7 +300,7 @@ if [[ -z "${SMTP_SERVER:-}" || -z "${SMTP_USERNAME:-}" || -z "${SMTP_PASSWORD:-}
   exit 3
 fi
 
-# Данные для восстановления, не исходники с GitHub (docs/static/vendor раздувают письмо).
+# Полный снимок: письмо 1 = data (БД, uploads, портал в Postgres), письмо 2 = files.
 SITE_LABEL="${BACKUP_SITE_LABEL:-CRM ${HOSTNAME_SHORT}}"
 
 STAGE="$TMP_DIR/payload"
@@ -321,16 +358,138 @@ if [[ ${#EXTRA_LIST[@]} -gt 0 ]]; then
     | tar -C "$STAGE/extra" -xf - || log "WARN: extra paths pack failed"
 fi
 
+DUMP_BYTES="$(wc -c < "$DB_DUMP_FILE" | tr -d ' ')"
+DUMP_NAME="$(basename "$DB_DUMP_FILE")"
 {
   echo "label=$SITE_LABEL"
   echo "created=$(date -Is)"
   echo "host=$(hostname -f 2>/dev/null || hostname)"
   echo "mode=$MODE"
-  echo "purpose=restore data only; code from git (GIT_HEAD / GIT_REMOTE)"
-  echo "contents=postgres dump, .env, data/uploads, nginx, letsencrypt, monitoring"
+  echo "purpose=full snapshot; data letter + files letter; restore without git"
+  echo "contents=postgres dump, .env, data/uploads, nginx, letsencrypt, monitoring, RESTORE.sh"
+  echo "postgres_dump=$DUMP_NAME"
+  echo "postgres_dump_bytes=$DUMP_BYTES"
+  echo "files_archive=crm_files_backup_${HOSTNAME_SHORT}_${TS}.7z"
 } > "$STAGE/MANIFEST.txt"
 
-log "Create compressed data archive -> $ARCHIVE_FILE"
+cat > "$STAGE/RESTORE.txt" <<EOF
+Полный снимок WORK — два архива
+================================
+Пароль 7z: BACKUP_ARCHIVE_PASSWORD / credentials.txt (в письме нет).
+Не нужен git: код в письме 2 (crm_files_backup_*.7z).
+
+7z x crm_data_backup_*.7z
+7z x crm_files_backup_*.7z
+tar -xJf crm_data_backup_*.tar.xz
+tar -xJf crm_files_backup_*.tar.xz
+sudo bash payload/RESTORE.sh /opt/nikanewcrm
+
+Дамп: postgres/$DUMP_NAME (${DUMP_BYTES} байт, custom -Fc). Портал клиентов — в этой же БД.
+Не делать: docker compose down -v
+EOF
+
+cat > "$STAGE/RESTORE.sh" <<'RESTORE_SH'
+#!/usr/bin/env bash
+# Restore WORK CRM from unpacked data (payload/) + files/ archives.
+set -euo pipefail
+DEST="${1:-/opt/nikanewcrm}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FILES=""
+if [[ -d "$HERE/../files" ]]; then
+  FILES="$(cd "$HERE/../files" && pwd)"
+elif [[ -d "$HERE/files" ]]; then
+  FILES="$HERE/files"
+fi
+
+mkdir -p "$DEST"
+if [[ -n "$FILES" ]]; then
+  echo "Copy application files -> $DEST"
+  cp -a "$FILES"/. "$DEST"/
+fi
+if [[ -f "$HERE/env/.env" ]]; then
+  cp -a "$HERE/env/.env" "$DEST/.env"
+  chmod 600 "$DEST/.env"
+fi
+if [[ -d "$HERE/uploads" ]]; then
+  mkdir -p "$DEST/data/uploads"
+  cp -a "$HERE/uploads"/. "$DEST/data/uploads"/
+fi
+if [[ -d "$HERE/monitoring" ]]; then
+  mkdir -p "$DEST/data/monitoring"
+  cp -a "$HERE/monitoring"/. "$DEST/data/monitoring"/
+fi
+if [[ -d "$HERE/letsencrypt" && -d /etc ]]; then
+  mkdir -p /etc/letsencrypt
+  cp -a "$HERE/letsencrypt"/. /etc/letsencrypt/ 2>/dev/null || true
+fi
+if [[ -d "$HERE/nginx" && -d /etc/nginx/conf.d ]]; then
+  cp -an "$HERE/nginx"/. /etc/nginx/conf.d/ 2>/dev/null || true
+fi
+
+cd "$DEST"
+if [[ -f docker-compose.yml ]]; then
+  dc() { docker compose "$@"; }
+elif [[ -f docker/docker-compose.yml ]]; then
+  dc() { docker compose -f docker/docker-compose.yml "$@"; }
+else
+  echo "ERROR: docker-compose.yml not found in $DEST" >&2
+  exit 2
+fi
+
+echo "Start postgres (never: docker compose down -v)"
+dc up -d postgres
+ok=0
+for _ in $(seq 1 40); do
+  if dc exec -T postgres pg_isready >/dev/null 2>&1; then
+    ok=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$ok" != "1" ]]; then
+  echo "ERROR: postgres is not ready" >&2
+  exit 2
+fi
+
+DUMP="$(ls -1 "$HERE"/postgres/*.dump 2>/dev/null | head -1 || true)"
+if [[ -z "$DUMP" ]]; then
+  echo "ERROR: no postgres/*.dump in payload" >&2
+  exit 2
+fi
+PG_USER="$(dc exec -T postgres printenv POSTGRES_USER | tr -d '\r')"
+PG_DB="$(dc exec -T postgres printenv POSTGRES_DB | tr -d '\r')"
+echo "Restore $DUMP -> $PG_DB"
+set +e
+dc exec -T postgres pg_restore -U "$PG_USER" -d "$PG_DB" --clean --if-exists < "$DUMP"
+rc=$?
+set -e
+if [[ $rc -gt 1 ]]; then
+  echo "ERROR: pg_restore failed (rc=$rc)" >&2
+  exit 2
+fi
+
+dc up -d
+echo "OK: restore finished. Open /login. Do not run docker compose down -v."
+RESTORE_SH
+chmod 755 "$STAGE/RESTORE.sh"
+
+log "Pack application files (exclude git/venv/backups/uploads)"
+FILES_STAGE="$TMP_DIR/files"
+mkdir -p "$FILES_STAGE"
+tar -C "$ROOT_DIR" \
+  --exclude='.git' \
+  --exclude='venv' \
+  --exclude='.venv' \
+  --exclude='.venv-win' \
+  --exclude='node_modules' \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --exclude='.pytest_cache' \
+  --exclude='data/database/backups' \
+  --exclude='data/uploads' \
+  --exclude='data/monitoring' \
+  -cf - . | tar -C "$FILES_STAGE" -xf -
+
 if [[ -z "${BACKUP_XZ_OPTS:-}" ]]; then
   mem_mb="$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
   if [[ "$mem_mb" -gt 0 && "$mem_mb" -lt 2048 ]]; then
@@ -340,56 +499,120 @@ if [[ -z "${BACKUP_XZ_OPTS:-}" ]]; then
     BACKUP_XZ_OPTS="-9e -T0"
   fi
 fi
-tar -I "xz $BACKUP_XZ_OPTS" -cf "$ARCHIVE_FILE" -C "$TMP_DIR" payload
+
+DATA_TAR="$BACKUP_DIR/crm_data_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
+FILES_TAR="$BACKUP_DIR/crm_files_backup_${HOSTNAME_SHORT}_${TS}.tar.xz"
+log "Create compressed data archive -> $DATA_TAR"
+tar -I "xz $BACKUP_XZ_OPTS" -cf "$DATA_TAR" -C "$TMP_DIR" payload
+log "Create compressed files archive -> $FILES_TAR"
+tar -I "xz $BACKUP_XZ_OPTS" -cf "$FILES_TAR" -C "$TMP_DIR" files
 
 if [[ -z "${BACKUP_ARCHIVE_PASSWORD:-}" ]]; then
   log "ERROR: BACKUP_ARCHIVE_PASSWORD пуст в .env — открытый дамп на почту не шлём"
-  rm -f "$ARCHIVE_FILE"
+  rm -f "$DATA_TAR" "$FILES_TAR"
   exit 2
 fi
-SEVENZ_FILE="${ARCHIVE_FILE%.tar.xz}.7z"
-log "7z AES-256 + encrypt headers -> $SEVENZ_FILE"
-rm -f "$SEVENZ_FILE"
-set +e
-(
-  cd "$(dirname "$ARCHIVE_FILE")" || exit 2
-  "$SEVENZ_BIN" a -t7z -mx=0 -mhe=on -y \
-    "-p${BACKUP_ARCHIVE_PASSWORD}" "$SEVENZ_FILE" "$(basename "$ARCHIVE_FILE")" >/dev/null
-)
-rc=$?
-set -e
-if [[ $rc -gt 1 || ! -f "$SEVENZ_FILE" ]]; then
-  log "ERROR: 7z failed (rc=$rc)"
-  exit 2
-fi
-rm -f "$ARCHIVE_FILE"
-ARCHIVE_FILE="$SEVENZ_FILE"
 
-ARCHIVE_SIZE_HR="$(du -h "$ARCHIVE_FILE" | awk '{print $1}')"
-log "Archive ready: $ARCHIVE_FILE ($ARCHIVE_SIZE_HR)"
+# Mail attachment cap. Larger .7z is kept whole on disk; email gets 25MB volumes.
+ATTACH_MAX="${BACKUP_ATTACH_MAX_BYTES:-28000000}"
+VOLUME_BYTES="${BACKUP_7Z_VOLUME_BYTES:-25000000}"
+
+pack_7z_one() {
+  local src="$1" dest="$2"
+  rm -f "$dest"
+  local rc=0
+  set +e
+  (
+    cd "$(dirname "$src")" || exit 2
+    "$SEVENZ_BIN" a -t7z -mx=0 -mhe=on -y \
+      "-p${BACKUP_ARCHIVE_PASSWORD}" "$dest" "$(basename "$src")" >/dev/null
+  )
+  rc=$?
+  set -e
+  if [[ $rc -gt 1 || ! -f "$dest" ]]; then
+    log "ERROR: 7z failed for $src (rc=$rc)"
+    exit 2
+  fi
+}
+
+split_7z_mail_parts() {
+  local src="$1" dest="$2"
+  local size prefix rc p
+  size="$(stat -c%s "$dest")"
+  WRAP_7Z_PARTS=()
+  if [[ "$size" -le "$ATTACH_MAX" ]]; then
+    WRAP_7Z_PARTS=("$dest")
+    return 0
+  fi
+  prefix="${dest%.7z}_mail.7z"
+  rm -f "${prefix}".[0-9][0-9][0-9]
+  leftover="${dest%.7z}_mail.7z"
+  [[ -f "$leftover" ]] && rm -f "$leftover"
+  log "Archive ${size} > ${ATTACH_MAX}: split mail volumes ${VOLUME_BYTES}b -> ${prefix}.00N"
+  set +e
+  (
+    cd "$(dirname "$src")" || exit 2
+    "$SEVENZ_BIN" a -t7z -mx=0 -mhe=on -y \
+      "-v${VOLUME_BYTES}b" \
+      "-p${BACKUP_ARCHIVE_PASSWORD}" "$prefix" "$(basename "$src")" >/dev/null
+  )
+  rc=$?
+  set -e
+  if [[ $rc -gt 1 ]]; then
+    log "ERROR: 7z volume split failed (rc=$rc)"
+    exit 2
+  fi
+  for p in "${prefix}".[0-9][0-9][0-9]; do
+    [[ -f "$p" ]] && WRAP_7Z_PARTS+=("$p")
+  done
+  if [[ ${#WRAP_7Z_PARTS[@]} -eq 0 && -f "$prefix" ]]; then
+    WRAP_7Z_PARTS=("$prefix")
+  fi
+  if [[ ${#WRAP_7Z_PARTS[@]} -eq 0 ]]; then
+    log "ERROR: 7z volume split produced no parts"
+    exit 2
+  fi
+}
+
+wrap_7z() {
+  local src="$1"
+  local dest="${src%.tar.xz}.7z"
+  log "7z AES-256 + encrypt headers -> $dest"
+  pack_7z_one "$src" "$dest"
+  split_7z_mail_parts "$src" "$dest"
+  rm -f "$src"
+  WRAP_7Z_OUT="$dest"
+}
+
+wrap_7z "$DATA_TAR"
+DATA_ARCHIVE="$WRAP_7Z_OUT"
+DATA_MAIL_PARTS=("${WRAP_7Z_PARTS[@]}")
+wrap_7z "$FILES_TAR"
+FILES_ARCHIVE="$WRAP_7Z_OUT"
+FILES_MAIL_PARTS=("${WRAP_7Z_PARTS[@]}")
+DATA_SIZE_HR="$(du -h "$DATA_ARCHIVE" | awk '{print $1}')"
+FILES_SIZE_HR="$(du -h "$FILES_ARCHIVE" | awk '{print $1}')"
+log "Archives ready: $DATA_ARCHIVE ($DATA_SIZE_HR) + $FILES_ARCHIVE ($FILES_SIZE_HR)"
 
 if [[ "${BACKUP_PUSH_PRIVATE:-}" == "1" ]]; then
-  log "Push encrypted snapshot to private branch work-restore"
-  if ! bash "$ROOT_DIR/scripts/backup_push_work_restore.sh" "$ARCHIVE_FILE"; then
+  log "Push encrypted data snapshot to private branch work-restore"
+  if ! bash "$ROOT_DIR/scripts/backup_push_work_restore.sh" "$DATA_ARCHIVE"; then
     log "WARN: private git snapshot push failed (disk archive still kept)"
   fi
 fi
 
 if [[ "${BACKUP_SKIP_EMAIL:-}" == "1" ]]; then
-  log "BACKUP_SKIP_EMAIL=1 — archive kept, no mail"
+  log "BACKUP_SKIP_EMAIL=1 — archives kept, no mail"
+  echo "$TODAY" > "$STAMP_FILE"
   exit 0
 fi
 
 export BACKUP_EMAIL_TO="$RECIPIENT_EMAIL"
-export BACKUP_ARCHIVE_PATH="$ARCHIVE_FILE"
 export BACKUP_TS="$TS"
 export BACKUP_HOST="$HOSTNAME_SHORT"
-export BACKUP_SIZE="$ARCHIVE_SIZE_HR"
 export BACKUP_SITE_LABEL="$SITE_LABEL"
-export BACKUP_ARCHIVE_BASENAME="$(basename "$ARCHIVE_FILE")"
+export BACKUP_ATTACH_MAX_BYTES="$ATTACH_MAX"
 export SMTP_SERVER SMTP_PORT SMTP_USE_TLS SMTP_USE_SSL SMTP_USERNAME SMTP_PASSWORD SMTP_SENDER
-
-log "Send archive via SMTP ($SMTP_SERVER:$SMTP_PORT) -> $RECIPIENT_EMAIL"
 
 send_via_python() {
   python3 - <<'PY'
@@ -408,9 +631,7 @@ use_tls = str(os.environ.get("SMTP_USE_TLS", "true")).strip().lower() in {"1", "
 use_ssl = str(os.environ.get("SMTP_USE_SSL", "false")).strip().lower() in {"1", "true", "yes", "on", "t"}
 email_to = os.environ["BACKUP_EMAIL_TO"].strip()
 archive_path = Path(os.environ["BACKUP_ARCHIVE_PATH"])
-backup_ts = os.environ.get("BACKUP_TS", "")
 backup_host = os.environ.get("BACKUP_HOST", "vps")
-backup_size = os.environ.get("BACKUP_SIZE", "")
 
 _, sender_email = parseaddr(smtp_sender_raw)
 smtp_sender = (sender_email or smtp_sender_raw).strip()
@@ -427,10 +648,8 @@ def _ascii_or_empty(value: str) -> str:
     except UnicodeEncodeError:
         return ""
 
-# Envelope / AUTH — только ASCII mailbox; display name с кириллицей нельзя в login
 smtp_sender = _ascii_or_empty(smtp_sender) or _ascii_or_empty(smtp_user)
 smtp_user = _ascii_or_empty(smtp_user) or smtp_sender
-# Пароль SMTP обязан быть ASCII (smtplib AUTH PLAIN)
 try:
     smtp_password.encode("ascii")
 except UnicodeEncodeError as exc:
@@ -445,52 +664,35 @@ if not archive_path.exists():
     raise FileNotFoundError(f"Archive not found: {archive_path}")
 
 msg = EmailMessage()
-site_label = os.environ.get("BACKUP_SITE_LABEL") or f"CRM {backup_host}"
-msg["Subject"] = f"[CRM Backup] {site_label} {backup_ts}"
+msg["Subject"] = os.environ["BACKUP_SUBJECT"]
 msg["From"] = smtp_sender
 msg["To"] = email_to
-msg.set_content(
-    f"Автоматический бэкап данных CRM (без исходников с GitHub).\n"
-    f"Сайт: {site_label}\n"
-    f"Сервер: {backup_host}\n"
-    f"Время: {backup_ts}\n"
-    f"Размер архива: {backup_size}\n"
-    f"Файл: {archive_path.name}\n\n"
-    f"В архиве: PostgreSQL dump, .env, загрузки (фото диагностики и т.п.),\n"
-    f"nginx и Let's Encrypt (если есть на хосте).\n"
-    f"Код приложения — из git (см. GIT_HEAD в архиве).\n"
-    f"Файл: 7z AES-256, имена внутри тоже зашифрованы.\n"
-    f"Пароль в письме нет: BACKUP_ARCHIVE_PASSWORD в .env на сервере.\n"
-    f"Откройте в 7-Zip и введите пароль. Внутри будет tar.xz с payload/.\n"
-)
-
-# Крупные вложения многие SMTP режут — шлём без файла, путь на диске
+body = os.environ["BACKUP_BODY"]
 attach_max = int(os.environ.get("BACKUP_ATTACH_MAX_BYTES") or "28000000")
 size_bytes = archive_path.stat().st_size
+if size_bytes > attach_max:
+    body += (
+        f"\nВложение НЕ приложено (размер {size_bytes} > {attach_max}).\n"
+        f"Файл на сервере: {archive_path}\n"
+        f"scp root@{backup_host}:{archive_path} .\n"
+    )
+msg.set_content(body)
 if size_bytes <= attach_max:
     with archive_path.open("rb") as f:
-        att_subtype = "x-7z-compressed" if archive_path.name.endswith(".7z") else "octet-stream"
         msg.add_attachment(
             f.read(),
             maintype="application",
-            subtype=att_subtype,
+            subtype="x-7z-compressed",
             filename=archive_path.name,
         )
-else:
-    msg.set_content(
-        msg.get_content()
-        + f"\nВложение НЕ приложено (размер {size_bytes} > {attach_max}).\n"
-        + f"Файл на сервере: {archive_path}\n"
-        + f"scp root@{backup_host}:{archive_path} .\n"
-    )
 
 if use_ssl:
-    with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=120) as server:
+    with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=180) as server:
         if smtp_user:
             server.login(smtp_user, smtp_password)
         server.send_message(msg)
 else:
-    with smtplib.SMTP(smtp_server, smtp_port, timeout=120) as server:
+    with smtplib.SMTP(smtp_server, smtp_port, timeout=180) as server:
         if use_tls:
             server.starttls()
         if smtp_user:
@@ -500,64 +702,89 @@ print("OK")
 PY
 }
 
-if [[ "$MODE" == "docker" ]]; then
-  # Предпочитаем host python (архив на хосте); fallback — контейнер web с volume path
-  if ! send_via_python; then
-    log "WARN: host SMTP send failed, trying docker web..."
-    docker compose exec -T \
-      -e BACKUP_EMAIL_TO \
-      -e BACKUP_TS \
-      -e BACKUP_HOST \
-      -e BACKUP_SIZE \
-      -e BACKUP_SITE_LABEL \
-      -e BACKUP_ARCHIVE_BASENAME \
-      -e SMTP_SERVER -e SMTP_PORT -e SMTP_USE_TLS -e SMTP_USE_SSL \
-      -e SMTP_USERNAME -e SMTP_PASSWORD -e SMTP_SENDER \
-      web python - <<'PY'
-import os, smtplib
-from email.message import EmailMessage
-from email.utils import parseaddr
-from pathlib import Path
-archive_path = Path("/app/database/backups/auto") / os.environ["BACKUP_ARCHIVE_BASENAME"]
-os.environ["BACKUP_ARCHIVE_PATH"] = str(archive_path)
-# reuse same logic via inline minimal send
-smtp_server = os.environ["SMTP_SERVER"].strip()
-smtp_port = int(os.environ.get("SMTP_PORT") or "587")
-smtp_user = os.environ.get("SMTP_USERNAME", "").strip()
-smtp_password = os.environ.get("SMTP_PASSWORD", "")
-smtp_sender = os.environ.get("SMTP_SENDER", "").strip() or smtp_user
-_, se = parseaddr(smtp_sender); smtp_sender = se or smtp_sender
-_, su = parseaddr(smtp_user); smtp_user = su or smtp_user or smtp_sender
-use_tls = str(os.environ.get("SMTP_USE_TLS", "true")).lower() in {"1","true","yes","on","t"}
-use_ssl = str(os.environ.get("SMTP_USE_SSL", "false")).lower() in {"1","true","yes","on","t"}
-msg = EmailMessage()
-msg["Subject"] = f"[CRM Backup] {os.environ.get('BACKUP_HOST')} {os.environ.get('BACKUP_TS')}"
-msg["From"] = smtp_sender
-msg["To"] = os.environ["BACKUP_EMAIL_TO"]
-msg.set_content(f"Backup {archive_path.name} size={os.environ.get('BACKUP_SIZE')}\n")
-with archive_path.open("rb") as f:
-    att_subtype = "x-7z-compressed" if archive_path.name.endswith(".7z") else "octet-stream"
-    msg.add_attachment(f.read(), maintype="application", subtype=att_subtype, filename=archive_path.name)
-if use_ssl:
-    with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=120) as s:
-        s.login(smtp_user, smtp_password); s.send_message(msg)
-else:
-    with smtplib.SMTP(smtp_server, smtp_port, timeout=120) as s:
-        if use_tls: s.starttls()
-        s.login(smtp_user, smtp_password); s.send_message(msg)
-PY
-  fi
-else
+send_archive_mail() {
+  local archive="$1" subject="$2" body="$3"
+  export BACKUP_ARCHIVE_PATH="$archive"
+  export BACKUP_SUBJECT="$subject"
+  export BACKUP_BODY="$body"
+  export BACKUP_SIZE
+  BACKUP_SIZE="$(du -h "$archive" | awk '{print $1}')"
+  log "Send $archive ($BACKUP_SIZE) via SMTP ($SMTP_SERVER:$SMTP_PORT) -> $RECIPIENT_EMAIL"
   send_via_python
-fi
+}
 
-log "Email sent successfully"
+send_mail_parts() {
+  local subject_base="$1" body_base="$2"
+  shift 2
+  local parts=("$@")
+  local n="${#parts[@]}" i=1 p names="" extra subject
+  for p in "${parts[@]}"; do
+    names+="$(basename "$p") "
+  done
+  names="${names%% }"
+  for p in "${parts[@]}"; do
+    extra=""
+    subject="$subject_base"
+    if [[ "$n" -gt 1 ]]; then
+      subject="${subject_base} ${i}/${n}"
+      extra="
+Часть ${i}/${n}. Положите ВСЕ части в одну папку и откройте первую:
+  7z x $(basename "${parts[0]}")
+Файлы: ${names}
+"
+    fi
+    send_archive_mail "$p" "$subject" "${body_base}${extra}"
+    i=$((i + 1))
+  done
+}
+
+send_mail_parts \
+  "[CRM Snapshot] ${SITE_LABEL} data ${TS}" \
+  "Полный снимок CRM — ДАННЫЕ.
+
+Сайт: ${SITE_LABEL}
+Сервер: ${HOSTNAME_SHORT}
+Время: ${TS}
+Целый архив на диске: $(basename "$DATA_ARCHIVE") (${DATA_SIZE_HR})
+
+В архиве: PostgreSQL dump (заявки, клиенты, личный кабинет),
+.env, загрузки (фото), nginx, Let's Encrypt, мониторинг,
+RESTORE.sh + RESTORE.txt.
+
+Отдельно придут файлы приложения (crm_files_backup_*).
+Пароль 7z: BACKUP_ARCHIVE_PASSWORD / credentials.txt, в письме нет.
+7z x *.7z (или *.7z.001) && tar -xJf crm_*_*.tar.xz
+sudo bash payload/RESTORE.sh /opt/nikanewcrm
+" \
+  "${DATA_MAIL_PARTS[@]}"
+
+send_mail_parts \
+  "[CRM Snapshot] ${SITE_LABEL} files ${TS}" \
+  "Полный снимок CRM — ФАЙЛЫ.
+
+Сайт: ${SITE_LABEL}
+Сервер: ${HOSTNAME_SHORT}
+Время: ${TS}
+Целый архив на диске: $(basename "$FILES_ARCHIVE") (${FILES_SIZE_HR})
+
+В архиве: дерево приложения (app, templates, static, docker, docs)
+без .git, venv, node_modules и без старых бэкапов.
+Uploads и база — в письмах data.
+
+Пароль 7z тот же. Restore: payload/RESTORE.sh из письма data.
+" \
+  "${FILES_MAIL_PARTS[@]}"
+
+log "Emails sent successfully"
+echo "$TODAY" > "$STAMP_FILE"
 
 log "Cleanup old auto backups (> ${RETENTION_DAYS} days)"
 find "$BACKUP_DIR" -maxdepth 1 -type f \( \
   -name 'crm_full_backup_*.tar.xz' -o -name 'crm_full_backup_*.tar.xz.enc' \
   -o -name 'crm_data_backup_*.tar.xz' -o -name 'crm_data_backup_*.tar.xz.enc' \
-  -o -name 'crm_data_backup_*.7z' \
+  -o -name 'crm_data_backup_*.7z' -o -name 'crm_data_backup_*_mail.7z.*' \
+  -o -name 'crm_files_backup_*.tar.xz' -o -name 'crm_files_backup_*.7z' \
+  -o -name 'crm_files_backup_*_mail.7z.*' \
 \) -mtime +"$RETENTION_DAYS" -delete
 
 log "DONE backup job"
