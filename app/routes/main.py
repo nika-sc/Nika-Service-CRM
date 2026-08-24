@@ -19,6 +19,7 @@ from app.utils.report_period import normalize_date_range
 import sqlite3
 import logging
 import json
+import re
 from email.utils import parseaddr
 from collections import defaultdict, deque
 from app.database.connection import get_db_connection
@@ -352,12 +353,8 @@ def permission_required(permission: str):
 
 def format_phone_display(phone):
     """Форматирует телефон для отображения."""
-    if not phone:
-        return ''
-    phone = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
-    if len(phone) == 11 and phone.startswith('7'):
-        return f"+7 ({phone[1:4]}) {phone[4:7]}-{phone[7:9]}-{phone[9:]}"
-    return phone
+    from app.utils.locale_fmt import format_phone_display as _fmt
+    return _fmt(phone)
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -774,21 +771,6 @@ def settings():
             payment_method_settings = {'cash_label': 'Наличные', 'card_label': 'Карта', 'transfer_label': 'Перевод'}
             usage_counts = {'device_types': {}, 'device_brands': {}, 'symptoms': {}, 'appearance_tags': {}, 'services': {}}
 
-    currency_options = [
-        ('RUB', 'Российский рубль (RUB)'),
-        ('USD', 'Доллар США (USD)'),
-        ('EUR', 'Евро (EUR)'),
-        ('UAH', 'Украинская гривна (UAH)'),
-        ('MDL', 'Молдавский лей (MDL)'),
-    ]
-    country_options = [
-        ('Россия', 'Россия'),
-        ('Украина', 'Украина'),
-        ('Молдова', 'Молдова'),
-        ('Казахстан', 'Казахстан'),
-        ('Беларусь', 'Беларусь'),
-    ]
-
     if request.method == 'POST':
         try:
             def _is_valid_ascii_email(value: str) -> bool:
@@ -818,8 +800,10 @@ def settings():
                     'logo_url': request.form.get('logo_url', ''),
                     'logo_max_width': int(request.form.get('logo_max_width') or 320),
                     'logo_max_height': int(request.form.get('logo_max_height') or 120),
-                    'currency': request.form.get('currency', 'RUB'),
-                    'country': request.form.get('country', 'Россия'),
+                    'currency': (request.form.get('currency') or 'RUB').strip() or 'RUB',
+                    'currency_symbol': (request.form.get('currency_symbol') or '₽').strip() or '₽',
+                    'phone_prefix': re.sub(r'\D', '', request.form.get('phone_prefix') or '7') or '7',
+                    'country': (request.form.get('country') or 'Россия').strip() or 'Россия',
                     'default_warranty_days': int(request.form.get('default_warranty_days') or 30),
                     'timezone_offset': int(request.form.get('timezone_offset') or 3),
                     'mail_server': request.form.get('mail_server', ''),
@@ -1299,8 +1283,6 @@ def settings():
         appearance_tags=appearance_tags,
         services=services,
         order_models=order_models,
-        currency_options=currency_options,
-        country_options=country_options,
         customer_template=customer_template,
         sales_receipt_template=sales_receipt_template,
         work_act_template=work_act_template,

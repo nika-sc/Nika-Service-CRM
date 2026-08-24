@@ -43,6 +43,15 @@
         /* Pre-hint: базовые цвета до загрузки всех CSS */
         html.theme-dark, html.theme-dark body { background: #1a1a1a; color: #e0e0e0; }
         html.theme-light, html.theme-light body { background: #ecf0f5; color: #333; }
+        .nika-money-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0.9em;
+            font-weight: 700;
+            font-style: normal;
+            line-height: 1;
+        }
     </style>
     <script src="{{ url_for('static', filename='js/app_theme_early.js') }}"></script>
 </head>
@@ -144,6 +153,14 @@
     <!-- jQuery (локально) -->
     <script src="{{ url_for('static', filename='cdn/jquery/3.6.0/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script nonce="{{ csp_nonce() }}">
+        window.NIKA_LOCALE = {
+            phonePrefix: {{ (phone_prefix or '7')|tojson }},
+            moneySymbol: {{ (money_symbol or '₽')|tojson }},
+            phonePrefixPlus: {{ (phone_prefix_plus or '+7')|tojson }}
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/nika_locale.js') }}"></script>
     <!-- Bootstrap 5 (локально) -->
     <script src="{{ url_for('static', filename='cdn/bootstrap/5.3.0/js/bootstrap.bundle.min.js') }}"></script>
     <!-- AdminLTE (локально) -->

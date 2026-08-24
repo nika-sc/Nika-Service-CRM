@@ -32,9 +32,9 @@
                         <p><strong>Мин. остаток:</strong> {{ part.min_quantity }} {{ part.unit or 'шт' }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Розничная цена:</strong> <span class="h4 text-primary">{{ part.retail_price or part.price or 0 }} ₽</span></p>
-                        <p><strong>Закупочная цена:</strong> {{ part.purchase_price or 0 }} ₽</p>
-                        <p><strong>Маржа:</strong> {{ (part.retail_price or part.price or 0) - (part.purchase_price or 0) }} ₽</p>
+                        <p><strong>Розничная цена:</strong> <span class="h4 text-primary">{{ part.retail_price or part.price or 0 }} {{ money_symbol }}</span></p>
+                        <p><strong>Закупочная цена:</strong> {{ part.purchase_price or 0 }} {{ money_symbol }}</p>
+                        <p><strong>Маржа:</strong> {{ (part.retail_price or part.price or 0) - (part.purchase_price or 0) }} {{ money_symbol }}</p>
                         {% if part.warranty_days %}
                         <p><strong>Гарантия:</strong> {{ part.warranty_days }} дн.</p>
                         {% endif %}
@@ -143,7 +143,7 @@
                             <input type="number" name="quantity" class="form-control" min="1" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Себестоимость, ₽</label>
+                            <label class="form-label">Себестоимость, {{ money_symbol }}</label>
                             <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" value="{{ part.purchase_price or 0 }}">
                             <small class="form-text text-muted">Если изменить, себестоимость обновится глобально для товара</small>
                         </div>

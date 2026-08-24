@@ -21,7 +21,7 @@
             <tr>
                 <td>{{ payment.payment_date|format_date(true) if payment.payment_date else '—' }}</td>
                 <td><a href="#" class="order-link" data-order-id="{{ payment.order_id }}">#{{ payment.order_id }}</a></td>
-                <td>{% if payment.kind|default('')|lower == 'refund' %}<span class="text-danger">−{{ payment.amount|default(0)|round(2) }} ₽</span>{% else %}{{ payment.amount|default(0)|round(2) }} ₽{% endif %}</td>
+                <td>{% if payment.kind|default('')|lower == 'refund' %}<span class="text-danger">−{{ payment.amount|default(0)|round(2) }} {{ money_symbol }}</span>{% else %}{{ payment.amount|default(0)|round(2) }} {{ money_symbol }}{% endif %}</td>
                 <td>{{ payment|format_payment_row_type }}</td>
             </tr>
             {% endfor %}

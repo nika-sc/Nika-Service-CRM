@@ -361,7 +361,7 @@
         SELLER_DIRECTOR: 'Смелков А.А.',
         SELLER_ACCOUNTANT: '',
         BUYER_FULL: 'ГУП "Медицинский центр", ИНН 7729071411, КПП 770101001',
-        TOTAL: '77 510,54 ₽',
+        TOTAL: '77 510,54 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
         TOTAL_WORDS: 'Семьдесят семь тысяч пятьсот десять рублей 54 копейки',
         ITEMS_COUNT: '2',
         LOGO_HTML: '',
@@ -372,8 +372,8 @@
         QTY: '1',
         UNIT: 'усл. ед.',
         VAT: 'Без НДС',
-        PRICE: '620,21 ₽',
-        SUM: '620,21 ₽'
+        PRICE: '620,21 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
+        SUM: '620,21 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')
     };
 
     const mockDataAct = {
@@ -382,7 +382,7 @@
         SELLER_FULL: 'ИП СМЕЛКОВ АЛЕКСАНДР АЛЕКСАНДРОВИЧ, ИНН 231702503668, 354340, РОССИЯ, КРАСНОДАРСКИЙ КРАЙ, Г СОЧИ, Р-Н АДЛЕРСКИЙ, УЛ САДОВАЯ, Д 5, КВ 14',
         SELLER_DIRECTOR: 'Смелков А.А.',
         BUYER_FULL: 'ГБУЗ "СП № 2 Г. СОЧИ" МЗ КК, ИНН 2317001494, КПП 231701001, Краснодарский край, г Сочи, р-н Адлерский, пер Революции, д 7',
-        TOTAL: '34 000,00 ₽',
+        TOTAL: '34 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
         TOTAL_WORDS: 'Тридцать четыре тысячи рублей',
         LOGO_HTML: '',
         SIGNATURE_HTML: '',
@@ -392,13 +392,13 @@
         QTY: '12',
         UNIT: 'шт',
         VAT: 'Без НДС',
-        PRICE: '1 000,00 ₽',
-        SUM: '12 000,00 ₽'
+        PRICE: '1 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
+        SUM: '12 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')
     };
 
     const demoRowsBill = [
-        { N: '1', TITLE: 'Замена фотобарабана HP MFC-5750DW', QTY: '1', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '620,21 ₽', SUM: '620,21 ₽' },
-        { N: '2', TITLE: 'Заправка картриджа MLT-D203U', QTY: '10', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '1 353,20 ₽', SUM: '13 532,00 ₽' }
+        { N: '1', TITLE: 'Замена фотобарабана HP MFC-5750DW', QTY: '1', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '620,21 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '620,21 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') },
+        { N: '2', TITLE: 'Заправка картриджа MLT-D203U', QTY: '10', UNIT: 'усл. ед.', VAT: 'Без НДС', PRICE: '1 353,20 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '13 532,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') }
     ];
 
     const mockDataWaybill = {
@@ -409,7 +409,7 @@
         SELLER_DIRECTOR: 'Смелков А.А.',
         SELLER_ACCOUNTANT: '',
         BUYER_FULL: 'АО "МЕЖДУНАРОДНЫЙ АЭРОПОРТ СОЧИ" АО "МАС", ИНН 2317044843, КПП 231701001, Краснодарский край, г Сочи, тер Аэропорт',
-        TOTAL: '12 000,00 ₽',
+        TOTAL: '12 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
         TOTAL_WORDS: 'Двенадцать тысяч рублей',
         LOGO_HTML: '',
         SIGNATURE_HTML: '',
@@ -419,18 +419,18 @@
         QTY: '6',
         UNIT: 'шт',
         VAT: 'Без НДС',
-        PRICE: '2 000,00 ₽',
-        SUM: '12 000,00 ₽'
+        PRICE: '2 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'),
+        SUM: '12 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')
     };
 
     const demoRowsWaybill = [
-        { N: '1', TITLE: 'Штамп', QTY: '6', UNIT: 'шт', VAT: 'Без НДС', PRICE: '2 000,00 ₽', SUM: '12 000,00 ₽' }
+        { N: '1', TITLE: 'Штамп', QTY: '6', UNIT: 'шт', VAT: 'Без НДС', PRICE: '2 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '12 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') }
     ];
 
     const demoRowsAct = [
-        { N: '1', TITLE: 'Заправка картриджа ТК-1170', QTY: '12', UNIT: 'шт', VAT: 'Без НДС', PRICE: '1 000,00 ₽', SUM: '12 000,00 ₽' },
-        { N: '2', TITLE: 'Заправка картриджа 283/285', QTY: '5', UNIT: 'шт', VAT: 'Без НДС', PRICE: '800,00 ₽', SUM: '4 000,00 ₽' },
-        { N: '3', TITLE: 'Заправка картриджа CF259A', QTY: '15', UNIT: '-', VAT: 'Без НДС', PRICE: '1 200,00 ₽', SUM: '18 000,00 ₽' }
+        { N: '1', TITLE: 'Заправка картриджа ТК-1170', QTY: '12', UNIT: 'шт', VAT: 'Без НДС', PRICE: '1 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '12 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') },
+        { N: '2', TITLE: 'Заправка картриджа 283/285', QTY: '5', UNIT: 'шт', VAT: 'Без НДС', PRICE: '800,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '4 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') },
+        { N: '3', TITLE: 'Заправка картриджа CF259A', QTY: '15', UNIT: '-', VAT: 'Без НДС', PRICE: '1 200,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'), SUM: '18 000,00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') }
     ];
 
     function getPreviewData(docLabel) {
@@ -450,7 +450,17 @@
     }
 
     function applySimpleTags(raw, mockData) {
-        let result = raw;
+        let result = String(raw || '');
+        result = result.replace(/&#(?:35|x23);/gi, '#');
+        result = result.replace(/##([\s\S]*?)##/g, (_, inner) => {
+            const name = String(inner || '')
+                .replace(/<[^>]+>/g, '')
+                .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+                .replace(/&nbsp;/gi, ' ')
+                .trim()
+                .replace(/\s+/g, '');
+            return `##${name}##`;
+        });
         result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*"([^"]+)"[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
         result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*'([^']+)'[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
         result = result.replace(/##([A-Za-z_][A-Za-z0-9_.-]*)##/g, (_, key) => (mockData[key] !== undefined ? mockData[key] : `##${key}##`));
@@ -582,6 +592,7 @@
             toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | table link | code preview fullscreen',
             branding: false,
             promotion: false,
+            text_patterns: false,
             // TinyMCE по умолчанию вырезает <style> — из‑за этого пропадали рамки таблиц
             valid_elements: '*[*]',
             extended_valid_elements: 'style[*],var-inline[*]',

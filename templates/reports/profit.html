@@ -51,25 +51,25 @@
     <div class="row g-4 mb-4">
         <div class="col-md-3">
             <div class="stat-box bg-success text-white">
-                <div class="value">{{ "%.0f"|format(report.total_income|float) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.total_income|float) }} {{ money_symbol }}</div>
                 <div class="label">Общий доход</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box bg-danger text-white">
-                <div class="value">{{ "%.0f"|format(report.total_expense|float) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.total_expense|float) }} {{ money_symbol }}</div>
                 <div class="label">Общий расход</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box bg-warning text-dark">
-                <div class="value">{{ "%.0f"|format(report.cogs|float) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.cogs|float) }} {{ money_symbol }}</div>
                 <div class="label">Себестоимость</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-box {% if report.net_profit >= 0 %}bg-primary{% else %}bg-dark{% endif %} text-white">
-                <div class="value">{{ "%.0f"|format(report.net_profit|float) }} ₽</div>
+                <div class="value">{{ "%.0f"|format(report.net_profit|float) }} {{ money_symbol }}</div>
                 <div class="label">Чистая прибыль</div>
             </div>
         </div>
@@ -86,12 +86,12 @@
                         {% for name, amount in report.income_by_category.items() %}
                         <div class="category-row">
                             <span>{{ name }}</span>
-                            <span class="fw-bold text-success">{{ "%.2f"|format(amount) }} ₽</span>
+                            <span class="fw-bold text-success">{{ "%.2f"|format(amount) }} {{ money_symbol }}</span>
                         </div>
                         {% endfor %}
                         <div class="category-row border-top mt-2 pt-2">
                             <strong>Итого:</strong>
-                            <strong class="text-success">{{ "%.2f"|format(report.total_income) }} ₽</strong>
+                            <strong class="text-success">{{ "%.2f"|format(report.total_income) }} {{ money_symbol }}</strong>
                         </div>
                     {% else %}
                     <p class="text-muted text-center py-3 mb-0">Нет данных</p>
@@ -109,12 +109,12 @@
                         {% for name, amount in report.expense_by_category.items() %}
                         <div class="category-row">
                             <span>{{ name }}</span>
-                            <span class="fw-bold text-danger">{{ "%.2f"|format(amount) }} ₽</span>
+                            <span class="fw-bold text-danger">{{ "%.2f"|format(amount) }} {{ money_symbol }}</span>
                         </div>
                         {% endfor %}
                         <div class="category-row border-top mt-2 pt-2">
                             <strong>Итого:</strong>
-                            <strong class="text-danger">{{ "%.2f"|format(report.total_expense) }} ₽</strong>
+                            <strong class="text-danger">{{ "%.2f"|format(report.total_expense) }} {{ money_symbol }}</strong>
                         </div>
                     {% else %}
                     <p class="text-muted text-center py-3 mb-0">Нет данных</p>
@@ -135,7 +135,7 @@
                         {% for name, amount in report.income_by_payment_method.items() %}
                         <div class="category-row">
                             <span>{{ name }}</span>
-                            <span class="fw-bold text-info">{{ "%.2f"|format(amount) }} ₽</span>
+                            <span class="fw-bold text-info">{{ "%.2f"|format(amount) }} {{ money_symbol }}</span>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -153,7 +153,7 @@
                     <h6 class="mb-0"><i class="fas fa-cogs text-info me-2"></i>Выручка от услуг</h6>
                 </div>
                 <div class="card-body">
-                    <h3 class="text-info mb-0">{{ "%.2f"|format(report.services_revenue) }} ₽</h3>
+                    <h3 class="text-info mb-0">{{ "%.2f"|format(report.services_revenue) }} {{ money_symbol }}</h3>
                 </div>
             </div>
         </div>
@@ -163,7 +163,7 @@
                     <h6 class="mb-0"><i class="fas fa-box text-warning me-2"></i>Выручка от товаров</h6>
                 </div>
                 <div class="card-body">
-                    <h3 class="text-warning mb-0">{{ "%.2f"|format(report.goods_revenue) }} ₽</h3>
+                    <h3 class="text-warning mb-0">{{ "%.2f"|format(report.goods_revenue) }} {{ money_symbol }}</h3>
                     <small class="text-muted">Маржа: {{ "%.1f"|format(report.margin_percent) }}%</small>
                 </div>
             </div>
@@ -178,23 +178,23 @@
             <table class="table table-borderless mb-0">
                 <tr>
                     <td>Общий доход</td>
-                    <td class="text-end text-success fw-bold">+ {{ "%.2f"|format(report.total_income) }} ₽</td>
+                    <td class="text-end text-success fw-bold">+ {{ "%.2f"|format(report.total_income) }} {{ money_symbol }}</td>
                 </tr>
                 <tr>
                     <td>Себестоимость проданных товаров</td>
-                    <td class="text-end text-warning">- {{ "%.2f"|format(report.cogs) }} ₽</td>
+                    <td class="text-end text-warning">- {{ "%.2f"|format(report.cogs) }} {{ money_symbol }}</td>
                 </tr>
                 <tr class="border-top">
                     <td><strong>Валовая прибыль</strong></td>
-                    <td class="text-end fw-bold">{{ "%.2f"|format(report.gross_profit) }} ₽</td>
+                    <td class="text-end fw-bold">{{ "%.2f"|format(report.gross_profit) }} {{ money_symbol }}</td>
                 </tr>
                 <tr>
                     <td>Операционные расходы</td>
-                    <td class="text-end text-danger">- {{ "%.2f"|format(report.total_expense) }} ₽</td>
+                    <td class="text-end text-danger">- {{ "%.2f"|format(report.total_expense) }} {{ money_symbol }}</td>
                 </tr>
                 <tr class="border-top table-{% if report.net_profit >= 0 %}success{% else %}danger{% endif %}">
                     <td><strong>Чистая прибыль</strong></td>
-                    <td class="text-end fw-bold fs-4">{{ "%.2f"|format(report.net_profit) }} ₽</td>
+                    <td class="text-end fw-bold fs-4">{{ "%.2f"|format(report.net_profit) }} {{ money_symbol }}</td>
                 </tr>
             </table>
         </div>

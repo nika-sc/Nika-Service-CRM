@@ -317,27 +317,27 @@
 
                                     <!-- Средний чек -->
                                     <div class="info-item mb-3">
-                                        <strong><i class="fas fa-ruble-sign me-1"></i>Средний чек:</strong><br>
-                                        <span class="h5 text-primary">{{ "{:,.0f}".format(stats.average_check|default(0)|float) }} ₽</span>
+                                        <strong><span class="nika-money-icon me-1">{{ money_icon_char }}</span>Средний чек:</strong><br>
+                                        <span class="h5 text-primary">{{ "{:,.0f}".format(stats.average_check|default(0)|float) }} {{ money_symbol }}</span>
                                     </div>
 
                                     <!-- Общая сумма -->
                                     <div class="info-item mb-3">
                                         <strong><i class="fas fa-money-bill-wave me-1"></i>Общая сумма:</strong><br>
-                                        <span class="h5 text-success">{{ "{:,.0f}".format(stats.total_amount|default(0)|float) }} ₽</span>
+                                        <span class="h5 text-success">{{ "{:,.0f}".format(stats.total_amount|default(0)|float) }} {{ money_symbol }}</span>
                                     </div>
 
                                     <!-- Оплачено -->
                                     <div class="info-item mb-3">
                                         <strong><i class="fas fa-check-circle me-1"></i>Оплачено:</strong><br>
-                                        <span class="text-success">{{ "{:,.0f}".format(stats.total_paid|default(0)|float) }} ₽</span>
+                                        <span class="text-success">{{ "{:,.0f}".format(stats.total_paid|default(0)|float) }} {{ money_symbol }}</span>
                                     </div>
 
                                     <!-- Задолженность -->
                                     {% if stats.debt and stats.debt > 0 %}
                                     <div class="info-item mb-3">
                                         <strong><i class="fas fa-exclamation-triangle me-1"></i>Задолженность:</strong><br>
-                                        <span class="text-danger">{{ "{:,.0f}".format(stats.debt|default(0)|float) }} ₽</span>
+                                        <span class="text-danger">{{ "{:,.0f}".format(stats.debt|default(0)|float) }} {{ money_symbol }}</span>
                                     </div>
                                     {% endif %}
 
@@ -535,7 +535,7 @@
                                                         <span class="badge badge-secondary">{{ order.status or 'Не указан' }}</span>
                                                         {% endif %}
                                                     </td>
-                                                    <td>{{ order.prepayment or '0' }} ₽</td>
+                                                    <td>{{ order.prepayment or '0' }} {{ money_symbol }}</td>
                                                     <td onclick="event.stopPropagation();">
                                                         <a href="/order/{{ order.order_id }}" class="btn btn-sm btn-primary">
                                                             <i class="fas fa-eye"></i>
@@ -602,10 +602,10 @@
                                                     </td>
                                                     <td>{{ sale.date|format_date(true) if sale.date else '—' }}</td>
                                                     <td>{{ sale.master_name or '—' }}</td>
-                                                    <td>{{ (sale.services_total or 0)|round(2) }} ₽</td>
-                                                    <td>{{ (sale.parts_total or 0)|round(2) }} ₽</td>
-                                                    <td class="fw-bold">{{ (sale.total_amount or 0)|round(2) }} ₽</td>
-                                                    <td>{{ (sale.paid_amount or 0)|round(2) }} ₽</td>
+                                                    <td>{{ (sale.services_total or 0)|round(2) }} {{ money_symbol }}</td>
+                                                    <td>{{ (sale.parts_total or 0)|round(2) }} {{ money_symbol }}</td>
+                                                    <td class="fw-bold">{{ (sale.total_amount or 0)|round(2) }} {{ money_symbol }}</td>
+                                                    <td>{{ (sale.paid_amount or 0)|round(2) }} {{ money_symbol }}</td>
                                                     <td onclick="event.stopPropagation();">
                                                         {% if sale.sale_type == 'order' %}
                                                         <a href="/order/{{ sale.reference_id }}" class="btn btn-sm btn-primary">
@@ -795,7 +795,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="editCustomerPhone" class="form-label">Телефон</label>
-                            <input type="tel" class="form-control" id="editCustomerPhone" value="{{ customer.phone or '' }}" placeholder="+7 (XXX) XXX-XX-XX">
+                            <input type="tel" class="form-control" id="editCustomerPhone" value="{{ customer.phone or '' }}" placeholder="{{ phone_prefix_plus }}">
                         </div>
                         <div class="mb-3">
                             <label for="editCustomerEmail" class="form-label">Email</label>

@@ -83,10 +83,21 @@ def amount_to_words_rub(amount) -> str:
         words = " ".join(c.strip() for c in chunks if c.strip())
 
     words = (words[:1].upper() + words[1:]) if words else "Ноль"
-    return (
-        f"{words} {_plural(rub, 'рубль', 'рубля', 'рублей')} "
-        f"{kop:02d} {_plural(kop, 'копейка', 'копейки', 'копеек')}"
-    )
+    units = None
+    try:
+        from app.utils.locale_fmt import get_money_word_units
+
+        units = get_money_word_units()
+    except Exception:
+        units = None
+    major = (units or {}).get("major") or ("рубль", "рубля", "рублей")
+    minor = (units or {}).get("minor") or ("копейка", "копейки", "копеек")
+    if minor and minor[0]:
+        return (
+            f"{words} {_plural(rub, major[0], major[1], major[2])} "
+            f"{kop:02d} {_plural(kop, minor[0], minor[1], minor[2])}"
+        )
+    return f"{words} {_plural(rub, major[0], major[1], major[2])}"
 
 
 def cents_to_words_rub(cents: int) -> str:

@@ -54,7 +54,7 @@
             <div class="card-body py-2">
                 <div class="small text-muted">Всего к выплате</div>
                 <div class="fw-semibold text-success">
-                    {{ ((totals.total_to_pay_cents or 0) / 100) | round(2) }} ₽
+                    {{ ((totals.total_to_pay_cents or 0) / 100) | round(2) }} {{ money_symbol }}
                 </div>
             </div>
         </div>
@@ -64,7 +64,7 @@
             <div class="card-body py-2">
                 <div class="small text-muted">Долг сотрудников компании</div>
                 <div class="fw-semibold text-danger">
-                    {{ ((totals.total_debt_company_cents or 0) / 100) | round(2) }} ₽
+                    {{ ((totals.total_debt_company_cents or 0) / 100) | round(2) }} {{ money_symbol }}
                 </div>
             </div>
         </div>
@@ -96,12 +96,12 @@
             <tr>
                 <td>{{ row.employee_name or 'Неизвестно' }}</td>
                 <td>{{ 'Мастер' if row.role == 'master' else 'Менеджер' }}</td>
-                <td class="text-end">{{ ((row.accrued_cents or 0) / 100) | round(2) }} ₽</td>
-                <td class="text-end text-success">{{ ((row.bonuses_cents or 0) / 100) | round(2) }} ₽</td>
-                <td class="text-end text-danger">{{ ((row.fines_cents or 0) / 100) | round(2) }} ₽</td>
-                <td class="text-end">{{ ((row.paid_cents or 0) / 100) | round(2) }} ₽</td>
+                <td class="text-end">{{ ((row.accrued_cents or 0) / 100) | round(2) }} {{ money_symbol }}</td>
+                <td class="text-end text-success">{{ ((row.bonuses_cents or 0) / 100) | round(2) }} {{ money_symbol }}</td>
+                <td class="text-end text-danger">{{ ((row.fines_cents or 0) / 100) | round(2) }} {{ money_symbol }}</td>
+                <td class="text-end">{{ ((row.paid_cents or 0) / 100) | round(2) }} {{ money_symbol }}</td>
                 <td class="text-end {% if owed < 0 %}text-danger{% elif owed > 0 %}text-success{% endif %}">
-                    {{ (owed / 100) | round(2) }} ₽
+                    {{ (owed / 100) | round(2) }} {{ money_symbol }}
                 </td>
                 <td class="text-end">
                     <a href="/salary/employee/{{ row.employee_id }}/{{ row.role }}" class="btn btn-sm btn-outline-primary">Открыть</a>

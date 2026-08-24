@@ -1,5 +1,12 @@
 """Russian phone login: 7 / +7 / 8 must resolve to the same number."""
+import pytest
+
 from app.utils.validators import normalize_phone, phone_lookup_variants
+
+
+@pytest.fixture(autouse=True)
+def _rf_phone_prefix(monkeypatch):
+    monkeypatch.setattr("app.utils.locale_fmt.get_phone_prefix", lambda: "7")
 
 
 def test_normalize_phone_accepts_7_plus7_and_8():

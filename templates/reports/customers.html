@@ -39,16 +39,16 @@
                         <p><strong>Всего заявок:</strong> <span class="h5 text-primary">{{ report.summary_orders if report else (customers|sum(attribute='orders_count') or 0) }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая сумма:</strong> <span class="h5 text-success">{{ ((report.summary_spent if report else (customers|sum(attribute='total_spent') or 0))|round(2)) }} ₽</span></p>
+                        <p><strong>Общая сумма:</strong> <span class="h5 text-success">{{ ((report.summary_spent if report else (customers|sum(attribute='total_spent') or 0))|round(2)) }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Средний чек:</strong> <span class="h5 text-info">
                             {% set total_orders = report.summary_orders if report else (customers|sum(attribute='orders_count') or 0) %}
                             {% set total_spent = report.summary_spent if report else (customers|sum(attribute='total_spent') or 0) %}
                             {% if total_orders > 0 %}
-                                {{ (total_spent / total_orders)|round(2) }} ₽
+                                {{ (total_spent / total_orders)|round(2) }} {{ money_symbol }}
                             {% else %}
-                                0 ₽
+                                0 {{ money_symbol }}
                             {% endif %}
                         </span></p>
                     </div>
@@ -86,8 +86,8 @@
                                 </td>
                                 <td>{{ customer.phone }}</td>
                                 <td><span class="badge bg-primary">{{ customer.orders_count }}</span></td>
-                                <td>{{ customer.total_spent or 0 }} ₽</td>
-                                <td>{{ customer.avg_order_value or 0 }} ₽</td>
+                                <td>{{ customer.total_spent or 0 }} {{ money_symbol }}</td>
+                                <td>{{ customer.avg_order_value or 0 }} {{ money_symbol }}</td>
                                 <td>{{ customer.last_order_date|format_date(true) if customer.last_order_date else '-' }}</td>
                             </tr>
                             {% else %}

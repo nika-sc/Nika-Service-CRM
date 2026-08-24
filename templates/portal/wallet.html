@@ -8,13 +8,13 @@
 <div class="card mb-4 {% if balance > 0 %}border-success{% elif balance < 0 %}border-danger{% else %}border-secondary{% endif %}">
     <div class="card-body text-center">
         {% if balance > 0 %}
-        <h2 class="text-success mb-2">{{ "%.2f"|format(balance) }} ₽</h2>
+        <h2 class="text-success mb-2">{{ "%.2f"|format(balance) }} {{ money_symbol }}</h2>
         <p class="text-muted mb-0">Переплата по заявкам</p>
         {% elif balance < 0 %}
-        <h2 class="text-danger mb-2">{{ "%.2f"|format(balance) }} ₽</h2>
+        <h2 class="text-danger mb-2">{{ "%.2f"|format(balance) }} {{ money_symbol }}</h2>
         <p class="text-muted mb-0">Долг по заявкам</p>
         {% else %}
-        <h2 class="text-secondary mb-2">0.00 ₽</h2>
+        <h2 class="text-secondary mb-2">0.00 {{ money_symbol }}</h2>
         <p class="text-muted mb-0">Нет переплаты и долга</p>
         {% endif %}
     </div>
@@ -36,10 +36,10 @@
             {% for r in order_rows %}
             <tr>
                 <td>#{{ r.id }}</td>
-                <td class="text-end">{{ "%.2f"|format(r.total) }} ₽</td>
-                <td class="text-end">{{ "%.2f"|format(r.paid) }} ₽</td>
+                <td class="text-end">{{ "%.2f"|format(r.total) }} {{ money_symbol }}</td>
+                <td class="text-end">{{ "%.2f"|format(r.paid) }} {{ money_symbol }}</td>
                 <td class="text-end {% if r.diff > 0 %}text-success{% elif r.diff < 0 %}text-danger{% endif %}">
-                    {{ "%.2f"|format(r.diff) }} ₽
+                    {{ "%.2f"|format(r.diff) }} {{ money_symbol }}
                 </td>
             </tr>
             {% endfor %}

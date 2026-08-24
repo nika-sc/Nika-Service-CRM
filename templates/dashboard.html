@@ -364,7 +364,7 @@
                 <div class="metric-card bg-gradient-revenue h-100">
                     <i class="fas fa-coins metric-icon"></i>
                     <div class="metric-label">Выручка по компании</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.revenue.total|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.revenue.total|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.revenue.change %}
                     <span class="metric-change {{ dashboard.summary.revenue.change.direction }}">
                         {{ dashboard.summary.revenue.change | dashboard_money_delta }}
@@ -378,7 +378,7 @@
                 <div class="metric-card bg-gradient-services h-100">
                     <i class="fas fa-tools metric-icon"></i>
                     <div class="metric-label">Выручка по услугам</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.services_revenue.total|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.services_revenue.total|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.services_revenue.change %}
                     <span class="metric-change {{ dashboard.summary.services_revenue.change.direction }}">
                         {{ dashboard.summary.services_revenue.change | dashboard_money_delta }}
@@ -392,7 +392,7 @@
                 <div class="metric-card bg-gradient-parts h-100">
                     <i class="fas fa-box metric-icon"></i>
                     <div class="metric-label">Выручка по товарам</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.parts_revenue.total|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.parts_revenue.total|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.parts_revenue.change %}
                     <span class="metric-change {{ dashboard.summary.parts_revenue.change.direction }}">
                         {{ dashboard.summary.parts_revenue.change | dashboard_money_delta }}
@@ -406,7 +406,7 @@
                     <div class="metric-card bg-gradient-profit h-100">
                         <i class="fas fa-arrow-down metric-icon"></i>
                         <div class="metric-label">Приход (касса)</div>
-                        <div class="metric-value">{{ "%.0f"|format(dashboard.summary.profit.total|default(0)|float) }} ₽</div>
+                        <div class="metric-value">{{ "%.0f"|format(dashboard.summary.profit.total|default(0)|float) }} {{ money_symbol }}</div>
                         {% if dashboard.summary.profit and dashboard.summary.profit.change %}
                         <span class="metric-change {{ dashboard.summary.profit.change.direction }}">
                             {{ dashboard.summary.profit.change | dashboard_money_delta }}
@@ -444,15 +444,15 @@
                         <div class="card-body py-3">
                             <div class="d-flex justify-content-between small">
                                 <span class="text-success">Доход:</span>
-                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_income|default(0)|float) }} ₽</strong>
+                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_income|default(0)|float) }} {{ money_symbol }}</strong>
                             </div>
                             <div class="d-flex justify-content-between small">
                                 <span class="text-danger">Расход:</span>
-                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_expense|default(0)|float) }} ₽</strong>
+                                <strong>{{ "%.0f"|format(dashboard.profit_report.total_expense|default(0)|float) }} {{ money_symbol }}</strong>
                             </div>
                             <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
                                 <span>Чистая прибыль:</span>
-                                <strong class="{% if (dashboard.profit_report.net_profit|default(0)) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ "%.0f"|format(dashboard.profit_report.net_profit|default(0)|float) }} ₽</strong>
+                                <strong class="{% if (dashboard.profit_report.net_profit|default(0)) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ "%.0f"|format(dashboard.profit_report.net_profit|default(0)|float) }} {{ money_symbol }}</strong>
                             </div>
                             <div class="small text-muted mt-1">Подробнее →</div>
                         </div>
@@ -504,7 +504,7 @@
                     <div class="metric-card bg-white border">
                         <i class="fas fa-arrow-down metric-icon text-success"></i>
                         <div class="metric-label text-muted">Поступления (касса)</div>
-                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.income.total|default(0)|float) }} ₽</div>
+                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.income.total|default(0)|float) }} {{ money_symbol }}</div>
                         {% if dashboard.cashflow.income.change %}
                         <span class="metric-change {{ dashboard.cashflow.income.change.direction }}">
                             {{ dashboard.cashflow.income.change | dashboard_money_delta }}
@@ -519,7 +519,7 @@
                     <div class="metric-card bg-white border">
                         <i class="fas fa-arrow-up metric-icon text-danger"></i>
                         <div class="metric-label text-muted">Расходы (касса)</div>
-                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.expense.total|default(0)|float) }} ₽</div>
+                        <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.cashflow.expense.total|default(0)|float) }} {{ money_symbol }}</div>
                         {% if dashboard.cashflow.expense.change %}
                         <span class="metric-change {{ dashboard.cashflow.expense.change.direction }}">
                             {{ dashboard.cashflow.expense.change | dashboard_money_delta }}
@@ -533,7 +533,7 @@
                 <div class="metric-card bg-gradient-warning">
                     <i class="fas fa-file-invoice-dollar metric-icon"></i>
                     <div class="metric-label">Дебиторка (активные заявки)</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.receivables.total_debt|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.receivables.total_debt|default(0)|float) }} {{ money_symbol }}</div>
                     <div class="metric-change same">
                         <i class="fas fa-list"></i> {{ dashboard.receivables.orders_with_debt|default(0) }} заявок с долгом
                     </div>
@@ -578,9 +578,9 @@
                                         </span>
                                     </a>
                                 </td>
-                                <td class="text-end"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format((o.total_sum or 0)|float) }} ₽</a></td>
-                                <td class="text-end text-success"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-success text-decoration-none">{{ "%.0f"|format((o.paid or 0)|float) }} ₽</a></td>
-                                <td class="text-end text-danger fw-bold"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-danger text-decoration-none">{{ "%.0f"|format((o.debt or 0)|float) }} ₽</a></td>
+                                <td class="text-end"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format((o.total_sum or 0)|float) }} {{ money_symbol }}</a></td>
+                                <td class="text-end text-success"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-success text-decoration-none">{{ "%.0f"|format((o.paid or 0)|float) }} {{ money_symbol }}</a></td>
+                                <td class="text-end text-danger fw-bold"><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-danger text-decoration-none">{{ "%.0f"|format((o.debt or 0)|float) }} {{ money_symbol }}</a></td>
                                 <td><a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="text-primary text-decoration-none">{{ o.created_at|format_date(true) if o.created_at else '—' }}</a></td>
                             </tr>
                             {% endfor %}
@@ -645,11 +645,11 @@
                         <div class="row">
                             <div class="col-6">
                                 <div class="text-muted">Оценка по рознице</div>
-                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.retail_value|default(0)|float) }} ₽</div>
+                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.retail_value|default(0)|float) }} {{ money_symbol }}</div>
                             </div>
                             <div class="col-6">
                                 <div class="text-muted">Себестоимость</div>
-                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.cost_value|default(0)|float) }} ₽</div>
+                                <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.cost_value|default(0)|float) }} {{ money_symbol }}</div>
                             </div>
                         </div>
                     </div>
@@ -669,7 +669,7 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="text-muted">Сумма</div>
-                                    <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.purchases_total|default(0)|float) }} ₽</div>
+                                    <div class="h4 mb-0">{{ "%.0f"|format(dashboard.warehouse.purchases_total|default(0)|float) }} {{ money_symbol }}</div>
                                 </div>
                             </div>
                         </div>
@@ -702,7 +702,7 @@
                                 </td>
                                 <td>{{ c.phone }}</td>
                                 <td class="text-end">{{ c.orders_count }}</td>
-                                <td class="text-end fw-bold">{{ "%.0f"|format((c.total_sum or 0)|float) }} ₽</td>
+                                <td class="text-end fw-bold">{{ "%.0f"|format((c.total_sum or 0)|float) }} {{ money_symbol }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -727,7 +727,7 @@
                 <div class="metric-card bg-gradient-orders-revenue">
                     <i class="fas fa-receipt metric-icon"></i>
                     <div class="metric-label">Выручка по заказам</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.orders.revenue|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.orders.revenue|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.orders.revenue_change %}
                     <span class="metric-change {{ dashboard.summary.orders.revenue_change.direction }}">
                         {{ dashboard.summary.orders.revenue_change | dashboard_money_delta }}
@@ -755,7 +755,7 @@
                 <div class="metric-card bg-white border">
                     <i class="fas fa-calculator metric-icon text-info"></i>
                     <div class="metric-label text-muted">Средний чек заказа</div>
-                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.orders.avg_check|default(0)|float) }} ₽</div>
+                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.orders.avg_check|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.orders.avg_change %}
                     <span class="metric-change {{ dashboard.summary.orders.avg_change.direction }}">
                         {{ dashboard.summary.orders.avg_change | dashboard_avg_money_delta }}
@@ -808,7 +808,7 @@
                 <div class="metric-card bg-gradient-shop">
                     <i class="fas fa-shopping-bag metric-icon"></i>
                     <div class="metric-label">Выручка по магазину</div>
-                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.shop.revenue|default(0)|float) }} ₽</div>
+                    <div class="metric-value">{{ "%.0f"|format(dashboard.summary.shop.revenue|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.shop.revenue_change %}
                     <span class="metric-change {{ dashboard.summary.shop.revenue_change.direction }}">
                         {{ dashboard.summary.shop.revenue_change | dashboard_money_delta }}
@@ -836,7 +836,7 @@
                 <div class="metric-card bg-white border">
                     <i class="fas fa-receipt metric-icon text-primary"></i>
                     <div class="metric-label text-muted">Средний чек магазина</div>
-                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.shop.avg_check|default(0)|float) }} ₽</div>
+                    <div class="metric-value text-dark">{{ "%.0f"|format(dashboard.summary.shop.avg_check|default(0)|float) }} {{ money_symbol }}</div>
                     {% if dashboard.summary.shop.avg_change %}
                     <span class="metric-change {{ dashboard.summary.shop.avg_change.direction }}">
                         {{ dashboard.summary.shop.avg_change | dashboard_avg_money_delta }}
@@ -868,7 +868,7 @@
                     </div>
                     <div class="card-body">
                         <p class="text-muted mb-3">
-                            Ожидаемая выручка: <strong>{{ "%.0f"|format(dashboard.orders_by_status.active_sum|default(0)|float) }} ₽</strong>
+                            Ожидаемая выручка: <strong>{{ "%.0f"|format(dashboard.orders_by_status.active_sum|default(0)|float) }} {{ money_symbol }}</strong>
                         </p>
                         <table class="table status-table mb-0">
                             <tbody>
@@ -882,7 +882,7 @@
                                         </span>
                                     </td>
                                     <td class="text-end"><strong>{{ status.count }}</strong></td>
-                                    <td class="text-end text-muted">{{ "%.0f"|format(status.sum|float) }} ₽</td>
+                                    <td class="text-end text-muted">{{ "%.0f"|format(status.sum|float) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endif %}
                                 {% endfor %}
@@ -917,7 +917,7 @@
                             </div>
                             <div class="master-stats">
                                 <span><i class="fas fa-clipboard-list"></i> {{ master.orders_count }}</span>
-                                <span><i class="fas fa-ruble-sign"></i> {{ "%.0f"|format(master.total_sum|float) }}</span>
+                                <span><span class="nika-money-icon">{{ money_icon_char }}</span> {{ "%.0f"|format(master.total_sum|float) }}</span>
                                 <span><i class="fas fa-chart-line"></i> ср. {{ "%.0f"|format(((master.total_sum|float) / master.orders_count) if master.orders_count else 0) }}</span>
                             </div>
                         </div>
@@ -948,7 +948,7 @@
                         <div class="text-muted">просроченных заказов</div>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <div class="h4 text-danger">{{ "%.0f"|format(dashboard.overdue_orders.total_sum|float) }} ₽</div>
+                        <div class="h4 text-danger">{{ "%.0f"|format(dashboard.overdue_orders.total_sum|float) }} {{ money_symbol }}</div>
                         <div class="text-muted">общая сумма</div>
                     </div>
                 </div>
@@ -1011,7 +1011,7 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum|float) }} ₽</a>
+                                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum|float) }} {{ money_symbol }}</a>
                                 </td>
                                 <td>{{ order.created_at|format_date(true) if order.created_at else '—' }}</td>
                             </tr>
@@ -1203,7 +1203,7 @@
                             let label = context.dataset.label || '';
                             if (context.parsed.y !== null) {
                                 if (context.dataset.label && context.dataset.label.includes('Выручка')) {
-                                    label += ': ' + context.parsed.y.toLocaleString('ru-RU') + ' ₽';
+                                    label += ': ' + context.parsed.y.toLocaleString('ru-RU') + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                                 } else {
                                     label += ': ' + context.parsed.y;
                                 }
@@ -1280,7 +1280,7 @@
                                 ...chartOptions.scales.y,
                                 ticks: {
                                     callback: function(value) {
-                                        return value.toLocaleString('ru-RU') + ' ₽';
+                                        return value.toLocaleString('ru-RU') + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                                     }
                                 }
                             }

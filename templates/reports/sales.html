@@ -44,24 +44,24 @@
                         <p><strong>Всего заявок:</strong> <span class="h5">{{ report.total_orders }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Сумма услуг:</strong> <span class="h5 text-primary">{{ report.total_services }} ₽</span></p>
+                        <p><strong>Сумма услуг:</strong> <span class="h5 text-primary">{{ report.total_services }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Сумма запчастей:</strong> <span class="h5 text-info">{{ report.total_parts }} ₽</span></p>
+                        <p><strong>Сумма запчастей:</strong> <span class="h5 text-info">{{ report.total_parts }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} ₽</span></p>
+                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} {{ money_symbol }}</span></p>
                     </div>
                 </div>
                 <div class="row mt-2">
                     <div class="col-md-4">
-                        <p><strong>Оплачено:</strong> <span class="h5 text-success">{{ "%.2f"|format(report.total_payments) }} ₽</span></p>
+                        <p><strong>Оплачено:</strong> <span class="h5 text-success">{{ "%.2f"|format(report.total_payments) }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-4">
                         <p><strong>Задолженность:</strong> 
                             {% set debt = report.get('total_debt', 0) or 0 %}
                             <span class="h5 {% if debt > 0 %}text-danger{% else %}text-success{% endif %}">
-                                {{ "%.2f"|format(debt) }} ₽
+                                {{ "%.2f"|format(debt) }} {{ money_symbol }}
                             </span>
                         </p>
                     </div>
@@ -125,12 +125,12 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ order.created_at|format_date(with_time=True) if order.created_at else '—' }}</td>
-                                <td>{{ (order.services_total or 0)|round(2) }} ₽</td>
-                                <td>{{ (order.parts_total or 0)|round(2) }} ₽</td>
-                                <td class="fw-bold">{{ (order.total_revenue or 0)|round(2) }} ₽</td>
-                                <td class="text-success">{{ (order.paid or order.paid_amount or 0)|round(2) }} ₽</td>
+                                <td>{{ (order.services_total or 0)|round(2) }} {{ money_symbol }}</td>
+                                <td>{{ (order.parts_total or 0)|round(2) }} {{ money_symbol }}</td>
+                                <td class="fw-bold">{{ (order.total_revenue or 0)|round(2) }} {{ money_symbol }}</td>
+                                <td class="text-success">{{ (order.paid or order.paid_amount or 0)|round(2) }} {{ money_symbol }}</td>
                                 <td class="{% if (order.debt or (order.total_revenue or 0) - (order.paid or order.paid_amount or 0)) > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
-                                    {{ ((order.debt or ((order.total_revenue or 0) - (order.paid or order.paid_amount or 0)))|round(2)) }} ₽
+                                    {{ ((order.debt or ((order.total_revenue or 0) - (order.paid or order.paid_amount or 0)))|round(2)) }} {{ money_symbol }}
                                 </td>
                                 <td>
                                     {% if order.payment_id %}

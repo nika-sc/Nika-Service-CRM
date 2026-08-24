@@ -345,11 +345,9 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Страна</label>
-                                <select class="form-select" name="country">
-                                    {% for code, label in country_options %}
-                                        <option value="{{ code }}" {% if settings.country == code %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text" class="form-control" name="country"
+                                       value="{{ settings.country or 'Россия' }}"
+                                       placeholder="Россия">
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label">Адрес</label>
@@ -392,12 +390,25 @@
                                        min="20" max="800" step="1">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Валюта</label>
-                                <select class="form-select" name="currency">
-                                    {% for code, label in currency_options %}
-                                        <option value="{{ code }}" {% if settings.currency == code %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label">Код валюты</label>
+                                <input type="text" class="form-control" name="currency"
+                                       value="{{ settings.currency or 'RUB' }}"
+                                       placeholder="RUB">
+                                <div class="form-text text-muted">Например: RUB, KGS</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Подпись валюты</label>
+                                <input type="text" class="form-control" name="currency_symbol"
+                                       value="{{ settings.currency_symbol or money_symbol or '₽' }}"
+                                       placeholder="₽">
+                                <div class="form-text text-muted">Как показывать суммы: {{ money_symbol }}, сом</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Префикс телефона</label>
+                                <input type="text" class="form-control" name="phone_prefix"
+                                       value="{{ settings.phone_prefix or phone_prefix or '7' }}"
+                                       placeholder="7" inputmode="numeric">
+                                <div class="form-text text-muted">Цифры без «+». Например: 7</div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Гарантия по умолчанию (дн.)</label>
@@ -1262,7 +1273,7 @@
                                                     {% endif %}
                                                 </td>
                                                 <td class="text-end">
-                                                    <span class="badge bg-success fs-6">{{ "%.2f"|format(service.price) }} ₽</span>
+                                                    <span class="badge bg-success fs-6">{{ "%.2f"|format(service.price) }} {{ money_symbol }}</span>
                                                 </td>
                                                 <td class="text-center">
                                                     {% if service.is_default %}
@@ -3918,7 +3929,7 @@ let editingPartId = null;
                     <li><code>##PREPAYMENT_WORDS##</code> — предоплата прописью</li>
                     <li><code>##ESTIMATED_COST##</code> — предварительная стоимость</li>
                     <li><code>##ESTIMATED_COST_WORDS##</code> — предварительная стоимость прописью</li>
-                    <li><code>##CURRENCY##</code> — валюта (₽)</li>
+                    <li><code>##CURRENCY##</code> — валюта ({{ money_symbol }})</li>
                 </ul>
             </div>
             <div class="col-md-4">
@@ -3982,6 +3993,9 @@ let editingPartId = null;
     }
     
     function previewTemplate(targetTextarea = null) {
+        if (window.tinymce && typeof window.tinymce.triggerSave === 'function') {
+            window.tinymce.triggerSave();
+        }
         const textarea = targetTextarea || getActiveTemplateTextarea();
         if (!textarea) return;
         const templateHtml = textarea.value;
@@ -4009,16 +4023,16 @@ let editingPartId = null;
             CLIENT_PHONE: '+79001234567',
             CLIENT_EMAIL: 'client@example.com',
             TOTAL_PAID: '287399.65',
-            'total.paid.words': 'Двести восемьдесят семь тысяч триста девяносто девять рублей 65 копеек',
+            'total.paid.words': {{ 287399.65|money_words|tojson }},
             PREPAYMENT: '1000.00',
-            PREPAYMENT_WORDS: 'Одна тысяча рублей 00 копеек',
+            PREPAYMENT_WORDS: {{ 1000|money_words|tojson }},
             ESTIMATED_COST: '5000.00',
-            ESTIMATED_COST_WORDS: 'Пять тысяч рублей 00 копеек',
+            ESTIMATED_COST_WORDS: {{ 5000|money_words|tojson }},
             ENGINEER_NAME: 'Сергей',
             MASTER_NAME: 'Сергей',
             MANAGER_NAME: 'Николай',
             EMPLOYEE_NAME: 'Сергей',
-            CURRENCY: '₽',
+            CURRENCY: {{ money_symbol|tojson }},
             TOTAL_ITEMS: '287399.65',
             INDEX: '1',
             ITEM_NAME: 'Диагностика',
@@ -4031,10 +4045,24 @@ let editingPartId = null;
         };
 
         function applySimpleTags(raw) {
-            let result = raw;
+            let result = String(raw || '');
+            result = result.replace(/&#(?:35|x23);/gi, '#');
+            result = result.replace(/##([\s\S]*?)##/g, (_, inner) => {
+                const name = String(inner || '')
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+                    .replace(/&nbsp;/gi, ' ')
+                    .trim()
+                    .replace(/\s+/g, '');
+                return `##${name}##`;
+            });
             result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*"([^"]+)"[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
             result = result.replace(/<var-inline[^>]*\s+data-var\s*=\s*'([^']+)'[^>]*>.*?<\/var-inline>/gis, (_, key) => mockData[key] || '');
             result = result.replace(/##([A-Za-z_][A-Za-z0-9_.-]*)##/g, (_, key) => (mockData[key] !== undefined ? mockData[key] : `##${key}##`));
+            const cur = mockData.CURRENCY;
+            if (cur) {
+                result = result.replace(new RegExp(`(\\d)${cur.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'), `$1 ${cur}`);
+            }
             return result;
         }
 
@@ -5667,6 +5695,10 @@ let editingPartId = null;
                 toolbar: 'undo redo | styles fontsize | bold italic underline | alignleft aligncenter alignright | bullist numlist | table link | code preview fullscreen',
                 font_size_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 24pt',
                 branding: false,
+                text_patterns: false,
+                protect: [
+                    /##[A-Za-z0-9_.-]+##/g
+                ],
                 setup: function (editor) {
                     editor.on('change keyup', function () {
                         editor.save();

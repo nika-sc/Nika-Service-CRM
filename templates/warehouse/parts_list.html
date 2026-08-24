@@ -158,11 +158,11 @@
                                             </span>
                                         </td>
                                         <td>{{ item.min_quantity }}</td>
-                                        <td><strong>{{ "%.2f"|format(item.retail_price or 0) }} ₽</strong></td>
-                                        <td>{{ "%.2f"|format(item.purchase_price or 0) }} ₽</td>
+                                        <td><strong>{{ "%.2f"|format(item.retail_price or 0) }} {{ money_symbol }}</strong></td>
+                                        <td>{{ "%.2f"|format(item.purchase_price or 0) }} {{ money_symbol }}</td>
                                         <td>
                                             <span class="badge {% if item.margin and item.margin > 0 %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {{ "%.2f"|format(item.margin or 0) }} ₽
+                                                {{ "%.2f"|format(item.margin or 0) }} {{ money_symbol }}
                                             </span>
                                         </td>
                                         <td>

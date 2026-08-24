@@ -479,8 +479,8 @@
                     <div class="col-md-4 required">
                         <label for="phone" class="form-label">Телефон</label>
                         <input type="tel" class="form-control" id="phone" name="phone"
-                               inputmode="tel" maxlength="18"
-                               placeholder="+7 (999) 123-45-67" value="+7" required>
+                               inputmode="tel" maxlength="22"
+                               placeholder="{{ phone_prefix_plus }} ..." value="{{ phone_prefix_plus }}" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Email</label>
@@ -571,10 +571,10 @@
                             <span class="input-group-text">₽</span>
                         </div>
                         <div class="btn-group btn-group-sm prepayment-buttons" role="group">
-                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="0">0 ₽</button>
-                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="1000">1 000 ₽</button>
-                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="5000">5 000 ₽</button>
-                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="10000">10 000 ₽</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="0">0 {{ money_symbol }}</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="1000">1 000 {{ money_symbol }}</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="5000">5 000 {{ money_symbol }}</button>
+                            <button type="button" class="btn btn-outline-primary prepayment-fill" data-value="10000">10 000 {{ money_symbol }}</button>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -674,10 +674,10 @@
             }
         }, 0);
 
-        // Телефон по умолчанию: +7 (и курсор в конец)
+        // Телефон по умолчанию: префикс из настроек
         if (phoneInput && !phoneInput.value) {
-            phoneInput.value = '+7';
-            phoneInput.dataset.normalized = '7';
+            phoneInput.value = (window.nikaPhoneDefaultValue && window.nikaPhoneDefaultValue()) || '+7';
+            phoneInput.dataset.normalized = (window.nikaPhonePrefix && window.nikaPhonePrefix()) || '7';
             try {
                 phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length);
             } catch (e) {}
@@ -1642,23 +1642,21 @@
         }
 
         function normalizePhoneClient(value) {
+            if (window.nikaNormalizePhone) return window.nikaNormalizePhone(value);
             const digits = value.replace(/\D/g, '');
             if (!digits) return '';
             let normalized = digits;
-            // Если начинается с 8, заменяем на 7
             if (normalized.startsWith('8')) {
                 normalized = '7' + normalized.slice(1);
             }
-            // Если 10 цифр и не начинается с 7, добавляем 7 в начале
             if (normalized.length === 10 && !normalized.startsWith('7')) {
                 normalized = '7' + normalized;
             }
-            // Если меньше 10 цифр, возвращаем как есть (пользователь еще вводит)
             return normalized;
         }
 
         function formatPhoneDisplay(value) {
-            // Форматирует телефон в формат: +7(988)146-32-31
+            if (window.nikaFormatPhoneDisplay) return window.nikaFormatPhoneDisplay(value);
             const digits = normalizePhoneClient(value);
             if (digits.length === 11 && digits.startsWith('7')) {
                 return `+${digits[0]}(${digits.slice(1,4)})${digits.slice(4,7)}-${digits.slice(7,9)}-${digits.slice(9)}`;
@@ -1667,7 +1665,7 @@
         }
 
         function maskPhoneInput(value) {
-            // Маска для ввода в формате: +7(988)146-32-31
+            if (window.nikaMaskPhoneInput) return window.nikaMaskPhoneInput(value);
             const digits = normalizePhoneClient(value);
             if (!digits) return '';
             let masked = '+';

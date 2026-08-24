@@ -254,7 +254,7 @@
                                                     <th><i class="fas fa-comment me-1"></i>Комментарий</th>
                                                     <th><i class="fas fa-cog me-1"></i>Услуги</th>
                                                     <th><i class="fas fa-box me-1"></i>Запчасти</th>
-                                                    <th><i class="fas fa-ruble-sign me-1"></i>Итого</th>
+                                                    <th><span class="nika-money-icon me-1">{{ money_icon_char }}</span>Итого</th>
                                                     <th><i class="fas fa-check-circle me-1"></i>Оплачено</th>
                                                     <th><i class="fas fa-cog me-1"></i>Действия</th>
                                                 </tr>
@@ -298,7 +298,7 @@
                                                     <td>{{ order.master_name or '—' }}</td>
                                                     <td>
                                                         {% if order.prepayment %}
-                                                            <strong>{{ order.prepayment }} ₽</strong>
+                                                            <strong>{{ order.prepayment }} {{ money_symbol }}</strong>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
@@ -349,7 +349,7 @@
                                                         {% if order.services_count and order.services_count > 0 %}
                                                             <span class="badge badge-primary">{{ order.services_count }}</span>
                                                             {% if order.services_total %}
-                                                                <div class="text-muted small">{{ order.services_total }} ₽</div>
+                                                                <div class="text-muted small">{{ order.services_total }} {{ money_symbol }}</div>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="text-muted">—</span>
@@ -364,14 +364,14 @@
                                                     </td>
                                                     <td>
                                                         {% if order.total_amount %}
-                                                            <strong>{{ order.total_amount }} ₽</strong>
+                                                            <strong>{{ order.total_amount }} {{ money_symbol }}</strong>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
                                                     </td>
                                                     <td>
                                                         {% if order.total_paid %}
-                                                            <span class="badge badge-success">{{ order.total_paid }} ₽</span>
+                                                            <span class="badge badge-success">{{ order.total_paid }} {{ money_symbol }}</span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}

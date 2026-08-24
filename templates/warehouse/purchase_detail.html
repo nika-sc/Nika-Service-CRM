@@ -32,7 +32,7 @@
                         </p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Сумма:</strong> <span class="h4 text-primary">{{ purchase.total_amount }} ₽</span></p>
+                        <p><strong>Сумма:</strong> <span class="h4 text-primary">{{ purchase.total_amount }} {{ money_symbol }}</span></p>
                         {% if purchase.notes %}
                         <p><strong>Примечания:</strong> {{ purchase.notes }}</p>
                         {% endif %}
@@ -61,8 +61,8 @@
                             <tr>
                                 <td>{{ item.part_name }} ({{ item.part_number }})</td>
                                 <td>{{ item.quantity }}</td>
-                                <td>{{ item.purchase_price }} ₽</td>
-                                <td>{{ item.total_price }} ₽</td>
+                                <td>{{ item.purchase_price }} {{ money_symbol }}</td>
+                                <td>{{ item.total_price }} {{ money_symbol }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

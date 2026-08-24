@@ -14,12 +14,17 @@ def _as_change_dict(change: Any) -> Optional[Dict[str, Any]]:
 
 
 def format_dashboard_money_change(change: Any) -> str:
-    """Абсолютная разница в ₽ и процент со знаком, напр. «+1 950 ₽ (+52.5%)»."""
+    """Абсолютная разница в валюте тенанта и процент со знаком."""
     ch = _as_change_dict(change)
     if ch is None:
         return "—"
+    try:
+        from app.utils.locale_fmt import get_money_symbol
+        symbol = get_money_symbol()
+    except Exception:
+        symbol = "₽"
     delta = float(ch.get("value") or 0)
-    abs_part = f"{delta:+.0f} ₽"
+    abs_part = f"{delta:+.0f} {symbol}"
     if ch.get("from_zero"):
         return f"{abs_part} (в сравн. периоде было 0)"
     sp = ch.get("signed_percent")
@@ -45,15 +50,20 @@ def format_dashboard_count_change(change: Any) -> str:
 
 
 def format_dashboard_avg_money_change(change: Any) -> str:
-    """Средний чек: дельта в ₽ может быть дробной."""
+    """Средний чек: дельта в валюте тенанта может быть дробной."""
     ch = _as_change_dict(change)
     if ch is None:
         return "—"
+    try:
+        from app.utils.locale_fmt import get_money_symbol
+        symbol = get_money_symbol()
+    except Exception:
+        symbol = "₽"
     delta = float(ch.get("value") or 0)
     if abs(delta - round(delta)) < 0.05:
-        abs_part = f"{round(delta):+.0f} ₽"
+        abs_part = f"{round(delta):+.0f} {symbol}"
     else:
-        abs_part = f"{delta:+.2f} ₽"
+        abs_part = f"{delta:+.2f} {symbol}"
     if ch.get("from_zero"):
         return f"{abs_part} (в сравн. периоде было 0)"
     sp = ch.get("signed_percent")

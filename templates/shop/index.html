@@ -468,23 +468,23 @@
         </div>
         <div class="stat-card" style="border-left-color: #198754;">
             <div class="stat-label">Выручка</div>
-            <div class="stat-value">{{ "%.0f"|format(statistics.total_amount) }} ₽</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.total_amount) }} {{ money_symbol }}</div>
         </div>
         <div class="stat-card" style="border-left-color: #ffc107;">
             <div class="stat-label">Средний чек</div>
-            <div class="stat-value">{{ "%.0f"|format(statistics.avg_amount) }} ₽</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.avg_amount) }} {{ money_symbol }}</div>
         </div>
         <div class="stat-card" style="border-left-color: #dc3545;">
             <div class="stat-label">Возвраты</div>
-            <div class="stat-value">{{ "%.0f"|format(statistics.get('refunds_amount', 0)) }} ₽</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.get('refunds_amount', 0)) }} {{ money_symbol }}</div>
         </div>
         <div class="stat-card" style="border-left-color: #0d6efd;">
             <div class="stat-label">Итого</div>
-            <div class="stat-value">{{ "%.0f"|format(statistics.get('net_amount', statistics.total_amount)) }} ₽</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.get('net_amount', statistics.total_amount)) }} {{ money_symbol }}</div>
         </div>
         <div class="stat-card" style="border-left-color: #6c757d;">
             <div class="stat-label">Скидки</div>
-            <div class="stat-value">{{ "%.0f"|format(statistics.total_discount) }} ₽</div>
+            <div class="stat-value">{{ "%.0f"|format(statistics.total_discount) }} {{ money_symbol }}</div>
         </div>
     </div>
                     
@@ -520,9 +520,9 @@
                             <td>{{ sale.sale_date|format_date(true) }}</td>
                             <td>{{ sale.customer_name or '—' }}</td>
                             <td>{{ sale.items_count or 0 }}</td>
-                            <td>{{ "%.2f"|format(sale.total_amount or 0) }} ₽</td>
-                            <td>{{ "%.2f"|format(sale.discount or 0) }} ₽</td>
-                            <td><strong>{{ "%.2f"|format(sale.final_amount or 0) }} ₽</strong></td>
+                            <td>{{ "%.2f"|format(sale.total_amount or 0) }} {{ money_symbol }}</td>
+                            <td>{{ "%.2f"|format(sale.discount or 0) }} {{ money_symbol }}</td>
+                            <td><strong>{{ "%.2f"|format(sale.final_amount or 0) }} {{ money_symbol }}</strong></td>
                             <td>
                                 <span class="badge bg-{{ 'success' if sale.paid_amount else 'warning' }}">
                                     {{ payment_labels.get(sale.payment_method, sale.payment_method) or '—' }}
@@ -623,15 +623,15 @@
                         <div class="total-section" id="totalSection">
                             <div class="total-row">
                                 <span>Сумма:</span>
-                                <span id="totalAmount">0.00 ₽</span>
+                                <span id="totalAmount">0.00 {{ money_symbol }}</span>
                             </div>
                             <div class="total-row">
                                 <span>Скидка:</span>
-                                <span id="totalDiscount">0.00 ₽</span>
+                                <span id="totalDiscount">0.00 {{ money_symbol }}</span>
                             </div>
                             <div class="total-row final">
                                 <span>Итого:</span>
-                                <span id="finalAmount">0.00 ₽</span>
+                                <span id="finalAmount">0.00 {{ money_symbol }}</span>
                             </div>
                         </div>
 
@@ -684,7 +684,7 @@
                                 {% endfor %}
                             </div>
                             <div class="mb-3">
-                                <label for="discountInput" class="form-label">Скидка (₽)</label>
+                                <label for="discountInput" class="form-label">Скидка ({{ money_symbol }})</label>
                                 <input type="number" class="form-control" id="discountInput" value="0" min="0" step="0.01">
                             </div>
                             <div class="mb-0">
@@ -888,8 +888,8 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = items.map(item => {
             const oos = item.type === 'part' && (Number(item.stock_quantity) || 0) <= 0;
             const meta = item.type === 'part'
-                ? `${Number(item.price || 0).toFixed(0)} ₽ · ост. ${Number(item.stock_quantity) || 0}`
-                : `${Number(item.price || 0).toFixed(0)} ₽`;
+                ? `${Number(item.price || 0).toFixed(0)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')} · ост. ${Number(item.stock_quantity) || 0}`
+                : `${Number(item.price || 0).toFixed(0)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
             const cls = `shop-chip${item.type === 'part' ? ' is-part' : ''}${oos ? ' is-oos' : ''}`;
             return `<button type="button" class="${cls}" data-cart-item="${encodeURIComponent(JSON.stringify(item))}">
                 <span class="shop-chip-name">${escapeHtml(item.name || '')}</span>
@@ -1035,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', function() {
                        min="1"
                        title="Количество"
                        onchange="updateQuantity(${index}, this.value)">
-                <div class="cart-item-price">${(item.price * item.quantity).toFixed(2)} ₽</div>
+                <div class="cart-item-price">${(item.price * item.quantity).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</div>
                 <i class="fas fa-times cart-item-remove" onclick="removeFromCart(${index})"></i>
                 </div>
         `).join('');
@@ -1071,12 +1071,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const discount = parseFloat(document.getElementById('discountInput').value) || 0;
         const final = Math.max(0, total - discount);
         
-        document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ₽';
-        document.getElementById('totalDiscount').textContent = discount.toFixed(2) + ' ₽';
-        document.getElementById('finalAmount').textContent = final.toFixed(2) + ' ₽';
+        document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+        document.getElementById('totalDiscount').textContent = discount.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+        document.getElementById('finalAmount').textContent = final.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         const saveLabel = saveSaleBtn ? saveSaleBtn.querySelector('.shop-save-total') : null;
         if (saveLabel) {
-            saveLabel.textContent = cart.length ? ('Провести ' + final.toFixed(0) + ' ₽') : 'Провести продажу';
+            saveLabel.textContent = cart.length ? ('Провести ' + final.toFixed(0) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')) : 'Провести продажу';
         }
     }
     

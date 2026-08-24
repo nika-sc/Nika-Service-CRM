@@ -199,15 +199,15 @@
             <div class="row g-2 small">
                 <div class="col-md-3">
                     <div class="text-muted">Общий приход кассы (как в /finance/cash)</div>
-                    <div class="fw-bold text-success" id="cashIncomeTotal">0.00 ₽</div>
+                    <div class="fw-bold text-success" id="cashIncomeTotal">0.00 {{ money_symbol }}</div>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">Выручка в /salary</div>
-                    <div class="fw-bold text-primary" id="salaryRevenueTotal">0.00 ₽</div>
+                    <div class="fw-bold text-primary" id="salaryRevenueTotal">0.00 {{ money_symbol }}</div>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">Разница</div>
-                    <div class="fw-bold" id="cashSalaryDiff">0.00 ₽</div>
+                    <div class="fw-bold" id="cashSalaryDiff">0.00 {{ money_symbol }}</div>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">Комментарий</div>
@@ -439,7 +439,7 @@ var escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : f
 
 function moneyRu(v) {
     const n = Number(v || 0);
-    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
 }
 
 function renderCashReconciliation(data) {
@@ -904,8 +904,8 @@ function renderDebts(data) {
 
     const totalToPayEl = document.getElementById('debtsTotalToPay');
     const totalCompanyEl = document.getElementById('debtsTotalCompany');
-    if (totalToPayEl) totalToPayEl.textContent = ((totals.total_to_pay_cents || 0) / 100).toFixed(2) + ' ₽';
-    if (totalCompanyEl) totalCompanyEl.textContent = ((totals.total_debt_company_cents || 0) / 100).toFixed(2) + ' ₽';
+    if (totalToPayEl) totalToPayEl.textContent = ((totals.total_to_pay_cents || 0) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    if (totalCompanyEl) totalCompanyEl.textContent = ((totals.total_debt_company_cents || 0) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
 
     if (!items.length) {
         debtsList.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Нет данных</td></tr>';
@@ -932,7 +932,7 @@ function renderDebts(data) {
             owedBadge = '<span class="badge bg-danger ms-2">Долг</span>';
             const debtPercent = Math.min(100, Math.abs(owed / (accrued || 1)) * 100);
             progressBar = `
-                <div class="progress mt-1" style="height: 6px;" title="Долг: ${Math.abs(owed).toFixed(2)} ₽">
+                <div class="progress mt-1" style="height: 6px;" title="Долг: ${Math.abs(owed).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}">
                     <div class="progress-bar bg-danger" role="progressbar" style="width: ${debtPercent}%"></div>
                 </div>
             `;
@@ -943,7 +943,7 @@ function renderDebts(data) {
             owedBadge = '<span class="badge bg-success ms-2">К выплате</span>';
             const payPercent = Math.min(100, (owed / (accrued + bonuses || 1)) * 100);
             progressBar = `
-                <div class="progress mt-1" style="height: 6px;" title="К выплате: ${owed.toFixed(2)} ₽">
+                <div class="progress mt-1" style="height: 6px;" title="К выплате: ${owed.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}">
                     <div class="progress-bar bg-success" role="progressbar" style="width: ${payPercent}%"></div>
                 </div>
             `;
@@ -969,20 +969,20 @@ function renderDebts(data) {
                 </td>
                 <td>${roleBadge}</td>
                 <td class="text-end">
-                    <span class="text-muted small">${accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                    <span class="text-muted small">${accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                 </td>
                 <td class="text-end">
-                    <span class="text-success small">+${bonuses.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                    <span class="text-success small">+${bonuses.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                 </td>
                 <td class="text-end">
-                    <span class="text-danger small">-${fines.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                    <span class="text-danger small">-${fines.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                 </td>
                 <td class="text-end">
-                    <span class="text-muted small">${paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>
+                    <span class="text-muted small">${paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                 </td>
                 <td class="text-end">
                     <div>
-                        ${owedIcon}<span class="${owedClass}">${Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₽</span>${owedBadge}
+                        ${owedIcon}<span class="${owedClass}">${Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>${owedBadge}
                         ${progressBar}
                     </div>
                 </td>
@@ -1049,11 +1049,11 @@ function renderEmployees(employees, containerId) {
     const totalOwedEl = document.getElementById(`${prefix}Owed`);
     
     if (totalOrdersEl) totalOrdersEl.textContent = ordersDisplay;
-    if (totalRevenueEl) totalRevenueEl.textContent = revenueDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ₽';
-    if (totalProfitEl) totalProfitEl.textContent = profitDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ₽';
-    if (totalAccruedEl) totalAccruedEl.textContent = totals.accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
-    if (totalPaidEl) totalPaidEl.textContent = totals.paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
-    if (totalOwedEl) totalOwedEl.textContent = totals.owed.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+    if (totalRevenueEl) totalRevenueEl.textContent = revenueDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    if (totalProfitEl) totalProfitEl.textContent = profitDisplay.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    if (totalAccruedEl) totalAccruedEl.textContent = totals.accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    if (totalPaidEl) totalPaidEl.textContent = totals.paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    if (totalOwedEl) totalOwedEl.textContent = totals.owed.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
     
     if (footer) footer.style.display = 'table-footer-group';
     if (totalsCard) totalsCard.style.display = 'block';
@@ -1078,7 +1078,7 @@ function renderEmployees(employees, containerId) {
                     <div class="mt-2">
                         <div class="d-flex justify-content-between small mb-1">
                             <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Долг</span>
-                            <span class="text-danger fw-bold">${Math.abs(owed).toFixed(2)} ₽</span>
+                            <span class="text-danger fw-bold">${Math.abs(owed).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                         </div>
                         <div class="progress" style="height: 4px;">
                             <div class="progress-bar bg-danger" role="progressbar" style="width: ${debtPercent}%"></div>
@@ -1092,7 +1092,7 @@ function renderEmployees(employees, containerId) {
                     <div class="mt-2">
                         <div class="d-flex justify-content-between small mb-1">
                             <span class="text-success"><i class="fas fa-check-circle me-1"></i>К выплате</span>
-                            <span class="text-success fw-bold">${owed.toFixed(2)} ₽</span>
+                            <span class="text-success fw-bold">${owed.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span>
                         </div>
                         <div class="progress" style="height: 4px;">
                             <div class="progress-bar bg-success" role="progressbar" style="width: ${payPercent}%"></div>
@@ -1137,27 +1137,27 @@ function renderEmployees(employees, containerId) {
                                 <div class="col-6">
                                     <i class="fas fa-chart-line text-info me-1"></i>
                                     <span class="text-muted">Выручка:</span> 
-                                    <strong>${revenue.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ₽</strong>
+                                    <strong>${revenue.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</strong>
                                 </div>
                                 <div class="col-6">
                                     <i class="fas fa-coins text-success me-1"></i>
                                     <span class="text-muted">Прибыль:</span> 
-                                    <strong class="text-success">${profit.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ₽</strong>
+                                    <strong class="text-success">${profit.toLocaleString('ru-RU', {maximumFractionDigits: 0})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</strong>
                                 </div>
                                 <div class="col-6">
                                     <i class="fas fa-money-bill-wave text-info me-1"></i>
                                     <span class="text-muted">Начислено:</span> 
-                                    <strong>${accrued.toFixed(2)} ₽</strong>
+                                    <strong>${accrued.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</strong>
                                 </div>
                                 <div class="col-6">
                                     <i class="fas fa-check-circle text-success me-1"></i>
                                     <span class="text-muted">Выплачено:</span> 
-                                    <strong>${paid.toFixed(2)} ₽</strong>
+                                    <strong>${paid.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</strong>
                                 </div>
                                 <div class="col-6">
                                     <i class="fas ${owed < 0 ? 'fa-exclamation-triangle text-danger' : owed > 0 ? 'fa-arrow-up text-success' : 'fa-equals text-muted'} me-1"></i>
                                     <span class="text-muted">${owedLabel}:</span> 
-                                    <strong class="${owedClass}">${Math.abs(owed).toFixed(2)} ₽</strong>
+                                    <strong class="${owedClass}">${Math.abs(owed).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</strong>
                                 </div>
                             </div>
                             ${debtIndicator}
@@ -1221,31 +1221,31 @@ function renderEmployees(employees, containerId) {
                 </td>
                 <td class="text-end">
                     <span title="Выручка за период">
-                        ${revenue.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ₽
+                        ${revenue.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}
                     </span>
                 </td>
                 <td class="text-end text-success fw-bold">
                     <i class="fas fa-coins me-1"></i>
                     <span title="Прибыль за период">
-                        ${profit.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ₽
+                        ${profit.toLocaleString('ru-RU', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}
                     </span>
                 </td>
                 <td class="text-end text-info">
                     <i class="fas fa-money-bill-wave me-1"></i>
                     <span title="Начислено зарплаты">
-                        ${accrued > 0 ? accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '-'}
+                        ${accrued > 0 ? accrued.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '-'}
                     </span>
                 </td>
                 <td class="text-end">
                     <i class="fas fa-check-circle text-success me-1"></i>
                     <span title="Выплачено зарплаты">
-                        ${paid > 0 ? paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '-'}
+                        ${paid > 0 ? paid.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '-'}
                     </span>
                 </td>
                 <td class="text-end">
                     <div class="d-flex align-items-center justify-content-end">
                         <span class="${owedClass}" title="${owed < 0 ? 'Долг сотрудника' : owed > 0 ? 'К выплате' : 'Баланс'}">
-                            ${owed !== 0 ? (owed < 0 ? '-' : '+') + Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽' : '0.00 ₽'}
+                            ${owed !== 0 ? (owed < 0 ? '-' : '+') + Math.abs(owed).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}
                         </span>
                         ${debtBadge}
                     </div>

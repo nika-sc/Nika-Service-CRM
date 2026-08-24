@@ -5866,6 +5866,7 @@ COPY public.schema_migrations_pg (version, name, applied_at) FROM stdin;
 022	diagnostics_templates_is_active_int	2026-08-22 00:00:00
 023	diagnostics_templates_seed	2026-08-22 00:00:00
 024	order_customer_emails	2026-08-22 00:00:00
+025	locale_settings	2026-08-24 00:00:00
 \.
 
 
@@ -10810,4 +10811,14 @@ CREATE TABLE IF NOT EXISTS order_customer_emails (
 );
 CREATE INDEX IF NOT EXISTS idx_order_customer_emails_order
     ON order_customer_emails(order_id, created_at DESC);
+
+-- Post-bootstrap schema: postgres migration 025 (idempotent)
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS phone_prefix TEXT;
+ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT;
+UPDATE general_settings
+SET phone_prefix = '7'
+WHERE phone_prefix IS NULL OR btrim(phone_prefix) = '';
+UPDATE general_settings
+SET currency_symbol = '₽'
+WHERE currency_symbol IS NULL OR btrim(currency_symbol) = '';
 

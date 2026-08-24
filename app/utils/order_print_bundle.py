@@ -20,6 +20,14 @@ def _safe(value: Any) -> str:
     return _html.escape("" if value is None else str(value))
 
 
+def _money_symbol() -> str:
+    try:
+        from app.utils.locale_fmt import get_money_symbol
+        return get_money_symbol() or "₽"
+    except Exception:
+        return "₽"
+
+
 def _line_discount(price: float, qty: int, discount_type: str, discount_val: float) -> float:
     if discount_type == "percent" and discount_val:
         return round(price * qty * discount_val / 100.0, 2)
@@ -106,7 +114,7 @@ def render_order_print_templates(
             "ENGINEER_NAME": _safe(order_obj.get("master_name") or ""),
             "MASTER_NAME": _safe(order_obj.get("master_name") or ""),
             "MANAGER_NAME": _safe(order_obj.get("manager_name") or ""),
-            "CURRENCY": _safe("₽"),
+            "CURRENCY": _safe(_money_symbol()),
             "EMPLOYEE_NAME": _safe(order_obj.get("master_name") or order_obj.get("manager_name") or ""),
             "COMPANY_LOGO_URL": _safe(logo_url),
             "COMPANY_LOGO_STYLE": _safe(

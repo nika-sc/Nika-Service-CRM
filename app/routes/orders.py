@@ -153,61 +153,9 @@ def _get_all_orders_header_counters() -> dict:
 
 
 def _amount_to_words_ru(amount: float) -> str:
-    """Сумма прописью на русском (целые рубли). Для печати квитанций."""
-    try:
-        rub = int(round(float(amount)))
-    except (TypeError, ValueError):
-        return ""
-    if rub < 0:
-        return ""
-    if rub == 0:
-        return "ноль рублей"
-    units = ("", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
-    units_f = ("", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
-    teens = ("десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать",
-             "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать")
-    tens = ("", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто")
-    hundreds = ("", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот")
-
-    def triple(n: int, feminine: bool = False) -> str:
-        u = units_f if feminine else units
-        if n == 0:
-            return ""
-        res = []
-        if n >= 100:
-            res.append(hundreds[n // 100])
-            n %= 100
-        if n >= 20:
-            res.append(tens[n // 10])
-            n %= 10
-        if n >= 10:
-            res.append(teens[n - 10])
-            return " ".join(res)
-        if n > 0:
-            res.append(u[n])
-        return " ".join(res)
-
-    def rubles_word(n: int) -> str:
-        if 11 <= n % 100 <= 14:
-            return "рублей"
-        if n % 10 == 1:
-            return "рубль"
-        if 2 <= n % 10 <= 4:
-            return "рубля"
-        return "рублей"
-
-    parts = []
-    if rub >= 1_000_000:
-        m = rub // 1_000_000
-        parts.append(triple(m) + (" миллион" if m % 10 == 1 and m % 100 != 11 else " миллиона" if 2 <= m % 10 <= 4 and m % 100 not in (12, 13, 14) else " миллионов"))
-        rub %= 1_000_000
-    if rub >= 1_000:
-        th = rub // 1_000
-        parts.append(triple(th, feminine=True) + (" тысяча" if th % 10 == 1 and th % 100 != 11 else " тысячи" if 2 <= th % 10 <= 4 and th % 100 not in (12, 13, 14) else " тысяч"))
-        rub %= 1_000
-    if rub > 0:
-        parts.append(triple(rub))
-    return " ".join(parts).strip() + " " + rubles_word(int(round(float(amount))))
+    """Сумма прописью для печати квитанций (единицы из настроек)."""
+    from app.utils.money_words import amount_to_words_rub
+    return amount_to_words_rub(amount)
 
 
 @bp.before_request
@@ -238,12 +186,8 @@ def _orders_api_permission_gate():
 
 def format_phone_display(phone: str) -> str:
     """Форматирует телефон для отображения."""
-    if not phone:
-        return ''
-    digits = normalize_phone(phone)
-    if len(digits) == 11 and digits.startswith('7'):
-        return f"+{digits[0]}({digits[1:4]}){digits[4:7]}-{digits[7:9]}-{digits[9:]}"
-    return phone
+    from app.utils.locale_fmt import format_phone_display as _fmt
+    return _fmt(phone)
 
 
 def _parse_customer_search_datetime(val) -> Optional[datetime]:

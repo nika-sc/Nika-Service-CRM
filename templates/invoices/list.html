@@ -59,7 +59,7 @@
                             <div>{{ inv.buyer_name or inv.customer_name or '—' }}</div>
                             {% if inv.buyer_inn %}<small class="text-muted">ИНН {{ inv.buyer_inn }}</small>{% endif %}
                         </td>
-                        <td class="fw-semibold">{{ inv.total_fmt }} ₽</td>
+                        <td class="fw-semibold">{{ inv.total_fmt }} {{ money_symbol }}</td>
                         <td><span class="badge text-bg-{{ inv.status_badge }}">{{ inv.status_label }}</span></td>
                         <td>
                             {% if inv.order_id %}

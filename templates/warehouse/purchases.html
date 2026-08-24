@@ -41,7 +41,7 @@
                                 <td>{{ purchase.id }}</td>
                                 <td>{{ purchase.supplier_name }}</td>
                                 <td>{{ purchase.purchase_date|format_date(true) }}</td>
-                                <td>{{ purchase.total_amount }} ₽</td>
+                                <td>{{ purchase.total_amount }} {{ money_symbol }}</td>
                                 <td>
                                     {% if purchase.status == 'draft' %}
                                     <span class="badge bg-secondary">Черновик</span>

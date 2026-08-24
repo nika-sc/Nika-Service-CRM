@@ -824,7 +824,7 @@
                                                     <th><i class="fas fa-user-tie me-1"></i>Мастер</th>
                                                     <th><i class="fas fa-user-cog me-1"></i>Менеджер</th>
                                                     <th><i class="fas fa-calendar me-1"></i>Дата создания</th>
-                                                    <th><i class="fas fa-ruble-sign me-1"></i>Сумма</th>
+                                                    <th><span class="nika-money-icon me-1">{{ money_icon_char }}</span>Сумма</th>
                                                     <th><i class="fas fa-wallet me-1"></i>Оплачено</th>
                                                     <th><i class="fas fa-credit-card me-1"></i>Долг</th>
                                                     <th><i class="fas fa-tools me-1"></i>Услуги</th>
@@ -1015,13 +1015,13 @@
                                                     {% set prepayment_val = order.get('prepayment') if order is mapping else order.prepayment %}
                                                     {% if prepayment_val is not none and prepayment_val and prepayment_val not in ['0', '0.0', 'None', 'null', '—'] %}
                                                         <span class="badge text-bg-success">
-                                                            <i class="fas fa-ruble-sign me-1"></i>{{ prepayment_val }} ₽
+                                                            <span class="nika-money-icon me-1">{{ money_icon_char }}</span>{{ prepayment_val }} {{ money_symbol }}
                                                         </span>
                                                     {% endif %}
                                                     {% set total_paid_val = order.get('total_paid', 0) if order is mapping else (order.total_paid|default(0)) %}
                                                     {% if total_paid_val|float > 0 %}
                                                         <span class="badge text-bg-primary">
-                                                            <i class="fas fa-coins me-1"></i>{{ total_paid_val }} ₽
+                                                            <i class="fas fa-coins me-1"></i>{{ total_paid_val }} {{ money_symbol }}
                                                         </span>
                                                     {% endif %}
                                                 </div>
@@ -1185,7 +1185,7 @@
             document.getElementById('previewManager').textContent = manager || 'Не назначен';
             document.getElementById('previewMaster').textContent = master || 'Не назначен';
             document.getElementById('previewAppearance').textContent = appearance || 'Не указан';
-            document.getElementById('previewPrepayment').textContent = prepayment && prepayment !== '0' ? `${prepayment} ₽` : 'Нет';
+            document.getElementById('previewPrepayment').textContent = prepayment && prepayment !== '0' ? `${prepayment} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}` : 'Нет';
             // Отображаем symptom_tags вместо comment
             let symptomTagsText = 'Не указано';
             if (symptomTags && symptomTags.trim() && symptomTags !== 'None' && symptomTags !== 'null' && symptomTags !== '') {

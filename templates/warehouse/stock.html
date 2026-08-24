@@ -65,9 +65,9 @@
                                 <td>{{ item.category or '-' }}</td>
                                 <td>{{ item.stock_quantity }}</td>
                                 <td>{{ item.min_quantity }}</td>
-                                <td>{{ item.retail_price or 0 }} ₽</td>
-                                <td>{{ item.purchase_price or 0 }} ₽</td>
-                                <td>{{ item.margin or 0 }} ₽</td>
+                                <td>{{ item.retail_price or 0 }} {{ money_symbol }}</td>
+                                <td>{{ item.purchase_price or 0 }} {{ money_symbol }}</td>
+                                <td>{{ item.margin or 0 }} {{ money_symbol }}</td>
                             </tr>
                             {% else %}
                             <tr>

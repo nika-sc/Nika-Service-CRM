@@ -136,7 +136,7 @@
         </div>
         <div class="text-end">
             <div class="fs-4 fw-bold {% if selected_category.type == 'expense' %}text-danger{% else %}text-success{% endif %}">
-                {{ "%.2f"|format(selected_category.total or 0) }} ₽
+                {{ "%.2f"|format(selected_category.total or 0) }} {{ money_symbol }}
             </div>
             <div class="small text-muted">{{ selected_category.count or 0 }} операций</div>
         </div>
@@ -162,7 +162,7 @@
                                 {% endif %}
                             </p>
                             <div class="stat-value {% if summary.balance >= 0 %}text-primary{% else %}text-danger fw-bold{% endif %}">
-                                {{ "%.2f"|format(summary.balance) }} ₽
+                                {{ "%.2f"|format(summary.balance) }} {{ money_symbol }}
                             </div>
                             <p class="small text-muted mb-0 mt-1">На конец периода: остаток на начало + приход − расход</p>
                         </div>
@@ -180,7 +180,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1"><strong>Остаток на начало</strong></p>
-                            <div class="stat-value text-secondary">{{ "%.2f"|format(summary.opening_balance) }} ₽</div>
+                            <div class="stat-value text-secondary">{{ "%.2f"|format(summary.opening_balance) }} {{ money_symbol }}</div>
                             <p class="small text-muted mb-0 mt-1">Сумма в кассе на дату начала выбранного периода</p>
                         </div>
                         <div class="rounded-circle bg-secondary bg-opacity-10 p-3 flex-shrink-0">
@@ -197,7 +197,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1"><strong>Приход за период</strong></p>
-                            <div class="stat-value text-success">{{ "%.2f"|format(summary.total_income) }} ₽</div>
+                            <div class="stat-value text-success">{{ "%.2f"|format(summary.total_income) }} {{ money_symbol }}</div>
                             <p class="small text-muted mb-0 mt-1">Все поступления за выбранный период</p>
                         </div>
                         <div class="rounded-circle bg-success bg-opacity-10 p-3 flex-shrink-0">
@@ -214,7 +214,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1"><strong>Расход за период</strong></p>
-                            <div class="stat-value text-danger">{{ "%.2f"|format(summary.total_expense) }} ₽</div>
+                            <div class="stat-value text-danger">{{ "%.2f"|format(summary.total_expense) }} {{ money_symbol }}</div>
                             <p class="small text-muted mb-0 mt-1">Все списания за выбранный период</p>
                         </div>
                         <div class="rounded-circle bg-danger bg-opacity-10 p-3 flex-shrink-0">
@@ -253,12 +253,12 @@
                         <span class="mx-1">/</span>
                         <span class="text-danger">-{{ "%.2f"|format(totals.expense) }}</span>
                     </div>
-                    <p class="small text-muted mb-0 mt-2">Остаток на конец периода: <strong class="{% if balance_method >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ "%.2f"|format(balance_method) }} ₽</strong></p>
+                    <p class="small text-muted mb-0 mt-2">Остаток на конец периода: <strong class="{% if balance_method >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ "%.2f"|format(balance_method) }} {{ money_symbol }}</strong></p>
                     {% if open_method != 0 %}
-                    <p class="small text-muted mb-0 mt-1">Как посчитано: {{ "%.2f"|format(open_method) }} ₽ на начало + {{ "%.2f"|format(totals.income) }} ₽ приход − {{ "%.2f"|format(totals.expense) }} ₽ расход = <strong>{{ "%.2f"|format(balance_method) }} ₽</strong></p>
+                    <p class="small text-muted mb-0 mt-1">Как посчитано: {{ "%.2f"|format(open_method) }} {{ money_symbol }} на начало + {{ "%.2f"|format(totals.income) }} {{ money_symbol }} приход − {{ "%.2f"|format(totals.expense) }} {{ money_symbol }} расход = <strong>{{ "%.2f"|format(balance_method) }} {{ money_symbol }}</strong></p>
                     {% endif %}
                     {% if method == 'cash' and balance_method < 0 %}
-                    <p class="small text-warning mb-0 mt-1 fw-bold"><i class="fas fa-hand-holding-usd"></i> Доложить в наличку: <strong>{{ "%.2f"|format(-balance_method) }} ₽</strong><br><span class="text-muted">чтобы покрыть расход по наличным (зарплата и др.)</span></p>
+                    <p class="small text-warning mb-0 mt-1 fw-bold"><i class="fas fa-hand-holding-usd"></i> Доложить в наличку: <strong>{{ "%.2f"|format(-balance_method) }} {{ money_symbol }}</strong><br><span class="text-muted">чтобы покрыть расход по наличным (зарплата и др.)</span></p>
                     {% endif %}
                 </div>
             </div>
@@ -301,7 +301,7 @@
                         </td>
                         <td class="text-end">{{ cat.count }}</td>
                         <td class="text-end fw-semibold {% if cat.type == 'expense' %}text-danger{% else %}text-success{% endif %}">
-                            {{ "%.2f"|format(cat.total or 0) }} ₽
+                            {{ "%.2f"|format(cat.total or 0) }} {{ money_symbol }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -396,9 +396,9 @@
                         </td>
                         <td class="text-end">
                             {% if t.transaction_type == 'income' %}
-                            <span class="text-success fw-bold">+{{ "%.2f"|format(t.amount) }} ₽</span>
+                            <span class="text-success fw-bold">+{{ "%.2f"|format(t.amount) }} {{ money_symbol }}</span>
                             {% else %}
-                            <span class="text-danger fw-bold">-{{ "%.2f"|format(t.amount) }} ₽</span>
+                            <span class="text-danger fw-bold">-{{ "%.2f"|format(t.amount) }} {{ money_symbol }}</span>
                             {% endif %}
                         </td>
                         <td>

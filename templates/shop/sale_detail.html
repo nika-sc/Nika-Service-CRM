@@ -147,29 +147,29 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end">{{ "%.2f"|format(item.price) }} ₽</td>
-                                    <td class="text-end fw-bold">{{ "%.2f"|format(item.total) }} ₽</td>
+                                    <td class="text-end">{{ "%.2f"|format(item.price) }} {{ money_symbol }}</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(item.total) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="table-light">
                                     <td colspan="4" class="text-end">Итого:</td>
-                                    <td class="text-end fw-bold">{{ "%.2f"|format(sale.total_amount) }} ₽</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(sale.total_amount) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% if sale.discount > 0 %}
                                 <tr>
                                     <td colspan="4" class="text-end text-danger">Скидка:</td>
-                                    <td class="text-end text-danger">-{{ "%.2f"|format(sale.discount) }} ₽</td>
+                                    <td class="text-end text-danger">-{{ "%.2f"|format(sale.discount) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr class="table-success">
                                     <td colspan="4" class="text-end"><strong>К оплате:</strong></td>
-                                    <td class="text-end"><strong>{{ "%.2f"|format(sale.final_amount) }} ₽</strong></td>
+                                    <td class="text-end"><strong>{{ "%.2f"|format(sale.final_amount) }} {{ money_symbol }}</strong></td>
                                 </tr>
                                 <tr>
                                     <td colspan="4" class="text-end">Оплачено:</td>
-                                    <td class="text-end">{{ "%.2f"|format(sale.paid_amount) }} ₽</td>
+                                    <td class="text-end">{{ "%.2f"|format(sale.paid_amount) }} {{ money_symbol }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -190,7 +190,7 @@
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <small class="text-muted">Себестоимость</small>
-                                    <h5 class="mb-0 text-danger">{{ "%.2f"|format(total_cost) }} ₽</h5>
+                                    <h5 class="mb-0 text-danger">{{ "%.2f"|format(total_cost) }} {{ money_symbol }}</h5>
                                 </div>
                             </div>
                         </div>
@@ -198,7 +198,7 @@
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <small class="text-muted">Выручка</small>
-                                    <h5 class="mb-0 text-primary">{{ "%.2f"|format(sale.final_amount) }} ₽</h5>
+                                    <h5 class="mb-0 text-primary">{{ "%.2f"|format(sale.final_amount) }} {{ money_symbol }}</h5>
                                 </div>
                             </div>
                         </div>
@@ -206,7 +206,7 @@
                             <div class="card {% if profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
                                 <div class="card-body text-center">
                                     <small style="opacity: 0.8;">Прибыль</small>
-                                    <h5 class="mb-0">{{ "%.2f"|format(profit) }} ₽</h5>
+                                    <h5 class="mb-0">{{ "%.2f"|format(profit) }} {{ money_symbol }}</h5>
                                 </div>
                             </div>
                         </div>

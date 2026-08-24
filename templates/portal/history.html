@@ -37,12 +37,12 @@
             <p class="mb-1 small"><i class="fas fa-stethoscope me-1 text-muted"></i>{{ o.diagnostics[:280] }}{% if o.diagnostics|length > 280 %}…{% endif %}</p>
             {% endif %}
             <div class="d-flex flex-wrap gap-3 mt-2 small text-muted">
-                <span>Оплачено: {{ "%.2f"|format(o.total_paid|default(0)) }} ₽</span>
+                <span>Оплачено: {{ "%.2f"|format(o.total_paid|default(0)) }} {{ money_symbol }}</span>
                 {% if o.warranty_days %}
                 <span>Гарантия: {{ o.warranty_days }} дн. с даты приёма</span>
                 {% endif %}
                 {% if o.estimated_cost and o.estimated_cost|string != '0' %}
-                <span>Оценка: {{ o.estimated_cost }} ₽</span>
+                <span>Оценка: {{ o.estimated_cost }} {{ money_symbol }}</span>
                 {% endif %}
             </div>
         </div>

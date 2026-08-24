@@ -35,7 +35,7 @@
                         <p><strong>Всего закупок:</strong> <span class="h5">{{ report.total_count }}</span></p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Общая сумма:</strong> <span class="h5 text-primary">{{ report.total_amount }} ₽</span></p>
+                        <p><strong>Общая сумма:</strong> <span class="h5 text-primary">{{ report.total_amount }} {{ money_symbol }}</span></p>
                     </div>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                                 <td>{{ purchase.id }}</td>
                                 <td>{{ purchase.supplier_name }}</td>
                                 <td>{{ purchase.purchase_date|format_date(true) }}</td>
-                                <td>{{ purchase.total_amount }} ₽</td>
+                                <td>{{ purchase.total_amount }} {{ money_symbol }}</td>
                                 <td>{{ purchase.items_count or 0 }}</td>
                             </tr>
                             {% else %}

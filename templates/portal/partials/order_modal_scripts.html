@@ -54,8 +54,8 @@
     function formatPaymentAmount(p) {
         var amt = parseFloat(p.amount || 0);
         var kind = (p.kind || '').toLowerCase();
-        if (kind === 'refund') return '<span class="text-danger">−' + amt.toFixed(2) + ' ₽</span>';
-        return amt.toFixed(2) + ' ₽';
+        if (kind === 'refund') return '<span class="text-danger">−' + amt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</span>';
+        return amt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
     }
 
     function buildReceiptHtml(data) {
@@ -77,7 +77,7 @@
         if (services.length) {
             html += '<p><strong>Услуги:</strong></p><table>';
             services.forEach(function(s) {
-                html += '<tr><td>' + escapeHtml(s.name || s.service_name || '—') + '</td><td style="text-align:right">' + (s.price ? parseFloat(s.price).toFixed(2) : '0.00') + ' ₽</td></tr>';
+                html += '<tr><td>' + escapeHtml(s.name || s.service_name || '—') + '</td><td style="text-align:right">' + (s.price ? parseFloat(s.price).toFixed(2) : '0.00') + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr>';
             });
             html += '</table>';
         }
@@ -87,19 +87,19 @@
                 var pr = p.price ? (parseFloat(p.price) * (p.quantity || 1)).toFixed(2) : '0.00';
                 var q = parseInt(p.quantity, 10);
                 if (isNaN(q) || q < 1) q = 1;
-                html += '<tr><td>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + '</td><td style="text-align:right">' + pr + ' ₽</td></tr>';
+                html += '<tr><td>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + '</td><td style="text-align:right">' + pr + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr>';
             });
             html += '</table>';
         }
-        html += '<hr><table><tr><td>Итого:</td><td style="text-align:right">' + total.toFixed(2) + ' ₽</td></tr>';
-        html += '<tr><td>Оплачено:</td><td style="text-align:right">' + paid.toFixed(2) + ' ₽</td></tr>';
-        html += '<tr><td>К оплате:</td><td style="text-align:right">' + debt.toFixed(2) + ' ₽</td></tr></table>';
+        html += '<hr><table><tr><td>Итого:</td><td style="text-align:right">' + total.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr>';
+        html += '<tr><td>Оплачено:</td><td style="text-align:right">' + paid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr>';
+        html += '<tr><td>К оплате:</td><td style="text-align:right">' + debt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr></table>';
         if (payments.length) {
             html += '<hr><p><strong>Платежи:</strong></p><table>';
             payments.forEach(function(p) {
                 var lbl = formatPaymentKindAndType(p);
                 var amt = parseFloat(p.amount || 0);
-                var amtStr = ((p.kind || '').toLowerCase() === 'refund' ? '−' : '') + amt.toFixed(2) + ' ₽';
+                var amtStr = ((p.kind || '').toLowerCase() === 'refund' ? '−' : '') + amt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                 html += '<tr><td>' + escapeHtml(formatDate(p.payment_date || p.created_at)) + ' ' + lbl + '</td><td style="text-align:right">' + amtStr + '</td></tr>';
             });
             html += '</table>';
@@ -148,7 +148,7 @@
         var servicesEl = document.getElementById('modalServices');
         if (servicesEl) {
             if (services.length) servicesEl.innerHTML = '<ul class="list-unstyled mb-0">' + services.map(function(s) {
-                return '<li>' + escapeHtml(s.name || s.service_name || '—') + (s.price ? ' — ' + parseFloat(s.price).toFixed(2) + ' ₽' : '') + '</li>';
+                return '<li>' + escapeHtml(s.name || s.service_name || '—') + (s.price ? ' — ' + parseFloat(s.price).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '') + '</li>';
             }).join('') + '</ul>';
             else servicesEl.textContent = '—';
         }
@@ -157,7 +157,7 @@
             if (parts.length) partsEl.innerHTML = '<ul class="list-unstyled mb-0">' + parts.map(function(p) {
                 var q = parseInt(p.quantity, 10);
                 if (isNaN(q) || q < 1) q = 1;
-                return '<li>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + (p.price ? ' — ' + parseFloat(p.price).toFixed(2) + ' ₽' : '') + '</li>';
+                return '<li>' + escapeHtml(p.name || p.part_name || '—') + ' × ' + q + (p.price ? ' — ' + parseFloat(p.price).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '') + '</li>';
             }).join('') + '</ul>';
             else partsEl.textContent = '—';
         }
@@ -165,11 +165,11 @@
         const paid = parseFloat(totals.paid || 0);
         const debt = parseFloat(totals.debt || 0);
         var totalEl = document.getElementById('modalTotal');
-        if (totalEl) totalEl.textContent = total.toFixed(2) + ' ₽';
+        if (totalEl) totalEl.textContent = total.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         var paidEl = document.getElementById('modalPaid');
-        if (paidEl) paidEl.textContent = paid.toFixed(2) + ' ₽';
+        if (paidEl) paidEl.textContent = paid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         var debtEl = document.getElementById('modalDebt');
-        if (debtEl) debtEl.textContent = debt.toFixed(2) + ' ₽';
+        if (debtEl) debtEl.textContent = debt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         var paymentsEl = document.getElementById('modalPayments');
         if (paymentsEl) {
             if (payments.length) paymentsEl.innerHTML = '<table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Сумма</th><th>Тип</th></tr></thead><tbody>' + payments.map(function(p) {

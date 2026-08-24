@@ -24,12 +24,8 @@ logger = logging.getLogger(__name__)
 
 def format_phone_display(phone: str) -> str:
     """Форматирует телефон для отображения."""
-    if not phone:
-        return ''
-    digits = normalize_phone(phone)
-    if len(digits) == 11 and digits.startswith('7'):
-        return f"+{digits[0]}({digits[1:4]}){digits[4:7]}-{digits[7:9]}-{digits[9:]}"
-    return phone
+    from app.utils.locale_fmt import format_phone_display as _fmt
+    return _fmt(phone)
 
 @bp.route('/clients')
 @login_required

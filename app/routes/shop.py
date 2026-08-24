@@ -21,6 +21,14 @@ from datetime import timedelta
 
 bp = Blueprint('shop', __name__, url_prefix='/shop')
 
+
+def _money_symbol() -> str:
+    try:
+        from app.utils.locale_fmt import get_money_symbol
+        return get_money_symbol() or '₽'
+    except Exception:
+        return '₽'
+
 _PAYMENT_FALLBACKS = {
     'cash': 'Наличные',
     'card': 'Карта',
@@ -349,7 +357,7 @@ def sale_detail(sale_id):
                 'ENGINEER_NAME': _safe(sale.get('master_name') or ''),
                 'MASTER_NAME': _safe(sale.get('master_name') or ''),
                 'MANAGER_NAME': _safe(sale.get('manager_name') or ''),
-                'CURRENCY': _safe('₽'),
+                'CURRENCY': _safe(_money_symbol()),
                 'EMPLOYEE_NAME': _safe(sale.get('master_name') or sale.get('manager_name') or sale.get('created_by_username') or ''),
                 'COMPANY_LOGO_URL': _safe(logo_url),
                 'COMPANY_LOGO_STYLE': _safe(f"max-width: {logo_max_width}px; max-height: {logo_max_height}px; width: auto; height: auto;"),

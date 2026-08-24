@@ -141,7 +141,7 @@ body.theme-dark .item-suggest-portal .text-muted {
                         <tr>
                             <th>Название</th>
                             <th class="col-qty">Кол-во</th>
-                            <th class="col-price">Цена ₽</th>
+                            <th class="col-price">Цена {{ money_symbol }}</th>
                             <th class="col-actions"></th>
                         </tr>
                     </thead>
@@ -288,7 +288,7 @@ body.theme-dark .item-suggest-portal .text-muted {
             btn.type = 'button';
             btn.dataset.idx = String(idx);
             const kind = kindLabel(item.type);
-            const price = item.price != null ? Number(item.price).toFixed(2) + ' ₽' : '';
+            const price = item.price != null ? Number(item.price).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') : '';
             btn.innerHTML = `<div class="d-flex justify-content-between align-items-center gap-2">
                 <div>
                     <span class="badge text-bg-secondary me-1">${kind}</span>

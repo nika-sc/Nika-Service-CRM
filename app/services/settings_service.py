@@ -3,6 +3,7 @@
 """
 import os
 import json
+import re
 from typing import Dict, Optional
 from app.database.connection import get_db_connection
 from app.utils.exceptions import DatabaseError
@@ -55,7 +56,9 @@ class SettingsService:
             'ogrn': '',
             'logo_url': '',
             'currency': 'RUB',
+            'currency_symbol': '₽',
             'country': 'Россия',
+            'phone_prefix': '7',
             'default_warranty_days': 30,
             'timezone_offset': 3,  # По умолчанию Москва (UTC+3)
             'mail_server': '',
@@ -108,6 +111,10 @@ class SettingsService:
                 
                 if settings:
                     d = {**default_settings, **dict(settings)}
+                    if not str(d.get('phone_prefix') or '').strip():
+                        d['phone_prefix'] = '7'
+                    if not str(d.get('currency_symbol') or '').strip():
+                        d['currency_symbol'] = '₽'
                     # Доп. параметры печати/логотипа храним в system_settings для совместимости
                     # со старыми БД, где в general_settings нет этих колонок.
                     try:
@@ -242,6 +249,7 @@ class SettingsService:
                 has_mail_cols = 'mail_server' in cols
                 has_automation_cols = 'close_print_mode' in cols
                 has_director_cols = 'director_email' in cols
+                has_locale_cols = 'phone_prefix' in cols and 'currency_symbol' in cols
 
                 cursor.execute("SELECT COUNT(*) FROM general_settings")
                 count = cursor.fetchone()[0]
@@ -431,6 +439,14 @@ class SettingsService:
                     cursor.execute(
                         f"UPDATE general_settings SET {sets} WHERE id = 1",
                         vals,
+                    )
+
+                if has_locale_cols:
+                    prefix = re.sub(r"\D", "", str(payload.get("phone_prefix") or "7")) or "7"
+                    symbol = str(payload.get("currency_symbol") or "₽").strip() or "₽"
+                    cursor.execute(
+                        "UPDATE general_settings SET phone_prefix = ?, currency_symbol = ? WHERE id = 1",
+                        (prefix, symbol),
                     )
 
                 # Всегда сохраняем параметры печати/логотипа в system_settings:

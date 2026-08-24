@@ -444,7 +444,7 @@ function renderManagers() {
         } else if (manager.salary_rule_type === 'percent' && manager.salary_rule_value != null) {
             ruleText = `${manager.salary_rule_value}% от прибыли`;
         } else if (manager.salary_rule_type === 'fixed' && manager.salary_rule_value != null) {
-            ruleText = `${(manager.salary_rule_value / 100).toFixed(2)} ₽ (фикс)`;
+            ruleText = `${(manager.salary_rule_value / 100).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')} (фикс)`;
         }
         
         tr.innerHTML = `
@@ -485,7 +485,7 @@ function renderMasters() {
         } else if (master.salary_rule_type === 'percent' && master.salary_rule_value != null) {
             ruleText = `${master.salary_rule_value}% от прибыли`;
         } else if (master.salary_rule_type === 'fixed' && master.salary_rule_value != null) {
-            ruleText = `${(master.salary_rule_value / 100).toFixed(2)} ₽ (фикс)`;
+            ruleText = `${(master.salary_rule_value / 100).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')} (фикс)`;
         }
         
         tr.innerHTML = `

@@ -33,13 +33,13 @@
                         <p><strong>Всего товаров:</strong> <span class="h5">{{ report.total_items }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая стоимость:</strong> <span class="h5 text-primary">{{ report.total_value }} ₽</span></p>
+                        <p><strong>Общая стоимость:</strong> <span class="h5 text-primary">{{ report.total_value }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} ₽</span></p>
+                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая маржа:</strong> <span class="h5 text-success">{{ report.total_margin }} ₽</span></p>
+                        <p><strong>Общая маржа:</strong> <span class="h5 text-success">{{ report.total_margin }} {{ money_symbol }}</span></p>
                     </div>
                 </div>
                 <div class="row mt-2">
@@ -77,11 +77,11 @@
                                 <td>{{ item.part_number or '-' }}</td>
                                 <td>{{ item.category or '-' }}</td>
                                 <td>{{ item.stock_quantity }}</td>
-                                <td>{{ item.retail_price or 0 }} ₽</td>
-                                <td>{{ item.purchase_price or 0 }} ₽</td>
-                                <td>{{ (item.retail_price or 0) * item.stock_quantity }} ₽</td>
-                                <td>{{ (item.purchase_price or 0) * item.stock_quantity }} ₽</td>
-                                <td>{{ ((item.retail_price or 0) - (item.purchase_price or 0)) * item.stock_quantity }} ₽</td>
+                                <td>{{ item.retail_price or 0 }} {{ money_symbol }}</td>
+                                <td>{{ item.purchase_price or 0 }} {{ money_symbol }}</td>
+                                <td>{{ (item.retail_price or 0) * item.stock_quantity }} {{ money_symbol }}</td>
+                                <td>{{ (item.purchase_price or 0) * item.stock_quantity }} {{ money_symbol }}</td>
+                                <td>{{ ((item.retail_price or 0) - (item.purchase_price or 0)) * item.stock_quantity }} {{ money_symbol }}</td>
                             </tr>
                             {% else %}
                             <tr>

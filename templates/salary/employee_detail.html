@@ -104,7 +104,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Начислено за период</h6>
-                    <h4 class="mb-0 text-info" id="totalAccrued">0.00 ₽</h4>
+                    <h4 class="mb-0 text-info" id="totalAccrued">0.00 {{ money_symbol }}</h4>
                 </div>
             </div>
         </div>
@@ -112,7 +112,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Выплачено за период</h6>
-                    <h4 class="mb-0 text-success" id="totalPaid">0.00 ₽</h4>
+                    <h4 class="mb-0 text-success" id="totalPaid">0.00 {{ money_symbol }}</h4>
                 </div>
             </div>
         </div>
@@ -120,7 +120,7 @@
             <div class="card text-center">
                 <div class="card-body" id="salaryOwedCard" style="cursor: help;">
                     <h6 class="text-muted mb-2" id="owedLabel">К выплате за период</h6>
-                    <h4 class="mb-0 text-danger" id="totalOwed">0.00 ₽</h4>
+                    <h4 class="mb-0 text-danger" id="totalOwed">0.00 {{ money_symbol }}</h4>
                     <p class="small text-muted mb-0 mt-1 d-none" id="owedHint"></p>
                 </div>
             </div>
@@ -129,7 +129,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Общий долг</h6>
-                    <h4 class="mb-0 text-danger" id="totalOverallOwed">0.00 ₽</h4>
+                    <h4 class="mb-0 text-danger" id="totalOverallOwed">0.00 {{ money_symbol }}</h4>
                     {% if can_register_payment %}
                     <button type="button" class="btn btn-sm btn-outline-secondary mt-2 d-none" id="writeoffBtn" onclick="showWriteoffModal()">
                         Списать долг
@@ -235,7 +235,7 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        <strong>Итого за период: <span id="accrualsTotal" class="text-info">0.00 ₽</span></strong>
+                        <strong>Итого за период: <span id="accrualsTotal" class="text-info">0.00 {{ money_symbol }}</span></strong>
                     </div>
                 </div>
             </div>
@@ -275,7 +275,7 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        <strong>Итого выплачено: <span id="paymentsTotal" class="text-success">0.00 ₽</span></strong>
+                        <strong>Итого выплачено: <span id="paymentsTotal" class="text-success">0.00 {{ money_symbol }}</span></strong>
                     </div>
                 </div>
             </div>
@@ -320,8 +320,8 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        <strong>Премии: <span id="bonusesTotal" class="text-success">+0.00 ₽</span></strong> | 
-                        <strong>Штрафы: <span id="finesTotal" class="text-danger">-0.00 ₽</span></strong>
+                        <strong>Премии: <span id="bonusesTotal" class="text-success">+0.00 {{ money_symbol }}</span></strong> | 
+                        <strong>Штрафы: <span id="finesTotal" class="text-danger">-0.00 {{ money_symbol }}</span></strong>
                     </div>
                 </div>
             </div>
@@ -378,7 +378,7 @@
             <form onsubmit="event.preventDefault(); submitBonus();">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Сумма (₽) <span class="text-danger">*</span></label>
+                        <label class="form-label">Сумма ({{ money_symbol }}) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="bonusAmount" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
@@ -414,7 +414,7 @@
             <form onsubmit="event.preventDefault(); submitFine();">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Сумма (₽) <span class="text-danger">*</span></label>
+                        <label class="form-label">Сумма ({{ money_symbol }}) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="fineAmount" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
@@ -450,7 +450,7 @@
             <form onsubmit="event.preventDefault(); submitPayment();">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Сумма (₽) <span class="text-danger">*</span></label>
+                        <label class="form-label">Сумма ({{ money_symbol }}) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="paymentAmount" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
@@ -500,7 +500,7 @@
             <form onsubmit="event.preventDefault(); submitWriteoff();">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Сумма (₽) <span class="text-danger">*</span></label>
+                        <label class="form-label">Сумма ({{ money_symbol }}) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="writeoffAmount" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
@@ -589,26 +589,26 @@ async function showAccrualDetailModal(orderId) {
             const totalCents = list.reduce((s, a) => s + (a.amount_cents || 0), 0);
             let rows = '';
             list.forEach(a => {
-                const ruleText = a.rule_type === 'percent' ? (a.rule_value || 0) + '%' : ((a.rule_value || 0) / 100).toFixed(2) + ' ₽';
+                const ruleText = a.rule_type === 'percent' ? (a.rule_value || 0) + '%' : ((a.rule_value || 0) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                 const name = a.master_name || a.manager_name || '—';
                 let detail = '';
                 if (a.source_service_name) {
-                    detail = 'Услуга «' + escapeHtml(a.source_service_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+                    detail = 'Услуга «' + escapeHtml(a.source_service_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                 } else if (a.source_part_name) {
-                    detail = 'Товар «' + escapeHtml(a.source_part_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+                    detail = 'Товар «' + escapeHtml(a.source_part_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                 } else {
                     const services = a.order_services_items || [];
                     const parts = a.order_parts_items || [];
                     const items = [];
-                    if (services.length) items.push('Услуги: ' + services.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
-                    if (parts.length) items.push('Товары: ' + parts.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
-                    detail = items.join('. ') || ('За заявку: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽');
+                    if (services.length) items.push('Услуги: ' + services.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + ')').join(', '));
+                    if (parts.length) items.push('Товары: ' + parts.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + ')').join(', '));
+                    detail = items.join('. ') || ('За заявку: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽'));
                 }
-                rows += '<tr><td class="text-muted small">' + escapeHtml(name) + '</td><td>' + detail + '</td><td class="fw-bold">' + fmt(a.amount_cents) + ' ₽</td></tr>';
+                rows += '<tr><td class="text-muted small">' + escapeHtml(name) + '</td><td>' + detail + '</td><td class="fw-bold">' + fmt(a.amount_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</td></tr>';
             });
-            return '<div class="mb-4"><h6 class="d-flex align-items-center gap-2 mb-2"><span class="badge ' + badgeClass + '">' + label + '</span><span class="fw-bold">Итого: ' + fmt(totalCents) + ' ₽</span></h6><table class="table table-sm table-bordered"><thead><tr><th>Сотрудник</th><th>За что</th><th>Сумма</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+            return '<div class="mb-4"><h6 class="d-flex align-items-center gap-2 mb-2"><span class="badge ' + badgeClass + '">' + label + '</span><span class="fw-bold">Итого: ' + fmt(totalCents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</span></h6><table class="table table-sm table-bordered"><thead><tr><th>Сотрудник</th><th>За что</th><th>Сумма</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
         }
-        body.innerHTML = '<div class="mb-3"><a href="' + orderHref + '" class="fw-bold">Заявка ' + escapeHtml(String(orderDisplay)) + '</a></div><div class="row mb-3"><div class="col-md-4"><strong>Выручка:</strong> ' + fmt(d.revenue_cents) + ' ₽</div><div class="col-md-4"><strong>Прибыль:</strong> ' + fmt(d.order_profit_cents) + ' ₽</div><div class="col-md-4"><strong>Руководителю:</strong> ' + fmt(d.owner_net_cents) + ' ₽</div></div><hr>' + roleBlock('master', 'Мастер', 'bg-primary') + roleBlock('manager', 'Менеджер', 'bg-info');
+        body.innerHTML = '<div class="mb-3"><a href="' + orderHref + '" class="fw-bold">Заявка ' + escapeHtml(String(orderDisplay)) + '</a></div><div class="row mb-3"><div class="col-md-4"><strong>Выручка:</strong> ' + fmt(d.revenue_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</div><div class="col-md-4"><strong>Прибыль:</strong> ' + fmt(d.order_profit_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</div><div class="col-md-4"><strong>Руководителю:</strong> ' + fmt(d.owner_net_cents) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</div></div><hr>' + roleBlock('master', 'Мастер', 'bg-primary') + roleBlock('manager', 'Менеджер', 'bg-info');
     } catch (e) {
         body.innerHTML = '<p class="text-danger">Ошибка: ' + escapeHtml(e.message) + '</p>';
     }
@@ -757,9 +757,9 @@ function renderDashboard(dashboard) {
     
     // Обновляем карточки
     document.getElementById('totalAccrued').textContent = 
-        ((totals.accrued_cents || 0) / 100).toFixed(2) + ' ₽';
+        ((totals.accrued_cents || 0) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
     document.getElementById('totalPaid').textContent = 
-        ((totals.paid_cents || 0) / 100).toFixed(2) + ' ₽';
+        ((totals.paid_cents || 0) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
     periodOwedCents = totals.period_owed_cents != null ? totals.period_owed_cents : (totals.accrued_cents || 0) - (totals.paid_cents || 0) + (totals.bonuses_cents || 0) - (totals.fines_cents || 0);
     overallOwedCents = totals.overall_owed_cents != null ? totals.overall_owed_cents : (totals.owed_cents || 0);
     salaryPayableCents = totals.payable_cents != null ? totals.payable_cents : Math.max(0, overallOwedCents);
@@ -790,14 +790,14 @@ function renderDashboard(dashboard) {
         }
     }
     if (totalOwedEl) {
-        const displayValue = (Math.abs(periodOwedCents) / 100).toFixed(2) + ' ₽';
+        const displayValue = (Math.abs(periodOwedCents) / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         totalOwedEl.textContent = displayValue;
         totalOwedEl.classList.toggle('text-danger', periodOwedCents > 0);
         totalOwedEl.classList.toggle('text-success', periodOwedCents < 0);
     }
     const overallOwedEl = document.getElementById('totalOverallOwed');
     if (overallOwedEl) {
-        overallOwedEl.textContent = (overallOwedCents / 100).toFixed(2) + ' ₽';
+        overallOwedEl.textContent = (overallOwedCents / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         overallOwedEl.classList.toggle('text-danger', overallOwedCents > 0);
         overallOwedEl.classList.toggle('text-success', overallOwedCents < 0);
     }
@@ -840,7 +840,7 @@ function renderAccruals(accruals) {
     if (!accruals || accruals.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Нет начислений</td></tr>';
         const totalEl = document.getElementById('accrualsTotal');
-        if (totalEl) totalEl.textContent = '0.00 ₽';
+        if (totalEl) totalEl.textContent = '0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         console.log('No accruals to render');
         return;
     }
@@ -855,7 +855,7 @@ function renderAccruals(accruals) {
         const profit = (accrual.profit_cents || 0) / 100;
         const rule = accrual.rule_type === 'percent' 
             ? `${accrual.rule_value}%` 
-            : `${(accrual.rule_value || 0) / 100} ₽`;
+            : `${(accrual.rule_value || 0) / 100} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
         const orderNumber = accrual.order_id != null ? accrual.order_id : (accrual.order_number || 'N/A');
         const orderHref = safeOrderHref(accrual.order_id, accrual.order_uuid);
         const orderLinkText = orderNumber !== 'N/A' ? 'Заявка #' + orderNumber : 'N/A';
@@ -887,7 +887,7 @@ function renderAccruals(accruals) {
         const paymentInfo = accrual.is_payment_split
             ? `<div class="small text-muted mt-1">
                     <i class="fas fa-credit-card me-1"></i>${paymentTypeShown}
-                    · ${((accrual.payment_amount_cents || 0) / 100).toFixed(2)} ₽
+                    · ${((accrual.payment_amount_cents || 0) / 100).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}
                     ${accrual.payment_comment ? `· ${escapeHtml(String(accrual.payment_comment))}` : ''}
                </div>`
             : '';
@@ -909,10 +909,10 @@ function renderAccruals(accruals) {
                     <div class="small text-muted">${dateTime}</div>
                 </td>
                 <td>${orderLink}${paymentInfo}</td>
-                <td>${profit.toFixed(2)} ₽</td>
+                <td>${profit.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</td>
                 <td>${rule}</td>
                 <td>${sourceLabel}</td>
-                <td class="fw-bold text-info">${amount.toFixed(2)} ₽</td>
+                <td class="fw-bold text-info">${amount.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</td>
                 <td>
                     ${detailBtn}${viewBtn}${payoutBtn}
                 </td>
@@ -922,7 +922,7 @@ function renderAccruals(accruals) {
     
     const totalEl = document.getElementById('accrualsTotal');
     if (totalEl) {
-        totalEl.textContent = (total / 100).toFixed(2) + ' ₽';
+        totalEl.textContent = (total / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
     }
     console.log('Rendered accruals, total:', total / 100);
 }
@@ -933,7 +933,7 @@ function renderPayments(payments) {
     
     if (payments.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Нет выплат</td></tr>';
-        document.getElementById('paymentsTotal').textContent = '0.00 ₽';
+        document.getElementById('paymentsTotal').textContent = '0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         return;
     }
     
@@ -953,7 +953,7 @@ function renderPayments(payments) {
         return `
             <tr>
                 <td>${date}</td>
-                <td class="fw-bold text-success">${amount.toFixed(2)} ₽</td>
+                <td class="fw-bold text-success">${amount.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</td>
                 <td>${period}</td>
                 <td>${typeLabel}</td>
                 <td>${payment.comment ? escapeHtml(String(payment.comment)) : '—'}</td>
@@ -962,7 +962,7 @@ function renderPayments(payments) {
         `;
     }).join('');
     
-    document.getElementById('paymentsTotal').textContent = (total / 100).toFixed(2) + ' ₽';
+    document.getElementById('paymentsTotal').textContent = (total / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
 }
 
 function renderBonusesFines(bonuses, fines) {
@@ -977,8 +977,8 @@ function renderBonusesFines(bonuses, fines) {
     
     if (allItems.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Нет премий и штрафов</td></tr>';
-        document.getElementById('bonusesTotal').textContent = '+0.00 ₽';
-        document.getElementById('finesTotal').textContent = '-0.00 ₽';
+        document.getElementById('bonusesTotal').textContent = '+0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+        document.getElementById('finesTotal').textContent = '-0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
         return;
     }
     
@@ -999,7 +999,7 @@ function renderBonusesFines(bonuses, fines) {
                     </span>
                 </td>
                 <td class="fw-bold ${isBonus ? 'text-success' : 'text-danger'}">
-                    ${isBonus ? '+' : '-'}${amount.toFixed(2)} ₽
+                    ${isBonus ? '+' : '-'}${amount.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}
                 </td>
                 <td>${item.reason ? escapeHtml(String(item.reason)) : '—'}</td>
                 <td>${orderLink}</td>
@@ -1008,8 +1008,8 @@ function renderBonusesFines(bonuses, fines) {
         `;
     }).join('');
     
-    document.getElementById('bonusesTotal').textContent = '+' + (bonusesTotal / 100).toFixed(2) + ' ₽';
-    document.getElementById('finesTotal').textContent = '-' + (finesTotal / 100).toFixed(2) + ' ₽';
+    document.getElementById('bonusesTotal').textContent = '+' + (bonusesTotal / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+    document.getElementById('finesTotal').textContent = '-' + (finesTotal / 100).toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
 }
 
 function showAddBonusModal() {
@@ -1376,11 +1376,11 @@ function loadRating() {
                             <div class="row mt-4">
                                 <div class="col-md-4">
                                     <h6 class="text-muted">Прибыль</h6>
-                                    <h4>${((employee.profit_cents || 0) / 100).toFixed(2)} ₽</h4>
+                                    <h4>${((employee.profit_cents || 0) / 100).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</h4>
                                 </div>
                                 <div class="col-md-4">
                                     <h6 class="text-muted">Выручка</h6>
-                                    <h4>${((employee.revenue_cents || 0) / 100).toFixed(2)} ₽</h4>
+                                    <h4>${((employee.revenue_cents || 0) / 100).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</h4>
                                 </div>
                                 <div class="col-md-4">
                                     <h6 class="text-muted">Заявок</h6>

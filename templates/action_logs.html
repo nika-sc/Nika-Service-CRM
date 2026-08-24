@@ -440,12 +440,12 @@
                                                             <strong>Предоплата:</strong>
                                                             <span class="text-muted">{{ value.old or '—' }}</span>
                                                             <i class="fas fa-arrow-right mx-1 text-muted"></i>
-                                                            <span>{{ value.new or '—' }} ₽</span>
+                                                            <span>{{ value.new or '—' }} {{ money_symbol }}</span>
                                                         {% elif key == 'estimated_cost' and value is mapping and value.old is defined %}
                                                             <strong>Предварительная стоимость:</strong>
                                                             <span class="text-muted">{{ value.old or '—' }}</span>
                                                             <i class="fas fa-arrow-right mx-1 text-muted"></i>
-                                                            <span>{{ value.new or '—' }} ₽</span>
+                                                            <span>{{ value.new or '—' }} {{ money_symbol }}</span>
                                                         {% elif key == 'client_name' and value is mapping and value.old is defined %}
                                                             <strong>Имя клиента:</strong>
                                                             <span class="text-muted">{{ value.old or '—' }}</span>
@@ -487,7 +487,7 @@
                                                         {% elif key == 'payment_method' %}
                                                             <strong>Оплата:</strong> {{ 'Наличные' if value == 'cash' else 'Карта' if value == 'card' else 'Перевод' if value == 'transfer' else value }}
                                                         {% elif key == 'amount' or key == 'final_amount' or key == 'total_amount' %}
-                                                            <strong>{{ field_labels.get(key, key) }}:</strong> {{ value }} ₽
+                                                            <strong>{{ field_labels.get(key, key) }}:</strong> {{ value }} {{ money_symbol }}
                                                         {% elif value is mapping or (value is iterable and value is not string) %}
                                                             <strong>{{ field_labels.get(key, key) }}:</strong> <code>{{ value|tojson }}</code>
                                                         {% elif value is none %}

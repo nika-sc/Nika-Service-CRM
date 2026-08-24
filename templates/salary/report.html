@@ -244,6 +244,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/period_filter.css') }}">
 
 <script>
+const moneySymbol = {{ money_symbol|tojson }};
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -388,10 +389,10 @@ function renderSummary(summary) {
         <div class="salary-kpi-card salary-kpi-card--revenue" title="Сумма оплат по заявкам (дата оплаты в периоде) + выручка продаж магазина (дата продажи в периоде). Совпадает с приходом кассы по заявкам и магазину.">
             <div class="salary-kpi-card__accent"></div>
             <div class="salary-kpi-card__body">
-                <div class="salary-kpi-card__icon"><i class="fas fa-ruble-sign"></i></div>
+                <div class="salary-kpi-card__icon"><span class="nika-money-icon">{{ money_icon_char }}</span></div>
                 <div class="salary-kpi-card__content">
                     <p class="salary-kpi-card__label">Выручка</p>
-                    <p class="salary-kpi-card__value">${fmt(revenueCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__value">${fmt(revenueCents)} <small>${moneySymbol}</small></p>
                     <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Заявки + магазин за период</p>
                 </div>
             </div>
@@ -402,7 +403,7 @@ function renderSummary(summary) {
                 <div class="salary-kpi-card__icon"><i class="fas fa-user-tie"></i></div>
                 <div class="salary-kpi-card__content">
                     <p class="salary-kpi-card__label">Итого руководителю</p>
-                    <p class="salary-kpi-card__value">${fmt(ownerNetCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__value">${fmt(ownerNetCents)} <small>${moneySymbol}</small></p>
                     <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Выручка − Сумма начислений</p>
                 </div>
             </div>
@@ -424,7 +425,7 @@ function renderSummary(summary) {
                 <div class="salary-kpi-card__icon"><i class="fas fa-wallet"></i></div>
                 <div class="salary-kpi-card__content">
                     <p class="salary-kpi-card__label">Сумма начислений</p>
-                    <p class="salary-kpi-card__value">${fmt(totalAmountCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__value">${fmt(totalAmountCents)} <small>${moneySymbol}</small></p>
                     <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Зарплата сотрудникам за период</p>
                 </div>
             </div>
@@ -435,7 +436,7 @@ function renderSummary(summary) {
                 <div class="salary-kpi-card__icon"><i class="fas fa-chart-line"></i></div>
                 <div class="salary-kpi-card__content">
                     <p class="salary-kpi-card__label">Прибыль</p>
-                    <p class="salary-kpi-card__value">${fmt(totalProfitCents)} <small>₽</small></p>
+                    <p class="salary-kpi-card__value">${fmt(totalProfitCents)} <small>${moneySymbol}</small></p>
                     <p class="salary-kpi-card__hint small text-muted mb-0 mt-1">Выручка − расходы (себестоимость)</p>
                 </div>
             </div>
@@ -481,28 +482,28 @@ function showAccrualDetailModal(orderId) {
         const totalCents = list.reduce((s, a) => s + (a.amount_cents || 0), 0);
         let rows = '';
         list.forEach(a => {
-            const ruleText = a.rule_type === 'percent' ? (a.rule_value || 0) + '%' : ((a.rule_value || 0) / 100).toFixed(2) + ' ₽';
+            const ruleText = a.rule_type === 'percent' ? (a.rule_value || 0) + '%' : ((a.rule_value || 0) / 100).toFixed(2) + ' ' + moneySymbol;
             const name = a.master_name || a.manager_name || '—';
             let detail = '';
             if (a.source_service_name) {
-                detail = 'Услуга «' + escapeHtml(a.source_service_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+                detail = 'Услуга «' + escapeHtml(a.source_service_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + moneySymbol;
             } else if (a.source_part_name) {
-                detail = 'Товар «' + escapeHtml(a.source_part_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽';
+                detail = 'Товар «' + escapeHtml(a.source_part_name) + '»: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + moneySymbol;
             } else {
                 const services = a.order_services_items || [];
                 const parts = a.order_parts_items || [];
                 const items = [];
-                if (services.length) items.push('Услуги: ' + services.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
-                if (parts.length) items.push('Товары: ' + parts.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ₽)').join(', '));
-                detail = items.join('. ') || ('За заявку: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ₽');
+                if (services.length) items.push('Услуги: ' + services.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ' + moneySymbol + ')').join(', '));
+                if (parts.length) items.push('Товары: ' + parts.map(x => escapeHtml(x.name || '') + ' (' + ((x.salary_cents || 0) / 100).toFixed(0) + ' ' + moneySymbol + ')').join(', '));
+                detail = items.join('. ') || ('За заявку: ' + ruleText + ' = ' + fmt(a.amount_cents) + ' ' + moneySymbol);
             }
-            rows += '<tr><td class="text-muted small">' + escapeHtml(name) + '</td><td>' + detail + '</td><td class="fw-bold">' + fmt(a.amount_cents) + ' ₽</td></tr>';
+            rows += '<tr><td class="text-muted small">' + escapeHtml(name) + '</td><td>' + detail + '</td><td class="fw-bold">' + fmt(a.amount_cents) + ' ' + moneySymbol + '</td></tr>';
         });
         return `
             <div class="mb-4">
                 <h6 class="d-flex align-items-center gap-2 mb-2">
                     <span class="badge ${badgeClass}">${label}</span>
-                    <span class="fw-bold">Итого: ${fmt(totalCents)} ₽</span>
+                    <span class="fw-bold">Итого: ${fmt(totalCents)} ${moneySymbol}</span>
                 </h6>
                 <table class="table table-sm table-bordered"><thead><tr><th>Сотрудник</th><th>За что</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table>
             </div>`;
@@ -514,9 +515,9 @@ function showAccrualDetailModal(orderId) {
             <a href="${orderHref}" class="fw-bold">Заявка ${escapeHtml(String(orderDisplay))}</a>
         </div>
         <div class="row mb-3">
-            <div class="col-md-4"><strong>Выручка:</strong> ${fmt(revenueCents)} ₽</div>
-            <div class="col-md-4"><strong>Прибыль:</strong> ${fmt(profitCents)} ₽</div>
-            <div class="col-md-4"><strong>Руководителю:</strong> ${fmt(ownerNetCents)} ₽</div>
+            <div class="col-md-4"><strong>Выручка:</strong> ${fmt(revenueCents)} ${moneySymbol}</div>
+            <div class="col-md-4"><strong>Прибыль:</strong> ${fmt(profitCents)} ${moneySymbol}</div>
+            <div class="col-md-4"><strong>Руководителю:</strong> ${fmt(ownerNetCents)} ${moneySymbol}</div>
         </div>
         <hr>
         ${roleBlock('master', 'Мастер', 'bg-primary')}
@@ -541,19 +542,19 @@ function renderAccruals(accruals) {
             const name = escapeHtml(item.name || '');
             const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
             const sal = (item.salary_cents || 0) / 100;
-            const tail = (pct && sal > 0) ? ' (' + pct + ' = ' + sal.toFixed(0) + '₽)' : (sal > 0 ? ' (' + sal.toFixed(0) + '₽)' : '');
+            const tail = (pct && sal > 0) ? ' (' + pct + ' = ' + sal.toFixed(0) + ' ' + moneySymbol + ')' : (sal > 0 ? ' (' + sal.toFixed(0) + ' ' + moneySymbol + ')' : '');
             return name + tail;
         }
         if (a.source_service_name) {
             const amt = (a.amount_cents || 0) / 100;
             const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
-            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : ' (' + amt.toFixed(0) + '₽)';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + ' ' + moneySymbol + ')' : ' (' + amt.toFixed(0) + ' ' + moneySymbol + ')';
             return escapeHtml('За услугу «' + (a.source_service_name || '') + '»') + tail;
         }
         if (a.source_part_name) {
             const amt = (a.amount_cents || 0) / 100;
             const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
-            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : ' (' + amt.toFixed(0) + '₽)';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + ' ' + moneySymbol + ')' : ' (' + amt.toFixed(0) + ' ' + moneySymbol + ')';
             return escapeHtml('За товар «' + (a.source_part_name || '') + '»') + tail;
         }
         const services = a.order_services_items || [];
@@ -565,12 +566,12 @@ function renderAccruals(accruals) {
         if (a.role === 'manager') {
             const amt = (a.amount_cents || 0) / 100;
             const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
-            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : '';
+            const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + ' ' + moneySymbol + ')' : '';
             return 'За заявку (прибыль целиком)' + tail + itemsList;
         }
         const amt = (a.amount_cents || 0) / 100;
         const pct = a.rule_type === 'percent' && a.rule_value ? Math.round(a.rule_value) + '%' : '';
-        const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + '₽)' : '';
+        const tail = pct ? ' (' + pct + ' = ' + amt.toFixed(0) + ' ' + moneySymbol + ')' : '';
         return 'За услуги и товары заявки' + tail + itemsList;
     }
 
@@ -580,7 +581,7 @@ function renderAccruals(accruals) {
         const date = new Date(accrual.created_at);
         const ruleText = accrual.rule_type === 'percent' 
             ? `${accrual.rule_value}%` 
-            : `${(accrual.rule_value / 100).toFixed(2)} ₽`;
+            : `${(accrual.rule_value / 100).toFixed(2)} ${moneySymbol}`;
         
         const orderHref = safeOrderHref(accrual.order_id, accrual.order_uuid);
         const orderDisplay = accrual.order_id != null ? `#${accrual.order_id}` : (accrual.order_uuid || '—');
@@ -602,10 +603,10 @@ function renderAccruals(accruals) {
             <td>${escapeHtml(accrual.master_name || accrual.manager_name || '—')}</td>
             <td><span class="badge bg-${accrual.role === 'master' ? 'primary' : 'info'}">${accrual.role === 'master' ? 'Мастер' : 'Менеджер'}</span></td>
             <td>${sourceHtml}</td>
-            <td><strong>${(accrual.amount_cents / 100).toFixed(2)} ₽</strong></td>
-            <td>${(revenueCents / 100).toFixed(2)} ₽</td>
-            <td>${(orderProfitCents / 100).toFixed(2)} ₽</td>
-            <td>${(ownerNetCents / 100).toFixed(2)} ₽</td>
+            <td><strong>${(accrual.amount_cents / 100).toFixed(2)} ${moneySymbol}</strong></td>
+            <td>${(revenueCents / 100).toFixed(2)} ${moneySymbol}</td>
+            <td>${(orderProfitCents / 100).toFixed(2)} ${moneySymbol}</td>
+            <td>${(ownerNetCents / 100).toFixed(2)} ${moneySymbol}</td>
             <td>${ruleText}</td>
         `;
         if (accrual.order_id) {

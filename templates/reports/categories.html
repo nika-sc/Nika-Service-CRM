@@ -46,15 +46,15 @@
                                 <p><strong>Операций:</strong> <span class="h5">{{ report.total_transactions }}</span></p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>Доходы:</strong> <span class="h5 text-success">{{ report.total_income|round(2) }} ₽</span></p>
+                                <p><strong>Доходы:</strong> <span class="h5 text-success">{{ report.total_income|round(2) }} {{ money_symbol }}</span></p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>Расходы:</strong> <span class="h5 text-danger">{{ report.total_expense|round(2) }} ₽</span></p>
+                                <p><strong>Расходы:</strong> <span class="h5 text-danger">{{ report.total_expense|round(2) }} {{ money_symbol }}</span></p>
                             </div>
                             <div class="col-md-3">
                                 <p><strong>Баланс:</strong> 
                                     <span class="h5 {% if report.total_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {{ report.total_balance|round(2) }} ₽
+                                        {{ report.total_balance|round(2) }} {{ money_symbol }}
                                     </span>
                                 </p>
                             </div>
@@ -98,11 +98,11 @@
                                         </td>
                                         <td>{{ cat.transactions_count }}</td>
                                         <td class="fw-bold {% if cat.category_type == 'income' %}text-success{% else %}text-danger{% endif %}">
-                                            {{ cat.total_amount|round(2) }} ₽
+                                            {{ cat.total_amount|round(2) }} {{ money_symbol }}
                                         </td>
-                                        <td>{{ cat.avg_amount|round(2) }} ₽</td>
-                                        <td>{{ cat.max_amount|round(2) }} ₽</td>
-                                        <td>{{ cat.min_amount|round(2) }} ₽</td>
+                                        <td>{{ cat.avg_amount|round(2) }} {{ money_symbol }}</td>
+                                        <td>{{ cat.max_amount|round(2) }} {{ money_symbol }}</td>
+                                        <td>{{ cat.min_amount|round(2) }} {{ money_symbol }}</td>
                                     </tr>
                                     {% endfor %}
                                     {% if not report.categories_stats %}
@@ -154,7 +154,7 @@
                                             {% endif %}
                                         </td>
                                         <td class="fw-bold {% if t.transaction_type == 'income' %}text-success{% else %}text-danger{% endif %}">
-                                            {{ t.amount|round(2) }} ₽
+                                            {{ t.amount|round(2) }} {{ money_symbol }}
                                         </td>
                                         <td>
                                             {% if t.payment_method == 'cash' %}

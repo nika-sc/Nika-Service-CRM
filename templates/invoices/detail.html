@@ -95,7 +95,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header">Итог</div>
                 <div class="card-body">
-                    <div class="fs-4 fw-bold">{{ invoice.total_fmt }} ₽</div>
+                    <div class="fs-4 fw-bold">{{ invoice.total_fmt }} {{ money_symbol }}</div>
                     <div class="text-muted">Без НДС</div>
                     {% if invoice.due_date %}<div class="mt-2">Срок оплаты: <b>{{ invoice.due_date }}</b></div>{% endif %}
                     {% if invoice.comment %}<div class="mt-2">{{ invoice.comment }}</div>{% endif %}

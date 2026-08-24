@@ -101,13 +101,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Розничная цена, ₽ <span class="text-danger">*</span></label>
+                                <label class="form-label">Розничная цена, {{ money_symbol }} <span class="text-danger">*</span></label>
                                 <input type="number" name="retail_price" class="form-control" value="{% if is_edit %}{{ part.retail_price or part.price or 0 }}{% else %}0{% endif %}" step="0.01" min="0" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Закупочная цена, ₽</label>
+                                <label class="form-label">Закупочная цена, {{ money_symbol }}</label>
                                 <input type="number" name="purchase_price" class="form-control" value="{% if is_edit %}{{ part.purchase_price or 0 }}{% else %}0{% endif %}" step="0.01" min="0">
                             </div>
                         </div>

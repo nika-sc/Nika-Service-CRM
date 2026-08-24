@@ -44,13 +44,13 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
-                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} ₽</span></p>
+                        <p><strong>Общая выручка:</strong> <span class="h5 text-success">{{ report.total_revenue }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} ₽</span></p>
+                        <p><strong>Общая себестоимость:</strong> <span class="h5">{{ report.total_cost }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Общая маржа:</strong> <span class="h5 text-primary">{{ report.total_margin }} ₽</span></p>
+                        <p><strong>Общая маржа:</strong> <span class="h5 text-primary">{{ report.total_margin }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Маржинальность:</strong> <span class="h5 text-success">{{ report.total_margin_percent|round(2) }}%</span></p>
@@ -58,10 +58,10 @@
                 </div>
                 <div class="row mt-2">
                     <div class="col-md-3">
-                        <p><strong>Выручка услуг:</strong> <span class="h5 text-info">{{ report.services_revenue }} ₽</span></p>
+                        <p><strong>Выручка услуг:</strong> <span class="h5 text-info">{{ report.services_revenue }} {{ money_symbol }}</span></p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Выручка всего:</strong> <span class="h5 text-success">{{ report.total_revenue_all }} ₽</span></p>
+                        <p><strong>Выручка всего:</strong> <span class="h5 text-success">{{ report.total_revenue_all }} {{ money_symbol }}</span></p>
                     </div>
                 </div>
             </div>
@@ -95,11 +95,11 @@
                                 <td>{{ item.part_number or '-' }}</td>
                                 <td>{{ item.category or '-' }}</td>
                                 <td>{{ item.total_sold }}</td>
-                                <td>{{ item.total_revenue }} ₽</td>
-                                <td>{{ item.total_cost }} ₽</td>
-                                <td>{{ item.margin }} ₽</td>
-                                <td>{{ item.avg_purchase_price|round(2) }} ₽</td>
-                                <td>{{ item.avg_retail_price|round(2) }} ₽</td>
+                                <td>{{ item.total_revenue }} {{ money_symbol }}</td>
+                                <td>{{ item.total_cost }} {{ money_symbol }}</td>
+                                <td>{{ item.margin }} {{ money_symbol }}</td>
+                                <td>{{ item.avg_purchase_price|round(2) }} {{ money_symbol }}</td>
+                                <td>{{ item.avg_retail_price|round(2) }} {{ money_symbol }}</td>
                                 <td>
                                     <span class="badge {% if item.margin_percent >= 30 %}bg-success{% elif item.margin_percent >= 15 %}bg-warning{% else %}bg-danger{% endif %}">
                                         {{ item.margin_percent|round(2) }}%

@@ -36,7 +36,7 @@
                     <p><strong>Поступлений:</strong> <span class="h5">{{ report.total_payments }}</span></p>
                 </div>
                 <div class="col-md-4">
-                    <p><strong>Итого:</strong> <span class="h5 text-success">{{ report.total_amount|round(2) }} ₽</span></p>
+                    <p><strong>Итого:</strong> <span class="h5 text-success">{{ report.total_amount|round(2) }} {{ money_symbol }}</span></p>
                 </div>
             </div>
             <div class="row mt-2">
@@ -65,7 +65,7 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ row.payments_count }}</td>
-                                    <td class="fw-bold">{{ (row.total_amount or 0)|round(2) }} ₽</td>
+                                    <td class="fw-bold">{{ (row.total_amount or 0)|round(2) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endfor %}
                                 {% if not report.by_type %}
@@ -125,9 +125,9 @@
                             </td>
                             <td class="fw-bold">
                                 {% if p.source_type == 'transaction' %}
-                                <a href="{{ url_for('finance.cash') }}?highlight={{ p.id }}" class="text-decoration-none">{{ (p.amount or 0)|round(2) }} ₽</a>
+                                <a href="{{ url_for('finance.cash') }}?highlight={{ p.id }}" class="text-decoration-none">{{ (p.amount or 0)|round(2) }} {{ money_symbol }}</a>
                                 {% else %}
-                                {{ (p.amount or 0)|round(2) }} ₽
+                                {{ (p.amount or 0)|round(2) }} {{ money_symbol }}
                                 {% endif %}
                             </td>
                             <td>

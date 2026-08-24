@@ -58,7 +58,7 @@
                                     <h6 class="card-title mb-1 text-white-50">Приход</h6>
                                     <div>
                                    
-                                        <h2 class="mb-0 text-white">{{ "%.2f"|format(summary.income.total) }} ₽</h2>
+                                        <h2 class="mb-0 text-white">{{ "%.2f"|format(summary.income.total) }} {{ money_symbol }}</h2>
                                     </div>
                                     <i class="fas fa-coins fa-2x opacity-50"></i>
                                 </div>
@@ -224,7 +224,7 @@
                                                     {% endif %}
                                                 </td>
                                                 <td>{{ payment.client_name or '—' }}</td>
-                                                <td class="text-success fw-bold">{{ "%.2f"|format(payment.amount) }} ₽</td>
+                                                <td class="text-success fw-bold">{{ "%.2f"|format(payment.amount) }} {{ money_symbol }}</td>
                                                 <td>
                                                     {% if payment.payment_type == 'cash' %}
                                                         <span class="badge bg-success">Наличные</span>

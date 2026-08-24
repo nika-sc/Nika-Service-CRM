@@ -30,7 +30,7 @@
                         {{ order.status_name or 'Без статуса' }}
                     </span>
                 </td>
-                <td>{{ "%.2f"|format(order.total_paid|default(0)) }} ₽</td>
+                <td>{{ "%.2f"|format(order.total_paid|default(0)) }} {{ money_symbol }}</td>
             </tr>
             {% endfor %}
         </tbody>

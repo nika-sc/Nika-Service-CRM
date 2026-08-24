@@ -139,8 +139,8 @@
                                         <span class="badge bg-info">Услуга</span>
                                     </td>
                                     <td class="text-center">{{ service.quantity }}</td>
-                                    <td class="text-end">{{ "%.2f"|format(service.price) }} ₽</td>
-                                    <td class="text-end fw-bold">{{ "%.2f"|format(service.total) }} ₽</td>
+                                    <td class="text-end">{{ "%.2f"|format(service.price) }} {{ money_symbol }}</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(service.total) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endfor %}
                                 {% for part in payment.parts %}
@@ -155,15 +155,15 @@
                                         <span class="badge bg-warning">Товар</span>
                                     </td>
                                     <td class="text-center">{{ part.quantity }}</td>
-                                    <td class="text-end">{{ "%.2f"|format(part.price) }} ₽</td>
-                                    <td class="text-end fw-bold">{{ "%.2f"|format(part.total) }} ₽</td>
+                                    <td class="text-end">{{ "%.2f"|format(part.price) }} {{ money_symbol }}</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(part.total) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="table-light">
                                     <td colspan="4" class="text-end">Итого по заявке:</td>
-                                    <td class="text-end fw-bold">{{ "%.2f"|format(payment.order_total) }} ₽</td>
+                                    <td class="text-end fw-bold">{{ "%.2f"|format(payment.order_total) }} {{ money_symbol }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -178,7 +178,7 @@
                                     <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Сумма оплаты</h6>
                                 </div>
                                 <div class="col-md-6 text-end">
-                                    <h4 class="mb-0 text-success">{{ "%.2f"|format(payment.amount) }} ₽</h4>
+                                    <h4 class="mb-0 text-success">{{ "%.2f"|format(payment.amount) }} {{ money_symbol }}</h4>
                                 </div>
                             </div>
                         </div>

@@ -2681,7 +2681,7 @@
                                                 <span class="compact-value fw-semibold">{{ order.estimated_cost or '0' }} {{ settings.currency if settings and settings.currency else 'RUB' }}</span>
                                             </div>
                                             <div class="compact-info-item highlight-item">
-                                                <span class="compact-label"><i class="fas fa-ruble-sign me-1"></i>Предоплата:</span>
+                                                <span class="compact-label"><span class="nika-money-icon me-1">{{ money_icon_char }}</span>Предоплата:</span>
                                                 <span class="compact-value fw-semibold">{{ order.prepayment or '0' }} {{ settings.currency if settings and settings.currency else 'RUB' }}</span>
                                             </div>
                                             <div class="compact-info-item highlight-item">
@@ -2808,7 +2808,7 @@
                                                                             </div>
                                                                             <span style="font-weight: 500; color: #374151; font-size: 0.875rem;">{{ service.service_name }}</span>
                                                                             {% if service.discount_value and service.discount_value > 0 %}
-                                                                            {% set discount_text = "-" + (service.discount_value|string) + ("%" if service.discount_type == "percent" else " ₽") %}
+                                                                            {% set discount_text = "-" + (service.discount_value|string) + ("%" if service.discount_type == "percent" else " {{ money_symbol }}") %}
                                                                             <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #16a34a; font-size: 0.65rem; padding: 0.15rem 0.4rem;">{{ discount_text }}</span>
                                                                             {% endif %}
                                                                             {% if service.warranty_days and service.warranty_days > 0 %}
@@ -2824,10 +2824,10 @@
                                                                         </div>
                                                                         <div class="d-flex align-items-center gap-3" style="font-size: 0.75rem; color: #6b7280;">
                                                                             <span>Кол-во: <strong>{{ service.quantity }}</strong></span>
-                                                                            <span>Цена: <strong>{{ "%.2f"|format(service.price) }} ₽</strong></span>
-                                                                            <span class="fw-bold" style="color: #3b82f6;">Сумма: {{ "%.2f"|format(service.price * service.quantity) }} ₽</span>
+                                                                            <span>Цена: <strong>{{ "%.2f"|format(service.price) }} {{ money_symbol }}</strong></span>
+                                                                            <span class="fw-bold" style="color: #3b82f6;">Сумма: {{ "%.2f"|format(service.price * service.quantity) }} {{ money_symbol }}</span>
                                                                             {% if service.cost_price is not none and service.cost_price > 0 %}
-                                                                            <span title="Себестоимость">Себ.: <strong>{{ "%.2f"|format(service.cost_price) }} ₽</strong></span>
+                                                                            <span title="Себестоимость">Себ.: <strong>{{ "%.2f"|format(service.cost_price) }} {{ money_symbol }}</strong></span>
                                                                             {% endif %}
                                                                             <span><i class="fas fa-calendar me-1"></i>{{ service.created_at|format_date(true) if service.created_at else '—' }}</span>
                                                                         </div>
@@ -2886,7 +2886,7 @@
                                                                             </span>
                                                                             {% endif %}
                                                                             {% if part.discount_value and part.discount_value > 0 %}
-                                                                            {% set discount_text = "-" + (part.discount_value|string) + ("%" if part.discount_type == "percent" else " ₽") %}
+                                                                            {% set discount_text = "-" + (part.discount_value|string) + ("%" if part.discount_type == "percent" else " {{ money_symbol }}") %}
                                                                             <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #16a34a; font-size: 0.65rem; padding: 0.15rem 0.4rem;">{{ discount_text }}</span>
                                                                             {% endif %}
                                                                             {% if part.warranty_days and part.warranty_days > 0 %}
@@ -2903,10 +2903,10 @@
                                                                         <div class="d-flex align-items-center gap-3" style="font-size: 0.75rem; color: #6b7280;">
                                                                             <span>Артикул: <strong>{{ part.part_number or '—' }}</strong></span>
                                                                             <span>Кол-во: <strong>{{ part.quantity }}</strong></span>
-                                                                            <span>Цена: <strong>{{ "%.2f"|format(part.price) }} ₽</strong></span>
-                                                                            <span class="fw-bold" style="color: #8b5cf6;">Сумма: {{ "%.2f"|format(part.price * part.quantity) }} ₽</span>
+                                                                            <span>Цена: <strong>{{ "%.2f"|format(part.price) }} {{ money_symbol }}</strong></span>
+                                                                            <span class="fw-bold" style="color: #8b5cf6;">Сумма: {{ "%.2f"|format(part.price * part.quantity) }} {{ money_symbol }}</span>
                                                                             {% if part.purchase_price is not none and part.purchase_price > 0 %}
-                                                                            <span title="Себестоимость">Себ.: <strong>{{ "%.2f"|format(part.purchase_price) }} ₽</strong></span>
+                                                                            <span title="Себестоимость">Себ.: <strong>{{ "%.2f"|format(part.purchase_price) }} {{ money_symbol }}</strong></span>
                                                                             {% endif %}
                                                                         </div>
                                                                     </div>
@@ -2936,14 +2936,14 @@
                                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2" style="font-size: 0.85rem;">
                                                     {% if order_services %}
                                                     <span class="text-muted">Услуги:</span>
-                                                    <span class="fw-bold" style="color: #3b82f6;">{{ "%.2f"|format(order_services_total) }} ₽</span>
+                                                    <span class="fw-bold" style="color: #3b82f6;">{{ "%.2f"|format(order_services_total) }} {{ money_symbol }}</span>
                                                     {% endif %}
                                                     {% if order_parts %}
                                                     <span class="text-muted {% if order_services %}ms-3{% endif %}">Товары:</span>
-                                                    <span class="fw-bold" style="color: #8b5cf6;">{{ "%.2f"|format(order_parts_total) }} ₽</span>
+                                                    <span class="fw-bold" style="color: #8b5cf6;">{{ "%.2f"|format(order_parts_total) }} {{ money_symbol }}</span>
                                                     {% endif %}
                                                     <span class="text-muted {% if order_services or order_parts %}ms-3{% endif %}">Всего:</span>
-                                                    <span class="fw-bold" style="color: #111827; font-size: 1rem;" data-order-total="{{ order_total }}">{{ "%.2f"|format(order_total) }} ₽</span>
+                                                    <span class="fw-bold" style="color: #111827; font-size: 1rem;" data-order-total="{{ order_total }}">{{ "%.2f"|format(order_total) }} {{ money_symbol }}</span>
                                                 </div>
                                                 {% set services_count = order_services|length if order_services else 0 %}
                                                 {% set parts_count = order_parts|length if order_parts else 0 %}
@@ -2986,7 +2986,7 @@
                                                                             <div style="width: 24px; height: 24px; background: {% if is_refund %}rgba(239, 68, 68, 0.15){% else %}rgba(34, 197, 94, 0.1){% endif %}; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem;">
                                                                                 <i class="fas {% if is_refund %}fa-undo{% else %}fa-calendar-check{% endif %}" style="color: {% if is_refund %}#dc2626{% else %}#22c55e{% endif %}; font-size: 0.7rem;"></i>
                                                                             </div>
-                                                                            <span class="fw-bold {% if is_refund %}text-decoration-line-through text-danger{% endif %}" style="{% if is_refund %}color: #dc2626 !important;{% else %}color: #22c55e;{% endif %} font-size: 0.95rem;">{% if is_refund %}−{% endif %}{{ "%.2f"|format(payment.amount) }} ₽</span>
+                                                                            <span class="fw-bold {% if is_refund %}text-decoration-line-through text-danger{% endif %}" style="{% if is_refund %}color: #dc2626 !important;{% else %}color: #22c55e;{% endif %} font-size: 0.95rem;">{% if is_refund %}−{% endif %}{{ "%.2f"|format(payment.amount) }} {{ money_symbol }}</span>
                                                                             <span class="ms-2" style="font-size: 0.75rem; color: #6b7280;">{{ payment.payment_date|format_date(true) }}</span>
                                                                             {% if is_refund %}<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">ВОЗВРАТ</span>{% endif %}
                                                                         </div>
@@ -3051,7 +3051,7 @@
                                                     {% for inv in order_invoices %}
                                                     <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">
                                                         <a href="{{ url_for('invoices.detail', invoice_id=inv.id) }}">№{{ inv.number }}</a>
-                                                        <span>{{ inv.total_fmt }} ₽</span>
+                                                        <span>{{ inv.total_fmt }} {{ money_symbol }}</span>
                                                         <span class="badge text-bg-{% if inv.status == 'paid' %}success{% elif inv.status == 'unpaid' %}warning{% else %}secondary{% endif %}">{{ inv.status_label }}</span>
                                                     </div>
                                                     {% endfor %}
@@ -3071,7 +3071,7 @@
                                             <i class="fas fa-calculator me-1"></i>К оплате
                                         </div>
                                         <div class="fw-bold" style="font-size: 1.35rem; color: #3b82f6; margin-bottom: 0.25rem;">
-                                            {{ "%.2f"|format(order_total) }} ₽
+                                            {{ "%.2f"|format(order_total) }} {{ money_symbol }}
                                         </div>
                                         <div class="text-muted" style="font-size: 0.7rem;">Общая сумма</div>
                                     </div>
@@ -3082,7 +3082,7 @@
                                             <i class="fas fa-wallet me-1"></i>Предоплата
                                         </div>
                                         <div class="fw-bold" style="font-size: 1.35rem; color: #17a2b8; margin-bottom: 0.25rem;">
-                                            {{ "%.2f"|format(totals.get('prepayment', 0)) }} ₽
+                                            {{ "%.2f"|format(totals.get('prepayment', 0)) }} {{ money_symbol }}
                                         </div>
                                         <div class="text-muted" style="font-size: 0.7rem;">При приеме</div>
                                     </div>
@@ -3093,7 +3093,7 @@
                                             <i class="fas fa-check-circle me-1"></i>Оплачено
                                         </div>
                                         <div class="fw-bold" style="font-size: 1.35rem; color: #22c55e; margin-bottom: 0.25rem;" data-order-paid="{{ order_paid }}">
-                                            {{ "%.2f"|format(order_paid) }} ₽
+                                            {{ "%.2f"|format(order_paid) }} {{ money_symbol }}
                                         </div>
                                         {% if order_total > 0 %}
                                         {% set payment_percent_raw = (order_paid / order_total * 100) %}
@@ -3112,11 +3112,11 @@
                                         </div>
                                         <div class="fw-bold" style="font-size: 1.35rem; color: {% if order_debt > 0 %}#ef4444{% else %}#22c55e{% endif %}; margin-bottom: 0.25rem;" data-order-debt="{{ order_debt }}" data-order-debt-value="{{ order_debt }}">
                                             {% if order_debt > 0 %}
-                                                {{ "%.2f"|format(order_debt) }} ₽
+                                                {{ "%.2f"|format(order_debt) }} {{ money_symbol }}
                                             {% elif totals.get('overpayment', 0) > 0 %}
-                                                +{{ "%.2f"|format(totals.get('overpayment', 0)) }} ₽
+                                                +{{ "%.2f"|format(totals.get('overpayment', 0)) }} {{ money_symbol }}
                                             {% else %}
-                                                0.00 ₽
+                                                0.00 {{ money_symbol }}
                                             {% endif %}
                                         </div>
                                         {% if order_debt > 0 %}
@@ -3151,12 +3151,12 @@
                                                         {% if paid_rub == 0 %}
                                                             — <span class="fw-normal text-muted" style="font-size: 0.85rem;">нет оплат</span>
                                                         {% else %}
-                                                            {{ "%.2f"|format(profit_rub) }} ₽
+                                                            {{ "%.2f"|format(profit_rub) }} {{ money_symbol }}
                                                         {% endif %}
                                                     </div>
                                                     <div class="text-muted" style="font-size: 0.75rem;">
-                                                        Оплачено: <strong>{{ "%.2f"|format(paid_rub) }} ₽</strong> •
-                                                        Себестоимость запчастей: <strong>{{ "%.2f"|format(parts_cost_rub) }} ₽</strong>
+                                                        Оплачено: <strong>{{ "%.2f"|format(paid_rub) }} {{ money_symbol }}</strong> •
+                                                        Себестоимость запчастей: <strong>{{ "%.2f"|format(parts_cost_rub) }} {{ money_symbol }}</strong>
                                                         {% if paid_rub == 0 %}
                                                             <span class="d-block mt-1" style="font-size: 0.7rem;">Прибыль рассчитается после поступления оплат</span>
                                                         {% endif %}
@@ -3186,10 +3186,10 @@
                                                 {% set salary_master_rub = (salary_totals.master_cents or 0) / 100 %}
                                                 {% set salary_manager_rub = (salary_totals.manager_cents or 0) / 100 %}
                                                 <div class="fw-bold" style="font-size: 1.35rem; color: #b45309; margin-bottom: 0.25rem;" id="salaryTotalValue">
-                                                    {{ "%.2f"|format(salary_total_rub) }} ₽
+                                                    {{ "%.2f"|format(salary_total_rub) }} {{ money_symbol }}
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.75rem;" id="salaryBreakdownText">
-                                                    Мастер: <strong>{{ "%.2f"|format(salary_master_rub) }} ₽</strong> • Менеджер: <strong>{{ "%.2f"|format(salary_manager_rub) }} ₽</strong>
+                                                    Мастер: <strong>{{ "%.2f"|format(salary_master_rub) }} {{ money_symbol }}</strong> • Менеджер: <strong>{{ "%.2f"|format(salary_manager_rub) }} {{ money_symbol }}</strong>
                                                 </div>
                                                 <div class="mt-2" id="salaryAccrualsList" style="font-size: 0.75rem; color: #6b7280;">
                                                     {% if salary_accruals %}
@@ -3202,7 +3202,7 @@
                                                                     </span>
                                                                     <span class="ms-1">{{ who or '—' }}</span>
                                                                 </div>
-                                                                <div class="fw-bold">{{ "%.2f"|format((a.amount_cents or 0) / 100) }} ₽</div>
+                                                                <div class="fw-bold">{{ "%.2f"|format((a.amount_cents or 0) / 100) }} {{ money_symbol }}</div>
                                                             </div>
                                                         {% endfor %}
                                                         {% if salary_accruals|length > 4 %}
@@ -3492,14 +3492,14 @@
                             <input type="number" class="form-control form-control-sm" id="orderItemEditQty" min="1" value="1">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small mb-1">Цена (₽)</label>
+                            <label class="form-label small mb-1">Цена ({{ money_symbol }})</label>
                             <input type="number" class="form-control form-control-sm" id="orderItemEditPrice" step="0.01" min="0">
                         </div>
                     </div>
 
                     <div class="row g-2 mb-2">
                         <div class="col-12">
-                            <label class="form-label small mb-1">Себестоимость (₽)</label>
+                            <label class="form-label small mb-1">Себестоимость ({{ money_symbol }})</label>
                             <input type="number" class="form-control form-control-sm" id="orderItemEditCost" step="0.01" min="0" placeholder="—">
                             <div class="text-muted small">Для товара/услуги в рамках заявки</div>
                         </div>
@@ -3514,7 +3514,7 @@
                         <div class="input-group input-group-sm">
                             <input type="number" class="form-control" id="orderItemEditDiscountValue" step="0.01" placeholder="0">
                             <button class="btn btn-outline-secondary" type="button" id="orderItemDiscountPercentBtn">%</button>
-                            <button class="btn btn-outline-secondary" type="button" id="orderItemDiscountRubBtn">₽</button>
+                            <button class="btn btn-outline-secondary" type="button" id="orderItemDiscountRubBtn">{{ money_symbol }}</button>
                         </div>
                         <div class="text-muted small">Если пусто — скидка не применяется</div>
                     </div>
@@ -3642,11 +3642,11 @@
                                 <input type="hidden" name="appearance" id="editAppearanceInput" value="{{ order.appearance or '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Предварительная стоимость (₽)</label>
+                                <label class="form-label">Предварительная стоимость ({{ money_symbol }})</label>
                                 <input type="number" class="form-control" name="estimated_cost" value="{{ order.estimated_cost or 0 }}" min="0" step="1">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Предоплата (₽)</label>
+                                <label class="form-label">Предоплата ({{ money_symbol }})</label>
                                 <input type="number" class="form-control" name="prepayment" value="{{ order.prepayment }}" min="0" step="1" required>
                             </div>
                             <div class="col-md-4">
@@ -3837,7 +3837,7 @@
                                    min="1" value="1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="partPrice" class="form-label">Цена за единицу (₽)</label>
+                            <label for="partPrice" class="form-label">Цена за единицу ({{ money_symbol }})</label>
                             <input type="number" class="form-control" id="partPrice" 
                                    step="0.01" min="0" placeholder="Автоматически из справочника">
                             <small class="form-text text-muted">Если не указана, будет использована цена из справочника</small>
@@ -4048,11 +4048,11 @@
                                         <input type="number" class="form-control" id="oneTimeQtyInput" min="1" value="1">
                                     </div>
                                     <div class="col-4">
-                                        <label class="form-label">Цена (₽) *</label>
+                                        <label class="form-label">Цена ({{ money_symbol }}) *</label>
                                         <input type="number" class="form-control" id="oneTimePriceInput" step="0.01" min="0" placeholder="0.00">
                                     </div>
                                     <div class="col-4">
-                                        <label class="form-label">Себ. (₽)</label>
+                                        <label class="form-label">Себ. ({{ money_symbol }})</label>
                                         <input type="number" class="form-control" id="oneTimeCostInput" step="0.01" min="0" placeholder="—">
                                     </div>
                                 </div>
@@ -4089,12 +4089,12 @@
                             <input type="number" class="form-control form-control-sm" id="selectedItemQtyInput" min="1" value="1">
                 </div>
                         <div class="mb-3">
-                            <label class="form-label small">Цена (₽)</label>
+                            <label class="form-label small">Цена ({{ money_symbol }})</label>
                             <input type="number" class="form-control form-control-sm" id="selectedItemPriceInput" step="0.01" min="0" placeholder="Из справочника">
                             <small class="text-muted" style="font-size: 0.7rem;">Можно изменить; при повторном выборе цена берётся из справочника</small>
             </div>
                         <div class="mb-3">
-                            <label class="form-label small">Себестоимость (₽)</label>
+                            <label class="form-label small">Себестоимость ({{ money_symbol }})</label>
                             <input type="number" class="form-control form-control-sm" id="selectedItemCostInput" step="0.01" min="0" placeholder="Авто">
                             <small class="text-muted" style="font-size: 0.7rem;">Для услуги/товара в рамках заявки</small>
                         </div>
@@ -4107,7 +4107,7 @@
                             <div class="input-group input-group-sm">
                                 <input type="number" class="form-control" id="selectedItemDiscountInput" step="0.01" placeholder="0">
                                 <button class="btn btn-outline-secondary" type="button" id="discountTypePercentBtn">%</button>
-                                <button class="btn btn-outline-secondary" type="button" id="discountTypeRubBtn">₽</button>
+                                <button class="btn btn-outline-secondary" type="button" id="discountTypeRubBtn">{{ money_symbol }}</button>
                             </div>
                             <small class="text-muted" style="font-size: 0.7rem;">От цены из справочника/склада</small>
                         </div>
@@ -4167,7 +4167,7 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="prepaymentAmount" class="form-label">Сумма, ₽ *</label>
+                            <label for="prepaymentAmount" class="form-label">Сумма, {{ money_symbol }} *</label>
                             <input type="number" class="form-control" id="prepaymentAmount" 
                                    step="0.01" min="0.01" required placeholder="Введите значение">
                         </div>
@@ -4213,7 +4213,7 @@
                         <label class="d-flex gap-2 align-items-center mb-1">
                             <input type="checkbox" class="form-check-input invoice-svc" value="{{ s.id }}" checked>
                             <span class="flex-grow-1">{{ s.name or s.service_name }}</span>
-                            <span class="text-muted">{{ "%.2f"|format(s.price or s.service_price or 0) }} ₽ × {{ s.quantity or 1 }}</span>
+                            <span class="text-muted">{{ "%.2f"|format(s.price or s.service_price or 0) }} {{ money_symbol }} × {{ s.quantity or 1 }}</span>
                         </label>
                         {% else %}
                         <div class="text-muted small">Нет услуг</div>
@@ -4225,7 +4225,7 @@
                         <label class="d-flex gap-2 align-items-center mb-1">
                             <input type="checkbox" class="form-check-input invoice-part" value="{{ p.id }}" checked>
                             <span class="flex-grow-1">{{ p.name or p.part_name }}</span>
-                            <span class="text-muted">{{ "%.2f"|format(p.price or p.sale_price or 0) }} ₽ × {{ p.quantity or 1 }}</span>
+                            <span class="text-muted">{{ "%.2f"|format(p.price or p.sale_price or 0) }} {{ money_symbol }} × {{ p.quantity or 1 }}</span>
                         </label>
                         {% else %}
                         <div class="text-muted small">Нет товаров</div>
@@ -4257,25 +4257,25 @@
                         <div class="alert alert-info mb-3" id="paymentInfoAlert">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>Сумма заявки:</strong>
-                                <span id="paymentOrderTotal">{{ "%.2f"|format(order_total) }} ₽</span>
+                                <span id="paymentOrderTotal">{{ "%.2f"|format(order_total) }} {{ money_symbol }}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>Оплачено:</strong>
-                                <span class="text-success" id="paymentOrderPaid">{{ "%.2f"|format(order_paid) }} ₽</span>
+                                <span class="text-success" id="paymentOrderPaid">{{ "%.2f"|format(order_paid) }} {{ money_symbol }}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <strong>К доплате:</strong>
-                                <span class="text-danger fw-bold" id="paymentOrderDebt">{{ "%.2f"|format(order_debt) }} ₽</span>
+                                <span class="text-danger fw-bold" id="paymentOrderDebt">{{ "%.2f"|format(order_debt) }} {{ money_symbol }}</span>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="paymentAmount" class="form-label">Сумма оплаты (₽) *</label>
+                            <label for="paymentAmount" class="form-label">Сумма оплаты ({{ money_symbol }}) *</label>
                             <input type="number" class="form-control" id="paymentAmount" 
                                    step="0.01" min="0.01" max="{{ order_debt if order_debt > 0 else '' }}" 
                                    required placeholder="0.00" value="{{ order_debt if order_debt > 0 else '' }}">
                             <small class="form-text text-muted" id="paymentAmountHelp">
                                 {% if order_debt > 0 %}
-                                    Максимальная сумма: {{ "%.2f"|format(order_debt) }} ₽
+                                    Максимальная сумма: {{ "%.2f"|format(order_debt) }} {{ money_symbol }}
                                 {% else %}
                                     Долг отсутствует
                                 {% endif %}
@@ -4348,7 +4348,7 @@
                                                 <option value="">Выберите услугу...</option>
                                                 {% for service in all_services %}
                                                 <option value="{{ service.id }}" data-price="{{ service.price }}">
-                                                    {{ service.name }} - {{ "%.2f"|format(service.price) }} ₽
+                                                    {{ service.name }} - {{ "%.2f"|format(service.price) }} {{ money_symbol }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -4358,7 +4358,7 @@
                                             <input type="number" class="form-control service-quantity" min="1" value="1" data-index="0">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Цена (₽)</label>
+                                            <label class="form-label">Цена ({{ money_symbol }})</label>
                                             <input type="number" class="form-control service-price" step="0.01" min="0" placeholder="Авто" data-index="0">
                                         </div>
                                         <div class="col-md-2 d-flex align-items-end">
@@ -4395,7 +4395,7 @@
                                             <input type="number" class="form-control part-quantity" min="1" value="1" data-index="0">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Цена (₽)</label>
+                                            <label class="form-label">Цена ({{ money_symbol }})</label>
                                             <input type="number" class="form-control part-price" step="0.01" min="0" placeholder="Авто" data-index="0">
                                         </div>
                                         <div class="col-md-2 d-flex align-items-end">
@@ -4420,7 +4420,7 @@
                             </h6>
                             <div class="row">
                                 <div class="col-md-4">
-                                    <label for="unifiedPaymentAmount" class="form-label">Сумма оплаты (₽)</label>
+                                    <label for="unifiedPaymentAmount" class="form-label">Сумма оплаты ({{ money_symbol }})</label>
                                     <input type="number" class="form-control" id="unifiedPaymentAmount" 
                                            step="0.01" min="0" placeholder="0.00">
                                 </div>
@@ -5993,14 +5993,13 @@
         
         if (editPhoneInput) {
             function normalizePhoneClient(value) {
+                if (window.nikaNormalizePhone) return window.nikaNormalizePhone(value);
                 const digits = value.replace(/\D/g, '');
                 if (!digits) return '';
                 let normalized = digits;
-                // Если начинается с 8, заменяем на 7
                 if (normalized.startsWith('8')) {
                     normalized = '7' + normalized.slice(1);
                 }
-                // Если 10 цифр и не начинается с 7, добавляем 7 в начале
                 if (normalized.length === 10 && !normalized.startsWith('7')) {
                     normalized = '7' + normalized;
                 }
@@ -6008,7 +6007,7 @@
             }
 
             function formatPhoneDisplay(value) {
-                // Форматирует телефон в формат: +7(988)146-32-31
+                if (window.nikaFormatPhoneDisplay) return window.nikaFormatPhoneDisplay(value);
                 const digits = normalizePhoneClient(value);
                 if (digits.length === 11 && digits.startsWith('7')) {
                     return `+${digits[0]}(${digits.slice(1,4)})${digits.slice(4,7)}-${digits.slice(7,9)}-${digits.slice(9)}`;
@@ -6017,7 +6016,7 @@
             }
 
             function maskPhoneInput(value) {
-                // Маска для ввода в формате: +7(988)146-32-31
+                if (window.nikaMaskPhoneInput) return window.nikaMaskPhoneInput(value);
                 const digits = normalizePhoneClient(value);
                 if (!digits) return '';
                 let masked = '+';
@@ -6299,7 +6298,7 @@
                     serviceItem.dataset.serviceId = service.id;
                     serviceItem.dataset.servicePrice = service.price;
                     const nameSpan = DOMUtils.createElement('span', service.name);
-                    const priceBadge = DOMUtils.createElement('span', `${parseFloat(service.price).toFixed(2)} ₽`, {
+                    const priceBadge = DOMUtils.createElement('span', `${parseFloat(service.price).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`, {
                         'class': 'badge bg-primary'
                     });
                     serviceItem.appendChild(nameSpan);
@@ -6611,7 +6610,7 @@
                     parts.forEach(part => {
                         const option = document.createElement('option');
                         option.value = part.id;
-                        option.textContent = `${part.name}${part.part_number ? ' (' + part.part_number + ')' : ''} - ${part.stock_quantity} шт. - ${parseFloat(part.price).toFixed(2)} ₽`;
+                        option.textContent = `${part.name}${part.part_number ? ' (' + part.part_number + ')' : ''} - ${part.stock_quantity} шт. - ${parseFloat(part.price).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                         option.dataset.price = part.price;
                         option.dataset.stock = part.stock_quantity;
                         partSelect.appendChild(option);
@@ -6973,7 +6972,7 @@
                 
                 // Проверяем, что сумма не превышает долг
                 if (maxDebt > 0 && amount > maxDebt) {
-                    showToast(`Сумма оплаты не может превышать долг (${maxDebt.toFixed(2)} ₽)`, 'warning');
+                    showToast(`Сумма оплаты не может превышать долг (${maxDebt.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')})`, 'warning');
                     return;
                 }
 
@@ -7071,10 +7070,10 @@
             const amountInput = document.getElementById('paymentAmount');
             const amountHelp = document.getElementById('paymentAmountHelp');
             
-            if (totalEl) totalEl.textContent = orderTotal.toFixed(2) + ' ₽';
-            if (paidEl) paidEl.textContent = orderPaid.toFixed(2) + ' ₽';
+            if (totalEl) totalEl.textContent = orderTotal.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+            if (paidEl) paidEl.textContent = orderPaid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
             if (debtEl) {
-                debtEl.textContent = orderDebt.toFixed(2) + ' ₽';
+                debtEl.textContent = orderDebt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                 debtEl.className = orderDebt > 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
             }
             
@@ -7086,7 +7085,7 @@
             
             if (amountHelp) {
                 if (orderDebt > 0) {
-                    amountHelp.textContent = 'Максимальная сумма: ' + orderDebt.toFixed(2) + ' ₽';
+                    amountHelp.textContent = 'Максимальная сумма: ' + orderDebt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                     amountHelp.className = 'form-text text-muted';
                 } else {
                     amountHelp.textContent = 'Долг отсутствует';
@@ -7139,7 +7138,7 @@
                     parts.forEach(part => {
                         const option = document.createElement('option');
                         option.value = part.id;
-                        option.textContent = `${part.name}${part.part_number ? ' (' + part.part_number + ')' : ''} - ${part.stock_quantity} шт. - ${parseFloat(part.price || part.retail_price || 0).toFixed(2)} ₽`;
+                        option.textContent = `${part.name}${part.part_number ? ' (' + part.part_number + ')' : ''} - ${part.stock_quantity} шт. - ${parseFloat(part.price || part.retail_price || 0).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                         option.dataset.price = part.price || part.retail_price || 0;
                         option.dataset.stock = part.stock_quantity;
                         select.appendChild(option);
@@ -7203,7 +7202,7 @@
                                                 <strong>${item.name}</strong>
                                                 ${stockInfo}
                                             </div>
-                                            <div class="text-success fw-bold">${priceText} ₽</div>
+                                            <div class="text-success fw-bold">${priceText} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</div>
                                         </div>
                                     </a>
                                 `;
@@ -7246,7 +7245,7 @@
                                             if (!option) {
                                                 option = document.createElement('option');
                                                 option.value = itemId;
-                                                option.textContent = `${itemName} - ${itemPrice} ₽`;
+                                                option.textContent = `${itemName} - ${itemPrice} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                                                 option.dataset.price = itemPrice;
                                                 emptyPartSelect.appendChild(option);
                                             }
@@ -7262,7 +7261,7 @@
                                                     if (!option) {
                                                         option = document.createElement('option');
                                                         option.value = itemId;
-                                                        option.textContent = `${itemName} - ${itemPrice} ₽`;
+                                                        option.textContent = `${itemName} - ${itemPrice} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                                                         option.dataset.price = itemPrice;
                                                         lastSelect.appendChild(option);
                                                     }
@@ -7677,14 +7676,14 @@
             item.setAttribute('data-item-cost-price', cost != null && cost > 0 ? String(cost) : '');
             item.setAttribute('data-item-date', createdAtStr);
             item.style.cssText = 'border: none; border-bottom: 1px solid rgba(229, 231, 235, 0.4); padding: 0.75rem 0;';
-            const costSpan = (cost != null && cost > 0) ? '<span title="Себестоимость">Себ.: <strong>' + cost.toFixed(2) + ' ₽</strong></span>' : '';
+            const costSpan = (cost != null && cost > 0) ? '<span title="Себестоимость">Себ.: <strong>' + cost.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</strong></span>' : '';
             item.innerHTML = '<div class="flex-grow-1">' +
                 '<div class="d-flex align-items-center mb-1 flex-wrap gap-1">' +
                 '<div style="width: 24px; height: 24px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem;"><i class="fas fa-' + (type === 'service' ? 'cogs' : 'cog') + '" style="color: ' + iconColor + '; font-size: 0.7rem;"></i></div>' +
                 '<span style="font-weight: 500; color: #374151; font-size: 0.875rem;">' + escapeHtmlForItems(name) + '</span></div>' +
                 '<div class="d-flex align-items-center gap-3" style="font-size: 0.75rem; color: #6b7280;">' +
-                '<span>Кол-во: <strong>' + quantity + '</strong></span><span>Цена: <strong>' + priceStr + ' ₽</strong></span>' +
-                '<span class="fw-bold" style="color: ' + sumColor + ';">Сумма: ' + sum + ' ₽</span>' + costSpan +
+                '<span>Кол-во: <strong>' + quantity + '</strong></span><span>Цена: <strong>' + priceStr + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</strong></span>' +
+                '<span class="fw-bold" style="color: ' + sumColor + ';">Сумма: ' + sum + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽') + '</span>' + costSpan +
                 '<span><i class="fas fa-calendar me-1"></i>' + escapeHtmlForItems(createdAtStr) + '</span></div></div>' +
                 (id != null ? '<button class="btn btn-sm btn-danger ' + (type === 'service' ? 'delete-service-btn' : 'delete-part-btn') + ' ms-2" data-' + (type === 'service' ? 'service-id' : 'part-id') + '="' + id + '" title="Удалить" style="border-radius: 6px; padding: 0.2rem 0.4rem; border: none; background: rgba(239, 68, 68, 0.1); color: #dc2626;"><i class="fas fa-trash" style="font-size: 0.7rem;"></i></button>' : '');
             list.appendChild(item);
@@ -7812,7 +7811,7 @@
                 const price = document.createElement('span');
                 price.className = 'text-muted';
                 price.style.cssText = 'font-size:0.75rem;';
-                price.textContent = `${Number(it.price || 0).toFixed(2)} ₽`;
+                price.textContent = `${Number(it.price || 0).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                 right.appendChild(price);
 
                 btn.appendChild(left);
@@ -7964,7 +7963,7 @@
                 tag.style.cssText = 'font-size: 0.72rem; padding: 0.22rem 0.45rem; border-radius: 999px; border: 1px solid rgba(229, 231, 235, 0.55); background: rgba(249, 250, 251, 0.55); transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
                 tag.textContent = it.name || '—';
                 // Цена показывается при наведении
-                tag.title = `${(Number(it.price || 0)).toFixed(2)} ₽`;
+                tag.title = `${(Number(it.price || 0)).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
                 
                 // Hover эффект
                 tag.addEventListener('mouseenter', function() {
@@ -8133,7 +8132,7 @@
             const stockText = (selectedItem.type === 'part' && stock !== null && stock !== undefined)
                 ? `Остаток: ${stock} шт.`
                 : '';
-            const priceText = `Цена: ${(Number(selectedItem.price || 0)).toFixed(2)} ₽`;
+            const priceText = `Цена: ${(Number(selectedItem.price || 0)).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
             metaEl.textContent = [stockText, priceText].filter(Boolean).join(' • ');
 
             qtyInput.value = String(selectedItem.qty || 1);
@@ -8322,7 +8321,7 @@
 
             const price = document.createElement('div');
             price.className = 'text-success';
-            price.textContent = `${(item.price || 0).toFixed(2)} ₽`;
+            price.textContent = `${(item.price || 0).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}`;
             price.style.cssText = 'font-size: 0.875rem;';
             left.appendChild(price);
 
@@ -9142,15 +9141,15 @@
                 debtDataEl.style.color = orderDebt > 0 ? '#ef4444' : '#22c55e';
 
                 if (orderDebt > 0) {
-                    debtDataEl.textContent = orderDebt.toFixed(2) + ' ₽';
+                    debtDataEl.textContent = orderDebt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                     if (debtTitleEl) debtTitleEl.textContent = 'К доплате';
                     if (debtHintEl) debtHintEl.textContent = 'Необходимо доплатить';
                 } else if (overpayment > 0) {
-                    debtDataEl.textContent = '+' + overpayment.toFixed(2) + ' ₽';
+                    debtDataEl.textContent = '+' + overpayment.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                     if (debtTitleEl) debtTitleEl.textContent = 'Баланс оплаты';
                     if (debtHintEl) debtHintEl.textContent = 'Переплата по заявке';
                 } else {
-                    debtDataEl.textContent = '0.00 ₽';
+                    debtDataEl.textContent = '0.00 ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                     if (debtTitleEl) debtTitleEl.textContent = 'Баланс оплаты';
                     if (debtHintEl) debtHintEl.textContent = 'Оплата закрыта';
                 }
@@ -9178,7 +9177,7 @@
 
             const paidDataEl = document.querySelector('[data-order-paid]');
             if (paidDataEl) {
-                paidDataEl.textContent = orderPaid.toFixed(2) + ' ₽';
+                paidDataEl.textContent = orderPaid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
             }
             const paidPercentEl = document.getElementById('orderPaidPercent');
             if (paidPercentEl) {
@@ -9202,26 +9201,26 @@
                     if (cleanLabelText.includes('К оплате') || cleanLabelText.includes('Общая сумма')) {
                         const totalEl = el.querySelector('.text-primary') || el.querySelector('.fw-bold.text-primary');
                         if (totalEl) {
-                            totalEl.textContent = orderTotal.toFixed(2) + ' ₽';
+                            totalEl.textContent = orderTotal.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             console.log('Обновлено: К оплате =', orderTotal.toFixed(2));
                         }
                     } else if (cleanLabelText.includes('Предоплата')) {
                         const prepaymentEl = el.querySelector('.text-info') || el.querySelector('.fw-bold.text-info');
                         if (prepaymentEl) {
-                            prepaymentEl.textContent = prepayment.toFixed(2) + ' ₽';
+                            prepaymentEl.textContent = prepayment.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             console.log('Обновлено: Предоплата =', prepayment.toFixed(2));
                         }
                     } else if (cleanLabelText.includes('Оплачено')) {
                         const paidEl = el.querySelector('.text-success') || el.querySelector('.fw-bold.text-success');
                         if (paidEl) {
-                            paidEl.textContent = orderPaid.toFixed(2) + ' ₽';
+                            paidEl.textContent = orderPaid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             console.log('Обновлено: Оплачено =', orderPaid.toFixed(2));
                         }
                     } else if (cleanLabelText.includes('К доплате') || cleanLabelText.includes('Задолженность')) {
                         // Ищем элемент с классом fw-bold внутри info-item
                         const debtEl = el.querySelector('.fw-bold');
                         if (debtEl) {
-                            debtEl.textContent = orderDebt.toFixed(2) + ' ₽';
+                            debtEl.textContent = orderDebt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             debtEl.className = 'fw-bold ' + (orderDebt > 0 ? 'text-danger' : 'text-success');
                             console.log('Обновлено: К доплате =', orderDebt.toFixed(2));
                         } else {
@@ -9249,28 +9248,28 @@
                     if (labelText.includes('К оплате:') || labelText.includes('Общая сумма:')) {
                         const totalEl = el.querySelector('.text-primary') || el.querySelector('.fw-bold');
                         if (totalEl) {
-                            totalEl.textContent = orderTotal.toFixed(2) + ' ₽';
+                            totalEl.textContent = orderTotal.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                         }
                     } else if (labelText.includes('Предоплата:')) {
                         const prepaymentEl = el.querySelector('.text-info') || el.querySelector('.fw-bold');
                         if (prepaymentEl) {
-                            prepaymentEl.textContent = prepayment.toFixed(2) + ' ₽';
+                            prepaymentEl.textContent = prepayment.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                         }
                     } else if (labelText.includes('Оплачено:')) {
                         const paidEl = el.querySelector('.text-success') || el.querySelector('.fw-bold');
                         if (paidEl) {
-                            paidEl.textContent = orderPaid.toFixed(2) + ' ₽';
+                            paidEl.textContent = orderPaid.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                         }
                     } else if (labelText.includes('К доплате:') || labelText.includes('Задолженность:')) {
                         const debtEl = el.querySelector('.fw-bold');
                         if (debtEl) {
-                            debtEl.textContent = orderDebt.toFixed(2) + ' ₽';
+                            debtEl.textContent = orderDebt.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             debtEl.className = 'fw-bold ' + (orderDebt > 0 ? 'text-danger' : 'text-success');
                         }
                     } else if (labelText.includes('Переплата:')) {
                         const overpaymentEl = el.querySelector('.fw-bold');
                         if (overpaymentEl) {
-                            overpaymentEl.textContent = overpayment.toFixed(2) + ' ₽';
+                            overpaymentEl.textContent = overpayment.toFixed(2) + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
                             overpaymentEl.className = 'fw-bold ' + (overpayment > 0 ? 'text-success' : 'text-muted');
                         }
                     }
@@ -9312,8 +9311,8 @@
                 }[payment.payment_type] || `<span class="badge ${isRefund ? 'bg-danger' : 'bg-secondary'}">${payment.payment_type}</span>`;
 
                 const amountStr = isRefund
-                    ? `<span class="text-decoration-line-through text-danger fw-bold">−${parseFloat(payment.amount).toFixed(2)} ₽</span> <span class="badge bg-danger ms-1">ВОЗВРАТ</span>`
-                    : `${parseFloat(payment.amount).toFixed(2)} ₽ ${payment.kind === 'deposit' ? '<span class="badge bg-info text-dark ms-1">предоплата</span>' : ''}`;
+                    ? `<span class="text-decoration-line-through text-danger fw-bold">−${parseFloat(payment.amount).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')}</span> <span class="badge bg-danger ms-1">ВОЗВРАТ</span>`
+                    : `${parseFloat(payment.amount).toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')} ${payment.kind === 'deposit' ? '<span class="badge bg-info text-dark ms-1">предоплата</span>' : ''}`;
 
                 const actionsBtns = isRefund ? '' : `
                             <button class="btn btn-sm btn-outline-secondary receipt-payment-btn"

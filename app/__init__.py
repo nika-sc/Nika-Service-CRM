@@ -756,6 +756,24 @@ def create_app(config_class=Config):
             "get_user_display_name": get_user_display_name,
             "csp_nonce": lambda: getattr(g, "csp_nonce", "") or "",
         }
+
+    @app.context_processor
+    def inject_locale():
+        """Tenant money symbol and phone prefix for templates (defaults: ₽ / 7)."""
+        try:
+            from app.utils.locale_fmt import get_money_symbol, get_phone_prefix
+
+            symbol = get_money_symbol() or "₽"
+            prefix = get_phone_prefix() or "7"
+        except Exception:
+            symbol = "₽"
+            prefix = "7"
+        return {
+            "money_symbol": symbol,
+            "money_icon_char": (symbol[:1] if symbol else "₽"),
+            "phone_prefix": prefix,
+            "phone_prefix_plus": f"+{prefix}",
+        }
     
     # Регистрация кастомных фильтров для шаблонов (до инициализации БД и Blueprint'ов)
     def format_date_filter(date_str, with_time=False):
@@ -876,11 +894,22 @@ def create_app(config_class=Config):
         amt = float(p.get('amount', 0) if isinstance(p, dict) else getattr(p, 'amount', 0) or 0)
         kind = (p.get('kind') if isinstance(p, dict) else getattr(p, 'kind', None)) or ''
         prefix = '−' if str(kind).lower() == 'refund' else ''
-        return f'{prefix}{amt:.2f} ₽'
+        try:
+            from app.utils.locale_fmt import get_money_symbol
+            symbol = get_money_symbol()
+        except Exception:
+            symbol = '₽'
+        return f'{prefix}{amt:.2f} {symbol}'
 
     app.jinja_env.filters['format_payment_type'] = format_payment_type_filter
     app.jinja_env.filters['format_payment_row_type'] = format_payment_row_type_filter
     app.jinja_env.filters['format_payment_amount'] = format_payment_amount_filter
+
+    def money_words_filter(amount):
+        from app.utils.money_words import amount_to_words_rub
+        return amount_to_words_rub(amount)
+
+    app.jinja_env.filters['money_words'] = money_words_filter
 
     from app.utils.dashboard_jinja_filters import (
         format_dashboard_avg_money_change,

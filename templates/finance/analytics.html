@@ -79,7 +79,7 @@
         </div>
         <div class="col-md-3">
             <div class="metric-box">
-                <div class="metric-value text-success">{{ "%.0f"|format(analytics.avg_stock_value) }} ₽</div>
+                <div class="metric-value text-success">{{ "%.0f"|format(analytics.avg_stock_value) }} {{ money_symbol }}</div>
                 <small class="text-muted">Стоимость остатков</small>
             </div>
         </div>
@@ -130,9 +130,9 @@
                                         <strong>{{ p.part_name }}</strong>
                                     </td>
                                     <td class="text-center">{{ p.total_qty }}</td>
-                                    <td class="text-end">{{ "%.0f"|format(p.total_revenue) }} ₽</td>
+                                    <td class="text-end">{{ "%.0f"|format(p.total_revenue) }} {{ money_symbol }}</td>
                                     <td class="text-end {% if p.profit > 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {{ "%.0f"|format(p.profit) }} ₽
+                                        {{ "%.0f"|format(p.profit) }} {{ money_symbol }}
                                     </td>
                                     <td class="text-end">
                                         <span class="badge {% if p.margin_percent > 30 %}bg-success{% elif p.margin_percent > 15 %}bg-warning{% else %}bg-danger{% endif %}">
@@ -182,7 +182,7 @@
                                     </td>
                                     <td><strong>{{ s.service_name }}</strong></td>
                                     <td class="text-center">{{ s.total_qty }}</td>
-                                    <td class="text-end text-success fw-bold">{{ "%.0f"|format(s.total_revenue) }} ₽</td>
+                                    <td class="text-end text-success fw-bold">{{ "%.0f"|format(s.total_revenue) }} {{ money_symbol }}</td>
                                 </tr>
                                 {% else %}
                                 <tr>

@@ -88,7 +88,7 @@
                                     <a href="/warehouse/parts/{{ part.id }}" class="list-group-item list-group-item-action">
                                         <div class="d-flex w-100 justify-content-between">
                                             <h6 class="mb-1">{{ part.name }}</h6>
-                                            <small>{{ part.price|default(0)|round(2) }} ₽</small>
+                                            <small>{{ part.price|default(0)|round(2) }} {{ money_symbol }}</small>
                                         </div>
                                         <p class="mb-1">
                                             {% if part.part_number %}Артикул: {{ part.part_number }}{% endif %}

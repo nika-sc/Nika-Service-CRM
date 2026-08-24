@@ -13,67 +13,20 @@ def normalize_phone(phone: str) -> str:
     """
     Нормализует номер телефона (без валидации).
 
-    Принимает российские номера с +7, 7 или 8 в начале, с пробелами/скобками,
-    и случай «+7» + вставка номера, который уже начинается с 7/8.
-
-    Returns:
-        Только цифры, для РФ обычно 11 знаков начиная с 7.
+    Префикс берётся из настроек (дефолт 7). Для РФ принимает +7, 7 или 8,
+    с пробелами/скобками, и случай «+7» + вставка номера, который уже
+    начинается с 7/8.
     """
-    if not phone:
-        return ""
+    from app.utils.locale_fmt import normalize_phone as _normalize_phone
 
-    digits = re.sub(r"\D", "", str(phone))
-    if digits.startswith("00"):
-        digits = digits[2:]
-    if not digits:
-        return ""
-
-    # +7 / 8, затем вставили номер, который уже с 7 или 8 (12 цифр, дальше мобильный 9…)
-    if (
-        len(digits) == 12
-        and digits[0] in "78"
-        and digits[1] in "78"
-        and digits[2] == "9"
-    ):
-        digits = "7" + digits[2:]
-
-    if digits.startswith("8"):
-        digits = "7" + digits[1:]
-
-    if digits and not digits.startswith("7"):
-        digits = "7" + digits
-
-    return digits
+    return _normalize_phone(phone)
 
 
 def phone_lookup_variants(phone: str) -> list:
-    """Варианты записи одного РФ-номера для поиска в БД (7 / 8 / +7 / 10 цифр)."""
-    raw = (phone or "").strip()
-    digits = re.sub(r"\D", "", raw)
-    normalized = normalize_phone(raw)
-    seen = []
-    for item in (
-        raw,
-        digits,
-        normalized,
-    ):
-        if item and item not in seen:
-            seen.append(item)
-    if normalized.startswith("7") and len(normalized) >= 11:
-        rest = normalized[1:]
-        extra = [
-            "8" + rest,
-            rest,
-            "+" + normalized,
-            "+7" + rest,
-            f"+7({rest[0:3]}){rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
-            f"+7 ({rest[0:3]}) {rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
-            f"8 ({rest[0:3]}) {rest[3:6]}-{rest[6:8]}-{rest[8:10]}",
-        ]
-        for item in extra:
-            if item and item not in seen:
-                seen.append(item)
-    return seen
+    """Варианты записи одного номера для поиска в БД."""
+    from app.utils.locale_fmt import phone_lookup_variants as _phone_lookup_variants
+
+    return _phone_lookup_variants(phone)
 
 
 PASSWORD_MIN_LEN = 6
