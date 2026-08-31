@@ -207,7 +207,7 @@ def portal_login():
                     session.permanent = True
                     session['_portal_last_active'] = time.time()
                     _reset_portal_login_guard(login_key)
-            _audit_portal_login_success(customer_data['customer_id'], normalized_phone or phone)
+                    _audit_portal_login_success(customer_data['customer_id'], normalized_phone or phone)
                     return redirect(url_for('customer_portal.portal_dashboard'))
                 else:
                     return render_template('portal/login.html', 
