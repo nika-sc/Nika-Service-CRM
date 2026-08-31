@@ -935,8 +935,8 @@ def create_app(config_class=Config):
             os.mkdir('logs')
         file_handler = RotatingFileHandler(
             app.config.get('LOG_FILE', 'app.log'),
-            maxBytes=10240000,  # 10MB
-            backupCount=10
+            maxBytes=int(os.environ.get('LOG_MAX_BYTES', '10240000')),
+            backupCount=int(os.environ.get('LOG_BACKUP_COUNT', '30'))
         )
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'

@@ -94,7 +94,8 @@ class Config:
     
     # Логирование (каталог logs должен быть writable для uid 1000 в Docker)
     LOG_FILE = os.environ.get('LOG_FILE', 'logs/app.log')
-    LOG_LEVEL = 'INFO'
+    # Production default INFO; set LOG_LEVEL=DEBUG only briefly (fills disk/noise).
+    LOG_LEVEL = (os.environ.get('LOG_LEVEL') or 'INFO').strip().upper() or 'INFO'
     LOG_SLOW_QUERIES = os.environ.get('LOG_SLOW_QUERIES', 'True').lower() == 'true'
     SLOW_QUERY_THRESHOLD_MS = int(os.environ.get('SLOW_QUERY_THRESHOLD_MS', '150'))
     

@@ -66,13 +66,71 @@ def _is_portal_login_locked(key: str) -> bool:
     return login_lockout.is_locked('portal', key)
 
 
-def _register_portal_login_failure(key: str):
-    login_lockout.register_failure('portal', key)
+def _mask_portal_phone(phone: str) -> str:
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if len(digits) <= 4:
+        return digits or "?"
+    return f"***{digits[-4:]}"
+
+
+def _audit_portal_login_failure(phone: str, *, locked: bool) -> None:
+    try:
+        from app.services.action_log_service import ActionLogService
+
+        mask = _mask_portal_phone(phone)
+        ActionLogService.log_action(
+            user_id=None,
+            username=None,
+            action_type="login_lockout" if locked else "login_failed",
+            entity_type="portal_auth",
+            description=(
+                f"Lockout portal ({mask})"
+                if locked
+                else f"Неудачный вход portal ({mask})"
+            ),
+            details={
+                "ip": _portal_client_ip(),
+                "phone_mask": mask,
+            },
+        )
+    except Exception as exc:
+        logger.debug("portal login audit log failed: %s", exc)
+
+
+def _register_portal_login_failure(key: str, phone: str = ""):
+    locked = login_lockout.register_failure('portal', key)
+    _audit_portal_login_failure(phone, locked=locked)
     logger.warning("AUTH_FAIL ip=%s kind=portal", _portal_client_ip())
+    return locked
 
 
 def _reset_portal_login_guard(key: str):
     login_lockout.clear('portal', key)
+
+
+def _audit_portal_login_success(customer_id, phone: str) -> None:
+    try:
+        from app.services.action_log_service import ActionLogService
+
+        mask = _mask_portal_phone(phone)
+        ActionLogService.log_action(
+            user_id=None,
+            username=None,
+            action_type="login_success",
+            entity_type="portal_auth",
+            entity_id=int(customer_id) if customer_id is not None else None,
+            description=f"Успешный вход portal ({mask})",
+            details={
+                "ip": _portal_client_ip(),
+                "phone_mask": mask,
+                "customer_id": customer_id,
+            },
+        )
+    except Exception as exc:
+        logger.debug("portal login success audit failed: %s", exc)
+    logger.info("AUTH_OK ip=%s kind=portal phone=%s", _portal_client_ip(), _mask_portal_phone(phone))
+
+
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -107,7 +165,7 @@ def portal_login():
 
         from app.utils.validators import password_eligible_for_verify, password_meets_policy
         if not password_eligible_for_verify(password):
-            _register_portal_login_failure(login_key)
+            _register_portal_login_failure(login_key, normalized_phone or phone)
             return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
         
         # Аутентификация по паролю
@@ -149,6 +207,7 @@ def portal_login():
                     session.permanent = True
                     session['_portal_last_active'] = time.time()
                     _reset_portal_login_guard(login_key)
+            _audit_portal_login_success(customer_data['customer_id'], normalized_phone or phone)
                     return redirect(url_for('customer_portal.portal_dashboard'))
                 else:
                     return render_template('portal/login.html', 
@@ -168,9 +227,10 @@ def portal_login():
             session.permanent = True
             session['_portal_last_active'] = time.time()
             _reset_portal_login_guard(login_key)
+            _audit_portal_login_success(customer_data['customer_id'], normalized_phone or phone)
             return redirect(url_for('customer_portal.portal_dashboard'))
         else:
-            _register_portal_login_failure(login_key)
+            _register_portal_login_failure(login_key, normalized_phone or phone)
             return render_template('portal/login.html', error='Неверные данные для входа', phone=phone)
 
     prefill = (request.args.get('phone') or '').strip()[:32]

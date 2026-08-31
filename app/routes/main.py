@@ -421,6 +421,27 @@ def login():
                 login_user(user, remember=remember_me)
                 UserService.update_user_last_login(user.id)
                 try:
+                    ActionLogService.log_action(
+                        user_id=user.id,
+                        username=username,
+                        action_type="login_success",
+                        entity_type="staff_auth",
+                        entity_id=user.id,
+                        description=f"Успешный вход staff ({_mask_username(username)})",
+                        details={
+                            "ip": _login_client_ip(),
+                            "username_mask": _mask_username(username),
+                            "remember_me": bool(remember_me),
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug("staff login success audit failed: %s", exc)
+                logger.info(
+                    "AUTH_OK ip=%s kind=staff user=%s",
+                    _login_client_ip(),
+                    _mask_username(username),
+                )
+                try:
                     from app.services.demo_visitor_service import DemoVisitorService
                     DemoVisitorService.record_event(
                         event_type="login",
