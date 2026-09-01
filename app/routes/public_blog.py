@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "dashboard-owner-cash",
+        "file": "blog/40-dashboard-owner-cash.md",
+        "date": "2026-09-01 09:00",
+        "title": "Сводный отчёт: работы, касса и цифры для руководителя — Nika Service CRM",
+        "description": (
+            "1 сентября 2026: в сводном отчёте разделены закрытые работы и деньги в кассе; "
+            "для руководителя видно остаток после зарплаты и расходов."
+        ),
+        "heading": "Сводный отчёт для руководителя",
+        "teaser": "Выручка и касса по отдельности; сколько осталось после зарплаты и расходов.",
+    },
+    {
         "slug": "security-runtime",
         "file": "blog/39-security-runtime.md",
         "date": "2026-08-22 14:20",

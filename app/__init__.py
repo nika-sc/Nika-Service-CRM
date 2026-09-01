@@ -963,6 +963,10 @@ def create_app(config_class=Config):
         return dict(csrf_token=lambda: generate_csrf())
 
     @app.context_processor
+    def inject_ui_text():
+        return {"_": lambda s: s}
+
+    @app.context_processor
     def inject_demo_visitor_stats():
         """Флаг и счётчик онлайн для демо-баннера/чипа (только при DEMO_VISITOR_STATS)."""
         enabled = bool(app.config.get("DEMO_VISITOR_STATS"))

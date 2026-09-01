@@ -50,6 +50,150 @@ def _closed_status_condition(cur: sqlite3.Cursor, alias: Optional[str] = None) -
     return "(" + " OR ".join(parts) + ")"
 
 
+def _cash_income_by_method_labeled(by_payment_method: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Приход кассы за период по способам оплаты (только income, с подписями из настроек)."""
+    try:
+        from app.services.settings_service import SettingsService
+        payment_labels = SettingsService.get_payment_method_settings()
+    except Exception:
+        payment_labels = {}
+    name_map = {
+        'cash': (payment_labels.get('cash_label') or '').strip() or 'Наличные',
+        'card': (payment_labels.get('card_label') or '').strip() or 'Карта',
+        'transfer': (payment_labels.get('transfer_label') or '').strip() or 'Перевод',
+        'other': 'Прочее',
+    }
+    order = ('cash', 'transfer', 'card', 'other')
+    result: List[Dict[str, Any]] = []
+    seen = set()
+    for method in order:
+        totals = (by_payment_method or {}).get(method) or {}
+        amount = float(totals.get('income', 0) or 0)
+        if amount > 0:
+            result.append({'method': method, 'label': name_map.get(method, method), 'amount': amount})
+        seen.add(method)
+    for method, totals in (by_payment_method or {}).items():
+        if method in seen:
+            continue
+        amount = float((totals or {}).get('income', 0) or 0)
+        if amount > 0:
+            result.append({
+                'method': method,
+                'label': name_map.get(method, method or 'Прочее'),
+                'amount': amount,
+            })
+    return result
+
+
+_INTERNAL_CASH_CATS = frozenset({
+    'внутренний перевод (списание)',
+    'внутренний перевод (зачисление)',
+})
+_SALARY_CASH_CATS = frozenset({
+    'зарплата',
+    'выплата зарплаты',
+})
+
+
+def _is_director_draw_category_name(name: str) -> bool:
+    """Статья «деньги себе»: выемка / изъятие / дивиденд, не уведомления директору."""
+    n = (name or '').strip().lower()
+    if not n:
+        return False
+    if 'уведомлен' in n:
+        return False
+    if 'выемк' in n or 'изъяти' in n or 'дивиденд' in n:
+        return True
+    if 'директор' in n and ('налич' in n or 'карман' in n):
+        return True
+    return False
+
+
+def _owner_cash_picture(cash_summary: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Картина кассы для директора (только деньги, дата операции).
+
+    Зарплату из модуля ЗП сюда не вычитаем повторно: выплата сотрудникам уже
+    сидит в расходе кассы (статьи «Зарплата» / «Выплата зарплаты»).
+    Выемка — не «расход бизнеса», а то, что уже взяли себе.
+    """
+    summary = cash_summary or {}
+    income = float(summary.get('total_income') or 0)
+    expense = float(summary.get('total_expense') or 0)
+    director_draw = 0.0
+    salary_cash = 0.0
+    draw_categories: List[Dict[str, Any]] = []
+    other_top: List[Dict[str, Any]] = []
+
+    for cat in summary.get('by_category') or []:
+        name = (cat.get('name') or '').strip()
+        cat_type = (cat.get('type') or '').strip()
+        total = float(cat.get('total') or 0)
+        if cat_type != 'expense' or total <= 0:
+            continue
+        low = name.lower()
+        if low in _INTERNAL_CASH_CATS:
+            continue
+        item = {
+            'id': cat.get('id'),
+            'name': name or 'Без названия',
+            'amount': round(total, 2),
+            'count': int(cat.get('count') or 0),
+            'color': cat.get('color') or '#6c757d',
+        }
+        if _is_director_draw_category_name(name):
+            director_draw += total
+            draw_categories.append(item)
+            continue
+        if low in _SALARY_CASH_CATS:
+            salary_cash += total
+            continue
+        other_top.append(item)
+
+    other_top.sort(key=lambda row: row['amount'], reverse=True)
+    other_expenses = round(max(0.0, expense - director_draw - salary_cash), 2)
+    director_draw = round(director_draw, 2)
+    salary_cash = round(salary_cash, 2)
+    after_costs = round(income - salary_cash - other_expenses, 2)
+    leftover = round(after_costs - director_draw, 2)
+
+    bar_parts = [
+        max(salary_cash, 0.0),
+        max(other_expenses, 0.0),
+        max(director_draw, 0.0),
+        max(leftover, 0.0),
+    ]
+    bar_total = sum(bar_parts)
+    if bar_total > 0:
+        shares = [round(100.0 * part / bar_total, 1) for part in bar_parts]
+    else:
+        shares = [0.0, 0.0, 0.0, 0.0]
+
+    primary_draw = draw_categories[0] if draw_categories else None
+    return {
+        'director_draw': director_draw,
+        'director_draw_found': bool(draw_categories),
+        'director_draw_category_id': primary_draw.get('id') if primary_draw else None,
+        'director_draw_label': (primary_draw.get('name') if primary_draw else '') or 'Выемка директору',
+        'director_draw_categories': draw_categories,
+        'salary_cash': salary_cash,
+        'other_expenses': other_expenses,
+        'other_expenses_top': other_top[:5],
+        'after_costs': after_costs,
+        'leftover_in_cash': leftover,
+        'closing_balance': round(float(summary.get('balance') or 0), 2),
+        'opening_balance': round(float(summary.get('opening_balance') or 0), 2),
+        'income': round(income, 2),
+        'shares': {
+            'salary': shares[0],
+            'other': shares[1],
+            'draw': shares[2],
+            'leftover': shares[3],
+        },
+        'took_more_than_earned': leftover < -0.5,
+    }
+
+
 class DashboardService:
     """Сервис для сводного отчёта."""
 
@@ -259,6 +403,8 @@ class DashboardService:
             cash_income_previous = 0.0
             cash_expense_current = 0.0
             cash_expense_previous = 0.0
+            cash_income_by_method: List[Dict[str, Any]] = []
+            owner = _owner_cash_picture({})
             try:
                 from app.services.finance_service import FinanceService
                 summary_current = FinanceService.get_cash_summary(date_from=date_from, date_to=date_to)
@@ -267,6 +413,26 @@ class DashboardService:
                 cash_income_previous = float(summary_prev.get('total_income', 0) or 0)
                 cash_expense_current = float(summary_current.get('total_expense', 0) or 0)
                 cash_expense_previous = float(summary_prev.get('total_expense', 0) or 0)
+                cash_income_by_method = _cash_income_by_method_labeled(
+                    summary_current.get('by_payment_method')
+                )
+                owner_now = _owner_cash_picture(summary_current)
+                owner_prev = _owner_cash_picture(summary_prev)
+                owner = {
+                    **owner_now,
+                    'director_draw_change': DashboardService.calculate_change(
+                        owner_now['director_draw'], owner_prev['director_draw']
+                    ),
+                    'after_costs_change': DashboardService.calculate_change(
+                        owner_now['after_costs'], owner_prev['after_costs']
+                    ),
+                    'leftover_change': DashboardService.calculate_change(
+                        owner_now['leftover_in_cash'], owner_prev['leftover_in_cash']
+                    ),
+                    'closing_balance_change': DashboardService.calculate_change(
+                        owner_now['closing_balance'], owner_prev['closing_balance']
+                    ),
+                }
             except Exception as e:
                 logger.warning(f"Не удалось получить данные кассы для сводки: {e}")
 
@@ -291,6 +457,9 @@ class DashboardService:
                     'total': cash_expense_current,
                     'change': DashboardService.calculate_change(cash_expense_current, cash_expense_previous)
                 },
+                'cash_income_by_method': cash_income_by_method,
+                'revenue_vs_cash_delta': round(current['total'] - cash_income_current, 2),
+                'owner': owner,
                 'orders': {
                     'revenue': current['orders_revenue'],
                     'count': current['orders_count'],

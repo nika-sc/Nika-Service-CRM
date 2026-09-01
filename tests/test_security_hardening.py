@@ -746,8 +746,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_security_runtime_blog_is_latest():
+def test_latest_blog_is_dashboard_owner_cash():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "security-runtime"
-    assert _POSTS[0]["file"] == "blog/39-security-runtime.md"
+    assert _POSTS[0]["slug"] == "dashboard-owner-cash"
+    assert _POSTS[0]["file"] == "blog/40-dashboard-owner-cash.md"

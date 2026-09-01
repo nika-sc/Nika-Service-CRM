@@ -1,6 +1,6 @@
 {% extends "reports/_layout.html" %}
 
-{% block title %}Сводный отчёт по компании — Nika CRM{% endblock %}
+{% block title %}{{ _('Сводный отчёт по компании — Nika CRM') }}{% endblock %}
 
 {% block styles %}
 <style>
@@ -38,6 +38,113 @@
         font-size: 0.875rem;
         opacity: 0.9;
         margin-bottom: 0.5rem;
+    }
+
+    .metric-kind {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.15rem 0.5rem;
+        border-radius: 6px;
+        margin-bottom: 0.4rem;
+        line-height: 1.3;
+    }
+
+    .metric-kind-accrual {
+        background: rgba(255, 255, 255, 0.35);
+        color: inherit;
+    }
+
+    .metric-kind-cash {
+        background: rgba(255, 255, 255, 0.35);
+        color: inherit;
+    }
+
+    .metric-card.bg-white.border .metric-kind-accrual,
+    .metric-card.bg-white.border .metric-kind-cash {
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    .metric-hint {
+        display: block;
+        font-size: 0.72rem;
+        opacity: 0.85;
+        margin-top: 0.35rem;
+        line-height: 1.25;
+    }
+
+    .dashboard-guide {
+        border-left: 4px solid #0d6efd;
+    }
+
+    .dashboard-pay-chip {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 0.65rem 0.85rem;
+        height: 100%;
+        background: #fff;
+    }
+
+    .bg-gradient-owner {
+        background: linear-gradient(135deg, #be185d 0%, #e11d48 100%);
+        color: white;
+    }
+
+    .bg-gradient-owner-rest {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        color: white;
+    }
+
+    .owner-section {
+        border: 1px solid #f9a8d4;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fff1f2 0%, #ffffff 48%);
+        padding: 1rem 1.15rem 0.4rem;
+        margin-bottom: 1rem;
+    }
+
+    .owner-split {
+        display: flex;
+        height: 14px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #e9ecef;
+    }
+
+    .owner-split > span {
+        display: block;
+        min-width: 0;
+        height: 100%;
+    }
+
+    .owner-split-salary { background: #fd7e14; }
+    .owner-split-other { background: #64748b; }
+    .owner-split-draw { background: #e11d48; }
+    .owner-split-left { background: #14b8a6; }
+
+    .owner-legend .fa-square {
+        background: none;
+    }
+    .owner-legend .owner-split-salary { color: #fd7e14; }
+    .owner-legend .owner-split-other { color: #64748b; }
+    .owner-legend .owner-split-draw { color: #e11d48; }
+    .owner-legend .owner-split-left { color: #14b8a6; }
+
+    .owner-wf-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.35rem 0;
+        border-bottom: 1px dashed #f1f5f9;
+        font-size: 0.875rem;
+    }
+
+    .owner-wf-row:last-child {
+        border-bottom: 0;
+        font-weight: 700;
     }
     
     .metric-card .metric-change {
@@ -292,7 +399,7 @@
             </form>
 
             <div class="mb-3 d-flex justify-content-end gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-primary" id="dashboardSendToDirectorBtn" title="Отправить сводный отчёт на email директора (из настроек «Уведомления директору»)">
+                <button type="button" class="btn btn-sm btn-primary" id="dashboardSendToDirectorBtn" title="{{ _('Отправить сводный отчёт на email директора (из настроек «Уведомления директору»)') }}">
                     <i class="fas fa-envelope me-1"></i>Отправить отчёт руководителю
                 </button>
                 <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardCalculationMethod" aria-expanded="false" aria-controls="dashboardCalculationMethod">
@@ -304,10 +411,18 @@
                 <div class="card border-info">
                     <div class="card-body">
                         <ul class="mb-0 small">
-                            <li><strong>Период:</strong> все метрики рассчитываются в выбранном диапазоне дат.</li>
-                            <li><strong>Сравнение:</strong> к предыдущему сопоставимому периоду показываются абсолютная разница и процент со знаком (+/−).</li>
-                            <li><strong>Выручка:</strong> агрегируется по услугам, запчастям и связанным продажам.</li>
-                            <li><strong>Детализация:</strong> карточки и таблицы ниже используют тот же фильтр периода.</li>
+                            <li><strong>{{ _('Период:') }}</strong> все метрики рассчитываются в выбранном диапазоне дат.</li>
+                            <li><strong>{{ _('Сравнение:') }}</strong> к предыдущему сопоставимому периоду показываются абсолютная разница и процент со знаком (+/−).</li>
+                            <li><strong>{{ _('Выручка по компании:') }}</strong> {{ _('сумма услуг и товаров по заявкам, переведённым в закрытый статус в этом периоде (по дате закрытия в истории статусов), плюс продажи магазина по дате чека. Это начисление «что продали/закрыли», а не дата оплаты.') }}</li>
+                            <li><strong>{{ _('Выручка по услугам / товарам:') }}</strong> {{ _('разбивка той же выручки: услуги и запчасти в заявках + соответствующие позиции в магазине. Сумма двух карточек равна «Выручке по компании».') }}</li>
+                            <li><strong>{{ _('Приход (касса) — оплаты:') }}</strong> {{ _('фактические поступления в кассу за период (таблица движений кассы), без внутренних переводов между способами оплаты. Может отличаться от выручки: предоплата по заявке попадает в кассу в одном месяце, а выручка — когда заявку закрыли; оплаты по ещё не закрытым заявкам идут в кассу, но не в выручку периода.') }}</li>
+                            <li><strong>{{ _('Закрытых заказов:') }}</strong> {{ _('сколько заявок перевели в закрытый статус в период (по истории статусов), не путать с «создано заказов».') }}</li>
+                            <li><strong>{{ _('Наличные / карта / перевод:') }}</strong> {{ _('разбивка прихода кассы по способу оплаты; сумма строк = «Приход (касса)».') }}</li>
+                            <li><strong>{{ _('На что опираться:') }}</strong> {{ _('«Сколько денег пришло» → Приход (касса); «Сколько работ закрыли/продали» → Выручка по компании; «Сколько себе взяли» → блок «Директору».') }}</li>
+                            <li><strong>{{ _('Директору — после ЗП и расходов:') }}</strong> {{ _('приход кассы минус зарплата из кассы минус прочие расходы. Выемку сюда не вычитаем второй раз: это уже ваши деньги, а не расход точки. Зарплату из модуля «Зарплата» тоже не вычитаем повторно — если выплата прошла через кассу, она уже в статье «Зарплата» / «Выплата зарплаты».') }}</li>
+                            <li><strong>{{ _('В карман (выемка):') }}</strong> {{ _('сумма расходов по статье с «выемка» / «изъятие» / «дивиденд» в названии (у вас — «Выемка наличных директором»). Это фактические деньги, которые сняли себе. Если за период взяли больше, чем «после ЗП и расходов» — часть ушла из остатка прошлых месяцев.') }}</li>
+                            <li><strong>{{ _('Остаток в кассе:') }}</strong> {{ _('сколько денег лежит в кассе на конец периода (наличные + карта + перевод), с учётом входящего остатка.') }}</li>
+                            <li><strong>{{ _('Детализация:') }}</strong> карточки и таблицы ниже используют тот же фильтр периода.</li>
                         </ul>
                     </div>
                 </div>
@@ -316,7 +431,7 @@
             <!-- Информация о периоде -->
             {% if data.period %}
             <div class="period-info mb-3">
-                <strong>Текущий период:</strong> {{ data.period.current_from }} — {{ data.period.current_to }}
+                <strong>{{ _('Текущий период:') }}</strong> {{ data.period.current_from }} — {{ data.period.current_to }}
                 <span class="text-muted ms-3">
                     <small>(сравнение с: {{ data.period.prev_from }} — {{ data.period.prev_to }})</small>
                 </span>
@@ -330,13 +445,24 @@
                 </h4>
 
                 {% if data.summary %}
+                <div class="alert alert-light border dashboard-guide small mb-3 py-2">
+                    <strong>{{ _('На что смотреть за период:') }}</strong>
+                    <span class="badge bg-primary ms-1">{{ _('выполненные работы') }}</span> — {{ _('закрыли заявки и продали в магазине;') }}
+                    <span class="badge bg-success ms-1">{{ _('деньги') }}</span> — {{ _('реально оплатили в кассу.') }}
+                    {% set rev_cash_delta = data.summary.revenue_vs_cash_delta|default(0)|float %}
+                    {% if rev_cash_delta|abs >= 1 %}
+                    <span class="ms-1">{{ _('Разница выручка − приход:') }} <strong>{{ "%+.0f"|format(rev_cash_delta) }} ₽</strong> — {{ _('предоплаты и разные даты закрытия/оплаты.') }}</span>
+                    {% endif %}
+                </div>
                 <div class="row">
                     <!-- Выручка по компании -->
                     <div class="col-md-3 mb-3">
                         <div class="metric-card bg-gradient-revenue">
                             <i class="fas fa-coins metric-icon"></i>
+                            <span class="metric-kind metric-kind-accrual">{{ _('выполненные работы') }}</span>
                             <div class="metric-label">Выручка по компании</div>
-                            <div class="metric-value">{{ "%.0f"|format(data.summary.revenue.total|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value">{{ "%.0f"|format(data.summary.revenue.total|default(0)|float) }} ₽</div>
+                            <span class="metric-hint">{{ _('Дата закрытия заявки и дата чека магазина') }}</span>
                             {% if data.summary.revenue.change is defined %}
                             <span class="metric-change {{ data.summary.revenue.change.direction }}">
                                 {{ data.summary.revenue.change | dashboard_money_delta }}
@@ -349,8 +475,10 @@
                     <div class="col-md-3 mb-3">
                         <div class="metric-card bg-gradient-services">
                             <i class="fas fa-tools metric-icon"></i>
+                            <span class="metric-kind metric-kind-accrual">{{ _('часть выручки') }}</span>
                             <div class="metric-label">Выручка по услугам</div>
-                            <div class="metric-value">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)|float) }} ₽</div>
+                            <span class="metric-hint">{{ _('Услуги в заявках + услуги магазина') }}</span>
                             {% if data.summary.services_revenue.change is defined %}
                             <span class="metric-change {{ data.summary.services_revenue.change.direction }}">
                                 {{ data.summary.services_revenue.change | dashboard_money_delta }}
@@ -363,8 +491,10 @@
                     <div class="col-md-3 mb-3">
                         <div class="metric-card bg-gradient-parts">
                             <i class="fas fa-box metric-icon"></i>
+                            <span class="metric-kind metric-kind-accrual">{{ _('часть выручки') }}</span>
                             <div class="metric-label">Выручка по товарам</div>
-                            <div class="metric-value">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)|float) }} ₽</div>
+                            <span class="metric-hint">{{ _('Товары в заявках + товары магазина') }}</span>
                             {% if data.summary.parts_revenue.change is defined %}
                             <span class="metric-change {{ data.summary.parts_revenue.change.direction }}">
                                 {{ data.summary.parts_revenue.change | dashboard_money_delta }}
@@ -377,8 +507,10 @@
                         <a class="text-decoration-none" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to) if data.period else url_for('finance.cash') }}">
                             <div class="metric-card bg-gradient-profit">
                                 <i class="fas fa-arrow-down metric-icon"></i>
+                                <span class="metric-kind metric-kind-cash">{{ _('деньги') }}</span>
                                 <div class="metric-label">Приход (касса) — оплаты</div>
-                                <div class="metric-value">{{ "%.0f"|format(data.summary.profit.total|default(0)|float) }} {{ money_symbol }}</div>
+                                <div class="metric-value">{{ "%.0f"|format(data.summary.profit.total|default(0)|float) }} ₽</div>
+                                <span class="metric-hint">{{ _('Дата операции в кассе, без внутренних переводов') }}</span>
                                 {% if data.summary.profit is defined and data.summary.profit.change is defined %}
                                 <span class="metric-change {{ data.summary.profit.change.direction }}">
                                     {{ data.summary.profit.change | dashboard_money_delta }}
@@ -388,14 +520,52 @@
                         </a>
                     </div>
                 </div>
+
+                {% if data.summary.cash_income_by_method %}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body py-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <h6 class="mb-0"><i class="fas fa-wallet me-2 text-success"></i>{{ _('Поступления по способам оплаты') }}</h6>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ _('деньги · дата оплаты') }}</span>
+                        </div>
+                        <p class="small text-muted mb-3">
+                            {{ _('Сумма строк = «Приход (касса)». Подробный журнал →') }}
+                            <a href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to) if data.period else url_for('finance.cash') }}">{{ _('Касса') }}</a>
+                        </p>
+                        <div class="row g-2">
+                            {% for row in data.summary.cash_income_by_method %}
+                            <div class="col-md-3 col-6">
+                                <div class="dashboard-pay-chip">
+                                    <div class="small text-muted">
+                                        {% if row.method == 'cash' %}
+                                        <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                        {% elif row.method == 'card' %}
+                                        <i class="fas fa-credit-card text-primary me-1"></i>
+                                        {% elif row.method == 'transfer' %}
+                                        <i class="fas fa-exchange-alt text-info me-1"></i>
+                                        {% else %}
+                                        <i class="fas fa-ellipsis-h text-secondary me-1"></i>
+                                        {% endif %}
+                                        {{ row.label }}
+                                    </div>
+                                    <div class="fw-bold fs-5">{{ "%.0f"|format(row.amount|float) }} ₽</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Касса: расход. Зарплата: начисления и выплаты -->
                 <div class="row mt-2">
                     <div class="col-md-4 mb-3">
                         <a class="text-decoration-none" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to) if data.period else url_for('finance.cash') }}">
                             <div class="metric-card bg-white border">
                                 <i class="fas fa-arrow-up metric-icon text-danger"></i>
+                                <span class="metric-kind metric-kind-cash">{{ _('деньги') }}</span>
                                 <div class="metric-label text-muted">Расход (касса) — выплаты</div>
-                                <div class="metric-value text-danger">{{ "%.0f"|format((data.summary.cash_expense|default({})).total|default(0)|float) }} {{ money_symbol }}</div>
+                                <div class="metric-value text-danger">{{ "%.0f"|format((data.summary.cash_expense|default({})).total|default(0)|float) }} ₽</div>
                                 {% if (data.summary.cash_expense|default({})).change is defined %}
                                 <span class="metric-change {{ (data.summary.cash_expense|default({})).change.direction|default('same') }}">
                                     {{ (data.summary.cash_expense|default({})).change | dashboard_money_delta }}
@@ -409,7 +579,7 @@
                             <div class="metric-card bg-white border">
                                 <i class="fas fa-coins metric-icon text-info"></i>
                                 <div class="metric-label text-muted">Зарплата: начислено за период</div>
-                                <div class="metric-value text-info">{{ "%.0f"|format((((data.salary|default({})).accrued_cents|default(0)|float) / 100)) }} {{ money_symbol }}</div>
+                                <div class="metric-value text-info">{{ "%.0f"|format((((data.salary|default({})).accrued_cents|default(0)|float) / 100)) }} ₽</div>
                                 {% if (data.salary|default({})).accrued_change is defined %}
                                 <span class="metric-change {{ (data.salary|default({})).accrued_change.direction|default('same') }}">
                                     {{ (data.salary|default({})).accrued_change | dashboard_money_delta }}
@@ -423,7 +593,7 @@
                             <div class="metric-card bg-white border">
                                 <i class="fas fa-money-check-alt metric-icon text-success"></i>
                                 <div class="metric-label text-muted">Зарплата: выплачено за период</div>
-                                <div class="metric-value text-success">{{ "%.0f"|format((((data.salary|default({})).paid_cents|default(0)|float) / 100)) }} {{ money_symbol }}</div>
+                                <div class="metric-value text-success">{{ "%.0f"|format((((data.salary|default({})).paid_cents|default(0)|float) / 100)) }} ₽</div>
                                 {% if (data.salary|default({})).paid_change is defined %}
                                 <span class="metric-change {{ (data.salary|default({})).paid_change.direction|default('same') }}">
                                     {{ (data.salary|default({})).paid_change | dashboard_money_delta }}
@@ -431,6 +601,175 @@
                                 {% endif %}
                             </div>
                         </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if data.summary %}
+                {% set owner = data.summary.owner|default({}) %}
+                <div class="owner-section">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-user-tie me-2 text-danger"></i>{{ _('Директору: что осталось вам') }}</h5>
+                            <p class="small text-muted mb-0">
+                                {{ _('Считаем по кассе, не по выручке. Зарплату второй раз не вычитаем — она уже в расходе кассы.') }}
+                            </p>
+                        </div>
+                        <span class="badge bg-danger">{{ _('деньги · вам') }}</span>
+                    </div>
+                    {% if not owner.director_draw_found %}
+                    <div class="alert alert-warning py-2 small mb-3">
+                        {{ _('Статья выемки за период не найдена. Чтобы видеть «в карман», проводите снятие статьёй с словом «выемка» в названии (как «Выемка наличных директором»).') }}
+                    </div>
+                    {% endif %}
+                    {% if owner.took_more_than_earned %}
+                    <div class="alert alert-danger py-2 small mb-3">
+                        {{ _('Выемка больше, чем осталось после ЗП и расходов за этот период — часть взята из остатка прошлых месяцев или касса ушла в минус.') }}
+                    </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            {% if owner.director_draw_category_id and data.period %}
+                            <a class="text-decoration-none" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to, category_id=owner.director_draw_category_id) }}">
+                            {% elif data.period %}
+                            <a class="text-decoration-none" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to) }}">
+                            {% else %}
+                            <a class="text-decoration-none" href="{{ url_for('finance.cash') }}">
+                            {% endif %}
+                                <div class="metric-card bg-gradient-owner">
+                                    <i class="fas fa-hand-holding-usd metric-icon"></i>
+                                    <span class="metric-kind metric-kind-cash">{{ _('в карман') }}</span>
+                                    <div class="metric-label">{{ owner.director_draw_label|default(_('Выемка директору')) }}</div>
+                                    <div class="metric-value">{{ "%.0f"|format(owner.director_draw|default(0)|float) }} ₽</div>
+                                    <span class="metric-hint">{{ _('Уже сняли себе за период') }}</span>
+                                    {% if owner.director_draw_change is defined %}
+                                    <span class="metric-change {{ owner.director_draw_change.direction|default('same') }}">
+                                        {{ owner.director_draw_change | dashboard_money_delta }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card bg-gradient-owner-rest">
+                                <i class="fas fa-balance-scale metric-icon"></i>
+                                <span class="metric-kind metric-kind-cash">{{ _('после ЗП и расходов') }}</span>
+                                <div class="metric-label">{{ _('Ваше за период') }}</div>
+                                <div class="metric-value">{{ "%.0f"|format(owner.after_costs|default(0)|float) }} ₽</div>
+                                <span class="metric-hint">{{ _('Приход − зарплата кассы − прочие расходы') }}</span>
+                                {% if owner.after_costs_change is defined %}
+                                <span class="metric-change {{ owner.after_costs_change.direction|default('same') }}">
+                                    {{ owner.after_costs_change | dashboard_money_delta }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card bg-white border">
+                                <i class="fas fa-piggy-bank metric-icon text-success"></i>
+                                <span class="metric-kind metric-kind-cash">{{ _('не вынуто') }}</span>
+                                <div class="metric-label text-muted">{{ _('Ещё в кассе за период') }}</div>
+                                <div class="metric-value {% if (owner.leftover_in_cash|default(0)|float) < 0 %}text-danger{% else %}text-success{% endif %}">{{ "%.0f"|format(owner.leftover_in_cash|default(0)|float) }} ₽</div>
+                                <span class="metric-hint text-muted">{{ _('Ваше минус уже снятая выемка') }}</span>
+                                {% if owner.leftover_change is defined %}
+                                <span class="metric-change {{ owner.leftover_change.direction|default('same') }}">
+                                    {{ owner.leftover_change | dashboard_money_delta }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a class="text-decoration-none" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to) if data.period else url_for('finance.cash') }}">
+                                <div class="metric-card bg-white border">
+                                    <i class="fas fa-cash-register metric-icon text-secondary"></i>
+                                    <span class="metric-kind metric-kind-cash">{{ _('сейчас в кассе') }}</span>
+                                    <div class="metric-label text-muted">{{ _('Остаток на конец периода') }}</div>
+                                    <div class="metric-value text-dark">{{ "%.0f"|format(owner.closing_balance|default(0)|float) }} ₽</div>
+                                    <span class="metric-hint text-muted">{{ _('Наличные + карта + перевод, с входящим остатком') }}</span>
+                                    {% if owner.closing_balance_change is defined %}
+                                    <span class="metric-change {{ owner.closing_balance_change.direction|default('same') }}">
+                                        {{ owner.closing_balance_change | dashboard_money_delta }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    {% set sh = owner.shares|default({}) %}
+                    {% if (owner.income|default(0)|float) > 0 or (owner.director_draw|default(0)|float) > 0 %}
+                    <div class="owner-split mb-2" title="{{ _('Куда разошлись деньги периода') }}">
+                        <span class="owner-split-salary" style="width: {{ sh.salary|default(0) }}%"></span>
+                        <span class="owner-split-other" style="width: {{ sh.other|default(0) }}%"></span>
+                        <span class="owner-split-draw" style="width: {{ sh.draw|default(0) }}%"></span>
+                        <span class="owner-split-left" style="width: {{ sh.leftover|default(0) }}%"></span>
+                    </div>
+                    <div class="owner-legend d-flex flex-wrap gap-3 mb-3">
+                        <span><i class="fas fa-square owner-split-salary"></i> {{ _('Зарплата') }} {{ "%.0f"|format(owner.salary_cash|default(0)|float) }} ₽</span>
+                        <span><i class="fas fa-square owner-split-other"></i> {{ _('Прочие расходы') }} {{ "%.0f"|format(owner.other_expenses|default(0)|float) }} ₽</span>
+                        <span><i class="fas fa-square owner-split-draw"></i> {{ _('В карман') }} {{ "%.0f"|format(owner.director_draw|default(0)|float) }} ₽</span>
+                        <span><i class="fas fa-square owner-split-left"></i> {{ _('Не вынуто') }} {{ "%.0f"|format(owner.leftover_in_cash|default(0)|float) }} ₽</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-7 mb-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body py-3">
+                                    <h6 class="mb-3">{{ _('Как сложилось «ваше»') }}</h6>
+                                    <div class="owner-wf-row">
+                                        <span>{{ _('Пришло в кассу') }}</span>
+                                        <strong>{{ "%.0f"|format(owner.income|default(0)|float) }} ₽</strong>
+                                    </div>
+                                    <div class="owner-wf-row text-danger">
+                                        <span>− {{ _('Зарплата из кассы') }}</span>
+                                        <strong>{{ "%.0f"|format(owner.salary_cash|default(0)|float) }} ₽</strong>
+                                    </div>
+                                    <div class="owner-wf-row text-danger">
+                                        <span>− {{ _('Прочие расходы (закупка, обед, уборка…)') }}</span>
+                                        <strong>{{ "%.0f"|format(owner.other_expenses|default(0)|float) }} ₽</strong>
+                                    </div>
+                                    <div class="owner-wf-row text-success">
+                                        <span>{{ _('После ЗП и расходов') }}</span>
+                                        <strong>{{ "%.0f"|format(owner.after_costs|default(0)|float) }} ₽</strong>
+                                    </div>
+                                    <div class="owner-wf-row text-danger">
+                                        <span>− {{ owner.director_draw_label|default(_('Выемка')) }}</span>
+                                        <strong>{{ "%.0f"|format(owner.director_draw|default(0)|float) }} ₽</strong>
+                                    </div>
+                                    <div class="owner-wf-row">
+                                        <span>{{ _('Не вынуто за период') }}</span>
+                                        <strong>{{ "%.0f"|format(owner.leftover_in_cash|default(0)|float) }} ₽</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-5 mb-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body py-3">
+                                    <h6 class="mb-3">{{ _('Куда ушли прочие расходы') }}</h6>
+                                    {% if owner.other_expenses_top %}
+                                        {% for row in owner.other_expenses_top %}
+                                        <div class="d-flex justify-content-between small mb-2 gap-2">
+                                            <a class="text-truncate" href="{{ url_for('finance.cash', date_from=data.period.current_from, date_to=data.period.current_to, category_id=row.id) if data.period else url_for('finance.cash', category_id=row.id) }}">{{ row.name }}</a>
+                                            <span class="fw-semibold text-nowrap">{{ "%.0f"|format(row.amount|float) }} ₽</span>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="small text-muted mb-0">{{ _('За период прочих расходов нет.') }}</p>
+                                    {% endif %}
+                                    {% if ((data.receivables|default({})).total_debt|default(0)|float) > 0 %}
+                                    <div class="alert alert-light border small mb-0 mt-3 py-2">
+                                        <i class="fas fa-hourglass-half me-1 text-warning"></i>
+                                        {{ _('Клиенты ещё должны') }}
+                                        <strong>{{ "%.0f"|format(data.receivables.total_debt|float) }} ₽</strong>
+                                        ({{ data.receivables.orders_with_debt|default(0) }} {{ _('заявок') }}) —
+                                        {{ _('это не в кассе и не в выемке.') }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -447,17 +786,18 @@
                                 </div>
                                 <div class="card-body py-3">
                                     <div class="d-flex justify-content-between small">
-                                        <span class="text-success">Доход:</span>
-                                        <strong>{{ "%.0f"|format(data.profit_report.total_income|default(0)|float) }} {{ money_symbol }}</strong>
+                                        <span class="text-success">{{ _('Доход:') }}</span>
+                                        <strong>{{ "%.0f"|format(data.profit_report.total_income|default(0)|float) }} ₽</strong>
                                     </div>
                                     <div class="d-flex justify-content-between small">
-                                        <span class="text-danger">Расход:</span>
-                                        <strong>{{ "%.0f"|format(data.profit_report.total_expense|default(0)|float) }} {{ money_symbol }}</strong>
+                                        <span class="text-danger">{{ _('Расход:') }}</span>
+                                        <strong>{{ "%.0f"|format(data.profit_report.total_expense|default(0)|float) }} ₽</strong>
                                     </div>
                                     <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
-                                        <span>Чистая прибыль:</span>
-                                        <strong class="{% if (data.profit_report.net_profit|default(0)) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ "%.0f"|format(data.profit_report.net_profit|default(0)|float) }} {{ money_symbol }}</strong>
+                                        <span>{{ _('Чистая прибыль:') }}</span>
+                                        <strong class="{% if (data.profit_report.net_profit|default(0)) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ "%.0f"|format(data.profit_report.net_profit|default(0)|float) }} ₽</strong>
                                     </div>
+                                    <div class="small text-muted mt-1">{{ _('В расходе кассы есть и выемка — «сколько вам» в блоке выше.') }}</div>
                                     <div class="small text-muted mt-1">Подробнее →</div>
                                 </div>
                             </div>
@@ -473,15 +813,15 @@
                                 </div>
                                 <div class="card-body py-3">
                                     <div class="d-flex justify-content-between small">
-                                        <span>Топ товаров:</span>
+                                        <span>{{ _('Топ товаров:') }}</span>
                                         <strong>{{ (data.product_analytics.top_products|default([]))|length }} поз.</strong>
                                     </div>
                                     <div class="d-flex justify-content-between small">
-                                        <span>Топ услуг:</span>
+                                        <span>{{ _('Топ услуг:') }}</span>
                                         <strong>{{ (data.product_analytics.top_services|default([]))|length }} поз.</strong>
                                     </div>
                                     <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
-                                        <span>Оборачиваемость:</span>
+                                        <span>{{ _('Оборачиваемость:') }}</span>
                                         <strong>{{ data.product_analytics.turnover_days|default(0) }} дн.</strong>
                                     </div>
                                     <div class="small text-muted mt-1">Подробнее →</div>
@@ -519,7 +859,8 @@
                         <div class="metric-card bg-gradient-orders">
                             <i class="fas fa-receipt metric-icon"></i>
                             <div class="metric-label">Выручка по заказам</div>
-                            <div class="metric-value">{{ "%.0f"|format(data.summary.orders.revenue|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value">{{ "%.0f"|format(data.summary.orders.revenue|default(0)|float) }} ₽</div>
+                            <span class="metric-hint">{{ _('Только закрытые заявки за период') }}</span>
                             {% if data.summary.orders.revenue_change is defined %}
                             <span class="metric-change {{ data.summary.orders.revenue_change.direction }}">
                                 {{ data.summary.orders.revenue_change | dashboard_money_delta }}
@@ -534,6 +875,7 @@
                             <i class="fas fa-check-circle metric-icon text-success"></i>
                             <div class="metric-label text-muted">Закрытых заказов</div>
                             <div class="metric-value text-dark">{{ data.summary.orders.count|default(0) }}</div>
+                            <span class="metric-hint text-muted">{{ _('Перевели в закрытый статус в период') }}</span>
                             {% if data.summary.orders.count_change is defined %}
                             <span class="metric-change {{ data.summary.orders.count_change.direction }}">
                                 {{ data.summary.orders.count_change | dashboard_count_delta }}
@@ -547,7 +889,7 @@
                         <div class="metric-card bg-white border">
                             <i class="fas fa-calculator metric-icon text-info"></i>
                             <div class="metric-label text-muted">Средний чек заказа</div>
-                            <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)|float) }} ₽</div>
                             {% if data.summary.orders.avg_change is defined %}
                             <span class="metric-change {{ data.summary.orders.avg_change.direction }}">
                                 {{ data.summary.orders.avg_change | dashboard_avg_money_delta }}
@@ -598,7 +940,8 @@
                         <div class="metric-card bg-gradient-shop">
                             <i class="fas fa-shopping-bag metric-icon"></i>
                             <div class="metric-label">Выручка по магазину</div>
-                            <div class="metric-value">{{ "%.0f"|format(data.summary.shop.revenue|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value">{{ "%.0f"|format(data.summary.shop.revenue|default(0)|float) }} ₽</div>
+                            <span class="metric-hint">{{ _('По дате чека магазина') }}</span>
                             {% if data.summary.shop.revenue_change is defined %}
                             <span class="metric-change {{ data.summary.shop.revenue_change.direction }}">
                                 {{ data.summary.shop.revenue_change | dashboard_money_delta }}
@@ -626,7 +969,7 @@
                         <div class="metric-card bg-white border">
                             <i class="fas fa-receipt metric-icon text-primary"></i>
                             <div class="metric-label text-muted">Средний чек магазина</div>
-                            <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)|float) }} {{ money_symbol }}</div>
+                            <div class="metric-value text-dark">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)|float) }} ₽</div>
                             {% if data.summary.shop.avg_change is defined %}
                             <span class="metric-change {{ data.summary.shop.avg_change.direction }}">
                                 {{ data.summary.shop.avg_change | dashboard_avg_money_delta }}
@@ -656,7 +999,7 @@
                             </div>
                             <div class="card-body">
                                 <p class="text-muted mb-3">
-                                    Ожидаемая выручка: <strong>{{ "%.0f"|format(data.orders_by_status.active_sum|default(0)|float) }} {{ money_symbol }}</strong>
+                                    Ожидаемая выручка: <strong>{{ "%.0f"|format(data.orders_by_status.active_sum|default(0)|float) }} ₽</strong>
                                 </p>
                                 <table class="table status-table mb-0">
                                     <tbody>
@@ -670,7 +1013,7 @@
                                                 </span>
                                             </td>
                                             <td class="text-end"><strong>{{ status.count }}</strong></td>
-                                            <td class="text-end text-muted">{{ "%.0f"|format(status.sum|float) }} {{ money_symbol }}</td>
+                                            <td class="text-end text-muted">{{ "%.0f"|format(status.sum|float) }} ₽</td>
                                         </tr>
                                         {% endif %}
                                         {% endfor %}
@@ -688,7 +1031,7 @@
                             </div>
                             <div class="card-body">
                                 <p class="text-muted small mb-3">
-                                    Количество активных заявок (без закрытых/отмененных) и суммарная стоимость по каждому мастеру.
+                                    {{ _('Количество активных заявок (без закрытых/отмененных) и суммарная стоимость по каждому мастеру.') }}
                                 </p>
                                 {% for master in data.orders_by_master %}
                                 {% if master.orders_count > 0 %}
@@ -709,7 +1052,7 @@
                                 </div>
                                 {% endif %}
                                 {% else %}
-                                <p class="text-muted text-center">Нет активных заказов</p>
+                                <p class="text-muted text-center">{{ _('Нет активных заказов') }}</p>
                                 {% endfor %}
                             </div>
                         </div>
@@ -733,7 +1076,7 @@
                                 <div class="text-muted">просроченных заказов</div>
                             </div>
                             <div class="col-md-6 text-md-end">
-                                <div class="h4 text-danger">{{ "%.0f"|format(data.overdue_orders.total_sum|float) }} {{ money_symbol }}</div>
+                                <div class="h4 text-danger">{{ "%.0f"|format(data.overdue_orders.total_sum|float) }} ₽</div>
                                 <div class="text-muted">общая сумма</div>
                             </div>
                         </div>
@@ -743,13 +1086,13 @@
                                 <thead>
                                     <tr>
                                         <th>№</th>
-                                        <th>Клиент</th>
-                                        <th>Устройство</th>
-                                        <th>Мастер</th>
-                                        <th>Менеджер</th>
-                                        <th>Статус</th>
-                                        <th>Сумма</th>
-                                        <th>Создан</th>
+                                        <th>{{ _('Клиент') }}</th>
+                                        <th>{{ _('Устройство') }}</th>
+                                        <th>{{ _('Мастер') }}</th>
+                                        <th>{{ _('Менеджер') }}</th>
+                                        <th>{{ _('Статус') }}</th>
+                                        <th>{{ _('Сумма') }}</th>
+                                        <th>{{ _('Создан') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -796,7 +1139,7 @@
                                             </a>
                                         </td>
                                         <td>
-                                            <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum|float) }} {{ money_symbol }}</a>
+                                            <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="text-primary text-decoration-none">{{ "%.0f"|format(order.total_sum|float) }} ₽</a>
                                         </td>
                                         <td>{{ order.created_at|format_date(true) if order.created_at else '—' }}</td>
                                     </tr>
@@ -808,7 +1151,7 @@
                         {% if data.overdue_orders.count > 10 %}
                         <div class="text-center mt-3">
                             <a href="{{ url_for('reports.orders_log_report') }}" class="btn btn-outline-danger">
-                                Показать все просроченные заказы
+                                {{ _('Показать все просроченные заказы') }}
                             </a>
                         </div>
                         {% endif %}
@@ -857,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         let label = context.dataset.label || '';
                         if (context.parsed.y !== null) {
                             if (context.dataset.label && context.dataset.label.includes('Выручка')) {
-                                label += ': ' + context.parsed.y.toLocaleString('ru-RU') + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+                                label += ': ' + context.parsed.y.toLocaleString('ru-RU') + ' ₽';
                             } else {
                                 label += ': ' + context.parsed.y;
                             }
@@ -934,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ...chartOptions.scales.y,
                         ticks: {
                             callback: function(value) {
-                                return value.toLocaleString('ru-RU') + ' ' + ((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽');
+                                return value.toLocaleString('ru-RU') + ' ₽';
                             }
                         }
                     }
