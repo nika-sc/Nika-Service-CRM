@@ -98,6 +98,17 @@ def test_owner_cash_flags_when_draw_exceeds_period_surplus():
     assert picture["took_more_than_earned"] is True
 
 
+def test_dashboard_template_has_three_boards():
+    from pathlib import Path
+
+    html = Path("templates/reports/dashboard.html").read_text(encoding="utf-8")
+    assert "dash-board-revenue" in html
+    assert "dash-board-profit" in html
+    assert "dash-board-cash" in html
+    assert "Данные по магазину" not in html
+    assert "salary_from_cash" not in html
+
+
 def test_owner_cash_empty_without_categories():
     picture = _owner_cash_picture({})
     assert picture["director_draw"] == 0

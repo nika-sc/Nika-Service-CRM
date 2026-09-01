@@ -18,46 +18,71 @@
     {% endif %}
 
     {% if data and data.summary %}
-    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Общие данные по компании') }}</h2>
+    {% set owner = data.summary.owner|default({}) %}
+    {% set cash_expense = data.summary.cash_expense|default({}) %}
+    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Выручка') }}</h2>
     <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">{{ _('Показатель') }}</th>
             <th style="text-align: right;">{{ _('Значение') }}</th>
             <th style="text-align: center;">{{ _('Изменение к сравн. периоду') }}</th>
         </tr>
-        <tr><td>{{ _('Выручка по компании') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.revenue.total|default(0)) }} {{ money_symbol }}</td>
+        <tr><td><strong>{{ _('Выручка') }}</strong></td><td style="text-align: right;"><strong>{{ "%.0f"|format(data.summary.revenue.total|default(0)) }} {{ money_symbol }}</strong></td>
             <td style="text-align: center;">{{ data.summary.revenue.change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Выручка по услугам') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)) }} {{ money_symbol }}</td>
+        <tr><td>{{ _('Услуги') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.services_revenue.total|default(0)) }} {{ money_symbol }}</td>
             <td style="text-align: center;">{{ data.summary.services_revenue.change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Выручка по товарам') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)) }} {{ money_symbol }}</td>
+        <tr><td>{{ _('Товары') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.parts_revenue.total|default(0)) }} {{ money_symbol }}</td>
             <td style="text-align: center;">{{ data.summary.parts_revenue.change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Приход (касса) — оплаты') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.profit.total|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ data.summary.profit.change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Расход (касса) — выплаты') }}</td><td style="text-align: right;">{{ "%.0f"|format((data.summary.cash_expense|default({})).total|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ (data.summary.cash_expense|default({})).change | dashboard_money_delta }}</td></tr>
+        <tr><td>{{ _('Заявки') }} ({{ _('закрыто') }} {{ data.summary.orders.count|default(0) }})</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.revenue|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">{{ data.summary.orders.revenue_change | dashboard_money_delta }}</td></tr>
+        <tr><td>{{ _('Магазин') }} ({{ data.summary.shop.count|default(0) }} {{ _('продаж') }})</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.revenue|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">{{ data.summary.shop.revenue_change | dashboard_money_delta }}</td></tr>
     </table>
 
-    {% set owner = data.summary.owner|default({}) %}
-    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Директору') }}</h2>
+    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('После зарплаты и расходов') }}</h2>
     <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
         <tr style="background: #f5f5f5;">
             <th style="text-align: left;">{{ _('Показатель') }}</th>
             <th style="text-align: right;">{{ _('Значение') }}</th>
             <th style="text-align: center;">{{ _('Изменение к сравн. периоду') }}</th>
         </tr>
-        <tr><td>{{ owner.director_draw_label|default(_('Выемка директору')) }} ({{ _('в карман') }})</td>
+        <tr><td><strong>{{ _('После зарплаты и расходов') }}</strong></td>
+            <td style="text-align: right;"><strong>{{ "%.0f"|format(owner.after_costs|default(0)) }} {{ money_symbol }}</strong></td>
+            <td style="text-align: center;">{% if owner.after_costs_change is defined %}{{ owner.after_costs_change | dashboard_money_delta }}{% else %}—{% endif %}</td></tr>
+        <tr><td>{{ owner.director_draw_label|default(_('Выемка директору')) }}</td>
             <td style="text-align: right;">{{ "%.0f"|format(owner.director_draw|default(0)) }} {{ money_symbol }}</td>
             <td style="text-align: center;">{% if owner.director_draw_change is defined %}{{ owner.director_draw_change | dashboard_money_delta }}{% else %}—{% endif %}</td></tr>
-        <tr><td>{{ _('После ЗП и расходов') }}</td>
-            <td style="text-align: right;">{{ "%.0f"|format(owner.after_costs|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{% if owner.after_costs_change is defined %}{{ owner.after_costs_change | dashboard_money_delta }}{% else %}—{% endif %}</td></tr>
-        <tr><td>{{ _('Не вынуто за период') }}</td>
+        <tr><td>{{ _('Ещё не вынули') }}</td>
             <td style="text-align: right;">{{ "%.0f"|format(owner.leftover_in_cash|default(0)) }} {{ money_symbol }}</td>
             <td style="text-align: center;">{% if owner.leftover_change is defined %}{{ owner.leftover_change | dashboard_money_delta }}{% else %}—{% endif %}</td></tr>
-        <tr><td>{{ _('Остаток в кассе на конец') }}</td>
+        <tr><td>{{ _('Зарплата из кассы') }}</td>
+            <td style="text-align: right;">{{ "%.0f"|format(owner.salary_cash|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">—</td></tr>
+        <tr><td>{{ _('Прочие расходы') }}</td>
+            <td style="text-align: right;">{{ "%.0f"|format(owner.other_expenses|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">—</td></tr>
+    </table>
+
+    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Касса') }}</h2>
+    <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+        <tr style="background: #f5f5f5;">
+            <th style="text-align: left;">{{ _('Показатель') }}</th>
+            <th style="text-align: right;">{{ _('Значение') }}</th>
+            <th style="text-align: center;">{{ _('Изменение к сравн. периоду') }}</th>
+        </tr>
+        <tr><td><strong>{{ _('Приход в кассу') }}</strong></td><td style="text-align: right;"><strong>{{ "%.0f"|format(data.summary.profit.total|default(0)) }} {{ money_symbol }}</strong></td>
+            <td style="text-align: center;">{{ data.summary.profit.change | dashboard_money_delta }}</td></tr>
+        {% for row in data.summary.cash_income_by_method|default([]) %}
+        <tr><td>{{ row.label }}</td><td style="text-align: right;">{{ "%.0f"|format(row.amount|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">—</td></tr>
+        {% endfor %}
+        <tr><td>{{ _('Расход (касса)') }}</td><td style="text-align: right;">{{ "%.0f"|format(cash_expense.total|default(0)) }} {{ money_symbol }}</td>
+            <td style="text-align: center;">{{ cash_expense.change | dashboard_money_delta }}</td></tr>
+        <tr><td>{{ _('Остаток на конец') }}</td>
             <td style="text-align: right;">{{ "%.0f"|format(owner.closing_balance|default(0)) }} {{ money_symbol }}</td>
             <td style="text-align: center;">{% if owner.closing_balance_change is defined %}{{ owner.closing_balance_change | dashboard_money_delta }}{% else %}—{% endif %}</td></tr>
     </table>
+    <p style="margin: 0 0 16px 0; color: #666; font-size: 12px;">{{ _('Наличные — ящик в кассе. Карта и перевод — обороты, не обнуляются каждый день.') }}</p>
 
     <h3 style="margin: 16px 0 8px 0; font-size: 14px;">{{ _('Зарплата за период') }}</h3>
     <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
@@ -72,22 +97,7 @@
             <td style="text-align: center;">{{ (data.salary|default({})).paid_change | dashboard_money_delta }}</td></tr>
     </table>
 
-    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Данные по заказам') }}</h2>
-    <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-        <tr style="background: #f5f5f5;">
-            <th style="text-align: left;">{{ _('Показатель') }}</th>
-            <th style="text-align: right;">{{ _('Значение') }}</th>
-            <th style="text-align: center;">{{ _('Изменение к сравн. периоду') }}</th>
-        </tr>
-        <tr><td>{{ _('Выручка по заказам') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.revenue|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ data.summary.orders.revenue_change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Закрытых заказов') }}</td><td style="text-align: right;">{{ data.summary.orders.count|default(0) }}</td>
-            <td style="text-align: center;">{{ data.summary.orders.count_change | dashboard_count_delta }}</td></tr>
-        <tr><td>{{ _('Средний чек заказа') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.orders.avg_check|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ data.summary.orders.avg_change | dashboard_avg_money_delta }}</td></tr>
-        <tr><td>{{ _('Создано заказов за период') }}</td><td style="text-align: right;">{{ data.created_orders.count|default(0) }}</td>
-            <td style="text-align: center;">{{ data.created_orders.change | dashboard_count_delta }}</td></tr>
-    </table>
+    <p style="margin: 0 0 16px 0; color: #555;">{{ _('Создано заказов за период') }}: <strong>{{ data.created_orders.count|default(0) }}</strong>{% if data.created_orders.change %} <span style="color:#555;">({{ data.created_orders.change | dashboard_count_delta }})</span>{% endif %}</p>
 
     <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Принятые заявки за период') }}</h2>
     <p style="margin: 0 0 8px 0;">Количество: <strong>{{ (data.accepted_orders|default({})).count|default(0) }}</strong>{% if (data.accepted_orders|default({})).count_change is defined %} <span style="color:#555;">({{ (data.accepted_orders|default({})).count_change | dashboard_count_delta }})</span>{% endif %}</p>
@@ -124,20 +134,6 @@
     <p style="margin: 0 0 20px 0; color: #666;">{{ _('Нет данных за выбранный период.') }}</p>
     {% endif %}
 
-    <h2 style="margin: 24px 0 12px 0; font-size: 16px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 6px;">{{ _('Данные по магазину') }}</h2>
-    <table cellpadding="8" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-        <tr style="background: #f5f5f5;">
-            <th style="text-align: left;">{{ _('Показатель') }}</th>
-            <th style="text-align: right;">{{ _('Значение') }}</th>
-            <th style="text-align: center;">{{ _('Изменение к сравн. периоду') }}</th>
-        </tr>
-        <tr><td>{{ _('Выручка по магазину') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.revenue|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ data.summary.shop.revenue_change | dashboard_money_delta }}</td></tr>
-        <tr><td>{{ _('Количество продаж') }}</td><td style="text-align: right;">{{ data.summary.shop.count|default(0) }}</td>
-            <td style="text-align: center;">{{ data.summary.shop.count_change | dashboard_count_delta }}</td></tr>
-        <tr><td>{{ _('Средний чек магазина') }}</td><td style="text-align: right;">{{ "%.0f"|format(data.summary.shop.avg_check|default(0)) }} {{ money_symbol }}</td>
-            <td style="text-align: center;">{{ data.summary.shop.avg_change | dashboard_avg_money_delta }}</td></tr>
-    </table>
     {% endif %}
 
     {% if data and data.cashflow %}
