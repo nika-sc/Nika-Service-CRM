@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # One-shot установка Nika CRM на Ubuntu 22.04 / 24.04 (аналог Windows SETUP).
 #
+# Чистый VPS (под root, curl уже есть или: apt-get install -y curl ca-certificates):
+#   curl -fsSL https://raw.githubusercontent.com/nika-sc/Nika-Service-CRM/main/scripts/linux_setup.sh -o /tmp/linux_setup.sh
+#   sed -i 's/\r$//' /tmp/linux_setup.sh
+#   bash /tmp/linux_setup.sh --with-nginx --harden
+#
+# Из клона:
 #   sudo bash scripts/linux_setup.sh
 #   sudo bash scripts/linux_setup.sh --with-nginx
 #   sudo bash scripts/linux_setup.sh --harden
@@ -8,13 +14,15 @@
 #   sudo bash scripts/linux_setup.sh --from-dir /path/to/already/cloned
 #
 # После установки: systemd unit nikacrm, демо-БД (если пустая), .env, печать URL и логинов.
-# Обновление существующей установки: scripts/linux_upgrade.sh (НЕ этот скрипт).
+# pip: сборка cairo/libpq часто 10–20 минут. Обновление: scripts/linux_upgrade.sh (НЕ этот скрипт).
+# --with-nginx на FASTPANEL/ISPmanager/Plesk остановит скрипт (сломает :80 панели). Обход: --force-nginx.
 #
 set -euo pipefail
 
 WITH_NGINX=0
 WITH_LAN=0
 WITH_HARDEN=0
+FORCE_NGINX=0
 FROM_DIR=""
 REPO_URL="${REPO_URL:-https://github.com/nika-sc/Nika-Service-CRM.git}"
 BRANCH="${BRANCH:-main}"
@@ -23,6 +31,7 @@ DEST="${DEST:-/root/Nika-Service-CRM}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --with-nginx) WITH_NGINX=1; shift ;;
+    --force-nginx) FORCE_NGINX=1; WITH_NGINX=1; shift ;;
     --lan) WITH_LAN=1; shift ;;
     --harden) WITH_HARDEN=1; shift ;;
     --from-dir) FROM_DIR="${2:-}"; shift 2 ;;
@@ -30,7 +39,7 @@ while [[ $# -gt 0 ]]; do
     --repo) REPO_URL="${2:-}"; shift 2 ;;
     --branch) BRANCH="${2:-}"; shift 2 ;;
     -h|--help)
-      sed -n '2,14p' "$0"
+      sed -n '2,18p' "$0"
       exit 0
       ;;
     *) echo "Неизвестный аргумент: $1"; exit 1 ;;
@@ -41,6 +50,34 @@ LOG() { echo "[linux_setup $(date '+%H:%M:%S')] $*"; }
 die() { LOG "ERROR: $*"; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || die "запустите от root (sudo)"
+
+hosting_panel_name() {
+  if [[ -d /usr/local/fastpanel2 ]] || [[ -d /usr/local/fastpanel ]] || command -v mogwai >/dev/null 2>&1; then
+    echo "FASTPANEL"
+    return 0
+  fi
+  if [[ -d /usr/local/mgr5 ]] || command -v ispmgr >/dev/null 2>&1; then
+    echo "ISPmanager"
+    return 0
+  fi
+  if command -v plesk >/dev/null 2>&1 || [[ -d /usr/local/psa ]]; then
+    echo "Plesk"
+    return 0
+  fi
+  if [[ -d /usr/local/cpanel ]]; then
+    echo "cPanel"
+    return 0
+  fi
+  return 1
+}
+
+PANEL_NAME="$(hosting_panel_name || true)"
+if [[ -n "${PANEL_NAME}" ]]; then
+  LOG "WARN: на сервере панель ${PANEL_NAME}. Для CRM лучше чистый Ubuntu без панели."
+  if [[ "$WITH_NGINX" == "1" && "$FORCE_NGINX" != "1" ]]; then
+    die "${PANEL_NAME} уже держит :80/:443. --with-nginx подменит сайт панели. Поставьте без --with-nginx и проксируйте через панель, либо чистый Ubuntu. Явный обход: --force-nginx"
+  fi
+fi
 
 if [[ -f /etc/os-release ]]; then
   # shellcheck disable=SC1091
@@ -76,7 +113,7 @@ fi
 [[ -f "$DEST/scripts/ubuntu_2404_bootstrap.sh" ]] || die "нет scripts/ubuntu_2404_bootstrap.sh в $DEST"
 chmod +x "$DEST/scripts/ubuntu_2404_bootstrap.sh" "$DEST/scripts/linux_upgrade.sh" "$DEST/scripts/linux_hardening.sh" 2>/dev/null || true
 
-LOG "Bootstrap (зависимости, PostgreSQL, демо-дамп если БД пустая)..."
+LOG "Bootstrap (зависимости, PostgreSQL, демо-дамп если БД пустая). pip часто 10–20 мин — это не зависание."
 DEST="$DEST" bash "$DEST/scripts/ubuntu_2404_bootstrap.sh"
 
 # systemd

@@ -50,7 +50,7 @@ cd Nika-Service-CRM
 
 ### 3. Linux / VPS (Ubuntu)
 
-One-shot установка: [`scripts/linux_setup.sh`](https://github.com/nika-sc/Nika-Service-CRM/blob/main/scripts/linux_setup.sh) (клон → PostgreSQL → bootstrap-дамп → systemd `nikacrm`).  
+One-shot установка: [`scripts/linux_setup.sh`](https://github.com/nika-sc/Nika-Service-CRM/blob/main/scripts/linux_setup.sh) (клон → PostgreSQL → bootstrap-дамп → systemd `nikacrm`). На чистом Ubuntu достаточно скачать скрипт и запустить с `--with-nginx --harden` (см. README, раздел Ubuntu 24.04).  
 Обновление без потери данных: [`scripts/linux_upgrade.sh`](https://github.com/nika-sc/Nika-Service-CRM/blob/main/scripts/linux_upgrade.sh) — **не** используйте `linux_setup` для апгрейда.  
 Подробности: корневой [README](https://github.com/nika-sc/Nika-Service-CRM/blob/main/README.md) (раздел VPS) и [docs/DEPLOY.md](DEPLOY.md).
 

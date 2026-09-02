@@ -20,8 +20,9 @@ apt-get install -y -qq \
 if [[ ! -d "$DEST/venv" ]]; then
   python3 -m venv "$DEST/venv"
 fi
+echo "pip: обновляю pip и ставлю requirements (часто 10–20 минут, cairo/libpq)..."
 "$DEST/venv/bin/pip" install -q --upgrade pip
-"$DEST/venv/bin/pip" install -q -r "$DEST/requirements.txt"
+"$DEST/venv/bin/pip" install -r "$DEST/requirements.txt"
 
 NIKA_PASS="$(openssl rand -hex 16)"
 SECRET="$(openssl rand -hex 32)"

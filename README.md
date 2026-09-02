@@ -609,18 +609,27 @@ psql -U postgres -h localhost -d nikacrm -f database/bootstrap/nikacrm_public_sa
 
 ### VPS: Ubuntu 24.04 LTS
 
-**Быстрая установка одной командой** (после `git clone` или скачивания скрипта):
+**Чистый Ubuntu 24.04, под root** (VPS без FASTPANEL / ISPmanager / Plesk на :80):
 
 ```bash
-# с уже клонированным репо:
-cd /root/Nika-Service-CRM
-sudo bash scripts/linux_setup.sh
-# опционально reverse-proxy на :80:
-# sudo bash scripts/linux_setup.sh --with-nginx
+apt-get update && apt-get install -y curl ca-certificates
+curl -fsSL https://raw.githubusercontent.com/nika-sc/Nika-Service-CRM/main/scripts/linux_setup.sh -o /tmp/linux_setup.sh
+sed -i 's/\r$//' /tmp/linux_setup.sh
+bash /tmp/linux_setup.sh --with-nginx --harden
 ```
 
-Скрипт ставит зависимости, PostgreSQL, демо-дамп (если БД пустая), `.env`, systemd `nikacrm` и печатает URL.  
-**Обновление** существующей CRM без потери данных: `sudo bash scripts/linux_upgrade.sh` (см. [docs/DEPLOY.md](docs/DEPLOY.md)).
+Скрипт сам клонирует репозиторий, ставит PostgreSQL, демо-дамп (если БД пустая), `.env`, systemd `nikacrm`, nginx на :80 и базовый UFW. Сборка Python-зависимостей (cairo/libpq) часто **10–20 минут** — это нормально, не прерывайте. Затем откройте `http://IP/` , войдите `admin` / `111111` и сразу смените пароль.
+
+Если репозиторий уже клонирован:
+
+```bash
+cd /root/Nika-Service-CRM
+sudo bash scripts/linux_setup.sh --with-nginx --harden
+```
+
+На сервере **с панелью хостера** не передавайте `--with-nginx`: скрипт остановится, чтобы не снести сайт панели. CRM тогда: `sudo bash scripts/linux_setup.sh --harden` и reverse-proxy из панели на `127.0.0.1:5000`.
+
+**Обновление** существующей CRM без потери данных: `sudo bash scripts/linux_upgrade.sh` (см. [docs/DEPLOY.md](docs/DEPLOY.md)). Не запускайте `linux_setup.sh` второй раз вместо апгрейда.
 
 Ниже — ручной сценарий (те же шаги по отдельности).
 
