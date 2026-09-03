@@ -3868,10 +3868,10 @@ def api_payment_receipts(payment_id: int):
 def api_refund_payment(payment_id: int):
     """API для возврата по оплате."""
     try:
-        from app.services.user_service import UserService
+        from app.utils.rbac import can_refund_receipts
         user_role = getattr(current_user, 'role', 'viewer')
-        if not UserService.check_role_permission(user_role, 'manager'):
-            return jsonify({'success': False, 'error': 'Недостаточно прав для возврата'}), 403
+        if not can_refund_receipts(user_role):
+            return jsonify({'success': False, 'error': 'Возврат оплаты может сделать только администратор'}), 403
 
         data = request.get_json(silent=True) or {}
         amount = float(data.get('amount', 0) or 0)

@@ -22,6 +22,11 @@ def can_create_role(current_user_role: str, target_role: str) -> bool:
     return False
 
 
+def can_refund_receipts(user_role: str) -> bool:
+    """Возврат оплаты в заявке и возврат/удаление продажи в магазине — только admin."""
+    return (user_role or "").strip() == "admin"
+
+
 def can_assign_user_role(
     *,
     actor_role: str,

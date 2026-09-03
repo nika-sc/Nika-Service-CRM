@@ -3013,6 +3013,7 @@
                                                                                 style="border-radius: 6px; padding: 0.2rem 0.4rem;">
                                                                             <i class="fas fa-receipt" style="font-size: 0.7rem;"></i>
                                                                         </button>
+                                                                        {% if current_user.role == 'admin' %}
                                                                         <button class="btn btn-sm btn-outline-warning refund-payment-btn"
                                                                                 data-payment-id="{{ payment.id }}"
                                                                                 data-payment-amount="{{ payment.amount }}"
@@ -3020,6 +3021,7 @@
                                                                                 style="border-radius: 6px; padding: 0.2rem 0.4rem;">
                                                                             <i class="fas fa-undo" style="font-size: 0.7rem;"></i>
                                                                         </button>
+                                                                        {% endif %}
                                                                         {% endif %}
                                                                     </div>
                                                                 </div>
@@ -9302,6 +9304,7 @@
                         <tbody>
             `;
 
+            const canRefundPayments = {{ 'true' if current_user.role == 'admin' else 'false' }};
             payments.forEach(payment => {
                 const isRefund = (payment.kind || '').toLowerCase() === 'refund';
                 const paymentTypeBadge = {
@@ -9320,12 +9323,12 @@
                                     title="Сформировать чек">
                                 <i class="fas fa-receipt"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-warning refund-payment-btn"
+                            ${canRefundPayments ? `<button class="btn btn-sm btn-outline-warning refund-payment-btn"
                                     data-payment-id="${payment.id}"
                                     data-payment-amount="${payment.amount}"
                                     title="Возврат">
                                 <i class="fas fa-undo"></i>
-                            </button>`;
+                            </button>` : ''}`;
 
                 tableHTML += `
                     <tr class="${isRefund ? 'table-danger' : ''}">

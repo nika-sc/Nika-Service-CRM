@@ -20,12 +20,14 @@
                             <i class="fas fa-calculator me-1"></i> Зарплата
                         </button>
                         {% endif %}
+                        {% if sale.final_amount is not none and sale.final_amount > 0 and current_user.role == 'admin' %}
                         <button class="btn btn-outline-warning btn-sm" onclick="refundSale({{ sale.id }});">
                             <i class="fas fa-undo me-1"></i> Возврат
                         </button>
                         <button class="btn btn-outline-danger btn-sm" onclick="deleteSale({{ sale.id }});">
                             <i class="fas fa-trash me-1"></i> Удалить
                         </button>
+                        {% endif %}
                         <a href="{{ url_for('shop.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-arrow-left me-1"></i> Назад
                         </a>

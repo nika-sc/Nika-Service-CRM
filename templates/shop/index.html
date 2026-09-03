@@ -544,12 +544,14 @@
                                 <button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); printSale({{ sale.id }});">
                                     <i class="fas fa-print"></i>
                                 </button>
+                                {% if current_user.role == 'admin' and (sale.final_amount is none or sale.final_amount >= 0) %}
                                 <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation(); refundSale({{ sale.id }});">
                                     <i class="fas fa-undo"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteSale({{ sale.id }});">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                {% endif %}
                             </td>
                         </tr>
                                 {% endfor %}

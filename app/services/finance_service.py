@@ -917,6 +917,45 @@ class FinanceService:
                     internal_expense += amount
             period_income = period_income - internal_income
             period_expense = period_expense - internal_expense
+
+            # Сверка за период: приходы/расходы без внутренних перекидок + число операций
+            cursor.execute(
+                """
+                SELECT COALESCE(ct.payment_method, 'cash'), ct.transaction_type,
+                       COUNT(*), COALESCE(SUM(ct.amount), 0)
+                FROM cash_transactions ct
+                JOIN transaction_categories tc ON ct.category_id = tc.id
+                WHERE tc.name NOT IN ('Внутренний перевод (списание)', 'Внутренний перевод (зачисление)')
+                """
+                + internal_date
+                + internal_eff
+                + """
+                GROUP BY COALESCE(ct.payment_method, 'cash'), ct.transaction_type
+                """,
+                internal_params,
+            )
+            external_by_method: Dict[str, Dict[str, float]] = {}
+            for row in cursor.fetchall():
+                method = row[0] or 'cash'
+                t_type = row[1]
+                cnt = int(row[2] or 0)
+                amount = float(row[3] or 0)
+                slot = external_by_method.setdefault(
+                    method,
+                    {'income': 0.0, 'expense': 0.0, 'income_count': 0, 'expense_count': 0},
+                )
+                if t_type == 'income':
+                    slot['income'] = amount
+                    slot['income_count'] = cnt
+                else:
+                    slot['expense'] = amount
+                    slot['expense_count'] = cnt
+            for m in ordered_methods:
+                ext = external_by_method.get(m) or {}
+                merged_by_payment_method[m]['external_income'] = float(ext.get('income') or 0)
+                merged_by_payment_method[m]['external_expense'] = float(ext.get('expense') or 0)
+                merged_by_payment_method[m]['income_count'] = int(ext.get('income_count') or 0)
+                merged_by_payment_method[m]['expense_count'] = int(ext.get('expense_count') or 0)
             
             return {
                 'opening_balance': opening_balance,

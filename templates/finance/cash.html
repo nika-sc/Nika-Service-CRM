@@ -247,12 +247,17 @@
                     <i class="fas fa-question-circle text-secondary fa-2x mb-2"></i>
                     <p class="mb-1 small text-muted">{{ payment_method_settings.card_label or method or 'Прочее' }}</p>
                     {% endif %}
-                    <p class="small text-muted mb-1 mb-md-2">За выбранный период (без переноса с прошлых дней):</p>
+                    <p class="small text-muted mb-1 mb-md-2">Сверка за период — приходы от клиентов, без перекидок между кассами:</p>
                     <div>
-                        <span class="text-success">+{{ "%.2f"|format(totals.income) }}</span>
+                        <span class="text-success">{{ totals.income_count|default(0) }} прих. +{{ "%.2f"|format(totals.external_income|default(totals.income)|float) }}</span>
                         <span class="mx-1">/</span>
-                        <span class="text-danger">-{{ "%.2f"|format(totals.expense) }}</span>
+                        <span class="text-danger">{{ totals.expense_count|default(0) }} расх. −{{ "%.2f"|format(totals.external_expense|default(totals.expense)|float) }}</span>
                     </div>
+                    {% if method == 'transfer' %}
+                    <p class="small text-muted mb-0 mt-1">Эту сумму приходов сверяйте с банком. Перекидывать в нал не нужно, если не снимали в ящик.</p>
+                    {% elif method == 'cash' %}
+                    <p class="small text-muted mb-0 mt-1">Остаток ниже — сколько должно лежать в ящике. Его уменьшают зарплата, выемка, обед.</p>
+                    {% endif %}
                     <p class="small text-muted mb-0 mt-2">Остаток на конец периода: <strong class="{% if balance_method >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ "%.2f"|format(balance_method) }} {{ money_symbol }}</strong></p>
                     {% if open_method != 0 %}
                     <p class="small text-muted mb-0 mt-1">Как посчитано: {{ "%.2f"|format(open_method) }} {{ money_symbol }} на начало + {{ "%.2f"|format(totals.income) }} {{ money_symbol }} приход − {{ "%.2f"|format(totals.expense) }} {{ money_symbol }} расход = <strong>{{ "%.2f"|format(balance_method) }} {{ money_symbol }}</strong></p>

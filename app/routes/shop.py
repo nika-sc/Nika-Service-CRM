@@ -17,6 +17,7 @@ from app.database.connection import get_db_connection
 from app.database.queries.warehouse_queries import WarehouseQueries
 from app.utils.exceptions import ValidationError
 from app.utils.error_handlers import api_internal_error
+from app.utils.rbac import can_refund_receipts
 from datetime import timedelta
 
 bp = Blueprint('shop', __name__, url_prefix='/shop')
@@ -477,6 +478,8 @@ def api_create_sale():
 @permission_required('manage_shop')
 def api_refund_sale(sale_id: int):
     """Возврат продажи в магазине."""
+    if not can_refund_receipts(getattr(current_user, 'role', '')):
+        return jsonify({'success': False, 'error': 'Возврат продажи может сделать только администратор'}), 403
     data = request.get_json(silent=True) or {}
     reason = data.get('reason')
     try:
@@ -496,6 +499,8 @@ def api_refund_sale(sale_id: int):
 @permission_required('manage_shop')
 def api_delete_sale(sale_id: int):
     """Удаление продажи из магазина (с возвратом средств и остатков)."""
+    if not can_refund_receipts(getattr(current_user, 'role', '')):
+        return jsonify({'success': False, 'error': 'Удалить продажу может только администратор'}), 403
     data = request.get_json(silent=True) or {}
     reason = data.get('reason')
     try:
