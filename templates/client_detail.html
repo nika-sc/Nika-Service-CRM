@@ -173,7 +173,7 @@
                                                 {% if phone_digits|length == 11 and phone_digits.startswith('7') %}
                                                     {% set phone_formatted = '+' + phone_digits[0] + '(' + phone_digits[1:4] + ')' + phone_digits[4:7] + '-' + phone_digits[7:9] + '-' + phone_digits[9:] %}
                                                 {% endif %}
-                                                <span class="contact-value" data-phone="{{ phone_digits }}" onclick="showPhoneMenu(event, {{ phone_digits|tojson }})">
+                                                <span class="contact-value" data-phone="{{ phone_digits }}" onclick="showPhoneMenu(event, this.dataset.phone)">
                                                     {{ phone_formatted }}
                                                 </span>
                                                 <div class="contact-dropdown" id="phoneMenu-{{ phone_digits }}">
@@ -189,11 +189,11 @@
                                                     <a href="https://t.me/+{{ (phone_digits if phone_digits[0:1] == '7' else ('7' + phone_digits[1:] if phone_digits[0:1] == '8' and phone_digits|length == 11 else phone_digits)) }}" class="contact-dropdown-item">
                                                         <i class="fab fa-telegram"></i> Написать в Телеграмм
                                                     </a>
-                                                    <a href="#" class="contact-dropdown-item" onclick="copyToClipboard({{ phone_digits|tojson }}, event)">
+                                                    <a href="#" class="contact-dropdown-item" data-copy-value="{{ phone_digits|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)">
                                                         <i class="fas fa-copy"></i> Копировать
                                                     </a>
                                                 </div>
-                                                <button class="contact-btn" onclick="copyToClipboard({{ phone_digits|tojson }}, event)" title="Копировать">
+                                                <button class="contact-btn" data-copy-value="{{ phone_digits|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                             {% else %}
@@ -208,7 +208,7 @@
                                                 <a href="mailto:{{ customer.email }}" class="contact-value">
                                                     {{ customer.email }}
                                                 </a>
-                                                <button class="contact-btn" onclick="copyToClipboard({{ customer.email|tojson }}, event)" title="Копировать">
+                                                <button class="contact-btn" data-copy-value="{{ customer.email|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                             {% else %}

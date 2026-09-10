@@ -10,11 +10,11 @@ def test_format_blog_date_ru_time_then_day_month_year():
     assert format_blog_date_ru("") == ""
 
 
-def test_latest_blog_post_is_warehouse_categories():
+def test_latest_blog_post_is_windows_setup_1_0_7():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "warehouse-categories"
-    assert _POSTS[0]["file"] == "blog/41-warehouse-categories.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-7"
+    assert _POSTS[0]["file"] == "blog/42-windows-setup-1-0-7.md"
 
 
 def test_post_view_keeps_iso_and_adds_display():

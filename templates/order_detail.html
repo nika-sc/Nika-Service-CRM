@@ -2572,7 +2572,7 @@
                                                                 <a href="https://t.me/+{{ (phone_raw if phone_raw[0:1] == '7' else ('7' + phone_raw[1:] if phone_raw[0:1] == '8' and phone_raw|length == 11 else phone_raw)) }}" class="quick-action-btn btn-telegram" title="Написать в Телеграмм">
                                                                     <i class="fab fa-telegram"></i>
                                                     </a>
-                                                                <button class="quick-action-btn btn-copy" onclick="copyToClipboard({{ phone_raw|tojson }}, event)" title="Копировать">
+                                                                <button class="quick-action-btn btn-copy" data-copy-value="{{ phone_raw|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                                             </div>
@@ -2588,7 +2588,7 @@
                                             {% if order.email %}
                                                         <div class="d-flex align-items-center gap-2">
                                                             <a href="mailto:{{ order.email }}" class="contact-value-main">{{ order.email }}</a>
-                                                            <button class="quick-action-btn btn-copy" onclick="copyToClipboard({{ order.email|tojson }}, event)" title="Копировать">
+                                                            <button class="quick-action-btn btn-copy" data-copy-value="{{ order.email|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                                         </div>
@@ -2697,7 +2697,7 @@
                                                 <span class="compact-label"><i class="fas fa-fingerprint me-1"></i>UUID:</span>
                                                 <div class="compact-value d-flex align-items-center gap-2 flex-wrap">
                                                     <code style="font-size: 0.7rem; word-break: break-all;">{{ order.order_id }}</code>
-                                                    <button type="button" class="quick-action-btn btn-copy" onclick="copyToClipboard({{ order.order_id|tojson }}, event)" title="Копировать UUID">
+                                                    <button type="button" class="quick-action-btn btn-copy" data-copy-value="{{ order.order_id|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать UUID">
                                                         <i class="fas fa-copy"></i>
                                                     </button>
                                                 </div>

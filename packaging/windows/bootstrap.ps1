@@ -32,8 +32,20 @@ $serviceName = "NikaCRM-Web"
 $postgresServiceName = "NikaCRM-PostgreSQL"
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
+
+# Inno's Permissions parameter only adds ACEs, so the inherited "Users: read" from
+# C:\ProgramData keeps .env (SECRET_KEY, DATABASE_URL) and the setup log readable by
+# every local account. Drop inheritance before anything is written. Explicit ACEs that
+# PostgreSQL sets on its data directory later are not affected.
+& icacls.exe $DataDir /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)(F)" "*S-1-5-32-544:(OI)(CI)(F)" | Out-Null
+foreach ($legacyPath in @($logsDir, $installerDir, $envFile)) {
+    if (Test-Path -LiteralPath $legacyPath) {
+        & icacls.exe $legacyPath /remove:g "*S-1-5-32-545" | Out-Null
+    }
+}
+
 Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.6 (2026-08-09)"
+Write-Host "[Nika CRM Setup] Bootstrap version 1.0.7 (2026-09-10)"
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
@@ -44,9 +56,15 @@ function Invoke-Native {
         [Parameter(Mandatory = $true)]
         [string] $FilePath,
         [string[]] $Arguments = @(),
-        [int[]] $SuccessCodes = @(0)
+        [int[]] $SuccessCodes = @(0),
+        [string[]] $MaskValues = @()
     )
-    Write-Host ("RUN: {0} {1}" -f $FilePath, ($Arguments -join " "))
+    # Setup transcript lands in ProgramData; never echo generated passwords there.
+    $printable = $Arguments -join " "
+    foreach ($secret in $MaskValues) {
+        if ($secret) { $printable = $printable.Replace($secret, "***") }
+    }
+    Write-Host ("RUN: {0} {1}" -f $FilePath, $printable)
     $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -notin $SuccessCodes) {
         throw "Command failed with exit code $($process.ExitCode): $FilePath"
@@ -311,7 +329,7 @@ try {
             "--enable-components", "server,commandlinetools",
             "--disable-components", "pgAdmin,stackbuilder",
             "--create_shortcuts", "0"
-        ) @(0)
+        ) @(0) -MaskValues @($postgresSuperPassword)
     }
 
     $psql = Join-Path $pgBin "psql.exe"

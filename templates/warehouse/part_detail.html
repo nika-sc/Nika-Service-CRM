@@ -57,7 +57,10 @@
                 <a href="{{ url_for('warehouse.edit_part', part_id=part.id) }}" class="btn btn-warning">
                     <i class="fas fa-edit me-1"></i> Редактировать
                 </a>
-                <button type="button" class="btn btn-danger" onclick="deletePart({{ part.id }}, {{ part.name|tojson }})">
+                <button type="button" class="btn btn-danger"
+                        data-part-id="{{ part.id }}"
+                        data-part-name="{{ part.name|e }}"
+                        onclick="deletePart(this.dataset.partId, this.dataset.partName)">
                     <i class="fas fa-trash me-1"></i> Удалить
                 </button>
                 <a href="{{ url_for('warehouse.parts_list') }}" class="btn btn-secondary">

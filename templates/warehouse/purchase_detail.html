@@ -80,7 +80,10 @@
                 <button id="completePurchaseBtn" class="btn btn-success" onclick="completePurchase({{ purchase.id }}, this)">
                     <i class="fas fa-check me-1"></i> Завершить закупку
                 </button>
-                <button type="button" class="btn btn-danger" onclick="deletePurchase({{ purchase.id }}, {{ purchase.supplier_name|tojson }})">
+                <button type="button" class="btn btn-danger"
+                        data-purchase-id="{{ purchase.id }}"
+                        data-supplier-name="{{ purchase.supplier_name|e }}"
+                        onclick="deletePurchase(this.dataset.purchaseId, this.dataset.supplierName)">
                     <i class="fas fa-trash me-1"></i> Удалить
                 </button>
                 {% endif %}

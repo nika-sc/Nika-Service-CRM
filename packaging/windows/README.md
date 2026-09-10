@@ -4,19 +4,19 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Published download links (1.0.6, build 2026-08-09):**
+**Published download links (1.0.7, build 2026-09-10):**
 
-- [NikaCRM-Offline-Setup-1.0.6-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.6/NikaCRM-Offline-Setup-1.0.6-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.6)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.6-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.7-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.7/NikaCRM-Offline-Setup-1.0.7-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.7)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.7-x64.exe)
 
-SHA256: `FA029F7CC5B53AA2C7CFD39C13539280A6CD654AA0BB1674AD6394F8D0A67387`
+SHA256: `12BE394E53FA7E831821D3C2E2D48C922F778B22B19C02C38402F985C0D6F250`
 
-**Changelog 1.0.6 (2026-08-09):** After saving SMTP on Windows, restart via desktop shortcut «Nika CRM — Перезапуск службы»; clearer From placeholders. See `docs/blog/24-windows-setup-1-0-6.md`.
+**Changelog 1.0.7 (2026-09-10):** Warehouse categories are managed from the parts list, part/purchase deletion works again, action column is pinned; setup no longer echoes generated passwords into `setup.log` and `%ProgramData%\NikaCRM` is admins-only. See `docs/blog/42-windows-setup-1-0-7.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.6-x64.exe` (links above).
+1. Download `NikaCRM-Offline-Setup-1.0.7-x64.exe` (links above).
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change
@@ -54,7 +54,7 @@ The script downloads version-pinned official installers, verifies SHA256,
 resolves a CPython 3.12 Windows wheelhouse, writes an integrity manifest and
 builds:
 
-`packaging\windows\output\NikaCRM-Offline-Setup-1.0.6-x64.exe`
+`packaging\windows\output\NikaCRM-Offline-Setup-1.0.7-x64.exe`
 
 Downloaded assets and build output are deliberately excluded from Git. To
 rebuild using already downloaded files:

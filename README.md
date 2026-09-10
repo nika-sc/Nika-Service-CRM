@@ -361,24 +361,26 @@ cd Nika-Service-CRM
 ### Windows SETUP (полный офлайн-установщик)
 
 Для Windows 10/11 x64 доступен единый автономный установщик
-`NikaCRM-Offline-Setup-1.0.6-x64.exe` (**сборка 2026-08-09**).
+`NikaCRM-Offline-Setup-1.0.7-x64.exe` (**сборка 2026-09-10**).
 Он не требует интернета и автоматически устанавливает встроенные Python 3.12
 и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
 миграции и регистрирует Nika CRM как службу Windows с автозапуском.
 
-**Что нового в 1.0.6 (2026-08-09):** после сохранения SMTP перезапустите службу
-ярлыком **«Nika CRM — Перезапуск службы»**; плейсхолдеры «От кого»
-(`Название вашей компании <ваш@email.ru>`). Подробности —
-[блог Windows SETUP 1.0.6](docs/blog/24-windows-setup-1-0-6.md)
-и [SMTP](docs/blog/22-smtp-mail-setup.md).
+**Что нового в 1.0.7 (2026-09-10):** категории склада создаются, переименовываются
+и удаляются с панели товаров; заработало удаление номенклатуры и закупки;
+колонка «Действия» закреплена у правого края; сверка кассы по внешним приходам;
+возврат чека только у администратора; служебные пароли не попадают в журнал
+установки, а `%ProgramData%\NikaCRM` доступен только администраторам. Подробности —
+[блог Windows SETUP 1.0.7](docs/blog/42-windows-setup-1-0-7.md)
+и [категории склада](docs/blog/41-warehouse-categories.md).
 
 **Скачать:**
 
-- [NikaCRM-Offline-Setup-1.0.6-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.6/NikaCRM-Offline-Setup-1.0.6-x64.exe)
-- [Страница релиза `windows-setup-1.0.6`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.6)
-- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.6-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.7-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.7/NikaCRM-Offline-Setup-1.0.7-x64.exe)
+- [Страница релиза `windows-setup-1.0.7`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.7)
+- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.7-x64.exe)
 
-SHA256: `FA029F7CC5B53AA2C7CFD39C13539280A6CD654AA0BB1674AD6394F8D0A67387`
+SHA256: `12BE394E53FA7E831821D3C2E2D48C922F778B22B19C02C38402F985C0D6F250`
 
 1. Скачайте EXE по ссылке выше.
 2. Запустите установщик **от имени администратора** (права Admin обязательны).

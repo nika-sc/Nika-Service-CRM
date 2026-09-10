@@ -144,11 +144,11 @@
                                 <tbody>
                                     {% for item in items %}
                                     <tr class="{% if item.is_low_stock %}parts-row-warning{% endif %}">
-                                        <td><strong>{{ item.name }}</strong></td>
-                                        <td><code>{{ item.part_number or '-' }}</code></td>
+                                        <td><strong class="cell-clip cell-clip-name" title="{{ item.name }}">{{ item.name }}</strong></td>
+                                        <td><code class="cell-clip cell-clip-sku" title="{{ item.part_number or '-' }}">{{ item.part_number or '-' }}</code></td>
                                         <td>
                                             {% if item.category_name %}
-                                            <span class="badge bg-info">{{ item.category_name }}</span>
+                                            <span class="badge bg-info cell-clip cell-clip-cat" title="{{ item.category_name }}">{{ item.category_name }}</span>
                                             {% else %}
                                             <span class="text-muted">—</span>
                                             {% endif %}
@@ -175,7 +175,11 @@
                                                 <a href="{{ url_for('warehouse.edit_part', part_id=item.id) }}" class="btn btn-sm btn-warning" title="Редактировать">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-danger" onclick="deletePart({{ item.id }}, {{ item.name|tojson }})" title="Удалить">
+                                                <button type="button" class="btn btn-sm btn-danger"
+                                                        data-part-id="{{ item.id }}"
+                                                        data-part-name="{{ item.name|e }}"
+                                                        onclick="handleDeletePart(event, this);"
+                                                        title="Удалить">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -446,15 +450,44 @@
         }
         .parts-table thead th {
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            padding: 0.875rem 1rem;
+            padding: 0.7rem 0.6rem;
             white-space: nowrap;
         }
         .parts-table tbody td {
-            padding: 0.75rem 1rem;
+            padding: 0.55rem 0.6rem;
             vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Длинные значения не растягивают колонку: обрезаем с «…», полное — в title */
+        .parts-table .cell-clip {
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .parts-table .cell-clip-name { max-width: 260px; }
+        .parts-table .cell-clip-sku { max-width: 130px; }
+        .parts-table .cell-clip-cat { max-width: 150px; }
+        @media (max-width: 1500px) {
+            .parts-table .cell-clip-name { max-width: 170px; }
+            .parts-table .cell-clip-sku { max-width: 95px; }
+            .parts-table .cell-clip-cat { max-width: 105px; }
+        }
+
+        /* Действия всегда под рукой, даже когда таблица шире экрана */
+        .parts-table thead th:last-child,
+        .parts-table tbody td:last-child:not([colspan]) {
+            position: sticky;
+            right: 0;
+            z-index: 2;
+            width: 1%;
+            box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.25);
         }
         .parts-table tbody tr {
             transition: background-color 0.15s ease;
@@ -724,6 +757,11 @@
                 console.error('Ошибка:', error);
                 alert('Ошибка при сохранении категории');
             });
+        }
+
+        function handleDeletePart(e, btn) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            deletePart(btn?.dataset?.partId, btn?.dataset?.partName || '');
         }
 
         function deletePart(partId, partName) {

@@ -175,7 +175,7 @@
                                                 <div class="contact-item">
                                                     {% if device.customer_phone_display or device.customer_phone %}
                                                         {% set phone_raw = (device.customer_phone_display or device.customer_phone)|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('+', '') %}
-                                                        <span class="contact-value" data-phone="{{ phone_raw }}" onclick="showPhoneMenu(event, {{ phone_raw|tojson }})">
+                                                        <span class="contact-value" data-phone="{{ phone_raw }}" onclick="showPhoneMenu(event, this.dataset.phone)">
                                                             {{ device.customer_phone_display or device.customer_phone }}
                                                         </span>
                                                         <div class="contact-dropdown" id="phoneMenu-{{ phone_raw }}">
@@ -188,11 +188,11 @@
                                                             <a href="viber://chat?number={{ phone_raw }}" class="contact-dropdown-item">
                                                                 <i class="fab fa-viber"></i> Viber
                                                             </a>
-                                                            <a href="#" class="contact-dropdown-item" onclick="copyToClipboard({{ phone_raw|tojson }}, event)">
+                                                            <a href="#" class="contact-dropdown-item" data-copy-value="{{ phone_raw|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)">
                                                                 <i class="fas fa-copy"></i> Копировать
                                                             </a>
                                                         </div>
-                                                        <button class="contact-btn" onclick="copyToClipboard({{ phone_raw|tojson }}, event)" title="Копировать">
+                                                        <button class="contact-btn" data-copy-value="{{ phone_raw|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                             <i class="fas fa-copy"></i>
                                                         </button>
                                                     {% else %}
@@ -207,7 +207,7 @@
                                                     <a href="mailto:{{ device.customer_email }}" class="contact-value">
                                                         {{ device.customer_email }}
                                                     </a>
-                                                    <button class="contact-btn" onclick="copyToClipboard({{ device.customer_email|tojson }}, event)" title="Копировать">
+                                                    <button class="contact-btn" data-copy-value="{{ device.customer_email|e }}" onclick="copyToClipboard(this.dataset.copyValue, event)" title="Копировать">
                                                         <i class="fas fa-copy"></i>
                                                     </button>
                                                 </div>

@@ -61,7 +61,10 @@
                                         <a href="{{ url_for('warehouse.edit_purchase', purchase_id=purchase.id) }}" class="btn btn-sm btn-warning">
                                             <i class="fas fa-edit"></i> Редактировать
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="deletePurchase({{ purchase.id }}, {{ purchase.supplier_name|tojson }})">
+                                        <button type="button" class="btn btn-sm btn-danger"
+                                                data-purchase-id="{{ purchase.id }}"
+                                                data-supplier-name="{{ purchase.supplier_name|e }}"
+                                                onclick="deletePurchase(this.dataset.purchaseId, this.dataset.supplierName)">
                                             <i class="fas fa-trash"></i> Удалить
                                         </button>
                                         {% endif %}

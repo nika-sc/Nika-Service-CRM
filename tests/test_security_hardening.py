@@ -746,8 +746,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_warehouse_categories():
+def test_latest_blog_is_windows_setup_1_0_7():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "warehouse-categories"
-    assert _POSTS[0]["file"] == "blog/41-warehouse-categories.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-7"
+    assert _POSTS[0]["file"] == "blog/42-windows-setup-1-0-7.md"

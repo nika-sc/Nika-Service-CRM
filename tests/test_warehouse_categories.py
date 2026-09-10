@@ -21,6 +21,22 @@ def test_parts_list_has_visible_category_actions():
     assert "has_permission('manage_warehouse')" in pill
 
 
+def test_delete_part_button_survives_quotes_in_name():
+    src = Path("templates/warehouse/parts_list.html").read_text(encoding="utf-8")
+    # tojson emits double quotes and used to terminate the onclick attribute
+    assert "item.name|tojson" not in src
+    assert "handleDeletePart(event, this)" in src
+    assert "function handleDeletePart" in src
+
+
+def test_parts_table_clips_columns_and_pins_actions():
+    src = Path("templates/warehouse/parts_list.html").read_text(encoding="utf-8")
+    assert "cell-clip-name" in src
+    assert "cell-clip-sku" in src
+    assert "cell-clip-cat" in src
+    assert "position: sticky" in src
+
+
 def test_part_form_binds_new_category_by_id():
     src = Path("templates/warehouse/part_form.html").read_text(encoding="utf-8")
     assert "option.value = String(data.id)" in src

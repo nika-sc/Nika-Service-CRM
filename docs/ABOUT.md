@@ -42,9 +42,9 @@ cd Nika-Service-CRM
 
 ### 2. Windows (офлайн SETUP)
 
-Для Windows 10/11 x64 доступен автономный установщик **1.0.6** (сборка **2026-08-09**) с PostgreSQL и службой автозапуска.  
-Ссылки: [GitHub release windows-setup-1.0.6](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.6), зеркало на [главной демо](/#windows-setup).  
-После сохранения SMTP перезапустите службу ярлыком **«Nika CRM — Перезапуск службы»**. Подробности — [блог 1.0.6](/blog/windows-setup-1-0-6).
+Для Windows 10/11 x64 доступен автономный установщик **1.0.7** (сборка **2026-09-10**) с PostgreSQL и службой автозапуска.  
+Ссылки: [GitHub release windows-setup-1.0.7](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.7), зеркало на [главной демо](/#windows-setup).  
+В 1.0.7: категории и удаление на складе, сверка кассы, закрытый доступ к папке с базой. Подробности — [блог 1.0.7](/blog/windows-setup-1-0-7).
 
 После установки демо-логины (пароль `111111`): `admin`, `manager`, `master`, `viewer`.
 

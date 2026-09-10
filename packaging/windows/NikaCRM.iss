@@ -1,6 +1,6 @@
 #define MyAppName "Nika CRM"
-#define MyAppVersion "1.0.6"
-#define MyAppVersionDate "2026-08-09"
+#define MyAppVersion "1.0.7"
+#define MyAppVersionDate "2026-09-10"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -40,7 +40,7 @@ CloseApplications=yes
 RestartApplications=no
 MinVersion=10.0.17763
 DiskSpanning=no
-VersionInfoVersion=1.0.6.0
+VersionInfoVersion=1.0.7.0
 VersionInfoCompany=Service Center Nika
 VersionInfoDescription=Nika CRM Offline Installer for Windows ({#MyAppVersionDate})
 VersionInfoCopyright=Copyright (c) 2026 Alexander Smelkov
@@ -53,13 +53,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Dirs]
 Name: "{commonappdata}\NikaCRM"; Permissions: admins-full system-full
-Name: "{commonappdata}\NikaCRM\logs"; Permissions: admins-full system-full users-readexec
+Name: "{commonappdata}\NikaCRM\logs"; Permissions: admins-full system-full
 
 [Files]
 Source: "{#SourceRoot}\app\*"; DestDir: "{app}\app\app"; Excludes: "database\service_center.db,database\*.db,database\*.db-*,database\*.sqlite,database\*.sqlite3,*\__pycache__\*,*\*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\database\bootstrap\nikacrm_public_sanitized.sql"; DestDir: "{app}\app\database\bootstrap"; Flags: ignoreversion
 Source: "{#SourceRoot}\database\bootstrap\README.md"; DestDir: "{app}\app\database\bootstrap"; Flags: ignoreversion
-Source: "{#SourceRoot}\docs\*"; DestDir: "{app}\app\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\docs\*"; DestDir: "{app}\app\docs"; Excludes: "private\*,*\private\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\static\*"; DestDir: "{app}\app\static"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\templates\*"; DestDir: "{app}\app\templates"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\scripts\run_migrations.py"; DestDir: "{app}\app\scripts"; Flags: ignoreversion
