@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "warehouse-categories",
+        "file": "blog/41-warehouse-categories.md",
+        "date": "2026-09-10 21:20",
+        "title": "Категории склада: создать, переименовать, удалить — Nika Service CRM",
+        "description": (
+            "10 сентября 2026: категории склада создаются, переименовываются и удаляются "
+            "прямо из списка товаров, без карточки номенклатуры."
+        ),
+        "heading": "Категории склада",
+        "teaser": "Новая категория, карандаш и корзина на панели товаров.",
+    },
+    {
         "slug": "dashboard-owner-cash",
         "file": "blog/40-dashboard-owner-cash.md",
         "date": "2026-09-01 09:00",

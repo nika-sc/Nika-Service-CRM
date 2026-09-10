@@ -507,6 +507,8 @@ def delete_category(category_id):
         return jsonify({'success': True}), 200
     except NotFoundError as e:
         return jsonify({'success': False, 'error': str(e)}), 404
+    except ValidationError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Ошибка при удалении категории: {e}", exc_info=True)
         return api_internal_error(e)

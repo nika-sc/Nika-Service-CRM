@@ -258,11 +258,10 @@
             .then(async response => {
                 const data = await response.json();
                 if (data.success) {
-                    // Добавляем новую категорию в select
                     const select = document.getElementById('categorySelect');
                     const option = document.createElement('option');
-                    option.value = name;
-                    option.text = name;
+                    option.value = String(data.id);
+                    option.textContent = name;
                     option.selected = true;
                     select.appendChild(option);
                     

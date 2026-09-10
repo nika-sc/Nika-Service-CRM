@@ -1,5 +1,25 @@
-{# Компактная кнопка категории для горизонтальной панели #}
-<a href="{{ url_for('warehouse.parts_list', category=cat.name) }}"
-   class="btn btn-sm {% if category == cat.name %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-    <i class="fas fa-folder-open me-1"></i>{{ cat.name }}
-</a>
+{# Категория: фильтр + всегда видимые правка/удаление (без hover — Windows/тач) #}
+<div class="btn-group btn-group-sm category-chip" role="group">
+    <a href="{{ url_for('warehouse.parts_list', category=cat.name) }}"
+       class="btn {% if category == cat.name %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <i class="fas fa-folder-open me-1"></i>{{ cat.name }}
+    </a>
+    {% if has_permission('manage_warehouse') %}
+    <button type="button" class="btn {% if category == cat.name %}btn-primary{% else %}btn-outline-secondary{% endif %} category-chip-action"
+            data-cat-id="{{ cat.id }}"
+            data-cat-name="{{ cat.name|e }}"
+            data-cat-desc="{{ (cat.description or '')|e }}"
+            data-cat-parent="{{ cat.parent_id if cat.parent_id is not none else '' }}"
+            onclick="handleEditCategory(event, this);"
+            title="Переименовать">
+        <i class="fas fa-edit"></i>
+    </button>
+    <button type="button" class="btn {% if category == cat.name %}btn-primary{% else %}btn-outline-danger{% endif %} category-chip-action"
+            data-cat-id="{{ cat.id }}"
+            data-cat-name="{{ cat.name|e }}"
+            onclick="handleDeleteCategory(event, this);"
+            title="Удалить">
+        <i class="fas fa-trash"></i>
+    </button>
+    {% endif %}
+</div>

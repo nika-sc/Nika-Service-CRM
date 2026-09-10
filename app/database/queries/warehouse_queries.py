@@ -661,14 +661,37 @@ class WarehouseQueries:
                 # Проверяем, что категория не пытается стать родителем самой себя
                 if parent_id == category_id:
                     raise ValueError("Категория не может быть родителем самой себя")
-                
+
+                cursor.execute('''
+                    SELECT id FROM part_categories
+                    WHERE name = ? AND id <> ?
+                      AND (parent_id = ? OR (parent_id IS NULL AND ? IS NULL))
+                    LIMIT 1
+                ''', (name.strip(), category_id, parent_id, parent_id))
+                existing = cursor.fetchone()
+                if existing:
+                    raise ValidationError(
+                        f"Категория с названием «{name.strip()}» уже существует. "
+                        "Выберите другое название."
+                    )
+
+                new_name = name.strip()
                 cursor.execute('''
                     UPDATE part_categories
                     SET name = ?, description = ?, parent_id = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
-                ''', (name.strip(), description.strip() if description else None, parent_id, category_id))
+                ''', (new_name, description.strip() if description else None, parent_id, category_id))
+                if cursor.rowcount <= 0:
+                    conn.commit()
+                    return False
+                cursor.execute(
+                    'UPDATE parts SET category = ? WHERE category_id = ?',
+                    (new_name, category_id)
+                )
                 conn.commit()
-                return cursor.rowcount > 0
+                return True
+        except ValidationError:
+            raise
         except sqlite3.IntegrityError as e:
             logger.error(f"Ошибка при обновлении категории: {e}")
             raise
@@ -702,24 +725,22 @@ class WarehouseQueries:
             return None
     
     @staticmethod
-    def count_parts_in_category(category_name: str) -> int:
+    def count_parts_in_category(category_id: int, category_name: Optional[str] = None) -> int:
         """
-        Подсчитывает количество товаров в категории (по имени категории).
-        
-        Args:
-            category_name: Название категории
-            
-        Returns:
-            Количество товаров в категории
+        Подсчитывает товары в категории по category_id (и legacy parts.category).
         """
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    SELECT COUNT(*) 
-                    FROM parts 
-                    WHERE category = ? AND is_deleted = 0
-                ''', (category_name,))
+                    SELECT COUNT(*)
+                    FROM parts
+                    WHERE is_deleted = 0
+                      AND (
+                        category_id = ?
+                        OR (category_id IS NULL AND category = ?)
+                      )
+                ''', (category_id, category_name or ''))
                 return cursor.fetchone()[0]
         except Exception as e:
             logger.error(f"Ошибка при подсчете товаров в категории {category_name}: {e}")

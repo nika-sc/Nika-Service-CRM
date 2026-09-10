@@ -14,13 +14,15 @@
             <div class="page-content" style="min-width: 0;">
                 <!-- Категории сверху -->
                 <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2 gap-2 flex-wrap">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-folder me-2"></i>Категории
                         </h5>
+                        {% if has_permission('manage_warehouse') %}
                         <button type="button" class="btn btn-success btn-sm" onclick="showAddCategoryForm(null)">
-                            <i class="fas fa-plus"></i>
+                            <i class="fas fa-plus me-1"></i>Новая категория
                         </button>
+                        {% endif %}
                     </div>
                     <div class="card-body py-2">
                         <div class="d-flex flex-wrap gap-1 align-items-center" id="categoriesList">
@@ -237,7 +239,7 @@
                             <label for="categoryDescription" class="form-label">Описание</label>
                             <textarea class="form-control" id="categoryDescription" name="description" rows="2"></textarea>
                         </div>
-                        <div class="mb-3" id="parentCategorySelect" style="display: none;">
+                        <div class="mb-3" id="parentCategorySelect">
                             <label for="categoryParent" class="form-label">Родительская категория</label>
                             <select class="form-select" id="categoryParent" name="parent_id">
                                 <option value="">Без родительской категории</option>
@@ -427,6 +429,10 @@
         /* Категории (кнопки сверху) */
         #categoriesList .btn {
             font-weight: 500;
+        }
+        .category-chip-action {
+            min-width: 36px;
+            min-height: 32px;
         }
 
         /* ========== Список товаров: новый дизайн таблицы ========== */
@@ -675,19 +681,22 @@
         }
 
         function saveCategory() {
-            const form = document.getElementById('categoryForm');
             const categoryId = document.getElementById('categoryId').value;
             const parentIdFromHidden = document.getElementById('categoryParentId').value;
             const parentIdFromSelect = document.getElementById('categoryParent').value;
-            
-            // Используем parent_id из скрытого поля, если оно установлено (для создания подкатегории)
-            // Иначе используем значение из select (для редактирования)
-            const parentId = parentIdFromHidden || parentIdFromSelect || null;
-            
+
+            let parentValue = parentIdFromHidden || parentIdFromSelect || null;
+            if (parentValue === '' || parentValue === 'null') {
+                parentValue = null;
+            } else if (parentValue !== null) {
+                parentValue = parseInt(parentValue, 10);
+                if (Number.isNaN(parentValue)) parentValue = null;
+            }
+
             const data = {
                 name: document.getElementById('categoryName').value.trim(),
                 description: document.getElementById('categoryDescription').value.trim() || null,
-                parent_id: parentId
+                parent_id: parentValue
             };
 
             if (!data.name) {

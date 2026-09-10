@@ -1333,6 +1333,10 @@ class WarehouseService:
             )
             
             return result
+        except ValidationError:
+            raise
+        except NotFoundError:
+            raise
         except ValueError as e:
             logger.error(f"Ошибка при обновлении категории: {e}")
             raise ValidationError(str(e))
@@ -1370,7 +1374,7 @@ class WarehouseService:
             category_name = category.get('name', '')
             
             # Проверяем, есть ли товары в этой категории
-            parts_count = WarehouseQueries.count_parts_in_category(category_name)
+            parts_count = WarehouseQueries.count_parts_in_category(category_id, category_name)
             if parts_count > 0:
                 raise ValidationError(
                     f"Невозможно удалить категорию '{category_name}': в ней находится {parts_count} товар(ов). "
