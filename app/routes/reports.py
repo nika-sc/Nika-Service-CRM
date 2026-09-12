@@ -402,12 +402,24 @@ def dashboard():
         ('year_to_date', 'С начала года'),
     ]
 
+    update_banner = None
+    if getattr(current_user, "is_authenticated", False) and getattr(current_user, "role", "") == "admin":
+        try:
+            from app.services.update_service import peek_cached_status
+
+            cached = peek_cached_status()
+            if cached and cached.get("update_available") and cached.get("latest"):
+                update_banner = cached
+        except Exception:
+            update_banner = None
+
     return render_template('reports/dashboard.html',
         data=data,
         preset=preset,
         date_from=date_from,
         date_to=date_to,
-        period_presets=period_presets
+        period_presets=period_presets,
+        update_banner=update_banner,
     )
 
 

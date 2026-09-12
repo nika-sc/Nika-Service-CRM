@@ -89,17 +89,21 @@ def main():
                 print(f"  - {m['version']}: {m['name']}")
             print()
         
-        # Бекап перед миграцией (обязательно)
-        print("Создание бекапа БД перед миграцией...")
-        if driver == 'postgres':
-            database_url = os.environ.get('DATABASE_URL', Config.DATABASE_URL)
-            if not database_url:
-                raise RuntimeError("DATABASE_URL не задан для PostgreSQL")
-            backup_path = create_pre_migration_pg_backup(database_url)
+        # Бекап перед миграцией (обязательно). Пропуск — только если вызывающая
+        # сторона уже сделала дамп сама (Windows-установщик).
+        if os.environ.get('SKIP_PRE_MIGRATION_BACKUP', '').lower() in ('1', 'true', 'yes'):
+            print("[OK] Бекап перед миграцией пропущен: SKIP_PRE_MIGRATION_BACKUP")
         else:
-            db_path = os.environ.get('DATABASE_PATH', Config.DATABASE_PATH)
-            backup_path = create_pre_migration_backup(db_path)
-        print(f"[OK] Бекап: {backup_path}")
+            print("Создание бекапа БД перед миграцией...")
+            if driver == 'postgres':
+                database_url = os.environ.get('DATABASE_URL', Config.DATABASE_URL)
+                if not database_url:
+                    raise RuntimeError("DATABASE_URL не задан для PostgreSQL")
+                backup_path = create_pre_migration_pg_backup(database_url)
+            else:
+                db_path = os.environ.get('DATABASE_PATH', Config.DATABASE_PATH)
+                backup_path = create_pre_migration_backup(db_path)
+            print(f"[OK] Бекап: {backup_path}")
         print()
         
         # Применяем миграции

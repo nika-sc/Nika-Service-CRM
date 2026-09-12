@@ -153,6 +153,13 @@
         });
     }
 
+    // Страницы с DataTables перекрашивают таблицу в drawCallback. Без экспорта
+    // вызов падал с ReferenceError, а DataTables скрывает индикатор «Подождите…»
+    // последней строкой обработчика — поэтому он висел поверх готового списка.
+    window.applyTableTheme = function(theme) {
+        applyTableTheme(themes.includes(theme) ? theme : currentTheme);
+    };
+
     // Инициализация при загрузке
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {

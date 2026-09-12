@@ -1,15 +1,78 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
-    [string] $AppDir,
-    [Parameter(Mandatory = $true)]
-    [string] $DataDir,
-    [Parameter(Mandatory = $true)]
-    [string] $AssetsDir
+    [string] $AppDir = "",
+    [string] $DataDir = "",
+    [string] $AssetsDir = "",
+    [string] $ProgressDir = ""
 )
 
+# Do not use Mandatory params: a hidden installer window would sit forever
+# waiting for AppDir instead of writing a log.
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+# Python writes redirected output in the locale code page; force UTF-8 so a
+# traceback from pip or run_migrations.py stays readable in setup.log.
+$env:PYTHONIOENCODING = "utf-8"
+
+# Handshake + setup log MUST live outside ProgramData and Inno {tmp}.
+# A failed install rolls back [Dirs] (so ProgramData\NikaCRM\logs vanishes)
+# and deletes {tmp}. Windows\Temp and the desktop copy survive.
+$stableDir = Join-Path $env:SystemRoot "Temp\NikaCRM-setup"
+New-Item -ItemType Directory -Force -Path $stableDir | Out-Null
+if ([string]::IsNullOrWhiteSpace($ProgressDir)) {
+    $ProgressDir = $stableDir
+}
+# Inno polls this PID with a message pump. Write it before any other work so
+# the wizard unfreezes even if a later command hangs.
+[System.IO.File]::WriteAllText(
+    (Join-Path $ProgressDir "setup-progress.pid"),
+    "$PID",
+    [System.Text.Encoding]::Default
+)
+$bootstrapLog = Join-Path $stableDir "setup.log"
+@(
+    "[{0}] bootstrap pid {1}" -f (Get-Date -Format "o"), $PID
+    "AppDir=$AppDir"
+    "DataDir=$DataDir"
+    "AssetsDir=$AssetsDir"
+    "ProgressDir=$ProgressDir"
+    "PSVersion=$($PSVersionTable.PSVersion)"
+    "CommandLine=$($MyInvocation.Line)"
+) | Set-Content -LiteralPath $bootstrapLog -Encoding UTF8
+
+$script:SecretValues = New-Object System.Collections.Generic.List[string]
+
+function Protect-Secrets([string] $Text) {
+    if ([string]::IsNullOrEmpty($Text)) { return $Text }
+    $result = $Text
+    foreach ($secret in $script:SecretValues) {
+        if ($secret) { $result = $result.Replace($secret, "***") }
+    }
+    return $result
+}
+
+function Write-SetupError([string] $Text) {
+    # setup-error.txt is copied to the public desktop, so it must never carry
+    # the generated PostgreSQL passwords.
+    $safe = Protect-Secrets $Text
+    $errorFile = Join-Path $ProgressDir "setup-error.txt"
+    try {
+        [System.IO.File]::WriteAllText($errorFile, $safe, [System.Text.Encoding]::Default)
+    }
+    catch {
+    }
+    try {
+        Add-Content -LiteralPath $bootstrapLog -Value $safe -Encoding UTF8
+    }
+    catch {
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($AppDir) -or [string]::IsNullOrWhiteSpace($DataDir) -or [string]::IsNullOrWhiteSpace($AssetsDir)) {
+    Write-SetupError "ERROR: missing AppDir/DataDir/AssetsDir (script started, parameters did not bind)."
+    [System.IO.File]::WriteAllText((Join-Path $ProgressDir "setup-progress.done"), "1", [System.Text.Encoding]::Default)
+    throw "Missing installer parameters. See $bootstrapLog"
+}
 
 $appRoot = Join-Path $AppDir "app"
 $runtimeRoot = Join-Path $AppDir "runtime"
@@ -19,10 +82,11 @@ $pgRoot = Join-Path $runtimeRoot "postgresql"
 $pgBin = Join-Path $pgRoot "bin"
 $pgData = Join-Path $DataDir "PostgreSQL\data"
 $logsDir = Join-Path $DataDir "logs"
+# Survives uninstall on purpose: holds the pg_dump taken before a full removal.
+$backupDir = Join-Path (Split-Path -Parent $DataDir) "NikaCRM-backup"
 $installerDir = Join-Path $DataDir "installer"
 $envFile = Join-Path $DataDir ".env"
 $stateFile = Join-Path $installerDir "install-state.json"
-$bootstrapLog = Join-Path $logsDir "setup.log"
 $pythonInstaller = Join-Path $AssetsDir "python-installer.exe"
 $postgresInstaller = Join-Path $AssetsDir "postgresql-installer.exe"
 $wheelhouse = Join-Path $AssetsDir "wheelhouse"
@@ -30,8 +94,34 @@ $nssmSource = Join-Path $AssetsDir "nssm.exe"
 $nssm = Join-Path $runtimeRoot "nssm.exe"
 $serviceName = "NikaCRM-Web"
 $postgresServiceName = "NikaCRM-PostgreSQL"
+$progressFile = Join-Path $ProgressDir "setup-progress.txt"
+$progressDoneFile = Join-Path $ProgressDir "setup-progress.done"
+$progressPidFile = Join-Path $ProgressDir "setup-progress.pid"
+
+trap {
+    try {
+        Write-SetupError ($_ | Out-String)
+        $_ | Out-File -LiteralPath $bootstrapLog -Append -Encoding UTF8
+        [System.IO.File]::WriteAllText($progressDoneFile, "1", [System.Text.Encoding]::Default)
+    }
+    catch {
+    }
+    break
+}
+
+[System.IO.File]::WriteAllText($progressPidFile, "$PID", [System.Text.Encoding]::Default)
+[System.IO.File]::WriteAllText(
+    $progressFile,
+    "5`r`nЗапуск настройки`r`nСкрипт стартовал. Дальше: права на папку данных, Python, PostgreSQL.",
+    [System.Text.Encoding]::Default
+)
 
 New-Item -ItemType Directory -Force -Path $runtimeRoot, $logsDir, $installerDir, $pgData | Out-Null
+[System.IO.File]::WriteAllText(
+    $progressFile,
+    "6`r`nПрава на папку данных`r`nОграничиваем доступ к %ProgramData%\NikaCRM.",
+    [System.Text.Encoding]::Default
+)
 
 # Inno's Permissions parameter only adds ACEs, so the inherited "Users: read" from
 # C:\ProgramData keeps .env (SECRET_KEY, DATABASE_URL) and the setup log readable by
@@ -44,11 +134,147 @@ foreach ($legacyPath in @($logsDir, $installerDir, $envFile)) {
     }
 }
 
-Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
-Write-Host "[Nika CRM Setup] Bootstrap version 1.0.7 (2026-09-10)"
+try {
+    Start-Transcript -LiteralPath $bootstrapLog -Append | Out-Null
+}
+catch {
+    Write-SetupError ("WARN: Start-Transcript failed: {0}" -f $_.Exception.Message)
+}
+
+$appVersion = "0.0.0"
+$versionPath = Join-Path $appRoot "VERSION"
+if (Test-Path -LiteralPath $versionPath) {
+    $appVersion = ([string](Get-Content -LiteralPath $versionPath -TotalCount 1)).Trim()
+}
+Write-Host ("[Nika CRM Setup] Bootstrap version {0}" -f $appVersion)
+
+Remove-Item -LiteralPath $progressDoneFile -Force -ErrorAction SilentlyContinue
 
 function Write-Step([string] $Message) {
     Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $Message)
+}
+
+function Write-InstallerFile {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Content
+    )
+    $bytes = [System.Text.Encoding]::Default.GetBytes($Content)
+    for ($i = 0; $i -lt 25; $i++) {
+        try {
+            $fs = New-Object System.IO.FileStream(
+                $Path,
+                [System.IO.FileMode]::Create,
+                [System.IO.FileAccess]::Write,
+                [System.IO.FileShare]::ReadWrite
+            )
+            try {
+                $fs.Write($bytes, 0, $bytes.Length)
+                $fs.Flush()
+            }
+            finally {
+                $fs.Dispose()
+            }
+            return
+        }
+        catch {
+            Start-Sleep -Milliseconds 80
+        }
+    }
+    try {
+        Set-Content -LiteralPath $Path -Value $Content -Encoding Default -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Host ("WARN: could not write {0}: {1}" -f $Path, $_.Exception.Message)
+    }
+}
+
+function Set-SetupProgress {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int] $Percent,
+        [Parameter(Mandatory = $true)]
+        [string] $Title,
+        [string] $Hint = ""
+    )
+    if ($Percent -lt 0) { $Percent = 0 }
+    if ($Percent -gt 100) { $Percent = 100 }
+    $text = "{0}`r`n{1}`r`n{2}" -f $Percent, $Title, $Hint
+    Write-InstallerFile -Path $progressFile -Content $text
+    Write-Step $Title
+}
+
+function Complete-SetupProgress {
+    param(
+        [Parameter(Mandatory = $true)][int] $ExitCode,
+        [string] $ErrorHint = ""
+    )
+    # Inno waits on this file. Write it before any other I/O so a later hang
+    # (LAN IP lookup, transcript, progress file lock) cannot freeze the wizard.
+    Write-InstallerFile -Path $progressDoneFile -Content ([string]$ExitCode)
+    if ($ExitCode -eq 0) {
+        Set-SetupProgress 100 "Установка завершена" "Можно открывать Nika CRM."
+    }
+    elseif ($ErrorHint) {
+        Set-SetupProgress 0 "Ошибка настройки" $ErrorHint
+    }
+}
+
+function Test-LocalHttpOk {
+    param(
+        [Parameter(Mandatory = $true)][string] $Url,
+        [int] $TimeoutMs = 2500
+    )
+    $uri = [Uri]$Url
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $async = $client.BeginConnect($uri.Host, $uri.Port, $null, $null)
+        if (-not $async.AsyncWaitHandle.WaitOne($TimeoutMs, $false)) {
+            return $false
+        }
+        $client.EndConnect($async) | Out-Null
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Close()
+    }
+
+    $request = [System.Net.HttpWebRequest]::Create($Url)
+    $request.Method = "GET"
+    $request.Timeout = $TimeoutMs
+    $request.ReadWriteTimeout = $TimeoutMs
+    $request.AllowAutoRedirect = $true
+    $request.KeepAlive = $false
+    $request.UserAgent = "NikaCRM-Setup"
+    $request.Proxy = [System.Net.GlobalProxySelection]::GetEmptyWebProxy()
+    try {
+        $response = $request.GetResponse()
+        try {
+            $code = [int]$response.StatusCode
+            return ($code -ge 200 -and $code -lt 400)
+        }
+        finally {
+            $response.Close()
+        }
+    }
+    catch [System.Net.WebException] {
+        $webResponse = $_.Exception.Response
+        if ($webResponse) {
+            try {
+                $code = [int]$webResponse.StatusCode
+                return ($code -ge 200 -and $code -lt 500)
+            }
+            finally {
+                $webResponse.Close()
+            }
+        }
+        return $false
+    }
+    catch {
+        return $false
+    }
 }
 
 function Invoke-Native {
@@ -57,17 +283,176 @@ function Invoke-Native {
         [string] $FilePath,
         [string[]] $Arguments = @(),
         [int[]] $SuccessCodes = @(0),
-        [string[]] $MaskValues = @()
+        [string[]] $MaskValues = @(),
+        [switch] $CaptureOutput
     )
     # Setup transcript lands in ProgramData; never echo generated passwords there.
     $printable = $Arguments -join " "
     foreach ($secret in $MaskValues) {
         if ($secret) { $printable = $printable.Replace($secret, "***") }
     }
-    Write-Host ("RUN: {0} {1}" -f $FilePath, $printable)
-    $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
-    if ($process.ExitCode -notin $SuccessCodes) {
-        throw "Command failed with exit code $($process.ExitCode): $FilePath"
+    Write-Host ("RUN: {0} {1}" -f $FilePath, (Protect-Secrets $printable))
+    $outFile = $null
+    $errFile = $null
+    try {
+        if ($CaptureOutput) {
+            # Keep native stdout/stderr in Windows\Temp: ProgramData logs vanish when
+            # Inno rolls back a failed install, and a hidden window has no console.
+            $stamp = Get-Date -Format "HHmmssfff"
+            $outFile = Join-Path $ProgressDir "native-$stamp.out.log"
+            $errFile = Join-Path $ProgressDir "native-$stamp.err.log"
+            $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru -NoNewWindow `
+                -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            foreach ($streamFile in @($outFile, $errFile)) {
+                if (Test-Path -LiteralPath $streamFile) {
+                    # PYTHONIOENCODING=utf-8 is set before pip and the migrations run.
+                    $streamText = Read-TextFileOrEmpty -Path $streamFile -Encoding "UTF8"
+                    if (-not [string]::IsNullOrWhiteSpace($streamText)) {
+                        Write-Host (Protect-Secrets $streamText.TrimEnd())
+                    }
+                }
+            }
+        }
+        else {
+            $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
+        }
+        if ($process.ExitCode -notin $SuccessCodes) {
+            $tail = New-Object System.Collections.Generic.List[string]
+            $tail.Add("Command failed with exit code $($process.ExitCode): $FilePath") | Out-Null
+            $tail.Add("RUN: $FilePath $printable") | Out-Null
+            foreach ($streamFile in @($outFile, $errFile)) {
+                if ($streamFile -and (Test-Path -LiteralPath $streamFile)) {
+                    $tail.Add("---- $(Split-Path -Leaf $streamFile) ----") | Out-Null
+                    Get-Content -LiteralPath $streamFile -Tail 80 -Encoding UTF8 -ErrorAction SilentlyContinue |
+                        ForEach-Object { $tail.Add([string] $_) | Out-Null }
+                }
+            }
+            Write-SetupError ($tail -join [Environment]::NewLine)
+            throw "Command failed with exit code $($process.ExitCode): $FilePath"
+        }
+    }
+    finally {
+        # The raw streams may quote a connection string; the masked copy is
+        # already in setup.log and only that folder leaves the machine.
+        foreach ($streamFile in @($outFile, $errFile)) {
+            if ($streamFile) {
+                Remove-Item -LiteralPath $streamFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
+function Format-NativeArgument([string] $Value) {
+    # Start-Process -ArgumentList joins array items with spaces and quotes
+    # nothing, so "SELECT 1 FROM x" reached psql as separate arguments.
+    if ($Value -eq "") { return '""' }
+    if ($Value -notmatch '[\s"]') { return $Value }
+    $escaped = $Value -replace '(\\*)"', '$1$1\"'
+    $escaped = $escaped -replace '(\\+)$', '$1$1'
+    return '"' + $escaped + '"'
+}
+
+function Read-TextFileOrEmpty {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        # Redirected native output is written in the console code page, so a
+        # Russian psql error read as ANSI turns into unreadable characters.
+        [string] $Encoding = "Oem"
+    )
+    if (-not (Test-Path -LiteralPath $Path)) { return "" }
+    $raw = Get-Content -LiteralPath $Path -Raw -Encoding $Encoding -ErrorAction SilentlyContinue
+    if ($null -eq $raw) { return "" }
+    return [string] $raw
+}
+
+function Invoke-Psql {
+    param(
+        [Parameter(Mandatory = $true)][string] $Database,
+        [string] $SqlText = "",
+        [string] $SqlFile = "",
+        [string] $Query = "",
+        [int[]] $SuccessCodes = @(0),
+        [switch] $PassThru,
+        [int] $TimeoutMs = 180000
+    )
+    # Hidden installer windows look like a console to psql, so the default
+    # pager (more.com) waits for a key that never comes. -X -P pager=off plus
+    # redirected streams keep it non-interactive.
+    $stamp = Get-Date -Format "HHmmssfff"
+    $tempSql = ""
+    # A helper script that cleared PGPASSWORD in this same process left the next
+    # call without a password: psql then prompted on the hidden console and the
+    # wizard sat at 84% until the timeout. Re-assert it and pass -w so psql
+    # never waits for input.
+    if ($postgresSuperPassword) {
+        $env:PGPASSWORD = $postgresSuperPassword
+    }
+    $argList = @(
+        "-X", "-w", "-P", "pager=off",
+        "-h", "127.0.0.1",
+        "-p", "$postgresPort",
+        "-U", "postgres",
+        "-d", $Database
+    )
+    if ($SqlText) {
+        # Multi-line SQL goes through a file: a newline inside argv is fragile,
+        # and the role statement carries the generated password.
+        $tempSql = Join-Path $installerDir "psql-$stamp.sql"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($tempSql, $SqlText, $utf8NoBom)
+        $argList += @("-v", "ON_ERROR_STOP=1", "-q", "-f", $tempSql)
+    }
+    elseif ($SqlFile) {
+        $argList += @("-v", "ON_ERROR_STOP=1", "-q", "-f", $SqlFile)
+    }
+    elseif ($Query) {
+        $argList += @("-tAc", $Query)
+    }
+    else {
+        throw "Invoke-Psql needs SqlText, SqlFile or Query."
+    }
+
+    $argString = ($argList | ForEach-Object { Format-NativeArgument $_ }) -join " "
+    Write-Host ("RUN: {0} {1}" -f $psql, (Protect-Secrets $argString))
+    $outFile = Join-Path $ProgressDir "psql-$stamp.out.log"
+    $errFile = Join-Path $ProgressDir "psql-$stamp.err.log"
+    try {
+        $process = Start-Process -FilePath $psql -ArgumentList $argString -PassThru -NoNewWindow `
+            -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+        # Touching Handle caches the process handle; without it ExitCode stays
+        # $null after WaitForExit and every call looks like a failure.
+        $null = $process.Handle
+        if (-not $process.WaitForExit($TimeoutMs)) {
+            try { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue } catch { }
+            Write-SetupError "psql timed out after $TimeoutMs ms: $(Protect-Secrets $argString)"
+            throw "psql timed out after $TimeoutMs ms"
+        }
+        $exitCode = -1
+        if ($null -ne $process.ExitCode) { $exitCode = [int] $process.ExitCode }
+        $stdout = Read-TextFileOrEmpty $outFile
+        $stderr = Read-TextFileOrEmpty $errFile
+        if (-not [string]::IsNullOrWhiteSpace($stderr)) {
+            Write-Host (Protect-Secrets $stderr.TrimEnd())
+        }
+        if (-not [string]::IsNullOrWhiteSpace($stdout)) {
+            Write-Host (Protect-Secrets $stdout.TrimEnd())
+        }
+        if ($exitCode -notin $SuccessCodes) {
+            Write-SetupError ("psql exit {0}`r`n{1}`r`n{2}" -f $exitCode, $stderr, $stdout)
+            throw "psql failed with exit code $exitCode"
+        }
+        if ($PassThru) {
+            return [string] $stdout
+        }
+    }
+    finally {
+        # These files can echo a failing statement, so they must not survive
+        # into the log folder that is copied to the public desktop.
+        foreach ($scratch in @($outFile, $errFile, $tempSql)) {
+            if ($scratch) {
+                Remove-Item -LiteralPath $scratch -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 }
 
@@ -143,17 +528,18 @@ function Write-DotEnvUtf8NoBom {
 }
 
 function Get-PrimaryLanIPv4 {
+    # Dns.GetHostAddresses is local and bounded. Get-NetIPAddress talks to CIM
+    # and can hang indefinitely inside Windows Sandbox.
     try {
-        $candidates = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
-            Where-Object {
-                $_.IPAddress -and
-                $_.IPAddress -notlike "127.*" -and
-                $_.IPAddress -notlike "169.254.*" -and
-                $_.PrefixOrigin -ne "WellKnown"
-            } |
-            Sort-Object -Property InterfaceMetric, PrefixLength
-        if ($candidates) {
-            return [string] $candidates[0].IPAddress
+        foreach ($addr in [System.Net.Dns]::GetHostAddresses([System.Net.Dns]::GetHostName())) {
+            if ($addr.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) {
+                continue
+            }
+            $ip = $addr.ToString()
+            if ($ip -like "127.*" -or $ip -like "169.254.*") {
+                continue
+            }
+            return $ip
         }
     }
     catch {
@@ -214,27 +600,8 @@ function Ensure-NikaCrmFirewallRule {
     )
     $ruleName = "Nika CRM (HTTP $Port)"
 
-    # Always recreate with Profile Any so upgrades replace older Private/Domain-only rules
-    # (Windows Sandbox / some Wi-Fi adapters use Public).
-    try {
-        Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
-            Remove-NetFirewallRule -ErrorAction SilentlyContinue
-        New-NetFirewallRule `
-            -DisplayName $ruleName `
-            -Direction Inbound `
-            -Action Allow `
-            -Protocol TCP `
-            -LocalPort $Port `
-            -Profile Any `
-            -ErrorAction Stop | Out-Null
-        Write-Step "Ensured firewall rule: $ruleName (Any profile)"
-        return
-    }
-    catch {
-        Write-Step "NetFirewallRule unavailable ($($_.Exception.Message)); trying netsh fallback"
-    }
-
-    # Sandbox / some SKUs lack Firewall CIM classes ("Invalid class"). netsh is enough.
+    # Do not use Firewall CIM cmdlets here: they can hang forever inside
+    # Windows Sandbox. netsh is enough.
     try {
         & netsh.exe advfirewall firewall delete rule name="$ruleName" | Out-Null
         & netsh.exe advfirewall firewall add rule `
@@ -265,6 +632,8 @@ try {
         }
     }
 
+    Set-SetupProgress 5 "Проверка прав и файлов установки" "Окно можно свернуть, но не закрывать. Обычно 5–10 минут."
+
     $state = $null
     if (Test-Path -LiteralPath $stateFile) {
         $state = Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -287,9 +656,11 @@ try {
     $postgresPort = [int] $state.postgres_port
     $postgresSuperPassword = [string] $state.postgres_super_password
     $appDbPassword = [string] $state.app_db_password
+    $script:SecretValues.Add($postgresSuperPassword) | Out-Null
+    $script:SecretValues.Add($appDbPassword) | Out-Null
 
     if (-not (Test-Path -LiteralPath $pythonExe)) {
-        Write-Step "Installing bundled Python runtime"
+        Set-SetupProgress 12 "Установка Python 3.12" "Один раз, занимает около минуты."
         Invoke-Native $pythonInstaller @(
             "/quiet",
             "InstallAllUsers=1",
@@ -306,17 +677,64 @@ try {
         throw "Python installation did not create $pythonExe"
     }
 
-    Write-Step "Installing application dependencies from offline wheelhouse"
+    Set-SetupProgress 25 "Установка библиотек приложения" "Ставятся из локальной папки, интернет не нужен."
     Invoke-Native $pythonExe @(
         "-m", "pip", "install",
         "--disable-pip-version-check",
         "--no-index",
         "--find-links", "`"$wheelhouse`"",
         "-r", "`"$(Join-Path $appRoot 'packaging\windows\requirements-windows.txt')`""
-    ) @(0)
+    ) @(0) -CaptureOutput
 
     if (-not (Test-Path -LiteralPath (Join-Path $pgBin "psql.exe"))) {
-        Write-Step "Installing bundled PostgreSQL 18"
+        # Binaries are missing, so PostgreSQL has to be installed again. Three
+        # leftovers from a previous install make the unattended installer fail,
+        # and every one of them ends as "Setup failed with error 1" for the user.
+
+        # 1. A registered service with the same name.
+        $staleService = Get-Service -Name $postgresServiceName -ErrorAction SilentlyContinue
+        if ($staleService) {
+            Write-Step "Removing stale $postgresServiceName service registration"
+            & net.exe stop $postgresServiceName /y | Out-Null
+            & sc.exe delete $postgresServiceName | Out-Null
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+                if (-not (Get-Service -Name $postgresServiceName -ErrorAction SilentlyContinue)) { break }
+                Start-Sleep -Milliseconds 500
+            }
+        }
+
+        # 2. A non-empty data directory: the installer refuses to initdb into it.
+        if (Test-Path -LiteralPath (Join-Path $pgData "PG_VERSION")) {
+            $legacyCluster = "{0}-legacy-{1}" -f $pgData, (Get-Date -Format "yyyyMMdd-HHmmss")
+            Write-Step "Moving leftover PostgreSQL cluster aside: $legacyCluster"
+            Move-Item -LiteralPath $pgData -Destination $legacyCluster -Force
+            New-Item -ItemType Directory -Force -Path $pgData | Out-Null
+        }
+
+        # 3. A local service account kept from the previous install: the
+        # installer validates the password we pass against the existing account.
+        $serviceAccount = $null
+        try {
+            $serviceAccount = Get-LocalUser -Name "postgres" -ErrorAction SilentlyContinue
+        }
+        catch {
+            Write-Step "Skipping leftover postgres account check ($($_.Exception.Message))"
+        }
+        if ($serviceAccount) {
+            $otherUsers = @(
+                Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+                    Where-Object { $_.StartName -and $_.StartName -match '(^|\\)postgres$' -and $_.Name -ne $postgresServiceName }
+            )
+            if ($otherUsers.Count -gt 0) {
+                Write-Step "Local 'postgres' account is used by another service; leaving its password untouched"
+            }
+            else {
+                Write-Step "Resetting password of the leftover local 'postgres' service account"
+                & net.exe user postgres $postgresSuperPassword | Out-Null
+            }
+        }
+
+        Set-SetupProgress 38 "Установка PostgreSQL 18" "Самый долгий шаг, обычно 1–3 минуты. Шкала может подождать — это нормально."
         Invoke-Native $postgresInstaller @(
             "--mode", "unattended",
             "--unattendedmodeui", "none",
@@ -338,11 +756,17 @@ try {
     }
     $env:PATH = "$pgBin;$env:PATH"
     $env:PGPASSWORD = $postgresSuperPassword
+    $env:TERM = "dumb"
+    Remove-Item Env:PAGER -ErrorAction SilentlyContinue
+    Remove-Item Env:PSQL_PAGER -ErrorAction SilentlyContinue
 
-    Write-Step "Waiting for PostgreSQL service"
+    Set-SetupProgress 55 "Ожидание запуска базы данных" "PostgreSQL поднимается как служба Windows."
     & sc.exe start $postgresServiceName | Out-Null
     $ready = $false
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
+        Set-SetupProgress 55 "Ожидание запуска базы данных" (
+            "Попытка {0} из 60. Служба PostgreSQL поднимается." -f ($attempt + 1)
+        )
         & (Join-Path $pgBin "pg_isready.exe") -h 127.0.0.1 -p $postgresPort -U postgres | Out-Null
         if ($LASTEXITCODE -eq 0) {
             $ready = $true
@@ -354,7 +778,7 @@ try {
         throw "PostgreSQL did not become ready on port $postgresPort."
     }
 
-    Write-Step "Creating application role and database"
+    Set-SetupProgress 62 "Создание роли и базы данных" "Данные прежней установки не затираются."
     $roleSql = @"
 DO `$do`$
 BEGIN
@@ -366,28 +790,37 @@ BEGIN
 END
 `$do`$;
 "@
-    & $psql -h 127.0.0.1 -p $postgresPort -U postgres -d postgres -v ON_ERROR_STOP=1 -c $roleSql
-    if ($LASTEXITCODE -ne 0) { throw "Failed to create PostgreSQL role." }
+    Invoke-Psql -Database "postgres" -SqlText $roleSql
 
     # SELECT EXISTS always emits t/f. This is intentionally used instead of a
     # query that returns zero rows: Windows PowerShell 5.1 represents empty
     # native stdout as $null and calling Trim() on it aborts a clean install.
-    $dbExistsOutput = @(& $psql -h 127.0.0.1 -p $postgresPort -U postgres -d postgres -tAc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='nikacrm')")
-    if ($LASTEXITCODE -ne 0) { throw "Failed to check whether the PostgreSQL database exists." }
-    $dbExists = (($dbExistsOutput | ForEach-Object { [string] $_ }) -join "").Trim()
+    $dbExistsOutput = Invoke-Psql -Database "postgres" -PassThru `
+        -Query "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='nikacrm')"
+    $dbExists = ([string]$dbExistsOutput).Trim()
     if ($dbExists -ne "t") {
-        & (Join-Path $pgBin "createdb.exe") -h 127.0.0.1 -p $postgresPort -U postgres -O nikacrm nikacrm
+        & (Join-Path $pgBin "createdb.exe") -h 127.0.0.1 -p $postgresPort -U postgres -w -O nikacrm nikacrm
         if ($LASTEXITCODE -ne 0) { throw "Failed to create PostgreSQL database." }
     }
 
-    $usersTableOutput = @(& $psql -h 127.0.0.1 -p $postgresPort -U postgres -d nikacrm -tAc "SELECT to_regclass('public.users') IS NOT NULL")
-    if ($LASTEXITCODE -ne 0) { throw "Failed to inspect the demo database." }
-    $usersTable = (($usersTableOutput | ForEach-Object { [string] $_ }) -join "").Trim()
+    $usersTableOutput = Invoke-Psql -Database "nikacrm" -PassThru `
+        -Query "SELECT to_regclass('public.users') IS NOT NULL"
+    $usersTable = ([string]$usersTableOutput).Trim()
     if ($usersTable -ne "t") {
-        Write-Step "Importing sanitized demo database"
-        $dump = Join-Path $appRoot "database\bootstrap\nikacrm_public_sanitized.sql"
-        & $psql -h 127.0.0.1 -p $postgresPort -U postgres -d nikacrm -v ON_ERROR_STOP=1 -f $dump
-        if ($LASTEXITCODE -ne 0) { throw "Demo database import failed." }
+        # Uninstall saves a pg_dump next to ProgramData and does not delete it, so a
+        # reinstall must restore the real data instead of the demo database.
+        $restoreDump = Get-ChildItem -LiteralPath $backupDir -Filter "nikacrm-*.sql" -File -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+        if ($restoreDump) {
+            Set-SetupProgress 70 "Восстановление базы из резервной копии" "Берётся свежий дамп из NikaCRM-backup."
+            Invoke-Psql -Database "nikacrm" -SqlFile $restoreDump.FullName -TimeoutMs 600000
+        }
+        else {
+            Set-SetupProgress 70 "Загрузка демо-базы" "Первая установка: справочники и учебные заявки."
+            $dump = Join-Path $appRoot "database\bootstrap\nikacrm_public_sanitized.sql"
+            Invoke-Psql -Database "nikacrm" -SqlFile $dump -TimeoutMs 600000
+        }
     }
 
     $grantSql = @"
@@ -399,10 +832,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO nikacrm;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO nikacrm;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
 "@
-    & $psql -h 127.0.0.1 -p $postgresPort -U postgres -d nikacrm -v ON_ERROR_STOP=1 -c $grantSql
-    if ($LASTEXITCODE -ne 0) { throw "Failed to grant database privileges." }
+    Invoke-Psql -Database "nikacrm" -SqlText $grantSql
 
-    Write-Step "Writing application environment"
+    Set-SetupProgress 78 "Запись настроек и правило брандмауэра" "База и пароли остаются в ProgramData."
     $computerName = ($env:COMPUTERNAME -as [string])
     if (-not $computerName) { $computerName = "localhost" }
     $trustedHosts = "localhost,127.0.0.1,@private,$computerName,$computerName.local"
@@ -418,6 +850,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         "SOCKETIO_CORS_ALLOWED_ORIGINS" = "http://localhost:5000,http://127.0.0.1:5000,@private"
         "SESSION_COOKIE_SECURE" = "0"
         "USE_HTTPS" = "false"
+        "NIKACRM_DATA_DIR" = $DataDir
     }
     $setIfMissing = @{
         "SECRET_KEY" = (New-SafePassword "NikaSecretA1")
@@ -425,6 +858,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         "TIMEZONE_OFFSET" = "3"
         "PUBLIC_LANDING" = "0"
         "DEMO_LOGIN_BANNER" = "0"
+        "UPDATE_CHECK_ENABLED" = "1"
+        "UPDATE_MANIFEST_URL" = "https://service.nika-crm.ru/api/windows-setup/latest"
+        "UPDATE_CHECK_TTL_HOURS" = "24"
         # Пустой SMTP-блок: заполняется в CRM Настройки → Почта (синхронизируется обратно в .env)
         "MAIL_SERVER" = ""
         "MAIL_PORT" = "587"
@@ -462,7 +898,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
     Write-Step "Opening Windows Firewall for local network access"
     Ensure-NikaCrmFirewallRule -Port 5000
 
-    Write-Step "Verifying application role privileges"
+    Set-SetupProgress 84 "Права базы и снимок перед миграциями" "На всякий случай сохраняется копия данных."
     & (Join-Path $appRoot "scripts\Grant-LocalPostgresAppPrivileges.ps1") `
         -PostgresSuperUserPassword $postgresSuperPassword `
         -HostDb "127.0.0.1" `
@@ -471,11 +907,71 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
         -EnvFile $envFile `
         -PsqlPath $psql
 
-    Write-Step "Applying pending PostgreSQL migrations"
-    Set-Location -LiteralPath $appRoot
-    Invoke-Native $pythonExe @("scripts\run_migrations.py") @(0)
+    # Both the demo dump and a restored pg_dump are loaded by the postgres
+    # superuser, so every table belongs to postgres. Migrations run as nikacrm
+    # and ALTER TABLE requires ownership, not just privileges: without this an
+    # upgrade over an older database fails on the first pending migration.
+    Write-Step "Normalizing object ownership to the nikacrm role"
+    $ownerSql = @"
+DO `$do`$
+DECLARE rel record;
+BEGIN
+    FOR rel IN
+        SELECT c.relkind, n.nspname, c.relname
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind IN ('r', 'p', 'S', 'v', 'm')
+          AND pg_get_userbyid(c.relowner) <> 'nikacrm'
+          -- A serial or identity sequence cannot be reassigned on its own
+          -- ("Sequence is linked to table"); it follows its table's owner.
+          AND NOT (
+              c.relkind = 'S'
+              AND EXISTS (
+                  SELECT 1
+                  FROM pg_depend d
+                  WHERE d.classid = 'pg_class'::regclass
+                    AND d.objid = c.oid
+                    AND d.deptype IN ('a', 'i')
+              )
+          )
+        ORDER BY CASE WHEN c.relkind IN ('r', 'p') THEN 0 ELSE 1 END
+    LOOP
+        EXECUTE format(
+            'ALTER %s %I.%I OWNER TO nikacrm',
+            CASE rel.relkind
+                WHEN 'S' THEN 'SEQUENCE'
+                WHEN 'v' THEN 'VIEW'
+                WHEN 'm' THEN 'MATERIALIZED VIEW'
+                ELSE 'TABLE'
+            END,
+            rel.nspname, rel.relname
+        );
+    END LOOP;
+END
+`$do`$;
+"@
+    Invoke-Psql -Database "nikacrm" -SqlText $ownerSql
 
-    Write-Step "Installing Windows service"
+    # Rollback point for an upgrade, and it also spares run_migrations.py its own
+    # pg_dump into Program Files.
+    Write-Step "Backing up the database before migrations"
+    $env:SKIP_PRE_MIGRATION_BACKUP = "0"
+    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
+        -File (Join-Path $appRoot "packaging\windows\backup-database.ps1") `
+        -AppDir $AppDir -DataDir $DataDir -BackupDir $backupDir -Quiet
+    if ($LASTEXITCODE -eq 0) {
+        $env:SKIP_PRE_MIGRATION_BACKUP = "1"
+    }
+    else {
+        Write-Step "WARNING: pre-migration backup failed, run_migrations.py will make its own"
+    }
+
+    Set-SetupProgress 90 "Применение обновлений базы" "Добавляются новые таблицы и поля, заявки не удаляются."
+    Set-Location -LiteralPath $appRoot
+    Invoke-Native $pythonExe @("scripts\run_migrations.py") @(0) -CaptureOutput
+
+    Set-SetupProgress 94 "Регистрация службы Nika CRM" "Служба запускается вместе с Windows."
     # On a repair install, a failed older service may still be running from
     # runtime\nssm.exe and therefore lock that file. Use the temporary NSSM
     # bundled with Setup to stop/remove the old service before overwriting it.
@@ -542,42 +1038,84 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO nikacrm;
     Invoke-Nssm @("set", $serviceName, "AppRotateFiles", "1")
     Invoke-Nssm @("set", $serviceName, "AppRotateBytes", "5242880")
     & sc.exe failure $serviceName reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null
-    Invoke-Nssm @("start", $serviceName)
+    $nssmStart = Start-Process -FilePath $nssm -ArgumentList @("start", $serviceName) -PassThru -NoNewWindow
+    if (-not $nssmStart.WaitForExit(180000)) {
+        Write-Step "NSSM start is still running after 3 minutes; continuing with HTTP check."
+    }
+    elseif ($nssmStart.ExitCode -notin @(0, 3)) {
+        Write-Step ("NSSM start exit code {0}; continuing with HTTP check." -f $nssmStart.ExitCode)
+    }
 
-    Write-Step "Waiting for Nika CRM"
+    Set-SetupProgress 97 "Проверка, что сайт открывается" "Ждём ответ http://127.0.0.1:5000/login"
     $healthy = $false
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
-        try {
-            $response = Invoke-WebRequest -Uri "http://127.0.0.1:5000/login" -UseBasicParsing -TimeoutSec 2
-            if ($response.StatusCode -eq 200) {
-                $healthy = $true
-                break
-            }
+        Set-SetupProgress 97 "Проверка, что сайт открывается" (
+            "Попытка {0} из 60. Ждём http://127.0.0.1:5000/login" -f ($attempt + 1)
+        )
+        if (Test-LocalHttpOk -Url "http://127.0.0.1:5000/login" -TimeoutMs 2500) {
+            $healthy = $true
+            break
         }
-        catch {
-            Start-Sleep -Seconds 1
-        }
+        Start-Sleep -Seconds 1
     }
     if (-not $healthy) {
         throw "Nika CRM service did not pass the HTTP health check."
     }
 
-    $lanIp = Get-PrimaryLanIPv4
-    Write-Step "Installation completed successfully"
-    Write-Host "Local URL:  http://127.0.0.1:5000"
-    if ($lanIp) {
-        Write-Host "LAN URL:    http://${lanIp}:5000"
-        Write-Host "Change demo passwords if other devices on the network can reach this PC."
+    $nowIso = (Get-Date).ToString("o")
+    $fromVersion = $null
+    if ($state.PSObject.Properties.Name -contains "app_version") {
+        $fromVersion = [string] $state.app_version
     }
-    else {
-        Write-Host "LAN URL:    (no private IPv4 detected; open http://<this-pc-ip>:5000 from another device)"
+    $history = @()
+    if ($state.PSObject.Properties.Name -contains "version_history" -and $state.version_history) {
+        $history = @($state.version_history)
+    }
+    $history += [ordered]@{ from = $fromVersion; to = $appVersion; at = $nowIso }
+    $state | Add-Member -NotePropertyName app_version -NotePropertyValue $appVersion -Force
+    $state | Add-Member -NotePropertyName updated_at -NotePropertyValue $nowIso -Force
+    $state | Add-Member -NotePropertyName version_history -NotePropertyValue @($history) -Force
+    $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $stateFile -Encoding UTF8
+
+    Write-Step "Installation completed successfully"
+    Complete-SetupProgress 0
+    try {
+        Copy-Item -LiteralPath $bootstrapLog -Destination (Join-Path $logsDir "setup.log") -Force
+    }
+    catch {
+    }
+    try {
+        $lanIp = Get-PrimaryLanIPv4
+        Write-Host "Local URL:  http://127.0.0.1:5000"
+        if ($lanIp) {
+            Write-Host "LAN URL:    http://${lanIp}:5000"
+            Write-Host "Change demo passwords if other devices on the network can reach this PC."
+        }
+        else {
+            Write-Host "LAN URL:    (no private IPv4 detected; open http://<this-pc-ip>:5000 from another device)"
+        }
+    }
+    catch {
+        Write-Host ("WARN: could not detect LAN URL: {0}" -f $_.Exception.Message)
     }
 }
 catch {
+    Write-SetupError ("Automatic setup failed: {0}`r`n{1}" -f $_.Exception.Message, $_.ScriptStackTrace)
     Write-Error ("Automatic setup failed: {0}`n{1}" -f $_.Exception.Message, $_.ScriptStackTrace)
+    if (-not (Test-Path -LiteralPath $progressDoneFile)) {
+        Complete-SetupProgress 1 $_.Exception.Message
+    }
     throw
 }
 finally {
+    if (-not (Test-Path -LiteralPath $progressDoneFile)) {
+        Complete-SetupProgress 1 "Установка прервалась без кода возврата."
+    }
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-    Stop-Transcript | Out-Null
+    try {
+        Stop-Transcript | Out-Null
+    }
+    catch {
+        # Transcript stop must not hide a completed install from the wizard.
+    }
 }

@@ -323,6 +323,12 @@
                             <span>Уведомления директору</span>
                         </a>
                     </li>
+                    <li class="settings-menu-item">
+                        <a class="settings-menu-link" id="about-tab" data-bs-toggle="tab" data-bs-target="#about" role="tab" aria-controls="about" aria-selected="false">
+                            <i class="fas fa-info-circle"></i>
+                            <span>О программе и обновления</span>
+                        </a>
+                    </li>
                 </ul>
             </aside>
 
@@ -1752,6 +1758,35 @@
                         </div>
                     </div>
 
+                    <div class="tab-pane fade" id="about" role="tabpanel">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h3 class="card-title mb-0">
+                                    <i class="fas fa-info-circle text-primary me-2"></i>О программе и обновления
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2">Установленная версия: <strong id="installedAppVersion">{{ app_version }}</strong>
+                                    {% if app_build_date %}<span class="text-muted">(сборка {{ app_build_date }})</span>{% endif %}
+                                </p>
+                                <p class="text-muted small mb-3">
+                                    Новую версию ставят тем же установщиком Windows поверх текущей: файлы обновляются, база и настройки остаются.
+                                    Перед заменой файлов делается снимок кода и дамп базы.
+                                    Проверка обновлений один раз в сутки скачивает только публичный JSON с service.nika-crm.ru — без номера установки и без статистики.
+                                    Выключить: в <code>.env</code> ключ <code>UPDATE_CHECK_ENABLED=0</code>.
+                                </p>
+                                {% if current_user.role == 'admin' %}
+                                <div id="updateCheckResult" class="mb-3"></div>
+                                <button type="button" class="btn btn-outline-primary" id="checkUpdatesBtn">
+                                    <i class="fas fa-sync-alt me-1"></i>Проверить обновления
+                                </button>
+                                {% else %}
+                                <p class="text-muted small mb-0">Проверять и ставить обновления может только администратор.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -2972,6 +3007,62 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 });
 
+function renderUpdateStatus(data) {
+    const box = document.getElementById('updateCheckResult');
+    if (!box) return;
+    if (!data || data.success === false) {
+        box.className = 'mb-3 alert alert-danger';
+        box.textContent = (data && data.error) ? data.error : 'Не удалось проверить обновления.';
+        return;
+    }
+    if (data.enabled === false) {
+        box.className = 'mb-3 alert alert-secondary';
+        box.textContent = 'Проверка обновлений выключена в настройках сервера (UPDATE_CHECK_ENABLED).';
+        return;
+    }
+    if (data.error) {
+        box.className = 'mb-3 alert alert-warning';
+        box.textContent = data.error + ' Попробуйте ещё раз, когда будет интернет.';
+        return;
+    }
+    if (data.update_available && data.latest) {
+        const latest = data.latest;
+        const sha = latest.sha256 ? (' SHA256: ' + latest.sha256) : '';
+        const blog = latest.blog_url ? (' <a href="' + latest.blog_url + '">Что нового</a>.') : '';
+        box.className = 'mb-3 alert alert-success';
+        box.innerHTML = 'Доступна версия <strong>' + (latest.version || '') + '</strong>. ' +
+            '<a href="' + (latest.github_download_url || '') + '">Скачать установщик</a> ' +
+            'и запустить от имени администратора поверх текущей установки — база сохранится.' +
+            blog + '<div class="small text-muted mt-1">' + sha + '</div>';
+        return;
+    }
+    box.className = 'mb-3 alert alert-light border';
+    box.textContent = 'Установлена актуальная версия ' + (data.installed_version || '') + '.';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('checkUpdatesBtn');
+    if (!btn) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    fetch('/api/updates/status', { headers: { 'Accept': 'application/json' } })
+        .then(function(r) { return r.json(); })
+        .then(renderUpdateStatus)
+        .catch(function() { /* нет сети — карточка останется пустой до кнопки */ });
+    btn.addEventListener('click', function() {
+        btn.disabled = true;
+        fetch('/api/updates/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf }
+        })
+        .then(function(r) { return r.json(); })
+        .then(renderUpdateStatus)
+        .catch(function() {
+            renderUpdateStatus({ success: false, error: 'Нет связи с сервером обновлений.' });
+        })
+        .finally(function() { btn.disabled = false; });
+    });
+});
+
 // Обработка переключения вкладок по хешу в URL
 function switchTabByHash() {
     const hash = window.location.hash;
@@ -2987,7 +3078,8 @@ function switchTabByHash() {
         '#permissions': 'permissions-tab',
         '#roles': 'roles-tab',
         '#notifications': 'notifications-tab',
-        '#client-notifications': 'client-notifications-tab'
+        '#client-notifications': 'client-notifications-tab',
+        '#about': 'about-tab'
     };
     
     if (hash && tabMap[hash]) {

@@ -127,6 +127,13 @@
                                 Логины SETUP: <code>admin</code>/<code>manager</code>/<code>master</code>/<code>viewer</code>, пароль <code>111111</code>.
                                 {% if windows_setup.sha256 %}<span class="d-block small text-muted mt-1">SHA256: <code>{{ windows_setup.sha256 }}</code></span>{% endif %}
                             </p>
+                            {% if windows_update and windows_update.latest %}
+                            <p class="mb-2 text-success">
+                                Доступна новая версия <strong>{{ windows_update.latest.version }}</strong>.
+                                <a href="{{ windows_update.latest.github_download_url or windows_setup.github_download_url }}">Скачать установщик</a>
+                                и запустить от имени администратора поверх текущей установки — база сохранится.
+                            </p>
+                            {% endif %}
                             {% endif %}
                         </div>
                         {% endif %}

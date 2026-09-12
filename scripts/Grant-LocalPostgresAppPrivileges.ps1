@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Выдаёт роли из DATABASE_URL права на все объекты в public (после pg_restore --no-owner).
 
@@ -49,6 +49,10 @@ if ($appUser -notmatch '^[a-zA-Z0-9_]+$') {
 $psql = if ($PsqlPath) { $PsqlPath } else { "C:\Program Files\PostgreSQL\18\bin\psql.exe" }
 if (-not (Test-Path $psql)) { throw "Не найден psql: $psql" }
 
+# Скрипт вызывают и как шаг установщика, в том же процессе PowerShell.
+# Переменные окружения общие, поэтому пароль восстанавливается, а не удаляется:
+# иначе следующий psql в bootstrap молча ждёт ввод пароля.
+$previousPgPassword = $env:PGPASSWORD
 $env:PGPASSWORD = $PostgresSuperUserPassword
 try {
     $grantSql = @"
@@ -60,10 +64,31 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $appUser;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $appUser;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO $appUser;
 "@
-    & $psql -h $HostDb -p $Port -U $SuperUser -d $dbName -v ON_ERROR_STOP=1 -c $grantSql
+    # Многострочный SQL уходит файлом: Start-Process не кавычит аргументы,
+    # и psql получил бы каждое слово отдельным параметром.
+    $sqlFile = Join-Path $env:TEMP "nika-grant.sql"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($sqlFile, $grantSql, $utf8NoBom)
+    try {
+        # -w: без пароля psql не спрашивает его у скрытой консоли, а падает сразу.
+        $argString = '-X -w -P pager=off -h "{0}" -p {1} -U "{2}" -d "{3}" -v ON_ERROR_STOP=1 -q -f "{4}"' -f `
+            $HostDb, $Port, $SuperUser, $dbName, $sqlFile
+        $p = Start-Process -FilePath $psql -ArgumentList $argString -Wait -PassThru -NoNewWindow
+        if ($p.ExitCode -ne 0) {
+            throw "psql grant failed with exit code $($p.ExitCode)"
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $sqlFile -Force -ErrorAction SilentlyContinue
+    }
 }
 finally {
-    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    if ($null -eq $previousPgPassword) {
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:PGPASSWORD = $previousPgPassword
+    }
 }
 
 Write-Host ("Done. Granted public schema privileges to {0} on database {1}." -f $appUser, $dbName)

@@ -493,6 +493,18 @@
 {% endblock %}
 
 {% block report_content %}
+            {% if update_banner and update_banner.latest %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert" id="nikaUpdateBanner">
+                <i class="fas fa-download me-1"></i>
+                Доступна версия <strong>{{ update_banner.latest.version }}</strong> (сейчас {{ app_version }}).
+                <a class="alert-link" href="{{ update_banner.latest.github_download_url }}">Скачать установщик</a>
+                и запустить от имени администратора поверх текущей установки — база сохранится.
+                {% if update_banner.latest.blog_url %}
+                <a href="{{ update_banner.latest.blog_url }}">Что нового</a>.
+                {% endif %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
             <!-- Заголовок -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="mb-0"><i class="fas fa-chart-line me-2 text-muted"></i>Сводный отчёт по компании</h2>

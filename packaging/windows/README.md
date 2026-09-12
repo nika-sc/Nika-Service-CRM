@@ -4,19 +4,19 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Published download links (1.0.7, build 2026-09-10):**
+**Published download links (1.0.8, build 2026-09-11):**
 
-- [NikaCRM-Offline-Setup-1.0.7-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.7/NikaCRM-Offline-Setup-1.0.7-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.7)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.7-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.8-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.8/NikaCRM-Offline-Setup-1.0.8-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.8)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.8-x64.exe)
 
-SHA256: `12BE394E53FA7E831821D3C2E2D48C922F778B22B19C02C38402F985C0D6F250`
+SHA256 is written after the EXE is built (`WINDOWS_SETUP_SHA256` in `app/version.py`).
 
-**Changelog 1.0.7 (2026-09-10):** Warehouse categories are managed from the parts list, part/purchase deletion works again, action column is pinned; setup no longer echoes generated passwords into `setup.log` and `%ProgramData%\NikaCRM` is admins-only. See `docs/blog/42-windows-setup-1-0-7.md`.
+**Changelog 1.0.8 (2026-09-11):** installer finishes on a clean machine, in-app update check, progress on the last wizard page, demo catalog without owner data. See `docs/blog/43-windows-setup-1-0-8.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.7-x64.exe` (links above).
+1. Download `NikaCRM-Offline-Setup-1.0.8-x64.exe` (links above).
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change
@@ -32,8 +32,37 @@ No separate Python or PostgreSQL installation is needed. The installer:
 - registers auto-start services `NikaCRM-PostgreSQL` and `NikaCRM-Web`;
 - creates Open, Restart service and Logs shortcuts.
 
-Uninstall removes the services, application runtime and shortcuts. Database
-files remain in `%ProgramData%\NikaCRM` to prevent accidental data loss.
+## Upgrade, uninstall and reinstall
+
+Running a newer installer over an existing installation is an in-place upgrade:
+both services are stopped before files are replaced, `%ProgramData%\NikaCRM`
+(database, `.env`, logs) is reused and only pending migrations are applied.
+
+Uninstall (**Nika CRM — Удалить** in the Start menu, or Apps & features) is a
+full removal:
+
+1. `pg_dump` of `nikacrm` plus a copy of `.env` into `%ProgramData%\NikaCRM-backup`
+   (administrators only, last 10 dumps kept). This folder survives uninstall.
+2. Services `NikaCRM-Web` and `NikaCRM-PostgreSQL` stopped and deleted, the
+   bundled PostgreSQL uninstaller removes its registry entry and service account.
+3. Firewall rule, shortcuts, `%ProgramFiles%\NikaCRM` and `%ProgramData%\NikaCRM`
+   removed. If the dump fails, the data directory is kept and the user is told.
+
+A later install finds the newest `nikacrm-*.sql` in `%ProgramData%\NikaCRM-backup`
+and restores it instead of the demo database. Delete or move that folder to get a
+clean demo install.
+
+If the installation is broken and the uninstaller is unavailable, run as
+administrator:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\uninstall-full.ps1 -RemoveData
+```
+
+It stops and deletes both services, runs the PostgreSQL uninstaller, removes the
+firewall rule, shortcuts, the Apps & features entry and `%ProgramFiles%\NikaCRM`;
+`-RemoveData` also wipes `%ProgramData%\NikaCRM` after taking a dump. Without the
+switch the database is kept.
 
 ## Build
 

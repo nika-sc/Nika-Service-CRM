@@ -959,6 +959,12 @@ def create_app(config_class=Config):
     # Добавляем csrf_token в контекст шаблонов
     from flask_wtf.csrf import generate_csrf
     @app.context_processor
+    def inject_app_version():
+        from app.version import APP_BUILD_DATE, APP_VERSION
+
+        return {"app_version": APP_VERSION, "app_build_date": APP_BUILD_DATE}
+
+    @app.context_processor
     def inject_csrf_token():
         return dict(csrf_token=lambda: generate_csrf())
 

@@ -189,6 +189,21 @@ class Config:
     ).strip()
     REFERRAL_VPS_PROMO_CODE = (os.environ.get("REFERRAL_VPS_PROMO_CODE") or "648528402").strip()
 
+    # Data dir for installer cache / ProgramData on Windows. Fallback: <project>/data.
+    NIKACRM_DATA_DIR = (os.environ.get("NIKACRM_DATA_DIR") or os.path.join(_PROJECT_ROOT, "data")).strip()
+    # Windows SETUP update check (outbound GET of a public JSON, no install identity).
+    UPDATE_CHECK_ENABLED = os.environ.get("UPDATE_CHECK_ENABLED", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    UPDATE_MANIFEST_URL = (
+        os.environ.get("UPDATE_MANIFEST_URL")
+        or "https://service.nika-crm.ru/api/windows-setup/latest"
+    ).strip()
+    UPDATE_CHECK_TTL_HOURS = int(os.environ.get("UPDATE_CHECK_TTL_HOURS", "24"))
+
 
 class DevelopmentConfig(Config):
     """Конфигурация для разработки."""

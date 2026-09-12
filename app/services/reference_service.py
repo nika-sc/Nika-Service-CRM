@@ -1527,71 +1527,41 @@ class ReferenceService:
         type_id: Optional[int] = None,
         brand_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """Модели: при типе+марке — только связанные (по заявкам и по полям модели)."""
+        """Модели: подходящие типу и марке идут первыми, но список всегда полный.
+
+        Раньше выбор типа и марки отфильтровывал остальные модели, и в заявке
+        нельзя было выбрать модель, которую в этой связке ещё не встречали.
+        """
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cursor = conn.cursor()
             has_links = ReferenceService._order_models_has_links(cursor)
-            if type_id and brand_id:
-                if has_links:
-                    cursor.execute('''
-                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
-                        FROM order_models om
-                        LEFT JOIN orders o ON o.model_id = om.id
-                            AND (o.hidden = 0 OR o.hidden IS NULL)
-                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
-                        LEFT JOIN devices d ON d.id = o.device_id
-                        WHERE (d.device_type_id = ? AND d.device_brand_id = ?)
-                           OR (om.device_type_id = ? AND om.device_brand_id = ?)
-                        GROUP BY om.id, om.name
-                        ORDER BY usage DESC, om.name
-                    ''', (int(type_id), int(brand_id), int(type_id), int(brand_id)))
-                else:
-                    cursor.execute('''
-                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
-                        FROM order_models om
-                        JOIN orders o ON o.model_id = om.id
-                            AND (o.hidden = 0 OR o.hidden IS NULL)
-                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
-                        JOIN devices d ON d.id = o.device_id
-                        WHERE d.device_type_id = ? AND d.device_brand_id = ?
-                        GROUP BY om.id, om.name
-                        ORDER BY usage DESC, om.name
-                    ''', (int(type_id), int(brand_id)))
-            elif type_id:
-                if has_links:
-                    cursor.execute('''
-                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
-                        FROM order_models om
-                        LEFT JOIN orders o ON o.model_id = om.id
-                            AND (o.hidden = 0 OR o.hidden IS NULL)
-                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
-                        LEFT JOIN devices d ON d.id = o.device_id
-                        WHERE d.device_type_id = ? OR om.device_type_id = ?
-                        GROUP BY om.id, om.name
-                        ORDER BY usage DESC, om.name
-                    ''', (int(type_id), int(type_id)))
-                else:
-                    cursor.execute('''
-                        SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
-                        FROM order_models om
-                        JOIN orders o ON o.model_id = om.id
-                            AND (o.hidden = 0 OR o.hidden IS NULL)
-                            AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
-                        JOIN devices d ON d.id = o.device_id
-                        WHERE d.device_type_id = ?
-                        GROUP BY om.id, om.name
-                        ORDER BY usage DESC, om.name
-                    ''', (int(type_id),))
-            else:
-                cursor.execute('''
-                    SELECT om.id, om.name, COUNT(DISTINCT o.id) AS usage
-                    FROM order_models om
-                    LEFT JOIN orders o ON o.model_id = om.id
-                        AND (o.hidden = 0 OR o.hidden IS NULL)
-                        AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
-                    GROUP BY om.id, om.name
-                    ORDER BY usage DESC, om.name
-                ''')
+            # 0 не совпадёт ни с одним id, поэтому SQL один на все случаи.
+            type_key = int(type_id) if type_id else 0
+            brand_key = int(brand_id) if brand_id else 0
+            params = [type_key, brand_key, brand_key]
+            link_relevance = ''
+            if has_links:
+                link_relevance = (
+                    '\n                           '
+                    'OR (om.device_type_id = ? AND (? = 0 OR om.device_brand_id = ?))'
+                )
+                params += [type_key, brand_key, brand_key]
+
+            cursor.execute(f'''
+                SELECT om.id, om.name,
+                       COUNT(DISTINCT o.id) AS usage,
+                       MAX(CASE
+                           WHEN (d.device_type_id = ? AND (? = 0 OR d.device_brand_id = ?)){link_relevance}
+                           THEN 1 ELSE 0
+                       END) AS relevant
+                FROM order_models om
+                LEFT JOIN orders o ON o.model_id = om.id
+                    AND (o.hidden = 0 OR o.hidden IS NULL)
+                    AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
+                LEFT JOIN devices d ON d.id = o.device_id
+                GROUP BY om.id, om.name
+                ORDER BY relevant DESC, usage DESC, om.name
+            ''', tuple(params))
             return [dict(row) for row in cursor.fetchall()]
 
     @staticmethod

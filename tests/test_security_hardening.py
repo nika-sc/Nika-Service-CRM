@@ -656,6 +656,31 @@ def test_safe_http_fetch_accepts_public_dns(monkeypatch):
     assert is_safe_public_http_url("file:///etc/passwd") is False
 
 
+def test_safe_http_fetch_blocks_metadata_and_rfc1918(monkeypatch):
+    import socket
+
+    from app.utils.safe_http_fetch import is_safe_public_http_url
+
+    def _pin(ip):
+        def fake_getaddrinfo(host, port, *args, **kwargs):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port or 80))]
+
+        return fake_getaddrinfo
+
+    monkeypatch.setattr(
+        "app.utils.safe_http_fetch.socket.getaddrinfo", _pin("169.254.169.254")
+    )
+    assert is_safe_public_http_url("http://example.test/logo.png") is False
+    monkeypatch.setattr(
+        "app.utils.safe_http_fetch.socket.getaddrinfo", _pin("10.0.0.8")
+    )
+    assert is_safe_public_http_url("http://example.test/logo.png") is False
+    monkeypatch.setattr(
+        "app.utils.safe_http_fetch.socket.getaddrinfo", _pin("192.168.1.1")
+    )
+    assert is_safe_public_http_url("http://example.test/logo.png") is False
+
+
 def test_csp_strict_prefixes_enforce_nonce_on_login():
     class _StrictLogin(_LanConfig):
         CSP_NONCE_MODE = "report"
@@ -670,6 +695,21 @@ def test_csp_strict_prefixes_enforce_nonce_on_login():
     assert "'unsafe-inline'" not in csp or "style-src-attr 'unsafe-inline'" in csp
     # script-src must not keep legacy unsafe-inline
     assert "script-src 'self' 'unsafe-inline'" not in csp
+
+
+def test_csp_strict_prefixes_empty_keeps_legacy_on_login():
+    class _ReportOnly(_LanConfig):
+        CSP_NONCE_MODE = "report"
+        CSP_REPORT_ONLY = True
+        CSP_STRICT_ENFORCE_PREFIXES = []
+        CSP_ENFORCE_PATH_PREFIXES = ["/login"]
+
+    app = create_app(_ReportOnly)
+    resp = app.test_client().get("/login")
+    csp = resp.headers.get("Content-Security-Policy") or ""
+    assert "'unsafe-eval'" in csp
+    ro = resp.headers.get("Content-Security-Policy-Report-Only") or ""
+    assert "script-src 'self' 'nonce-" in ro
 
 
 def test_login_pages_include_csp_nonce_attr():
@@ -732,6 +772,7 @@ def test_auth_fail_fail2ban_example_disabled_and_not_http_200():
         encoding="utf-8"
     )
     assert "enabled = false" in jail
+    assert "ignoreip" in jail
     assert "AUTH_FAIL" in filt
     assert "200" not in login_filt.split("failregex", 1)[-1]
     assert "(401|403|429)" in login_filt
@@ -746,8 +787,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_windows_setup_1_0_7():
+def test_latest_blog_is_windows_setup_1_0_8():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "windows-setup-1-0-7"
-    assert _POSTS[0]["file"] == "blog/42-windows-setup-1-0-7.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-8"
+    assert _POSTS[0]["file"] == "blog/43-windows-setup-1-0-8.md"

@@ -8,6 +8,7 @@ from flask_limiter.util import get_remote_address
 from functools import wraps
 import time
 import threading
+from app.version import APP_BUILD_DATE, APP_VERSION, WINDOWS_SETUP_SHA256
 from app.services.reference_service import ReferenceService
 from app.services.user_service import UserService
 from app.services.settings_service import SettingsService
@@ -108,18 +109,20 @@ def _reset_login_guard(key: str):
 
 def _windows_setup_info():
     """Ссылки на автономный Windows SETUP (публичный релиз + зеркало на демо)."""
-    version = "1.0.7"
+    version = APP_VERSION
     filename = f"NikaCRM-Offline-Setup-{version}-x64.exe"
     tag = f"windows-setup-{version}"
     github_base = "https://github.com/nika-sc/Nika-Service-CRM"
+    slug = version.replace(".", "-")
     return {
         "version": version,
         "filename": filename,
-        "build_date": "2026-09-10",
-        "sha256": "12BE394E53FA7E831821D3C2E2D48C922F778B22B19C02C38402F985C0D6F250",
+        "build_date": APP_BUILD_DATE,
+        "sha256": WINDOWS_SETUP_SHA256,
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
         "demo_download_url": f"https://service.nika-crm.ru/downloads/{filename}",
+        "blog_url": f"https://service.nika-crm.ru/blog/windows-setup-{slug}",
         "requires_admin": True,
     }
 
@@ -148,6 +151,14 @@ def _login_page_extra():
         "windows_setup": _windows_setup_info(),
         "vps_referral": _vps_referral_info(),
     }
+    try:
+        from app.services.update_service import peek_cached_status
+
+        cached = peek_cached_status()
+        if cached and cached.get("update_available") and cached.get("latest"):
+            extra["windows_update"] = cached
+    except Exception:
+        pass
     if not current_app.config.get("DEMO_LOGIN_BANNER"):
         return extra
     spec = (current_app.config.get("DEMO_SERVER_SPEC") or "").strip()
@@ -355,6 +366,47 @@ def format_phone_display(phone):
     """Форматирует телефон для отображения."""
     from app.utils.locale_fmt import format_phone_display as _fmt
     return _fmt(phone)
+
+
+@bp.route("/api/windows-setup/latest", methods=["GET"])
+@rate_limit_if_available("60 per hour")
+def windows_setup_latest():
+    """Public manifest of the current Windows installer. No auth, no install identity."""
+    response = jsonify(_windows_setup_info())
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def _admin_json_guard():
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "error": "auth_required"}), 401
+    if getattr(current_user, "role", "") != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
+    return None
+
+
+@bp.route("/api/updates/status", methods=["GET"])
+@login_required
+def api_updates_status():
+    denied = _admin_json_guard()
+    if denied:
+        return denied
+    from app.services.update_service import status as update_status
+
+    payload = update_status(force=False)
+    return jsonify({"success": True, **payload})
+
+
+@bp.route("/api/updates/check", methods=["POST"])
+@login_required
+def api_updates_check():
+    denied = _admin_json_guard()
+    if denied:
+        return denied
+    from app.services.update_service import status as update_status
+
+    payload = update_status(force=True)
+    return jsonify({"success": True, **payload})
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -1317,6 +1369,8 @@ def settings():
         ),
         success=success,
         usage_counts=usage_counts,
+        app_version=APP_VERSION,
+        app_build_date=APP_BUILD_DATE,
     )
 
 
