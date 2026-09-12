@@ -26,6 +26,36 @@ RETRY_DELAY = 0.1
 LOCK_TIMEOUT = 20.0
 _PG_POOL = None
 _PG_POOL_DSN = None
+_TABLE_INFO_CACHE = {}
+_PRAGMA_TABLE_INFO_RE = re.compile(r"^pragma\s+table_info\(([^)]+)\)\s*$", re.IGNORECASE)
+
+
+def _normalize_table_info_name(raw: str) -> str:
+    return (raw or "").strip().strip('"').strip("'").lower()
+
+
+def _table_info_cache_enabled() -> bool:
+    """Кэш колонок только в HTTP-запросе, чтобы миграции с ALTER не видели stale PRAGMA."""
+    try:
+        from flask import has_request_context
+
+        return has_request_context()
+    except Exception:
+        return False
+
+
+def clear_table_info_cache() -> None:
+    _TABLE_INFO_CACHE.clear()
+
+
+def get_table_info_cache(table_name: str):
+    return _TABLE_INFO_CACHE.get(_normalize_table_info_name(table_name))
+
+
+def store_table_info_cache(table_name: str, rows) -> tuple:
+    frozen = tuple(tuple(row) for row in rows)
+    _TABLE_INFO_CACHE[_normalize_table_info_name(table_name)] = frozen
+    return frozen
 
 
 def _get_database_path() -> str:
@@ -187,11 +217,43 @@ class TimedCursor(sqlite3.Cursor):
         _log_slow_query(query, elapsed_ms)
 
     def execute(self, query, parameters=()):
+        self._pragma_cached_rows = None
+        self._pragma_cache_table = None
+        q = str(query).strip()
+        match = _PRAGMA_TABLE_INFO_RE.match(q)
+        if match and _table_info_cache_enabled():
+            table_name = _normalize_table_info_name(match.group(1))
+            cached = _TABLE_INFO_CACHE.get(table_name)
+            if cached is not None:
+                self._pragma_cached_rows = cached
+                self._pragma_cached_index = 0
+                return self
+            self._pragma_cache_table = table_name
         started = time.perf_counter()
         try:
             return super().execute(query, parameters)
         finally:
             self._log_if_slow(str(query), (time.perf_counter() - started) * 1000)
+
+    def fetchall(self):
+        if getattr(self, "_pragma_cached_rows", None) is not None:
+            return [tuple(row) for row in self._pragma_cached_rows]
+        rows = super().fetchall()
+        table_name = getattr(self, "_pragma_cache_table", None)
+        if table_name and _table_info_cache_enabled():
+            store_table_info_cache(table_name, rows)
+        return rows
+
+    def fetchone(self):
+        cached = getattr(self, "_pragma_cached_rows", None)
+        if cached is not None:
+            idx = getattr(self, "_pragma_cached_index", 0)
+            if idx >= len(cached):
+                return None
+            self._pragma_cached_index = idx + 1
+            return tuple(cached[idx])
+        row = super().fetchone()
+        return row
 
     def executemany(self, query, seq_of_parameters):
         started = time.perf_counter()
@@ -213,6 +275,9 @@ class PostgresCursorAdapter:
         self._cursor = raw_cursor
         self._use_dict_rows = use_dict_rows
         self._pragma_table_info_mode = False
+        self._pragma_cached_rows = None
+        self._pragma_cache_table = None
+        self._pragma_cached_index = 0
         self._lastrowid = None
 
     @property
@@ -291,10 +356,17 @@ class PostgresCursorAdapter:
         q_lower = q.lower()
 
         if q_lower.startswith("pragma "):
-            pragma_table_info = re.match(r"^pragma\s+table_info\(([^)]+)\)\s*$", q_lower)
+            pragma_table_info = _PRAGMA_TABLE_INFO_RE.match(q_lower)
             if pragma_table_info:
-                table_name = pragma_table_info.group(1).strip().strip('"').strip("'")
+                table_name = _normalize_table_info_name(pragma_table_info.group(1))
                 self._pragma_table_info_mode = True
+                if _table_info_cache_enabled():
+                    cached = _TABLE_INFO_CACHE.get(table_name)
+                    if cached is not None:
+                        self._pragma_cached_rows = cached
+                        self._pragma_cached_index = 0
+                        return None, ()
+                    self._pragma_cache_table = table_name
                 sql = """
                     SELECT
                         (c.ordinal_position - 1) AS cid,
@@ -353,8 +425,13 @@ class PostgresCursorAdapter:
     def execute(self, query: str, parameters: Optional[Sequence[Any]] = None):
         params = tuple(parameters) if parameters is not None else None
         self._pragma_table_info_mode = False
+        self._pragma_cached_rows = None
+        self._pragma_cache_table = None
+        self._pragma_cached_index = 0
         self._lastrowid = None
         translated, translated_params = self._translate_special_sql(query, tuple(params or ()))
+        if self._pragma_cached_rows is not None or translated is None:
+            return self
         started = time.perf_counter()
         try:
             if translated_params:
@@ -377,6 +454,12 @@ class PostgresCursorAdapter:
         return self
 
     def fetchone(self):
+        if self._pragma_cached_rows is not None:
+            if self._pragma_cached_index >= len(self._pragma_cached_rows):
+                return None
+            row = self._pragma_cached_rows[self._pragma_cached_index]
+            self._pragma_cached_index += 1
+            return tuple(row)
         row = self._cursor.fetchone()
         if row is None:
             return None
@@ -387,9 +470,14 @@ class PostgresCursorAdapter:
         return row
 
     def fetchall(self):
+        if self._pragma_cached_rows is not None:
+            return [tuple(row) for row in self._pragma_cached_rows]
         rows = self._cursor.fetchall()
         if self._pragma_table_info_mode:
-            return [tuple(r.values()) if isinstance(r, dict) else r for r in rows]
+            normalized = [tuple(r.values()) if isinstance(r, dict) else tuple(r) for r in rows]
+            if self._pragma_cache_table and _table_info_cache_enabled():
+                store_table_info_cache(self._pragma_cache_table, normalized)
+            return normalized
         return [CompatRow(r) if isinstance(r, dict) else r for r in rows]
 
     def __iter__(self):

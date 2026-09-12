@@ -38,8 +38,10 @@ def setup_auth(login_manager: LoginManager):
     def _unauthorized():
         from flask import jsonify, redirect, request, url_for
 
+        from app.utils.json_api import is_json_api_path
+
         path = request.path or ""
-        if path.startswith("/api/") or path.startswith("/portal/api/"):
+        if is_json_api_path(path):
             return jsonify({
                 "success": False,
                 "error": "unauthorized",

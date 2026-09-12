@@ -237,6 +237,47 @@ class ReferenceService:
         return ReferenceQueries.get_all_references()
 
     @staticmethod
+    def get_order_card_references() -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Справочники карточки заявки без parts/order_models/полного каталога услуг.
+        Услуги подгружаются AJAX при открытии модалки добавления.
+        """
+        return {
+            'device_types': ReferenceService.get_device_types(),
+            'device_brands': ReferenceService.get_device_brands(),
+            'managers': ReferenceService.get_managers(),
+            'masters': ReferenceService.get_masters(),
+            'symptoms': ReferenceService.get_symptoms(),
+            'appearance_tags': ReferenceService.get_appearance_tags(),
+            'order_statuses': ReferenceService.get_order_statuses(),
+            'services': [],
+            'parts': [],
+            'order_models': [],
+        }
+
+    @staticmethod
+    def get_services_for_order_catalog() -> List[Dict[str, Any]]:
+        """Услуги для модалки заявки, частые сверху (usage counts только здесь)."""
+        services = list(ReferenceService.get_services() or [])
+        try:
+            usage = ReferenceService.get_all_usage_counts().get('services') or {}
+        except Exception:
+            usage = {}
+        annotated = []
+        for svc in services:
+            row = dict(svc)
+            row['usage_count'] = int(usage.get(str(svc.get('id')), 0) or 0)
+            annotated.append(row)
+        annotated.sort(
+            key=lambda s: (
+                -int(s.get('usage_count') or 0),
+                int(s.get('sort_order') or 0),
+                str(s.get('name') or ''),
+            )
+        )
+        return annotated
+
+    @staticmethod
     def get_orders_list_references() -> Dict[str, List[Dict[str, Any]]]:
         """
         Справочники для /all_orders без parts/services (тяжёлые и не нужны на странице списка).

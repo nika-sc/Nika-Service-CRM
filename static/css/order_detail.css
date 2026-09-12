@@ -86,6 +86,8 @@
 
         /* Hover эффекты отключены */
         /*
+        /* Hover эффекты отключены */
+        /*
         .normal-view .info-card .card-header .nav-tabs .nav-link:hover {
             color: #374151 !important;
             background: rgba(255, 255, 255, 0.8) !important;
@@ -181,7 +183,15 @@
             overflow: hidden !important;
         }
 
+        /* Чтобы выпадающий список «Статус заявки» не обрезался блоком Клиент */
+        .normal-view .data-section:has(.status-dropdown-menu),
+        .normal-view .data-section.status-host {
+            overflow: visible !important;
+            z-index: 6 !important;
+        }
+
         .normal-view .data-section::before {
+            pointer-events: none !important;
             content: '' !important;
             position: absolute !important;
             top: 0 !important;
@@ -193,7 +203,10 @@
             transition: opacity 0.3s ease !important;
         }
 
-        /* Hover эффекты отключены
+        /* Hover эффекты отключены */
+        /*
+        /* Hover эффекты отключены */
+        /*
         .normal-view .data-section:not(:has(.table)):hover {
             transform: translateY(-4px) !important;
             background: rgba(255, 255, 255, 0.7) !important;
@@ -428,6 +441,15 @@
         }
         */
 
+        .normal-view .quick-action-btn.btn-telegram {
+            background: linear-gradient(135deg, #0088cc 0%, #229ED9 100%) !important;
+            color: #ffffff !important;
+        }
+
+        .normal-view .quick-action-btn.btn-telegram:hover {
+            background: linear-gradient(135deg, #229ED9 0%, #0077b5 100%) !important;
+        }
+
         .normal-view .quick-action-btn.btn-copy {
             background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
             color: #ffffff !important;
@@ -596,30 +618,49 @@
 
         .normal-view .status-dropdown-menu {
             min-width: 220px !important;
+            max-height: min(360px, calc(100vh - 24px)) !important;
+            overflow-y: auto !important;
             border-radius: 16px !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(229, 231, 235, 0.9) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 0 0 1000px #ffffff !important;
+            border: 1px solid #e5e7eb !important;
             padding: 0.75rem !important;
             margin-top: 0.5rem !important;
-            background: rgba(255, 255, 255, 0.98) !important;
-            backdrop-filter: blur(16px) saturate(180%) !important;
-            z-index: 9999 !important;
+            background-color: #ffffff !important;
+            background-image: none !important;
+            opacity: 1 !important;
+            isolation: isolate !important;
+            z-index: 1060 !important;
             position: absolute !important;
+            pointer-events: auto !important;
+        }
+
+        .normal-view .status-dropdown-menu li {
+            background-color: transparent !important;
+        }
+
+        .normal-view .status-dropdown-menu .dropdown-item,
+        .normal-view .status-dropdown-menu .status-dropdown-item {
+            pointer-events: auto !important;
+            background-color: transparent !important;
+        }
+
+        .normal-view .status-dropdown-menu .status-dropdown-item.active {
+            background-color: #eef2ff !important;
         }
 
         /* Стили для dropdown статуса в блоке основных данных */
         .normal-view .info-card .dropdown {
             position: relative !important;
-            z-index: 1050 !important;
+            z-index: auto !important;
         }
 
         .normal-view .info-card .dropdown.show,
         .normal-view .info-card .dropdown[aria-expanded="true"] {
-            z-index: 9999 !important;
+            z-index: 1061 !important;
         }
 
         .normal-view .info-card .dropdown-menu {
-            z-index: 9999 !important;
+            z-index: 1060 !important;
         }
 
         .normal-view .page-header .dropdown {
@@ -662,7 +703,8 @@
         }
 
         .normal-view .status-dropdown-item.active {
-            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+            background-color: #eef2ff !important;
+            background-image: none !important;
             font-weight: 700 !important;
             border-left: 3px solid rgba(99, 102, 241, 0.7) !important;
             color: #1f2937 !important;
@@ -935,6 +977,55 @@
             right: 0;
         }
         
+        /* Боковая панель редактирования позиций (Товары и услуги) */
+        .order-items-sidebar {
+            position: fixed;
+            right: -420px;
+            top: 57px;
+            bottom: 0;
+            width: 420px;
+            background-color: rgba(255, 255, 255, 0.92);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08), -2px 0 8px rgba(0, 0, 0, 0.04);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s ease;
+            border-left: 1px solid rgba(229, 231, 235, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .order-items-sidebar.active {
+            right: 0;
+        }
+
+        .order-items-sidebar-header {
+            background: linear-gradient(135deg, rgba(249, 250, 251, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%);
+            color: #374151;
+            padding: 1.0rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            backdrop-filter: blur(10px);
+        }
+
+        .order-items-sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            background: rgba(249, 250, 251, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .order-items-sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(229, 231, 235, 0.8);
+            background-color: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+            backdrop-filter: blur(10px);
+        }
+        
         .comments-sidebar-header {
             background: linear-gradient(135deg, rgba(249, 250, 251, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%);
             color: #374151;
@@ -984,6 +1075,19 @@
             backdrop-filter: blur(5px);
         }
         
+        .comment-item.internal-comment {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        
+        .comment-item .comment-text .mention {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
         .comment-item .delete-comment-btn {
             opacity: 0.7;
             transition: all 0.2s ease;
@@ -993,6 +1097,10 @@
         /* Адаптивность для боковой панели */
         @media (max-width: 768px) {
             .comments-sidebar {
+                width: 100%;
+                right: -100%;
+            }
+            .order-items-sidebar {
                 width: 100%;
                 right: -100%;
             }
@@ -1247,11 +1355,62 @@
         }
         
         @media print {
+            /*
+             * При печати показываем только блок .print-view (форма из настроек или резервная квитанция).
+             * .normal-view > *:not(.print-view) скрывает всё кроме .print-view.
+             */
+            .normal-view {
+                display: block !important;
+                background: #fff !important;
+                padding: 0 !important;
+                min-height: auto !important;
+            }
+            .normal-view > *:not(.print-view) {
+                display: none !important;
+            }
+            .normal-view .print-view,
             .print-view {
                 display: block !important;
+                visibility: visible !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow: visible !important;
+                background: #fff !important;
+                color: #000 !important;
             }
-            .normal-view {
-                display: none !important;
+            /* Не задаём display:block для всех * — ломает таблицы и списки. Только видимость. */
+            .print-view * {
+                visibility: visible !important;
+            }
+            .print-view table {
+                display: table !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            .print-view thead,
+            .print-view tbody {
+                display: table-row-group !important;
+            }
+            .print-view tr {
+                display: table-row !important;
+            }
+            .print-view td,
+            .print-view th {
+                display: table-cell !important;
+                padding: 4px 8px !important;
+                border: 1px solid #ccc !important;
+            }
+            .print-view ol,
+            .print-view ul {
+                display: block !important;
+            }
+            .print-view li {
+                display: list-item !important;
+            }
+            .print-view p,
+            .print-view div,
+            .print-view h1, .print-view h2, .print-view h3, .print-view h4 {
+                display: block !important;
             }
         }
 
@@ -1362,44 +1521,6 @@
             border-color: #2d2d3a;
         }
 
-        /* Ключевые блоки центральной колонки заявки (normal-view) */
-        .theme-dark .normal-view .info-card {
-            background: rgba(30, 30, 45, 0.92) !important;
-            border-color: #2d2d3a !important;
-        }
-
-        .theme-dark .normal-view .info-card .card-body {
-            background: rgba(30, 30, 45, 0.88) !important;
-            color: #e1e1e1 !important;
-        }
-
-        .theme-dark .normal-view .data-section {
-            background: rgba(37, 37, 54, 0.86) !important;
-            border-color: #3a3a4a !important;
-        }
-
-        .theme-dark .normal-view .status-section {
-            background: rgba(45, 45, 58, 0.85) !important;
-            border-color: #3a3a4a !important;
-        }
-
-        .theme-dark .normal-view .section-header,
-        .theme-dark .normal-view .compact-value,
-        .theme-dark .normal-view .contact-value-main {
-            color: #f1f1f1 !important;
-        }
-
-        .theme-dark .normal-view .compact-info-item {
-            border-bottom-color: #3a3a4a !important;
-        }
-
-        .theme-dark .normal-view .compact-label,
-        .theme-dark .normal-view .status-section-label,
-        .theme-dark .normal-view .meta-item,
-        .theme-dark .normal-view .info-label {
-            color: #bdbdc7 !important;
-        }
-
         .theme-dark .info-card .card-header {
             background: linear-gradient(135deg, #4d5ef7 0%, #6b3fa0 100%);
         }
@@ -1420,9 +1541,7 @@
         }
 
         .theme-dark .page-header {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            color: #e1e1e1;
-            border-color: #2d2d3a;
+            background: linear-gradient(135deg, #4d5ef7 0%, #fbf9ff 100%);
         }
 
         .theme-dark .table thead {
@@ -1837,6 +1956,12 @@
         }
         */
 
+        /* Возврат в списке оплат */
+        .payment-refund {
+            background: rgba(239, 68, 68, 0.08) !important;
+            border-left: 3px solid #dc2626 !important;
+        }
+
         /* Стили для прогресс-бара оплаты */
         .normal-view .payment-progress {
             height: 8px !important;
@@ -1977,89 +2102,163 @@
             animation: slideOutRight 0.3s ease-out forwards;
         }
 
-        /* ===================================================================
-           FINAL DARK OVERRIDES (must stay at file end)
-           Stabilizes dark mode against earlier .normal-view light rules.
-           =================================================================== */
-        body.theme-dark .normal-view .page-header {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
-            border-color: #2d2d3a !important;
-            color: #e1e1e1 !important;
+        /* Тёмная тема: карточка заявки */
+        body.theme-dark .normal-view.container-fluid,
+        body.theme-dark .container-fluid.normal-view {
+            background: #1a1a1a !important;
         }
-
-        body.theme-dark .normal-view .page-header h2 {
-            color: #f3f4f6 !important;
-        }
-
         body.theme-dark .normal-view .info-card,
-        body.theme-dark .normal-view .info-card .card-body,
-        body.theme-dark .normal-view .data-section,
+        body.theme-dark .normal-view .info-card .card-body {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .normal-view .info-card .card-header {
+            background: #333 !important;
+            border-color: #444 !important;
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .normal-view .info-card .card-header h3 {
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .normal-view .info-card .card-header .nav-tabs .nav-link {
+            background: #2d2d2d !important;
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .normal-view .info-card .card-header .nav-tabs .nav-link.active {
+            background: #0d6efd !important;
+            color: #fff !important;
+        }
         body.theme-dark .normal-view .status-section,
-        body.theme-dark .normal-view .comments-sidebar,
-        body.theme-dark .normal-view .comments-sidebar-body,
-        body.theme-dark .normal-view .comments-sidebar-footer,
-        body.theme-dark .normal-view .comment-item {
-            background: #1f2430 !important;
-            color: #e5e7eb !important;
-            border-color: #3a3f4b !important;
+        body.theme-dark .normal-view .data-section {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
         }
-
-        body.theme-dark .normal-view .info-card .card-header,
-        body.theme-dark .normal-view .comments-sidebar-header {
-            background: #2a3040 !important;
-            color: #e5e7eb !important;
-            border-color: #3a3f4b !important;
+        body.theme-dark .normal-view .section-header {
+            color: #e0e0e0 !important;
+            border-color: #444 !important;
         }
-
-        body.theme-dark .normal-view .info-card .card-header h3,
-        body.theme-dark .normal-view .comments-sidebar-header h5,
-        body.theme-dark .normal-view .section-header,
+        body.theme-dark .normal-view .compact-label,
+        body.theme-dark .normal-view .status-section-label {
+            color: #bdbdbd !important;
+        }
         body.theme-dark .normal-view .compact-value,
         body.theme-dark .normal-view .contact-value-main {
-            color: #f3f4f6 !important;
+            color: #e0e0e0 !important;
         }
-
-        body.theme-dark .normal-view .compact-label,
-        body.theme-dark .normal-view .status-section-label,
-        body.theme-dark .normal-view .meta-item,
-        body.theme-dark .normal-view .info-label,
-        body.theme-dark .normal-view .toast-message {
-            color: #c4c8d0 !important;
-        }
-
         body.theme-dark .normal-view .compact-info-item,
-        body.theme-dark .normal-view .info-item,
-        body.theme-dark .normal-view .table tbody tr {
-            border-color: #3a3f4b !important;
+        body.theme-dark .normal-view .info-item {
+            border-color: #444 !important;
         }
-
-        body.theme-dark .normal-view .table,
-        body.theme-dark .normal-view .table thead,
-        body.theme-dark .normal-view .table tbody tr {
-            background: #1f2430 !important;
-            color: #e5e7eb !important;
+        body.theme-dark .normal-view .data-section .table,
+        body.theme-dark .normal-view .data-section .table td,
+        body.theme-dark .normal-view .data-section .table th {
+            background: #2d2d2d !important;
+            color: #e0e0e0 !important;
+            border-color: #444 !important;
         }
-
-        body.theme-dark .normal-view .table thead th,
-        body.theme-dark .normal-view .table tbody td {
-            color: #e5e7eb !important;
-            border-color: #3a3f4b !important;
+        body.theme-dark .normal-view .status-dropdown-menu {
+            background-color: #2d2d2d !important;
+            background-image: none !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 0 0 1000px #2d2d2d !important;
+            opacity: 1 !important;
+            border-color: #444 !important;
         }
-
-        body.theme-dark .normal-view .status-dropdown-menu,
-        body.theme-dark .normal-view .dropdown-menu {
-            background: #1f2430 !important;
-            border-color: #3a3f4b !important;
-            color: #e5e7eb !important;
+        body.theme-dark .normal-view .status-dropdown-item {
+            color: #e0e0e0 !important;
         }
-
-        body.theme-dark .normal-view .status-dropdown-item,
-        body.theme-dark .normal-view .dropdown-item {
-            color: #e5e7eb !important;
+        body.theme-dark .normal-view .status-dropdown-item.active {
+            background: rgba(99, 102, 241, 0.25) !important;
+            color: #e0e0e0 !important;
         }
-
-        body.theme-dark .normal-view .status-dropdown-item:hover,
-        body.theme-dark .normal-view .dropdown-item:hover {
-            background: #2b3242 !important;
-            color: #ffffff !important;
+        body.theme-dark .contact-btn {
+            background: #3d3d3d !important;
+            border-color: #555 !important;
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .contact-dropdown {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .contact-dropdown-item {
+            color: #e0e0e0 !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .contact-dropdown-item:hover {
+            background: #3d3d3d !important;
+        }
+        body.theme-dark .normal-view .order-meta-info .meta-item {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .normal-view .compact-info-item.highlight-item {
+            background: #3d3d3d !important;
+            border-left-color: #666 !important;
+        }
+        body.theme-dark .normal-view .page-header {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .normal-view .page-header h2 {
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .action-buttons {
+            border-top-color: #444 !important;
+        }
+        body.theme-dark .normal-view .info-label {
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .normal-view .master-comment-card {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .normal-view .master-comment-header {
+            background: #333 !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .normal-view .master-comment-icon {
+            background: #3d3d3d !important;
+            border-color: #555 !important;
+        }
+        body.theme-dark .normal-view .master-comment-icon i {
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .normal-view .master-comment-title,
+        body.theme-dark .normal-view .master-comment-subtitle {
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .normal-view .master-comment-body {
+            background: #2d2d2d !important;
+        }
+        body.theme-dark .normal-view .master-comment-text {
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .order-items-sidebar {
+            background-color: #1e1e2d !important;
+            border-left-color: #2d2d3a !important;
+        }
+        body.theme-dark .order-items-sidebar-header {
+            background: #252536 !important;
+            border-color: #2d2d3a !important;
+            color: #e0e0e0 !important;
+        }
+        body.theme-dark .order-items-sidebar-body {
+            background: #252536 !important;
+        }
+        body.theme-dark .normal-view .payment-progress {
+            background: #444 !important;
+        }
+        body.theme-dark .normal-view .summary-card {
+            background: #2d2d2d !important;
+            border-color: #444 !important;
+        }
+        body.theme-dark .order-items-totals {
+            background: #2d2d2d !important;
+            border-top-color: #444 !important;
+        }
+        body.theme-dark .order-items-totals .text-muted {
+            color: #bdbdbd !important;
+        }
+        body.theme-dark .order-items-totals [data-order-total] {
+            color: #e0e0e0 !important;
         }

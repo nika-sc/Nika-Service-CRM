@@ -338,7 +338,14 @@ def permission_required(permission: str):
         @wraps(f)
         @login_required
         def decorated_function(*args, **kwargs):
-            is_api_request = '/api/' in request.path or request.path.startswith('/api')
+            from app.utils.json_api import is_json_api_path
+
+            path = request.path or ""
+            is_api_request = (
+                is_json_api_path(path)
+                or "/api/" in path
+                or path.startswith("/api")
+            )
 
             if not current_user.is_authenticated:
                 if is_api_request:

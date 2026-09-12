@@ -2,7 +2,7 @@
 Blueprint для глобального поиска.
 """
 from flask import Blueprint, request, jsonify, render_template
-from flask_login import login_required
+from app.routes.main import permission_required
 from app.services.search_service import SearchService
 import logging
 from app.utils.error_handlers import api_internal_error
@@ -13,7 +13,7 @@ bp = Blueprint('search', __name__, url_prefix='/search')
 
 
 @bp.route('', methods=['GET'])
-@login_required
+@permission_required('view_orders')
 def search_results():
     """Страница результатов поиска."""
     query = request.args.get('q', '').strip()
@@ -44,7 +44,7 @@ def search_results():
 
 
 @bp.route('/api/autocomplete', methods=['GET'])
-@login_required
+@permission_required('view_orders')
 def autocomplete():
     """API для автодополнения."""
     query = request.args.get('q', '').strip()
@@ -62,7 +62,7 @@ def autocomplete():
 
 
 @bp.route('/api', methods=['GET'])
-@login_required
+@permission_required('view_orders')
 def search_api():
     """API для поиска."""
     query = request.args.get('q', '').strip()

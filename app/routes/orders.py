@@ -48,7 +48,7 @@ def print_logo_proxy():
     Проксирует внешний логотип, чтобы печать из about:blank не зависела
     от hotlink-ограничений стороннего сайта.
     """
-    settings = SettingsService.get_general_settings() or {}
+    settings = SettingsService.get_public_general_settings() or {}
     logo_url = (settings.get('logo_url') or '').strip()
     if not logo_url:
         return Response(status=204)
@@ -696,7 +696,7 @@ def all_orders():
         in_progress_count = status_dict.get('in_progress', 0)
         completed_count = status_dict.get('completed', 0)
         closed_count = status_dict.get('closed', 0)
-        close_print_mode = (SettingsService.get_general_settings() or {}).get('close_print_mode', 'choice')
+        close_print_mode = (SettingsService.get_public_general_settings() or {}).get('close_print_mode', 'choice')
         
         return render_template(
             'all_orders.html',
@@ -1125,25 +1125,7 @@ def order_detail(order_id):
             flash('Ошибка при загрузке данных заявки', 'error')
             return redirect(url_for('orders.all_orders'))
         
-        # Получаем справочники для формы (нужны и для POST, и для GET)
-        refs = ReferenceService.get_all_references()
-        try:
-            usage = ReferenceService.get_all_usage_counts().get('services') or {}
-            annotated = []
-            for svc in refs.get('services') or []:
-                row = dict(svc)
-                row['usage_count'] = int(usage.get(str(svc.get('id')), 0) or 0)
-                annotated.append(row)
-            annotated.sort(
-                key=lambda s: (
-                    -int(s.get('usage_count') or 0),
-                    int(s.get('sort_order') or 0),
-                    str(s.get('name') or ''),
-                )
-            )
-            refs['services'] = annotated
-        except Exception:
-            pass
+        refs = ReferenceService.get_order_card_references()
         
         # Если POST - обновление заявки
         if request.method == 'POST':
@@ -1634,8 +1616,8 @@ def order_detail(order_id):
         if order_data.get('customer') and order_data['customer'].get('phone'):
             order_data['customer']['phone_display'] = format_phone_display(order_data['customer']['phone'])
         
-        # Получаем настройки для печати
-        settings = SettingsService.get_general_settings()
+        # Получаем настройки для печати (без SMTP-пароля)
+        settings = SettingsService.get_public_general_settings()
         
         # Получаем историю заявки из action_logs
         from datetime import datetime
@@ -2460,10 +2442,10 @@ def order_detail(order_id):
             symptoms=[(s['id'], s['name'], s.get('sort_order', 0)) for s in refs.get('symptoms', [])],
             appearance_tags=[(at['id'], at['name'], at.get('sort_order', 0)) for at in refs.get('appearance_tags', [])],
             order_statuses=refs['order_statuses'],
-            services_list=refs['services'],
-            parts_list=refs.get('parts', []),
-            all_services=refs['services'],  # Для модального окна добавления услуг
-            order_models=refs.get('order_models', []),  # Модели устройств для поля "Модель"
+            services_list=[],
+            parts_list=[],
+            all_services=[],
+            order_models=[],
             order_history=order_history,  # История взаимодействий с заявкой
             history_has_more=history_has_more,
             customer_emails=NotificationService.list_order_customer_emails(order.id),
@@ -2807,7 +2789,7 @@ def api_order_print_html(order_id):
         order_data = OrderService.get_order_full_data(order.id)
         if order_data.get('customer') and order_data['customer'].get('phone'):
             order_data['customer']['phone_display'] = format_phone_display(order_data['customer']['phone'])
-        settings = SettingsService.get_general_settings()
+        settings = SettingsService.get_public_general_settings()
         bundle = render_order_print_templates(
             order=order,
             order_data=order_data,
@@ -3108,6 +3090,24 @@ def unpin_order_api(order_id):
     except Exception as e:
         logger.error("Ошибка открепления заявки %s: %s", order_id, e, exc_info=True)
         return jsonify({'success': False, 'error': 'Не удалось открепить заявку'}), 500
+
+
+@bp.route('/api/order/<int:order_id>/service-catalog', methods=['GET'])
+@login_required
+@permission_required('view_orders')
+def api_order_service_catalog(order_id):
+    """Каталог услуг для модалки карточки. Тот же RBAC, что у GET /order/<id>."""
+    try:
+        order = OrderService.get_order(order_id)
+        if not order:
+            return jsonify({'success': False, 'error': 'not_found'}), 404
+        services = ReferenceService.get_services_for_order_catalog()
+        return jsonify({'success': True, 'services': services})
+    except ValidationError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Ошибка каталога услуг заявки %s: %s", order_id, e, exc_info=True)
+        return api_internal_error(e)
 
 
 @bp.route('/api/order/<int:order_id>/delete', methods=['POST'])

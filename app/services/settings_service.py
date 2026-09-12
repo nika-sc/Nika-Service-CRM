@@ -225,6 +225,11 @@ class SettingsService:
         data = dict(SettingsService._get_general_settings_public() or {})
         data['mail_password'] = SettingsService.get_mail_password()
         return data
+
+    @staticmethod
+    def get_public_general_settings() -> Dict:
+        """Настройки для экранов без SMTP-пароля (карточка заявки, печать)."""
+        return dict(SettingsService._get_general_settings_public() or {})
     
     @staticmethod
     def save_general_settings(payload: Dict) -> bool:

@@ -620,6 +620,16 @@ def test_write_api_limit_memory(monkeypatch):
     assert allow_write(ip, 2) is False
 
 
+def test_write_throttle_covers_shop_and_finance_api(monkeypatch):
+    monkeypatch.setattr("app.utils.write_api_limit.allow_write", lambda *_a, **_k: False)
+    app = create_app(_CsrfOffConfig)
+    client = app.test_client()
+    for path in ("/shop/api/sales", "/finance/api/categories", "/warehouse/api/1"):
+        resp = client.post(path, base_url="http://127.0.0.1")
+        assert resp.status_code == 429, path
+        assert (resp.get_json() or {}).get("error") == "too_many_requests"
+
+
 def test_staff_chat_disallows_archives():
     from app.services.staff_chat_service import _ALLOWED_EXTENSIONS
 
@@ -787,8 +797,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_windows_setup_1_0_8():
+def test_latest_blog_is_security_api_access():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "windows-setup-1-0-8"
-    assert _POSTS[0]["file"] == "blog/43-windows-setup-1-0-8.md"
+    assert _POSTS[0]["slug"] == "security-api-access"
+    assert _POSTS[0]["file"] == "blog/44-security-api-access.md"

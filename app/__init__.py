@@ -250,8 +250,10 @@ def create_app(config_class=Config):
         if not _host_allowed(request.host):
             return jsonify({'success': False, 'error': 'invalid_host'}), 400
         # Базовый anti-DoS: global throttle для state-changing API
-        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and (
-            request.path.startswith('/api/') or request.path.startswith('/portal/api/')
+        from app.utils.json_api import is_json_api_path
+
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and is_json_api_path(
+            request.path
         ):
             limit = int(app.config.get('WRITE_API_RATE_LIMIT_PER_MIN', 120) or 120)
             from app.utils.request_ip import client_ip
@@ -315,8 +317,10 @@ def create_app(config_class=Config):
         if last_active and lifetime > 0 and (now - float(last_active)) > lifetime:
             logout_user()
             session.clear()
+            from app.utils.json_api import is_json_api_path
+
             path = request.path or ''
-            if path.startswith('/api/') or path.startswith('/portal/api/'):
+            if is_json_api_path(path) or path.startswith('/portal/api/'):
                 return jsonify({
                     'success': False,
                     'error': 'session_expired',

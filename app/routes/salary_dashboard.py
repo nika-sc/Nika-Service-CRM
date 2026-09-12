@@ -51,6 +51,20 @@ def check_salary_access():
     return True
 
 
+def _can_view_org_salary_aggregates(role) -> bool:
+    """Мастер видит только свой кабинет, не итоги всей фирмы."""
+    return not _is_master_role(role)
+
+
+def _empty_org_salary_aggregates():
+    return {
+        'period_totals': None,
+        'cash_reconciliation': None,
+        'profit_details': [],
+        'not_in_salary': [],
+    }
+
+
 @bp.route('')
 @login_required
 def index():
@@ -179,39 +193,42 @@ def api_get_employees():
             current_user_role=current_user.role
         )
 
-        # Итоги по заявкам (выручка и прибыль без дублирования: одна заявка = один раз)
-        period_totals = SalaryDashboardService.get_salary_period_totals(
-            date_from=date_from,
-            date_to=date_to,
-        )
-
         payload = {
             'success': True,
             'employees': employees,
-            'period_totals': period_totals,
-            'cash_reconciliation': None,
-            'profit_details': [],
-            'not_in_salary': [],
             'light': light,
         }
 
-        if not light:
-            # Тяжёлые блоки — только по полному запросу (после первого paint)
-            payload['cash_reconciliation'] = SalaryDashboardService.get_cash_reconciliation(
+        if not _can_view_org_salary_aggregates(current_user.role):
+            payload.update(_empty_org_salary_aggregates())
+        else:
+            # Итоги по заявкам (выручка и прибыль без дублирования: одна заявка = один раз)
+            period_totals = SalaryDashboardService.get_salary_period_totals(
                 date_from=date_from,
                 date_to=date_to,
-                salary_totals=period_totals,
             )
-            payload['profit_details'] = SalaryDashboardService.get_profit_details_by_orders(
-                date_from=date_from,
-                date_to=date_to,
-                limit=300,
-            )
-            payload['not_in_salary'] = SalaryDashboardService.get_not_in_salary_items(
-                date_from=date_from,
-                date_to=date_to,
-                limit=200,
-            )
+            payload['period_totals'] = period_totals
+            payload['cash_reconciliation'] = None
+            payload['profit_details'] = []
+            payload['not_in_salary'] = []
+
+            if not light:
+                # Тяжёлые блоки — только по полному запросу (после первого paint)
+                payload['cash_reconciliation'] = SalaryDashboardService.get_cash_reconciliation(
+                    date_from=date_from,
+                    date_to=date_to,
+                    salary_totals=period_totals,
+                )
+                payload['profit_details'] = SalaryDashboardService.get_profit_details_by_orders(
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=300,
+                )
+                payload['not_in_salary'] = SalaryDashboardService.get_not_in_salary_items(
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=200,
+                )
 
         logger.info(f"Found {len(employees)} employees light={light}")
 
@@ -231,6 +248,11 @@ def api_salary_extras():
         return jsonify({'success': False, 'error': 'Нет прав доступа'}), 403
 
     try:
+        if not _can_view_org_salary_aggregates(current_user.role):
+            payload = {'success': True}
+            payload.update(_empty_org_salary_aggregates())
+            return jsonify(payload)
+
         date_from = _normalize_request_date(request.args.get('date_from'))
         date_to = _normalize_request_date(request.args.get('date_to'))
 
@@ -544,6 +566,18 @@ def api_get_salary_debts():
         return jsonify({'success': False, 'error': 'Нет прав доступа'}), 403
 
     try:
+        if _is_master_role(current_user.role):
+            return jsonify({
+                'success': True,
+                'data': {
+                    'items': [],
+                    'totals': {
+                        'total_to_pay_cents': 0,
+                        'total_debt_company_cents': 0,
+                    },
+                },
+            })
+
         role = request.args.get('role')
         status = request.args.get('status', 'active')
 
