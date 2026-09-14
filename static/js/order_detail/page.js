@@ -143,7 +143,7 @@ function numericOrderId() {
         document.getElementById('loadMoreOrderHistory')?.addEventListener('click', function() {
             const btn = this;
             const next = Number(btn.dataset.page || '2');
-            const id = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : null;
+            const id = numericOrderId();
             if (!id) return;
             btn.disabled = true;
             fetch('/api/order/' + id + '/action-logs?page=' + next, { credentials: 'same-origin' })
@@ -174,7 +174,7 @@ function numericOrderId() {
         window._orderPrintBundle = window._orderPrintBundle || null;
         window.ensureOrderPrintBundle = function() {
             if (window._orderPrintBundle) return Promise.resolve(window._orderPrintBundle);
-            const id = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : null;
+            const id = numericOrderId();
             if (!id) return Promise.resolve(null);
             return fetch('/api/order/' + id + '/print-html', { credentials: 'same-origin' })
                 .then(r => r.json())
@@ -367,7 +367,7 @@ function numericOrderId() {
             const blocksEditTarget = statusDropdownItem && (statusDropdownItem.dataset.blocksEdit === '1' || statusDropdownItem.dataset.blocksEdit === 'true');
             const isFinalTarget = statusDropdownItem && (statusDropdownItem.dataset.isFinal === '1' || statusDropdownItem.dataset.isFinal === 'true');
             if ((blocksEditTarget || isFinalTarget) && window.NikaDiagnostics && window.NikaDiagnostics.guardStatusChange) {
-                const numericId = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : orderDbId;
+                const numericId = numericOrderId() || parseInt(orderDbId, 10) || orderDbId;
                 const shouldProceed = await window.NikaDiagnostics.guardStatusChange({
                     numericId: numericId,
                     orderId: orderId,
@@ -729,7 +729,7 @@ function numericOrderId() {
                 }
 
                 if (window.NikaDiagnostics && window.NikaDiagnostics.isMissingDiagnosticsError(error.message)) {
-                    const numericId = (typeof ORDER_ID !== 'undefined') ? ORDER_ID : orderDbId;
+                    const numericId = numericOrderId() || parseInt(orderDbId, 10) || orderDbId;
                     window.NikaDiagnostics.openForOrder(numericId, {
                         pendingStatus: {
                             buttonElement: buttonElement,
@@ -866,13 +866,16 @@ function numericOrderId() {
         }
 
         // Обработка услуг, запчастей и оплат
-        const orderId = ORDER_ID;
-        
         // Сохранение услуги (инициализация при загрузке DOM)
         whenDOMReady(function() {
             const saveServiceBtn = document.getElementById('saveServiceBtn');
             if (saveServiceBtn) {
                 saveServiceBtn.addEventListener('click', async function() {
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
+                    return;
+                }
                 const serviceId = parseInt(document.getElementById('serviceSelect').value);
                 const quantity = parseInt(document.getElementById('serviceQuantity').value);
                 const priceInput = document.getElementById('servicePrice').value;
@@ -980,7 +983,11 @@ function numericOrderId() {
                 return allServicesData;
             }
             try {
-                const response = await fetch('/api/order/' + ORDER_ID + '/service-catalog');
+                const catalogOrderId = numericOrderId();
+                if (!catalogOrderId) {
+                    throw new Error('Не удалось определить заявку');
+                }
+                const response = await fetch('/api/order/' + catalogOrderId + '/service-catalog');
                 if (!response.ok) {
                     throw new Error('HTTP ' + response.status);
                 }
@@ -1384,6 +1391,11 @@ function numericOrderId() {
                     showToast('Заполните все обязательные поля', 'warning');
                     return;
                 }
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
+                    return;
+                }
                 
                 try {
                     const response = await fetch(`/api/orders/${orderId}/payments`, {
@@ -1481,6 +1493,11 @@ function numericOrderId() {
 
                 if (!partId || quantity <= 0) {
                     showToast('Выберите запчасть и укажите количество', 'warning');
+                    return;
+                }
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
                     return;
                 }
 
@@ -1798,6 +1815,11 @@ function numericOrderId() {
                 // Проверяем, что сумма не превышает долг
                 if (maxDebt > 0 && amount > maxDebt) {
                     showToast(`Сумма оплаты не может превышать долг (${maxDebt.toFixed(2)} ${((window.nikaMoneySymbol && window.nikaMoneySymbol()) || '₽')})`, 'warning');
+                    return;
+                }
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
                     return;
                 }
 
@@ -2358,6 +2380,12 @@ function numericOrderId() {
                     if (paymentComment) {
                         payment.comment = paymentComment;
                     }
+                }
+
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
+                    return;
                 }
 
                 try {

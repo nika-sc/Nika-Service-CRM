@@ -12,8 +12,10 @@
 
     function orderId() {
         if (currentNumericId) return currentNumericId;
-        if (typeof ORDER_ID !== "undefined") return ORDER_ID;
-        return null;
+        if (typeof numericOrderId === "function") return numericOrderId();
+        var raw = (window.NIKA_ORDER_PAGE && window.NIKA_ORDER_PAGE.orderId) || window.ORDER_ID;
+        var id = parseInt(raw, 10);
+        return (Number.isFinite(id) && id > 0) ? id : null;
     }
 
     function statusItem(statusId) {
@@ -505,7 +507,7 @@
         var modal = document.getElementById("diagnosticsModal");
         if (openBtn) {
             openBtn.addEventListener("click", function () {
-                var id = (typeof ORDER_ID !== "undefined") ? ORDER_ID : currentNumericId;
+                var id = orderId();
                 openForOrder(id, {});
             });
         }

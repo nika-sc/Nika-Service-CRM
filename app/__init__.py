@@ -966,7 +966,22 @@ def create_app(config_class=Config):
     def inject_app_version():
         from app.version import APP_BUILD_DATE, APP_VERSION
 
-        return {"app_version": APP_VERSION, "app_build_date": APP_BUILD_DATE}
+        def static_url(filename: str) -> str:
+            """Static URL with mtime so nginx 7d cache does not keep a broken JS build."""
+            rel = (filename or "").replace("\\", "/").lstrip("/")
+            version = APP_VERSION
+            path = os.path.join(app.static_folder, *rel.split("/"))
+            try:
+                version = f"{APP_VERSION}.{int(os.path.getmtime(path))}"
+            except OSError:
+                pass
+            return url_for("static", filename=rel, v=version)
+
+        return {
+            "app_version": APP_VERSION,
+            "app_build_date": APP_BUILD_DATE,
+            "static_url": static_url,
+        }
 
     @app.context_processor
     def inject_csrf_token():

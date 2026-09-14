@@ -6,9 +6,9 @@
     <!-- TomSelect CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='cdn/tom-select/2.2.2/css/tom-select.bootstrap5.css') }}">
     <!-- Order Detail CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/order_detail.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/order_detail.css') }}">
     
-    <script src="{{ url_for('static', filename='js/order_detail/copy_clipboard.js') }}"></script>
+    <script src="{{ static_url('js/order_detail/copy_clipboard.js') }}"></script>
 
 {% endblock %}
 
@@ -2181,7 +2181,7 @@
     <!-- TomSelect (дополнительно, так как не подключен в base.html) -->
     <script src="{{ url_for('static', filename='cdn/tom-select/2.2.2/js/tom-select.complete.min.js') }}"></script>
     <!-- Utils for safe DOM manipulation -->
-    <script src="{{ url_for('static', filename='js/order_detail/api_client.js') }}"></script>
+    <script src="{{ static_url('js/order_detail/api_client.js') }}"></script>
 
     <script nonce="{{ csp_nonce() }}">
         window.NIKA_ORDER_PAGE = {
@@ -2200,7 +2200,7 @@
             canRefundPayments: {% if current_user.role == 'admin' %}true{% else %}false{% endif %}
         };
     </script>
-    <script src="{{ url_for('static', filename='js/order_detail/page_init.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/order_detail/edit_form.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/order_detail/page.js') }}"></script>
+    <script src="{{ static_url('js/order_detail/page_init.js') }}"></script>
+    <script src="{{ static_url('js/order_detail/edit_form.js') }}"></script>
+    <script src="{{ static_url('js/order_detail/page.js') }}"></script>
 {% endblock %}

@@ -90,10 +90,63 @@ def test_order_detail_template_moved_assets_out_of_html():
 
 
 def test_order_detail_page_js_does_not_post_nan_order_id():
-    page_js = (
-        Path(__file__).resolve().parents[1] / "static" / "js" / "order_detail" / "page.js"
-    ).read_text(encoding="utf-8")
-    assert "parseInt('ORDER_ID')" not in page_js
-    assert "/from-order/ORDER_ID" not in page_js
-    assert "function numericOrderId(" in page_js
-    assert "/api/orders/${orderId}/services" in page_js
+    root = Path(__file__).resolve().parents[1] / "static" / "js" / "order_detail"
+    leftovers = []
+    for path in sorted(root.glob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        if "parseInt('ORDER_ID')" in text or 'parseInt("ORDER_ID")' in text:
+            leftovers.append(f"{path.name}: parseInt('ORDER_ID')")
+        if "/from-order/ORDER_ID" in text:
+            leftovers.append(f"{path.name}: /from-order/ORDER_ID")
+        if "'ORDER_ID'" in text or '"ORDER_ID"' in text:
+            leftovers.append(f"{path.name}: quoted ORDER_ID string")
+        if "typeof ORDER_ID" in text:
+            leftovers.append(f"{path.name}: typeof ORDER_ID")
+        if "${ORDER_ID}" in text:
+            leftovers.append(f"{path.name}: ${{ORDER_ID}} interpolation")
+    assert leftovers == []
+
+
+def test_extracted_js_has_no_leftover_jinja():
+    root = Path(__file__).resolve().parents[1]
+    leftovers = []
+    for path in sorted((root / "static" / "js").rglob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        if "{{" in text and "}}" in text:
+            leftovers.append(str(path.relative_to(root)))
+    assert leftovers == []
+
+
+def test_inline_scripts_do_not_parseint_quoted_jinja_ids():
+    """parseInt('{{ order.id }}') becomes parseInt('ORDER_ID') if JS is extracted."""
+    root = Path(__file__).resolve().parents[1] / "templates"
+    import re
+
+    script_re = re.compile(r"<script(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.S | re.I)
+    bad = re.compile(r"""parseInt\(\s*['"]\{\{[^}]+\}\}['"]|parseFloat\(\s*['"]\{\{[^}]+\}\}['"]""")
+    leftovers = []
+    for path in sorted(root.rglob("*.html")):
+        text = path.read_text(encoding="utf-8")
+        for match in script_re.finditer(text):
+            if re.search(r"\bsrc\s*=", match.group("attrs"), re.I):
+                continue
+            if bad.search(match.group("body")):
+                leftovers.append(str(path.relative_to(root.parent)))
+    assert leftovers == []
+
+
+def test_order_detail_scripts_are_cache_busted():
+    html = (Path(__file__).resolve().parents[1] / "templates" / "order_detail.html").read_text(
+        encoding="utf-8"
+    )
+    assert "static_url('js/order_detail/page.js')" in html
+    assert "static_url('js/order_detail/page_init.js')" in html
+    from flask import render_template_string
+
+    from app import create_app
+
+    app = create_app(_CsrfOffConfig)
+    with app.test_request_context():
+        rendered = render_template_string("{{ static_url('js/order_detail/page.js') }}")
+    assert "order_detail/page.js" in rendered
+    assert "v=" in rendered

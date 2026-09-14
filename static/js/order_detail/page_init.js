@@ -200,10 +200,20 @@
          * @param {number|null} price - Цена (опционально)
          * @returns {Promise<Object>} - Результат операции
          */
+        function pageOrderId() {
+            const raw = (window.NIKA_ORDER_PAGE && window.NIKA_ORDER_PAGE.orderId) || window.ORDER_ID;
+            const id = parseInt(raw, 10);
+            return Number.isFinite(id) && id > 0 ? id : null;
+        }
+
         async function addItemToOrder(type, itemId, quantity = 1, price = null) {
+            const orderId = pageOrderId();
+            if (!orderId) {
+                throw new Error('Не удалось определить заявку');
+            }
             const endpoint = type === 'service' 
-                ? `/api/orders/${ORDER_ID}/services`
-                : `/api/orders/${ORDER_ID}/parts`;
+                ? `/api/orders/${orderId}/services`
+                : `/api/orders/${orderId}/parts`;
             
             const body = type === 'service'
                 ? { service_id: itemId, quantity, price }
@@ -277,7 +287,6 @@
             const commentsSidebar = document.getElementById('commentsSidebar');
             const toggleCommentsBtn = document.getElementById('toggleCommentsBtn');
             const closeCommentsBtn = document.getElementById('closeCommentsBtn');
-            const orderId = ORDER_ID;
             
             // Переключение боковой панели комментариев
             if (toggleCommentsBtn && commentsSidebar) {
@@ -316,6 +325,11 @@
                         showToast('Введите текст комментария', 'warning');
                         return;
                     }
+                    const commentOrderId = pageOrderId();
+                    if (!commentOrderId) {
+                        showToast('Не удалось определить заявку', 'error');
+                        return;
+                    }
                     
                     // Загружаем файлы, если есть
                     const attachmentIds = [];
@@ -339,7 +353,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`/api/order/${orderId}/comment`, {
+                        const response = await fetch(`/api/order/${commentOrderId}/comment`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -476,7 +490,11 @@
             
             if (hideOrderBtn) {
                 hideOrderBtn.addEventListener('click', async function() {
-                    const orderId = hideOrderBtn.getAttribute('data-order-id');
+                    const orderId = parseInt(hideOrderBtn.getAttribute('data-order-id'), 10) || pageOrderId();
+                    if (!orderId) {
+                        showToast('Не удалось определить заявку', 'error');
+                        return;
+                    }
                     const currentHidden = parseInt(hideOrderBtn.getAttribute('data-hidden') ?? '0', 10) || 0;
                     const newHidden = currentHidden === 1 ? 0 : 1;
                     
@@ -544,9 +562,14 @@
 
             if (confirmDeleteOrderBtn && deleteOrderBtn) {
                 confirmDeleteOrderBtn.addEventListener('click', async function() {
-                    const orderId = deleteOrderBtn.getAttribute('data-order-id');
+                    const orderId = parseInt(deleteOrderBtn.getAttribute('data-order-id'), 10) || pageOrderId();
                     const orderUuid = deleteOrderBtn.getAttribute('data-order-uuid');
                     const reason = (deleteOrderReasonInput?.value || '').trim();
+
+                    if (!orderId) {
+                        showToast('Не удалось определить заявку', 'error');
+                        return;
+                    }
 
                     if (!reason) {
                         showToast('Укажите причину удаления', 'warning');

@@ -69,9 +69,10 @@ const editSymptomHidden = document.getElementById('editSymptomTagsInput');
                 const form = document.getElementById('editOrderForm');
                 if (flag) flag.value = enabled ? '1' : '0';
                 if (title) {
+                    const titleOrderId = (window.NIKA_ORDER_PAGE && window.NIKA_ORDER_PAGE.orderId) || window.ORDER_ID || '';
                     title.textContent = enabled
-                        ? 'Смена исполнителей заявки #' + ORDER_ID
-                        : 'Редактирование заявки #' + ORDER_ID;
+                        ? 'Смена исполнителей заявки #' + titleOrderId
+                        : 'Редактирование заявки #' + titleOrderId;
                 }
                 if (!form) return;
                 const keepNames = new Set(['manager', 'master', 'csrf_token', 'assignees_only', 'status']);
