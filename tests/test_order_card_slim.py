@@ -87,3 +87,13 @@ def test_order_detail_template_moved_assets_out_of_html():
     assert "css/order_detail.css" in text
     assert "<style nonce" not in text
     assert len(text.encode("utf-8")) < 250_000
+
+
+def test_order_detail_page_js_does_not_post_nan_order_id():
+    page_js = (
+        Path(__file__).resolve().parents[1] / "static" / "js" / "order_detail" / "page.js"
+    ).read_text(encoding="utf-8")
+    assert "parseInt('ORDER_ID')" not in page_js
+    assert "/from-order/ORDER_ID" not in page_js
+    assert "function numericOrderId(" in page_js
+    assert "/api/orders/${orderId}/services" in page_js

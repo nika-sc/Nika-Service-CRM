@@ -1,4 +1,10 @@
 /* Extracted from templates/order_detail.html — keep in sync with NIKA_ORDER_PAGE bootstrap. */
+function numericOrderId() {
+    const raw = (window.NIKA_ORDER_PAGE && window.NIKA_ORDER_PAGE.orderId) || window.ORDER_ID;
+    const id = parseInt(raw, 10);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 // Инициализация динамического dropdown статуса
         // Пробуем несколько способов инициализации для надежности
         function initStatusDropdown() {
@@ -1733,7 +1739,13 @@
                         || document.querySelector('input[name="csrf_token"]')?.value || '';
                     createInvoiceSubmit.disabled = true;
                     try {
-                        const resp = await fetch(`/invoices/api/from-order/ORDER_ID`, {
+                        const invoiceOrderId = numericOrderId();
+                        if (!invoiceOrderId) {
+                            showToast('Не удалось определить заявку', 'error');
+                            createInvoiceSubmit.disabled = false;
+                            return;
+                        }
+                        const resp = await fetch(`/invoices/api/from-order/${invoiceOrderId}`, {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
                             body: JSON.stringify({
@@ -3205,7 +3217,8 @@
         }
 
         async function postAddItem({ type, id, name, quantity, price, cost_price, purchase_price }) {
-            const orderId = parseInt('ORDER_ID');
+            const orderId = numericOrderId();
+            if (!orderId) throw new Error('Не удалось определить заявку');
             const endpoint = type === 'service' ? `/api/orders/${orderId}/services` : `/api/orders/${orderId}/parts`;
             const payload = type === 'service'
                 ? { service_id: id || null, name: id ? null : name, quantity, price, cost_price: cost_price ?? null }
@@ -3231,7 +3244,11 @@
                 return;
                     }
                 }
-                const orderId = parseInt('ORDER_ID');
+                const orderId = numericOrderId();
+                if (!orderId) {
+                    showToast('Не удалось определить заявку', 'error');
+                    return;
+                }
                 const endpoint = item.type === 'service'
                     ? `/api/orders/${orderId}/services`
                     : `/api/orders/${orderId}/parts`;
@@ -3842,7 +3859,11 @@
                         }
                     }
 
-                    const orderId = parseInt('ORDER_ID');
+                    const orderId = numericOrderId();
+                    if (!orderId) {
+                        showToast('Не удалось определить заявку', 'error');
+                        return;
+                    }
                     const endpoint = itemType === 'service' 
                         ? `/api/orders/${orderId}/services`
                         : `/api/orders/${orderId}/parts`;
