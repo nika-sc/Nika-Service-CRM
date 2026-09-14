@@ -797,8 +797,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_security_api_access():
+def test_latest_blog_is_windows_setup_1_0_9():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "security-api-access"
-    assert _POSTS[0]["file"] == "blog/44-security-api-access.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-9"
+    assert _POSTS[0]["file"] == "blog/45-windows-setup-1-0-9.md"

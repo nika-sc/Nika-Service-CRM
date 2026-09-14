@@ -4,19 +4,23 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Published download links (1.0.8, build 2026-09-11):**
+**Current published build: 1.0.9 (2026-09-14).**
 
-- [NikaCRM-Offline-Setup-1.0.8-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.8/NikaCRM-Offline-Setup-1.0.8-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.8)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.8-x64.exe)
+See `RELEASE_NOTES_1.0.9.md`.
+
+**Published download links (1.0.9, build 2026-09-14):**
+
+- [NikaCRM-Offline-Setup-1.0.9-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.9/NikaCRM-Offline-Setup-1.0.9-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.9)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.9-x64.exe)
 
 SHA256 is written after the EXE is built (`WINDOWS_SETUP_SHA256` in `app/version.py`).
 
-**Changelog 1.0.8 (2026-09-11):** installer finishes on a clean machine, in-app update check, progress on the last wizard page, demo catalog without owner data. See `docs/blog/43-windows-setup-1-0-8.md`.
+**Changelog 1.0.9 (2026-09-14):** order card again adds services and payments (no «page not found»). See `docs/blog/45-windows-setup-1-0-9.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.8-x64.exe` (links above).
+1. Download `NikaCRM-Offline-Setup-1.0.9-x64.exe`.
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change

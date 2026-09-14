@@ -143,10 +143,10 @@ Nika CRM — веб-система для сервисного центра: з�
 
 ### 2.3. Автономная установка на Windows
 
-Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база), версия **1.0.8**, дата сборки **2026-09-11**:
+Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база), версия **1.0.9**, дата сборки **2026-09-14**:
 
-1. Скачайте [NikaCRM-Offline-Setup-1.0.8-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.8/NikaCRM-Offline-Setup-1.0.8-x64.exe)  
-   или зеркало на [service.nika-crm.ru/downloads/…](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.8-x64.exe).
+1. Скачайте [NikaCRM-Offline-Setup-1.0.9-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.9/NikaCRM-Offline-Setup-1.0.9-x64.exe)  
+   или зеркало на [service.nika-crm.ru/downloads/…](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.9-x64.exe).
 2. Запустите **от имени администратора**.
 3. После копирования файлов мастер несколько минут настраивает Python, PostgreSQL и службу (обычно 5–10 минут). Окно не закрывать — это не зависание. При ошибке журнал копируется на рабочий стол в `NikaCRM-setup-log`.
 4. Ярлык **Nika CRM — Открыть** → `http://127.0.0.1:5000`. С другого ПК в LAN: `http://<IP-этого-ПК>:5000` (доступ из сети включён по умолчанию; смените демо-пароли).
@@ -162,7 +162,7 @@ Nika CRM — веб-система для сервисного центра: з�
 
 SHA256 публикуется вместе с EXE на странице релиза.
 
-Страница релиза: [windows-setup-1.0.8](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.8).
+Страница релиза: [windows-setup-1.0.9](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.9).
 
 **Пароль PostgreSQL для pgAdmin** — не `111111` (это только демо-логины CRM). Установщик генерирует случайные пароли. Ярлык **Nika CRM — Пароль базы данных** или скрипт `packaging/windows/show-db-credentials.ps1` (нужны права администратора). Данные: `%ProgramData%\NikaCRM\installer\install-state.json` и `DATABASE_URL` в `%ProgramData%\NikaCRM\.env`.
 
@@ -170,7 +170,7 @@ SHA256 публикуется вместе с EXE на странице рели
 
 Журналы установки и работы службы — ярлык **Nika CRM — Журналы** (`%ProgramData%\NikaCRM\logs`); каталог открывается с правами администратора.
 
-Страница релиза: [windows-setup-1.0.8](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.8).
+Страница релиза: [windows-setup-1.0.9](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.9).
 
 Поддержка: [smelkov2008@yandex.ru](mailto:smelkov2008@yandex.ru), [nika-sc@bk.ru](mailto:nika-sc@bk.ru?subject=Nika-CRM%20Помощь%20по%20установке), [Telegram](https://t.me/nikaserviceadler).
 
@@ -1209,6 +1209,7 @@ CRM можно открыть как обычный сайт или **устан
 | **3.14** | **2026-09-10** | Склад: категории с панели товаров (§ 7.2), работает удаление номенклатуры и закупки, компактные колонки с закреплёнными действиями; касса: сверка по внешним приходам, возврат чека только у администратора; Windows SETUP **1.0.7** (§ 2.3); блог 41–42 |
 | **3.15** | **2026-09-11** | Windows SETUP: обновление поверх прежней версии больше не прерывается на миграциях, полное удаление с ярлыком «Удалить», резервная копия базы перед обновлением и удалением (§ 2.3) |
 | **3.16** | **2026-09-11** | Windows SETUP **1.0.8**: проверка обновлений в «О программе», настройка Python/PostgreSQL на последней странице мастера, снимок кода для отката (§ 2.3); блог 43 |
+| **3.17** | **2026-09-14** | Windows SETUP **1.0.9**: на карточке заявки снова добавляются услуги и оплаты (§ 2.3); блог 45 |
 
 ---
 

@@ -2,7 +2,7 @@
 #define VersionFileHandle FileOpen(AddBackslash(SourcePath) + "..\..\VERSION")
 #define MyAppVersion Trim(FileRead(VersionFileHandle))
 #expr FileClose(VersionFileHandle)
-#define MyAppVersionDate "2026-09-11"
+#define MyAppVersionDate "2026-09-14"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"

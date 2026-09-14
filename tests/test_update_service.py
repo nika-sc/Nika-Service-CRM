@@ -9,10 +9,11 @@ from app.services import update_service as us
 
 def test_version_compare_numeric_not_lexicographic():
     assert us.is_newer("1.0.10", "1.0.7")
+    assert us.is_newer("1.0.9", "1.0.8")
     assert us.is_newer("1.0.8", "1.0.7")
     assert not us.is_newer("1.0.7", "1.0.7")
     assert not us.is_newer("1.0.6", "1.0.7")
-    assert us.parse_version("1.0.8") == (1, 0, 8)
+    assert us.parse_version("1.0.9") == (1, 0, 9)
 
 
 def test_status_disabled_makes_no_network(monkeypatch, tmp_path):

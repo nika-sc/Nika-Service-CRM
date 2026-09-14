@@ -10,11 +10,11 @@ def test_format_blog_date_ru_time_then_day_month_year():
     assert format_blog_date_ru("") == ""
 
 
-def test_latest_blog_post_is_security_api_access():
+def test_latest_blog_post_is_windows_setup_1_0_9():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "security-api-access"
-    assert _POSTS[0]["file"] == "blog/44-security-api-access.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-9"
+    assert _POSTS[0]["file"] == "blog/45-windows-setup-1-0-9.md"
 
 
 def test_post_view_keeps_iso_and_adds_display():

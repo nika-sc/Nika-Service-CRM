@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "windows-setup-1-0-9",
+        "file": "blog/45-windows-setup-1-0-9.md",
+        "date": "2026-09-14 18:30",
+        "title": "Windows SETUP 1.0.9: заявка снова сохраняет услуги — Nika CRM",
+        "description": (
+            "14 сентября 2026: офлайн-установщик 1.0.9 — на карточке заявки снова "
+            "добавляются услуги и оплаты, без «страница не найдена»."
+        ),
+        "heading": "Windows SETUP 1.0.9",
+        "teaser": "Windows SETUP 1.0.9: на заявке снова добавляются услуги.",
+    },
+    {
         "slug": "security-api-access",
         "file": "blog/44-security-api-access.md",
         "date": "2026-09-12 22:50",
