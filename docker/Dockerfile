@@ -39,6 +39,7 @@ COPY static/ ./static/
 COPY oh-oh-icq-sound.mp3 .
 COPY wsgi.py .
 COPY run.py .
+COPY VERSION .
 COPY scripts/run_migrations.py ./scripts/
 
 RUN mkdir -p /app/database /app/logs
