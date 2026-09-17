@@ -697,6 +697,15 @@ class ReportsService:
 
                 where_sql_payments = ("WHERE " + " AND ".join(where_clauses_payments)) if where_clauses_payments else ""
                 where_sql_transactions = ("WHERE " + " AND ".join(where_clauses_transactions)) if where_clauses_transactions else ""
+                cash_eff = ""
+                try:
+                    from app.services.finance_service import cash_effective_sql
+                    cash_eff = cash_effective_sql("ct")
+                except Exception:
+                    cash_eff = (
+                        " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)"
+                        " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
+                    )
 
                 # 1. Оплаты из payments (по заявкам)
                 cursor.execute(f'''
@@ -712,9 +721,11 @@ class ReportsService:
 
                 # 2. Операции из cash_transactions (доходы и расходы)
                 if where_sql_transactions:
-                    where_sql_transactions_income = where_sql_transactions + " AND ct.transaction_type = 'income'"
+                    where_sql_transactions_income = (
+                        where_sql_transactions + " AND ct.transaction_type = 'income'" + cash_eff
+                    )
                 else:
-                    where_sql_transactions_income = "WHERE ct.transaction_type = 'income'"
+                    where_sql_transactions_income = "WHERE ct.transaction_type = 'income'" + cash_eff
                 
                 cursor.execute(f'''
                     SELECT

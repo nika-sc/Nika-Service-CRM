@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "refund-voids-cash",
+        "file": "blog/46-refund-voids-cash.md",
+        "date": "2026-09-17 22:50",
+        "title": "Возврат оплаты больше не оставляет сумму в кассе — Nika CRM",
+        "description": (
+            "17 сентября 2026: полный возврат оплаты снимает исходный приход "
+            "из кассы и сводного отчёта."
+        ),
+        "heading": "Возврат и касса",
+        "teaser": "Ошибочная оплата после возврата больше не висит в приходе кассы.",
+    },
+    {
         "slug": "windows-setup-1-0-9",
         "file": "blog/45-windows-setup-1-0-9.md",
         "date": "2026-09-14 18:30",

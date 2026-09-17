@@ -395,58 +395,15 @@ class PaymentService:
                     WHERE id = ?
                 ''', (now, reason, user_id, username, payment_id))
                 
-                # 2. Находим связанную кассовую операцию и помечаем как отменённую
-                cursor.execute('''
-                    SELECT id, category_id, amount, payment_method 
-                    FROM cash_transactions 
-                    WHERE payment_id = ? AND (is_cancelled = 0 OR is_cancelled IS NULL)
-                    LIMIT 1
-                ''', (payment_id,))
-                cash_row = cursor.fetchone()
-                
-                if cash_row:
-                    original_tx_id = cash_row[0]
-                    category_id = cash_row[1]
-                    tx_amount = float(cash_row[2])
-                    payment_method = cash_row[3]
-                    
-                    # Помечаем оригинальную операцию как отменённую
-                    cursor.execute('''
-                        UPDATE cash_transactions SET 
-                            is_cancelled = 1,
-                            cancelled_at = ?,
-                            cancelled_reason = ?,
-                            cancelled_by_id = ?,
-                            cancelled_by_username = ?
-                        WHERE id = ?
-                    ''', (now, reason, user_id, username, original_tx_id))
-                    
-                    # 3. Создаём сторно-операцию (отрицательная сумма для компенсации)
-                    storno_description = f"СТОРНО: Отмена оплаты по заявке #{order_number}"
-                    if client_name:
-                        storno_description += f" ({client_name})"
-                    if reason:
-                        storno_description += f". Причина: {reason}"
-                    
-                    # Используем FinanceService для создания сторно-операции (внутренний метод для работы с существующим cursor)
-                    from app.services.finance_service import FinanceService
-                    FinanceService._create_transaction_with_cursor(
-                        cursor=cursor,
-                        amount=tx_amount,
-                        transaction_type='expense',
-                        category_id=category_id,
-                        payment_method=payment_method,
-                        description=storno_description,
-                        order_id=order_id,
-                        # payment_id уникален в cash_transactions, поэтому у сторно он должен быть пустым
-                        payment_id=None,
-                        transaction_date=get_moscow_now().date().isoformat(),
-                        created_by_id=user_id,
-                        created_by_username=username,
-                        storno_of_id=original_tx_id
-                    )
-                    
-                    logger.info(f"Создана сторно-операция для отмены оплаты {payment_id}")
+                # 2. Снимаем связанные кассовые проводки (soft-cancel + сторно)
+                from app.services.finance_service import FinanceService, clear_cash_related_caches
+                FinanceService.void_cash_transactions_for_payment(
+                    payment_id,
+                    reason=reason,
+                    user_id=user_id,
+                    username=username,
+                    cursor=cursor,
+                )
                 
                 conn.commit()
                 
@@ -471,10 +428,9 @@ class PaymentService:
                 except Exception as e:
                     logger.warning(f"Не удалось залогировать отмену оплаты: {e}")
                 
-                # Очищаем кэш
                 from app.utils.cache import clear_cache
                 clear_cache(key_prefix='order')
-                clear_cache(key_prefix='finance')
+                clear_cash_related_caches()
 
                 try:
                     from app.services.salary_service import SalaryService
@@ -506,10 +462,12 @@ class PaymentService:
         create_cash_transaction: bool = True
     ) -> int:
         """
-        Создаёт возврат (refund) как отдельную запись payments(kind='refund') и кассовый расход.
+        Создаёт возврат (refund) как отдельную запись payments(kind='refund').
 
-        Возврат НЕ удаляет исходную оплату и не делает сторно исходной кассовой операции.
-        Это отдельная финансовая операция.
+        Полный возврат снимает исходный приход в кассе (как сторно продажи в магазине),
+        чтобы сумма ошибочной оплаты не оставалась в «Приходе» и сводном отчёте.
+        Частичный возврат по-прежнему пишет расход на возвращённую сумму.
+        Возврат НЕ удаляет исходную строку оплаты.
         """
         if not original_payment_id or original_payment_id <= 0:
             raise ValidationError("Неверный ID исходной оплаты")
@@ -635,18 +593,47 @@ class PaymentService:
                 )
                 refund_payment_id = int(cursor.lastrowid)
 
-                # Кассовый расход создаём только если это реальный возврат денег.
-                # Для "возврата в депозит клиента" cash out не нужен.
-                if create_cash_transaction:
-                    from app.services.finance_service import FinanceService
+                from app.services.finance_service import FinanceService, clear_cash_related_caches
+                total_refunded = already_refunded + amount
+                full_refund = total_refunded + 0.009 >= original_amount
+
+                if create_cash_transaction and full_refund:
+                    FinanceService.void_cash_transactions_for_payment(
+                        original_payment_id,
+                        reason=str(reason).strip(),
+                        user_id=user_id,
+                        username=username,
+                        cursor=cursor,
+                    )
+                    refund_ids = [refund_payment_id]
+                    if has_refunded_of and has_kind:
+                        cursor.execute(
+                            """
+                            SELECT id FROM payments
+                            WHERE refunded_of_id = ?
+                              AND kind = 'refund'
+                              AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                            """,
+                            (original_payment_id,),
+                        )
+                        refund_ids = [
+                            int(r[0] if not hasattr(r, "keys") else r["id"])
+                            for r in cursor.fetchall()
+                        ]
+                    for rid in refund_ids:
+                        FinanceService.void_cash_transactions_for_payment(
+                            rid,
+                            reason=str(reason).strip(),
+                            user_id=user_id,
+                            username=username,
+                            cursor=cursor,
+                        )
+                    conn.commit()
+                elif create_cash_transaction:
                     payment_method_map = {"cash": "cash", "card": "card", "transfer": "transfer"}
                     payment_method = payment_method_map.get(payment_type, "cash")
-
-                    # Дата возврата — сегодня по Москве
                     transaction_date = get_moscow_now_str('%Y-%m-%d')
-
-                    conn.commit()  # до вызова сервиса
-
+                    conn.commit()
                     FinanceService.create_transaction(
                         amount=amount,
                         transaction_type="expense",
@@ -684,8 +671,9 @@ class PaymentService:
                     logger.warning(f"Не удалось залогировать возврат: {e}")
 
                 from app.utils.cache import clear_cache
+                from app.services.finance_service import clear_cash_related_caches
                 clear_cache(key_prefix="order")
-                clear_cache(key_prefix="finance")
+                clear_cash_related_caches()
 
                 try:
                     from app.services.salary_service import SalaryService
@@ -729,6 +717,73 @@ class PaymentService:
             user_id=user_id,
             username=username
         )
+
+    @staticmethod
+    def reconcile_full_refund_cash(
+        original_payment_id: Optional[int] = None,
+        order_id: Optional[int] = None,
+        user_id: int = None,
+        username: str = None,
+        reason: str = "Сверка: полный возврат снимает исходный приход",
+    ) -> int:
+        """
+        Для уже сделанных полных возвратов снимает живой исходный приход
+        и расход «Возврат по заявке», чтобы приход кассы не держал ошибочную сумму.
+        """
+        from app.services.finance_service import FinanceService, clear_cash_related_caches
+
+        voided = 0
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(payments)")
+            cols = [r[1] for r in cursor.fetchall()]
+            if "kind" not in cols or "refunded_of_id" not in cols:
+                return 0
+
+            where = ["p.kind IN ('payment', 'deposit')", "(p.is_cancelled = 0 OR p.is_cancelled IS NULL)"]
+            params: list = []
+            if original_payment_id:
+                where.append("p.id = ?")
+                params.append(int(original_payment_id))
+            if order_id:
+                where.append("p.order_id = ?")
+                params.append(int(order_id))
+            cursor.execute(
+                f"""
+                SELECT p.id, p.amount
+                FROM payments p
+                WHERE {" AND ".join(where)}
+                """,
+                tuple(params),
+            )
+            originals = [(int(r[0]), float(r[1] or 0)) for r in cursor.fetchall()]
+            for orig_id, orig_amount in originals:
+                cursor.execute(
+                    """
+                    SELECT id, amount
+                    FROM payments
+                    WHERE refunded_of_id = ?
+                      AND kind = 'refund'
+                      AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                    """,
+                    (orig_id,),
+                )
+                refunds = [(int(r[0]), float(r[1] or 0)) for r in cursor.fetchall()]
+                refunded_sum = sum(a for _, a in refunds)
+                if not refunds or refunded_sum + 0.009 < orig_amount:
+                    continue
+                voided += FinanceService.void_cash_transactions_for_payment(
+                    orig_id, reason=reason, user_id=user_id, username=username, cursor=cursor
+                )
+                for rid, _ in refunds:
+                    voided += FinanceService.void_cash_transactions_for_payment(
+                        rid, reason=reason, user_id=user_id, username=username, cursor=cursor
+                    )
+            conn.commit()
+        from app.utils.cache import clear_cache
+        clear_cache(key_prefix="order")
+        clear_cash_related_caches()
+        return voided
     
     @staticmethod
     def get_payment_statistics(

@@ -945,7 +945,11 @@ class DashboardService:
         with get_db_connection(row_factory=sqlite3.Row) as conn:
             cur = conn.cursor()
             has_cancelled = _has_column(cur, "cash_transactions", "is_cancelled")
-            not_cancelled = " AND (ct.is_cancelled = 0 OR ct.is_cancelled IS NULL)" if has_cancelled else ""
+            try:
+                from app.services.finance_service import cash_effective_sql
+                not_cancelled = cash_effective_sql("ct")
+            except Exception:
+                not_cancelled = " AND (ct.is_cancelled = 0 OR ct.is_cancelled IS NULL)" if has_cancelled else ""
 
             def fetch(d_from: str, d_to: str) -> Dict[str, Any]:
                 cur.execute(

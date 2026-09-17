@@ -17,6 +17,9 @@ import re
 logger = logging.getLogger(__name__)
 
 
+_CASH_ALIAS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
 def _cash_next_day(date_str: Optional[str]) -> Optional[str]:
     """Следующий календарный день (для полуоткрытого интервала [from, to+1))."""
     if not date_str:
@@ -25,6 +28,36 @@ def _cash_next_day(date_str: Optional[str]) -> Optional[str]:
         return (datetime.strptime(str(date_str)[:10], "%Y-%m-%d").date() + timedelta(days=1)).isoformat()
     except Exception:
         return None
+
+
+def cash_effective_sql(alias: str = "ct") -> str:
+    """Только живые кассовые операции: без отменённых, без сторно и без исходных, по которым уже есть сторно."""
+    alias = (alias or "").strip()
+    if alias and not _CASH_ALIAS_RE.match(alias):
+        raise ValueError("invalid cash SQL alias")
+    col = f"{alias}." if alias else ""
+    row_id = f"{alias}.id" if alias else "id"
+    return (
+        f" AND ({col}is_cancelled IS NULL OR {col}is_cancelled = 0)"
+        f" AND ({col}storno_of_id IS NULL OR {col}storno_of_id = 0)"
+        f" AND NOT EXISTS (SELECT 1 FROM cash_transactions sx WHERE sx.storno_of_id = {row_id})"
+    )
+
+
+def clear_cash_related_caches() -> None:
+    """Сброс кэша кассы, сводного отчёта и отчёта «Касса»."""
+    for prefix in (
+        "finance",
+        "cash_summary",
+        "dashboard_full",
+        "dashboard_company_summary",
+        "reports_cash",
+        "reports_categories",
+    ):
+        try:
+            clear_cache(key_prefix=prefix)
+        except Exception:
+            pass
 
 
 class FinanceService:
@@ -541,7 +574,7 @@ class FinanceService:
                 logger.warning(f"Не удалось залогировать создание кассовой операции: {e}")
             
             try:
-                clear_cache(key_prefix='cash_summary')
+                clear_cash_related_caches()
             except Exception:
                 pass
             return transaction_id
@@ -649,6 +682,152 @@ class FinanceService:
             created_by_id, created_by_username, storno_of_id
         ))
         return cursor.lastrowid
+
+    @staticmethod
+    def void_cash_tx_with_cursor(
+        cursor,
+        tx_id: int,
+        reason: str = None,
+        user_id: int = None,
+        username: str = None,
+    ) -> bool:
+        """
+        Снимает проводку с кассы: soft-cancel + сторно (не входит в приход/расход).
+        Сторно без payment_id — UNIQUE по payment_id иначе не даст вторую строку.
+        """
+        if not tx_id:
+            return False
+        cursor.execute(
+            """
+            SELECT id, category_id, amount, transaction_type, payment_method,
+                   description, order_id,
+                   COALESCE(is_cancelled, 0) AS is_cancelled,
+                   storno_of_id
+            FROM cash_transactions
+            WHERE id = ?
+            """,
+            (int(tx_id),),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return False
+        if hasattr(row, "keys"):
+            tx = dict(row)
+        else:
+            tx = {
+                "id": row[0],
+                "category_id": row[1],
+                "amount": row[2],
+                "transaction_type": row[3],
+                "payment_method": row[4],
+                "description": row[5],
+                "order_id": row[6],
+                "is_cancelled": row[7],
+                "storno_of_id": row[8],
+            }
+        if int(tx.get("is_cancelled") or 0):
+            return False
+        if tx.get("storno_of_id"):
+            return False
+        cursor.execute(
+            "SELECT id FROM cash_transactions WHERE storno_of_id = ? LIMIT 1",
+            (tx["id"],),
+        )
+        if cursor.fetchone():
+            cursor.execute(
+                """
+                UPDATE cash_transactions SET
+                    is_cancelled = 1,
+                    cancelled_at = ?,
+                    cancelled_reason = ?,
+                    cancelled_by_id = ?,
+                    cancelled_by_username = ?
+                WHERE id = ? AND (is_cancelled IS NULL OR is_cancelled = 0)
+                """,
+                (
+                    get_moscow_now_str(),
+                    reason,
+                    user_id,
+                    username,
+                    tx["id"],
+                ),
+            )
+            return cursor.rowcount > 0
+
+        now = get_moscow_now_str()
+        cursor.execute(
+            """
+            UPDATE cash_transactions SET
+                is_cancelled = 1,
+                cancelled_at = ?,
+                cancelled_reason = ?,
+                cancelled_by_id = ?,
+                cancelled_by_username = ?
+            WHERE id = ?
+            """,
+            (now, reason, user_id, username, tx["id"]),
+        )
+        original_type = (tx.get("transaction_type") or "income").strip() or "income"
+        storno_type = "expense" if original_type == "income" else "income"
+        desc = (tx.get("description") or "").strip() or f"#{tx['id']}"
+        storno_description = f"СТОРНО: {desc}"
+        if reason:
+            storno_description += f" (причина: {reason})"
+        FinanceService._create_transaction_with_cursor(
+            cursor=cursor,
+            amount=float(tx.get("amount") or 0),
+            transaction_type=storno_type,
+            category_id=tx.get("category_id"),
+            payment_method=tx.get("payment_method") or "cash",
+            description=storno_description,
+            order_id=tx.get("order_id"),
+            payment_id=None,
+            transaction_date=get_moscow_now().date().isoformat(),
+            created_by_id=user_id,
+            created_by_username=username,
+            storno_of_id=tx["id"],
+        )
+        return True
+
+    @staticmethod
+    def void_cash_transactions_for_payment(
+        payment_id: int,
+        reason: str = None,
+        user_id: int = None,
+        username: str = None,
+        cursor=None,
+    ) -> int:
+        """Снимает все живые кассовые проводки, привязанные к оплате."""
+        if not payment_id:
+            return 0
+
+        def _run(cur) -> int:
+            cur.execute(
+                """
+                SELECT id
+                FROM cash_transactions
+                WHERE payment_id = ?
+                  AND (is_cancelled IS NULL OR is_cancelled = 0)
+                  AND (storno_of_id IS NULL OR storno_of_id = 0)
+                """,
+                (int(payment_id),),
+            )
+            ids = [int(r[0] if not hasattr(r, "keys") else r["id"]) for r in cur.fetchall()]
+            voided = 0
+            for tx_id in ids:
+                if FinanceService.void_cash_tx_with_cursor(
+                    cur, tx_id, reason=reason, user_id=user_id, username=username
+                ):
+                    voided += 1
+            return voided
+
+        if cursor is not None:
+            return _run(cursor)
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            n = _run(cur)
+            conn.commit()
+            return n
     
     @staticmethod
     @handle_service_error
@@ -686,7 +865,7 @@ class FinanceService:
                 LEFT JOIN masters m ON m.id = sp.user_id AND sp.role = 'master'
                 LEFT JOIN managers mg ON mg.id = sp.user_id AND sp.role = 'manager'
                 WHERE 1=1
-            '''
+            ''' + cash_effective_sql("ct")
             params = []
             
             if date_from:
@@ -737,24 +916,13 @@ class FinanceService:
             cursor = conn.cursor()
             
             # Эффективные операции: не отменены, не сторно-записи, и не исходные по которым есть сторно
-            cancelled_col = 'is_cancelled' in [c[1] for c in cursor.execute("PRAGMA table_info(cash_transactions)").fetchall()]
-            not_storned = (
-                " AND NOT EXISTS ("
-                "SELECT 1 FROM cash_transactions sx WHERE sx.storno_of_id = {alias}.id"
-                ")"
-            )
-            effective_filter = " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)" if cancelled_col else ""
-            effective_filter += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
-            effective_filter += not_storned.format(alias="ct")
-            
+            effective_filter = cash_effective_sql("ct")
+            open_eff = cash_effective_sql("")
             date_from_bound = str(date_from)[:10] if date_from else None
             date_to_exclusive = _cash_next_day(date_to)
 
             # Рассчитываем остаток на начало периода (до date_from)
             opening_balance = 0.0
-            open_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
-            open_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
-            open_eff += not_storned.format(alias="cash_transactions")
             if date_from_bound:
                 cursor.execute(f'''
                     SELECT 
@@ -802,9 +970,7 @@ class FinanceService:
                 params.append(date_to_exclusive)
             
             # Общие суммы за период
-            base_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
-            base_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
-            base_eff += not_storned.format(alias="cash_transactions")
+            base_eff = cash_effective_sql("")
             cursor.execute(f'''
                 SELECT 
                     transaction_type,
@@ -886,13 +1052,7 @@ class FinanceService:
                 balance_by_method[m] = ob + t["income"] - t["expense"]
 
             # Перевод между кассами — внутренний виртуальный, не считаем в приход/расход
-            internal_eff = " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)" if cancelled_col else ""
-            internal_eff += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
-            internal_eff += (
-                " AND NOT EXISTS ("
-                "SELECT 1 FROM cash_transactions sx WHERE sx.storno_of_id = ct.id"
-                ")"
-            )
+            internal_eff = cash_effective_sql("ct")
             internal_date = date_filter_ct
             internal_params = list(params)
             cursor.execute(
@@ -981,10 +1141,7 @@ class FinanceService:
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cancelled_col = 'is_cancelled' in [c[1] for c in cursor.execute("PRAGMA table_info(cash_transactions)").fetchall()]
-            base_eff = " AND (is_cancelled IS NULL OR is_cancelled = 0)" if cancelled_col else ""
-            base_eff += " AND (storno_of_id IS NULL OR storno_of_id = 0)"
-            base_eff += " AND id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
+            base_eff = cash_effective_sql("")
             date_filter = ""
             params: List[Any] = []
             if date_from:
@@ -1139,7 +1296,7 @@ class FinanceService:
                 logger.warning(f"Не удалось залогировать отмену операции: {e}")
             
             try:
-                clear_cache(key_prefix='cash_summary')
+                clear_cash_related_caches()
             except Exception:
                 pass
             return True
@@ -2250,14 +2407,7 @@ class FinanceService:
                 params.append(date_to)
             
             # Исключаем отменённые и сторнированные транзакции (как на странице кассы)
-            cursor.execute("PRAGMA table_info(cash_transactions)")
-            cols = [c[1] for c in cursor.fetchall()]
-            eff_filter = ""
-            if 'is_cancelled' in cols:
-                eff_filter += " AND (ct.is_cancelled IS NULL OR ct.is_cancelled = 0)"
-            if 'storno_of_id' in cols:
-                eff_filter += " AND (ct.storno_of_id IS NULL OR ct.storno_of_id = 0)"
-                eff_filter += " AND ct.id NOT IN (SELECT storno_of_id FROM cash_transactions WHERE storno_of_id IS NOT NULL AND storno_of_id != 0)"
+            eff_filter = cash_effective_sql("ct")
 
             # Внутренние переводы не считаем ни в доходах, ни в расходах (виртуальное движение между кассами).
             # Разовая себестоимость заявки — это COGS, не операционный расход (иначе двойной вычет).
