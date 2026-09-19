@@ -82,7 +82,9 @@ class OrderService:
     @monitor_db_query(threshold=1.0)
     def get_orders_with_details(filters: Optional[OrderFiltersDict] = None, 
                                 page: int = 1, 
-                                per_page: int = 50) -> Paginator:
+                                per_page: int = 50,
+                                sort_by: str = 'created_at',
+                                sort_order: str = 'DESC') -> Paginator:
         """
         Получает список заявок с деталями (оптимизированный запрос).
         
@@ -100,6 +102,8 @@ class OrderService:
                 - hidden: фильтр по скрытости (int, 0 или 1)
             page: Номер страницы (начинается с 1)
             per_page: Количество элементов на странице
+            sort_by: Поле сортировки (по умолчанию created_at)
+            sort_order: ASC или DESC
             
         Returns:
             Paginator с заявками и метаданными пагинации
@@ -112,7 +116,9 @@ class OrderService:
         if per_page < 1:
             raise ValidationError("Количество элементов на странице должно быть >= 1")
         
-        result = OrderQueries.get_orders_with_all_details(filters, page, per_page)
+        result = OrderQueries.get_orders_with_all_details(
+            filters, page, per_page, sort_by=sort_by, sort_order=sort_order
+        )
         return Paginator(
             items=result['items'],
             page=result['page'],
@@ -2187,18 +2193,46 @@ class OrderService:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
 
-                # Блокируем удаление, если есть активные оплаты.
-                cursor.execute('''
-                    SELECT COUNT(*)
-                    FROM payments
-                    WHERE order_id = ?
-                      AND (is_cancelled = 0 OR is_cancelled IS NULL)
-                ''', (order_id,))
-                active_payments = int((cursor.fetchone() or [0])[0] or 0)
-                if active_payments > 0:
-                    raise ValidationError(
-                        "Нельзя удалить заявку с активными оплатами. Сначала отмените оплаты, затем удалите заявку."
+                # Refund does not set is_cancelled; it inserts kind=refund.
+                # Block delete only when net captured amount is still non-zero.
+                cursor.execute("PRAGMA table_info(payments)")
+                pay_cols = [r[1] for r in cursor.fetchall()]
+                if "kind" in pay_cols:
+                    cursor.execute(
+                        """
+                        SELECT COALESCE(SUM(
+                            CASE
+                                WHEN kind = 'refund' THEN -ABS(amount)
+                                ELSE ABS(amount)
+                            END
+                        ), 0)
+                        FROM payments
+                        WHERE order_id = ?
+                          AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                        """,
+                        (order_id,),
                     )
+                    net_paid = float((cursor.fetchone() or [0])[0] or 0)
+                    if abs(net_paid) > 0.009:
+                        raise ValidationError(
+                            "Нельзя удалить заявку, пока по ней есть невозвращённые оплаты. "
+                            "Оформите полный возврат, затем удалите заявку."
+                        )
+                else:
+                    cursor.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM payments
+                        WHERE order_id = ?
+                          AND (is_cancelled = 0 OR is_cancelled IS NULL)
+                        """,
+                        (order_id,),
+                    )
+                    active_payments = int((cursor.fetchone() or [0])[0] or 0)
+                    if active_payments > 0:
+                        raise ValidationError(
+                            "Нельзя удалить заявку с активными оплатами. Сначала отмените оплаты, затем удалите заявку."
+                        )
 
                 now_moscow = get_moscow_now_str()
                 cursor.execute('''

@@ -797,8 +797,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_refund_voids_cash():
+def test_latest_blog_is_workshop_kanban():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "refund-voids-cash"
-    assert _POSTS[0]["file"] == "blog/46-refund-voids-cash.md"
+    assert _POSTS[0]["slug"] == "workshop-kanban"
+    assert _POSTS[0]["file"] == "blog/47-workshop-kanban.md"

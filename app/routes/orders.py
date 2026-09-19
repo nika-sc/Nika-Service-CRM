@@ -9,7 +9,7 @@ from app.routes.main import permission_required
 from typing import Optional
 import logging
 import html as _html
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Импорты сервисов
 from app.services.order_service import OrderService
@@ -557,6 +557,159 @@ def _parse_all_orders_status(raw) -> Optional[str]:
     return value
 
 
+_KANBAN_MAX_ORDERS = 150
+_KANBAN_AGE_FRESH_MAX = 3
+_KANBAN_AGE_WARN_MAX = 6
+_KANBAN_AGE_LATE_MAX = 13
+_KANBAN_AGE_TONES = frozenset(('fresh', 'warn', 'late', 'overdue'))
+_KANBAN_AGE_TONE_LABELS = {
+    'fresh': 'свежая',
+    'warn': 'внимание',
+    'late': 'задержка',
+    'overdue': 'просрочка',
+}
+
+
+def _kanban_is_final_status(status: dict) -> bool:
+    return int(status.get('is_final') or 0) != 0
+
+
+def _kanban_is_unclaimed_status(status: dict) -> bool:
+    return 'незабираш' in (status.get('name') or '').lower()
+
+
+def _kanban_status_id(status: dict) -> Optional[int]:
+    try:
+        return int(status.get('id'))
+    except (TypeError, ValueError):
+        return None
+
+
+def _kanban_column_statuses(order_statuses, status_filter, orders):
+    """Колонки доски: для «в работе» пустые нефинальные этапы остаются."""
+    statuses = list(order_statuses or [])
+    present_ids = set()
+    for order in orders or []:
+        try:
+            present_ids.add(int(order.get('status_id')))
+        except (TypeError, ValueError):
+            continue
+
+    if status_filter and status_filter != 'in_progress':
+        matched = []
+        needle = str(status_filter)
+        for status in statuses:
+            sid = _kanban_status_id(status)
+            code = str(status.get('code') or '')
+            if code == needle or (sid is not None and str(sid) == needle):
+                matched.append(status)
+        return matched
+
+    columns = []
+    for status in statuses:
+        sid = _kanban_status_id(status)
+        archived = int(status.get('is_archived') or 0) != 0
+        if archived and sid not in present_ids:
+            continue
+        is_pipeline = (
+            not _kanban_is_final_status(status)
+            and not _kanban_is_unclaimed_status(status)
+        )
+        if status_filter == 'in_progress':
+            if is_pipeline:
+                columns.append(status)
+            continue
+        if is_pipeline or sid in present_ids:
+            columns.append(status)
+    return columns
+
+
+def _order_age_days(created_at) -> Optional[int]:
+    dt = _parse_customer_search_datetime(created_at)
+    if not dt:
+        return None
+    return max(0, (get_moscow_now().date() - dt.date()).days)
+
+
+def _kanban_age_tone(age_days: Optional[int]) -> str:
+    """Цвет карточки по возрасту заявки: fresh / warn / late / overdue."""
+    if age_days is None:
+        return 'unknown'
+    days = int(age_days)
+    if days <= _KANBAN_AGE_FRESH_MAX:
+        return 'fresh'
+    if days <= _KANBAN_AGE_WARN_MAX:
+        return 'warn'
+    if days <= _KANBAN_AGE_LATE_MAX:
+        return 'late'
+    return 'overdue'
+
+
+def _kanban_device_line(order: dict) -> str:
+    parts = []
+    for key in ('device_type', 'device_brand', 'model'):
+        value = str(order.get(key) or '').strip()
+        if value and value != '—':
+            parts.append(value)
+    return ' '.join(parts) or '—'
+
+
+def _first_symptom(raw) -> str:
+    if not raw:
+        return ''
+    for part in str(raw).split(','):
+        tag = part.strip()
+        if tag and tag not in ('None', 'null', '—'):
+            return tag
+    return ''
+
+
+def _enrich_kanban_orders(orders):
+    items = list(orders or [])
+    ids = []
+    for order in items:
+        try:
+            ids.append(int(order.get('id')))
+        except (TypeError, ValueError):
+            continue
+    totals = OrderQueries.get_orders_totals_batch(ids) if ids else {}
+    for order in items:
+        try:
+            oid = int(order.get('id'))
+        except (TypeError, ValueError):
+            oid = None
+        row = totals.get(oid) or {}
+        order['total_paid'] = float(row.get('paid') or 0)
+        order['debt'] = float(row.get('debt') or 0)
+        age = _order_age_days(order.get('created_at'))
+        tone = _kanban_age_tone(age)
+        order['age_days'] = age
+        order['age_tone'] = tone if tone in _KANBAN_AGE_TONES else 'unknown'
+        order['age_tone_label'] = _KANBAN_AGE_TONE_LABELS.get(order['age_tone'], '')
+        order['is_overdue'] = order['age_tone'] in ('late', 'overdue')
+        order['device_line'] = _kanban_device_line(order)
+        order['symptom_one'] = _first_symptom(order.get('symptom_tags'))
+        master = str(order.get('master') or order.get('master_name') or '').strip()
+        order['master_label'] = '' if (not master or master == '—') else master
+    return items
+
+
+def _build_kanban_columns(column_statuses, orders):
+    by_sid = defaultdict(list)
+    for order in orders or []:
+        try:
+            by_sid[int(order.get('status_id'))].append(order)
+        except (TypeError, ValueError):
+            continue
+    columns = []
+    for status in column_statuses or []:
+        sid = _kanban_status_id(status)
+        if sid is None:
+            continue
+        columns.append({'status': status, 'orders': by_sid.get(sid, [])})
+    return columns
+
+
 @bp.route('/all_orders')
 @login_required
 @permission_required('view_orders')
@@ -610,38 +763,38 @@ def all_orders():
         if date_to:
             filters['date_to'] = date_to
         
+        kanban_total = 0
+        kanban_shown = 0
+        kanban_columns = []
+
         # Получаем заявки
         if view == 'registry':
             orders = []
             paginator = None
         elif view == 'kanban':
-            # Канбан: по умолчанию только последние 7 дней (иначе HTML/TTFB раздуваются).
-            # Явные date_from/date_to из формы сохраняются.
-            today = get_moscow_now().date()
-            if not date_from:
-                date_from = (today - timedelta(days=6)).isoformat()
-                filters['date_from'] = date_from
-            if not date_to:
-                date_to = today.isoformat()
-                filters['date_to'] = date_to
-            _kanban_max_orders = 150
+            # Потолок 150: самые старые «в работе», без авто-окна 7 дней.
             total = OrderQueries.count_orders(filters if filters else None)
-            if total <= 0:
+            kanban_total = int(total or 0)
+            if kanban_total <= 0:
                 from app.utils.pagination import Paginator
-                paginator = Paginator([], page=1, per_page=_kanban_max_orders, total=0)
+                paginator = Paginator([], page=1, per_page=_KANBAN_MAX_ORDERS, total=0)
                 orders = []
             else:
-                take = min(total, _kanban_max_orders)
-                paginator = OrderService.get_orders_with_details(filters, 1, take)
-                orders = paginator.items
+                take = min(kanban_total, _KANBAN_MAX_ORDERS)
+                paginator = OrderService.get_orders_with_details(
+                    filters, 1, take, sort_by='created_at', sort_order='ASC'
+                )
+                orders = _enrich_kanban_orders(paginator.items)
+            kanban_shown = len(orders)
         else:
             paginator = OrderService.get_orders_with_details(filters, page, per_page)
             orders = paginator.items
         
-        # Форматируем телефоны для отображения
-        for order in orders:
-            if 'phone' in order:
-                order['phone_display'] = format_phone_display(order['phone'])
+        # Форматируем телефоны для отображения (реестр/журнал; канбан их не показывает)
+        if view != 'kanban':
+            for order in orders:
+                if 'phone' in order:
+                    order['phone_display'] = format_phone_display(order['phone'])
         
         # Справочники списка без parts/services (кэшированные get_*)
         refs = ReferenceService.get_orders_list_references()
@@ -665,6 +818,8 @@ def all_orders():
                     s['id'],
                 )
             )
+            column_statuses = _kanban_column_statuses(order_statuses, status_filter, orders)
+            kanban_columns = _build_kanban_columns(column_statuses, orders)
         # Конвертируем в кортежи для шаблона
         managers = [(m['id'], m['name']) for m in refs.get('managers', [])]
         masters = [(m['id'], m['name']) for m in refs.get('masters', [])]
@@ -731,6 +886,9 @@ def all_orders():
             total=paginator.total if paginator else 0,
             pages=paginator.pages if paginator else 1,
             close_print_mode=close_print_mode,
+            kanban_total=kanban_total,
+            kanban_shown=kanban_shown,
+            kanban_columns=kanban_columns,
         )
     except Exception as e:
         logger.error(f"Ошибка при получении списка заявок: {e}", exc_info=True)

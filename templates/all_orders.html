@@ -13,6 +13,9 @@
 {% endblock %}
 
 {% block styles %}
+    {% if view == 'kanban' %}
+    <link rel="stylesheet" href="{{ static_url('css/orders-kanban.css') }}">
+    {% endif %}
     <style>
 
         .order-row {
@@ -56,78 +59,6 @@
             transform: translateY(-50%);
             font-size: 0.8em;
             opacity: 0.7;
-        }
-
-        .kanban-card {
-            border-left: 4px solid transparent;
-            border-radius: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .kanban-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-            border-left-color: var(--bs-primary);
-        }
-
-        .theme-dark .kanban-card:hover {
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-        }
-
-        /* Канбан: узкие колонки и компактные карточки под ширину экрана */
-        .kanban-board {
-            --kanban-col-max-h: min(72vh, 640px);
-        }
-        .kanban-board > [class*="col-"] {
-            min-width: 0;
-        }
-        .kanban-board .kanban-column .card-header {
-            padding: 0.35rem 0.5rem;
-        }
-        .kanban-board .kanban-column .card-header .card-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0;
-            line-height: 1.25;
-            word-break: break-word;
-        }
-        .kanban-board .kanban-column-scroll {
-            min-height: 120px;
-            max-height: var(--kanban-col-max-h);
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        .kanban-board .kanban-card {
-            font-size: 0.78rem;
-            border-radius: 10px;
-        }
-        .kanban-board .kanban-card .card-body {
-            padding: 0.4rem 0.45rem !important;
-        }
-        .kanban-board .kanban-card .status-indicator {
-            width: 7px;
-            height: 7px;
-            min-width: 7px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .kanban-board .kanban-card .badge {
-            font-size: 0.65rem;
-            font-weight: 500;
-            padding: 0.2em 0.4em;
-        }
-        .kanban-board .kanban-card .text-muted {
-            font-size: 0.75rem !important;
-        }
-        .kanban-board .symptom-tags {
-            gap: 2px;
-        }
-        .kanban-board .symptom-tag {
-            font-size: 0.62rem;
-            padding: 1px 4px;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .preview-label {
@@ -848,202 +779,108 @@
                         </div>
                     </div>
                     {% elif view == 'kanban' %}
-                    <!-- КАНБАН -->
-                    <div class="row">
-                        <div class="col-12">
-                            <!-- Форма фильтров и поиск -->
-                            <div class="card mb-3">
-                                <div class="card-body py-2">
-                                    <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <!-- Кнопка слева -->
-                                        <div class="flex-shrink-0">
-                                            <a href="/add_order" class="btn btn-success btn-sm">
-                                                <i class="fas fa-plus me-1"></i> Новая заявка
-                                            </a>
-                                        </div>
-                                        <!-- Форма сортировки справа -->
-                                        <form method="get" action="/all_orders" id="kanbanFiltersForm" class="d-flex align-items-center gap-2 ms-lg-auto flex-wrap flex-lg-nowrap">
-                                            <input type="hidden" name="view" value="kanban">
-                                            <select name="status" class="form-control form-control-sm filter-field" style="min-width: 150px;">
-                                                <option value="">Все статусы</option>
-                                                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Все в работе ({{ in_progress_orders_count }})</option>
-                                                {% for status in order_statuses %}
-                                                <option value="{{ status.code if status.code else status.id }}" {% if status_filter == (status.code or status.id|string) %}selected{% endif %}>{{ status.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <select name="manager" class="form-control form-control-sm filter-field" style="min-width: 150px;">
-                                                <option value="">Все менеджеры</option>
-                                                {% for id, name in managers %}
-                                                    <option value="{{ id }}" {% if manager_filter == id|string %}selected{% endif %}>{{ name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <select name="master" class="form-control form-control-sm filter-field" style="min-width: 150px;">
-                                                <option value="">Все мастера</option>
-                                                {% for id, name in masters %}
-                                                    <option value="{{ id }}" {% if master_filter == id|string %}selected{% endif %}>{{ name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <input type="date" name="date_from" class="form-control form-control-sm filter-field" value="{{ date_from or '' }}" style="min-width: 150px;">
-                                            <input type="date" name="date_to" class="form-control form-control-sm filter-field" value="{{ date_to or '' }}" style="min-width: 150px;">
-                                            <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
-                                                <i class="fas fa-filter"></i> Применить
-                                            </button>
-                                            <a href="/all_orders?view=kanban&status=in_progress" class="btn btn-default btn-sm" style="white-space: nowrap;">
-                                                <i class="fas fa-times"></i> Сбросить
-                                            </a>
-                                        </form>
+                    <div class="kanban-page">
+                        <div class="card kanban-toolbar mb-3">
+                            <div class="card-body">
+                                <form method="get" action="{{ url_for('orders.all_orders') }}" id="kanbanFiltersForm" class="kanban-filters">
+                                    <input type="hidden" name="view" value="kanban">
+                                    <a href="{{ url_for('orders.add_order') }}" class="btn btn-success btn-sm flex-shrink-0">
+                                        <i class="fas fa-plus me-1"></i> Новая заявка
+                                    </a>
+                                    <input type="search" name="q" value="{{ search_query or '' }}" class="form-control form-control-sm filter-field kanban-search" placeholder="Номер, клиент, устройство" autocomplete="off">
+                                    <select name="status" class="form-control form-control-sm filter-field kanban-status" title="Статус">
+                                        <option value="all" {% if not status_filter %}selected{% endif %}>Все статусы</option>
+                                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Все в работе</option>
+                                        {% for status in order_statuses %}
+                                        <option value="{{ status.code if status.code else status.id }}" {% if status_filter == (status.code or status.id|string) %}selected{% endif %}>{{ status.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="master" class="form-control form-control-sm filter-field kanban-master" title="Мастер">
+                                        <option value="">Все мастера</option>
+                                        {% for id, name in masters %}
+                                            <option value="{{ id }}" {% if master_filter == id|string %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="date" name="date_from" class="form-control form-control-sm filter-field" value="{{ date_from or '' }}" title="С даты">
+                                    <input type="date" name="date_to" class="form-control form-control-sm filter-field" value="{{ date_to or '' }}" title="По дату">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-filter me-1"></i> Применить
+                                    </button>
+                                    <a href="{{ url_for('orders.all_orders', view='kanban', status='in_progress') }}" class="btn btn-default btn-sm">
+                                        <i class="fas fa-times me-1"></i> Сбросить
+                                    </a>
+                                </form>
+                                <div class="kanban-meta">
+                                    {% if kanban_total > kanban_shown %}
+                                    <span class="badge text-bg-warning kanban-cap">Показано {{ kanban_shown }} из {{ kanban_total }} — сузьте период или фильтр</span>
+                                    {% else %}
+                                    <span class="badge text-bg-light text-dark border kanban-cap">{{ kanban_shown }} заявок</span>
+                                    {% endif %}
+                                    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('orders.all_orders', view='registry', status=status_filter or 'all', master=master_filter or none, date_from=date_from or none, date_to=date_to or none, q=search_query or none) }}">
+                                        Открыть в реестре
+                                    </a>
+                                    <div class="kanban-legend" aria-label="Цвет карточки по возрасту заявки">
+                                        <span class="kanban-legend-item"><span class="kanban-legend-swatch age-fresh"></span>до 3 дн</span>
+                                        <span class="kanban-legend-item"><span class="kanban-legend-swatch age-warn"></span>4–6 дн</span>
+                                        <span class="kanban-legend-item"><span class="kanban-legend-swatch age-late"></span>7–13 дн</span>
+                                        <span class="kanban-legend-item"><span class="kanban-legend-swatch age-overdue"></span>от 14 дн</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Канбан доска с заголовком -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title mb-2">
-                                <i class="fas fa-columns me-2"></i>Канбан доска
-                                <span class="badge text-bg-light text-dark border ms-1" title="По умолчанию — заявки за последние 7 дней">
-                                    {{ date_from or '—' }} — {{ date_to or '—' }}
-                                </span>
-                                <a href="{{ url_for('orders.all_orders', view='kanban', status='in_progress', date_from=date_from, date_to=date_to) }}" class="ms-2">
-                                    <span class="badge text-bg-secondary {% if status_filter == 'in_progress' and not master_filter %}text-bg-dark{% endif %}">
-                                        Все в работе: {{ in_progress_orders_count }}
-                                    </span>
-                                </a>
-                                <a href="{{ url_for('orders.all_orders', view='kanban', status='all', date_from=date_from, date_to=date_to) }}" class="ms-2">
-                                    <span class="badge text-bg-info {% if not status_filter %}text-bg-primary{% endif %}">
-                                        За период: {{ total }}
-                                    </span>
-                                </a>
-                                {% for status_counter in active_status_counters %}
-                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id, date_from=date_from, date_to=date_to) }}" class="ms-1">
-                                        <span
-                                            class="badge"
-                                            style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
-                                            {{ status_counter.name }}: {{ status_counter.cnt }}
-                                        </span>
-                                    </a>
-                                {% endfor %}
-                                {% if archived_status_counters %}
-                                <span class="ms-2 small text-muted">|</span>
-                                <span class="ms-1 small text-muted"><i class="fas fa-archive me-1"></i>Архивные:</span>
-                                {% for status_counter in archived_status_counters %}
-                                    <a href="{{ url_for('orders.all_orders', view='kanban', status=status_counter.code if status_counter.code else status_counter.id, date_from=date_from, date_to=date_to) }}" class="ms-1">
-                                        <span
-                                            class="badge"
-                                            style="background-color: {{ status_counter.color or '#6c757d' }}; color: #fff; opacity: 0.85; border: 2px solid {% if status_filter == (status_counter.code or status_counter.id|string) %}#111827{% else %}transparent{% endif %};">
-                                            {{ status_counter.name }}: {{ status_counter.cnt }}
-                                        </span>
-                                    </a>
-                                {% endfor %}
-                                {% endif %}
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                    <div class="row kanban-board g-2">
-                        {% for status in order_statuses %}
-                        {% set status_orders = orders|selectattr('status_id', 'equalto', status.id)|list %}
-                        {% if status_orders|length > 0 %}
-                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-                            <div class="card kanban-column h-100">
-                                <div class="card-header text-white py-1 px-2" style="background-color: {{ status.color }};">
-                                    <div class="card-title">{{ status.name }}</div>
-                                </div>
-                                <div class="card-body p-1 kanban-column-scroll">
-                                    {% for order in status_orders %}
-                                        <div class="card mb-1 kanban-card"
-                                             style="cursor: pointer;"
-                                             onclick="window.location.href='/order/{{ order.id|urlencode }}'">
-                                            <div class="card-body p-1">
-                                                <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
-                                                    <div class="d-flex align-items-center gap-1 min-w-0 flex-grow-1">
-                                                        <span class="status-indicator" style="background-color: {{ status.color }};"></span>
-                                                        <strong class="text-primary text-truncate">#{{ order.id }}</strong>
-                                                    </div>
-                                                    <small class="text-muted text-nowrap flex-shrink-0" style="font-size: 0.68rem !important;">{{ order.created_at|format_date(true) if order.created_at else '' }}</small>
+                        <div class="card kanban-board-wrap">
+                            <div class="card-body p-2 p-md-3">
+                                {% if not kanban_columns %}
+                                <p class="kanban-empty mb-0">Нет заявок для доски. Смените фильтр или откройте реестр.</p>
+                                {% else %}
+                                <div class="kanban-board">
+                                    {% for column in kanban_columns %}
+                                    {% set status = column.status %}
+                                    <section class="kanban-column" aria-label="{{ status.name }}">
+                                        <header class="kanban-col-head" style="background-color: {{ status.color or '#6c757d' }};">
+                                            <h2 class="kanban-col-title">{{ status.name }}</h2>
+                                            <span class="kanban-col-count">{{ column.orders|length }}</span>
+                                        </header>
+                                        <div class="kanban-col-body">
+                                            {% if not column.orders %}
+                                            <p class="kanban-empty">пусто</p>
+                                            {% endif %}
+                                            {% for order in column.orders %}
+                                            {% set prepayment_val = order.get('prepayment') if order is mapping else order.prepayment %}
+                                            {% set age_tone = order.age_tone if order.age_tone in ['fresh', 'warn', 'late', 'overdue'] else 'unknown' %}
+                                            <a class="kanban-card age-{{ age_tone }}" href="{{ url_for('orders.order_detail', order_id=order.id) }}" title="{% if order.age_tone_label %}{{ order.age_days }} дн, {{ order.age_tone_label }}{% endif %}{% if order.symptom_one %} · {{ order.symptom_one }}{% endif %}">
+                                                <div class="kanban-card-top">
+                                                    <span class="kanban-id">#{{ order.id }}</span>
+                                                    {% if order.age_days is not none %}
+                                                    <span class="kanban-age">{{ order.age_days }} дн</span>
+                                                    {% endif %}
                                                 </div>
-                                                <div class="d-flex align-items-start justify-content-between gap-1 mb-1">
-                                                    <div class="fw-bold text-truncate min-w-0" title="{{ order.client_name }}" style="max-width: 100%;">
-                                                        {{ order.client_name }}
-                                                    </div>
+                                                <div class="kanban-device">{{ order.device_line }}</div>
+                                                <div class="kanban-client">{{ order.client_name or '—' }}</div>
+                                                <div class="kanban-foot">
+                                                    {% if order.master_label %}
+                                                    <span class="kanban-chip kanban-chip-master">{{ order.master_label }}</span>
+                                                    {% endif %}
                                                     {% if order.comments_count and order.comments_count|int > 0 %}
-                                                        <span class="badge text-bg-secondary" title="Комментарии">
-                                                            <i class="fas fa-comment-dots me-1"></i>{{ order.comments_count }}
-                                                        </span>
+                                                    <span class="kanban-chip kanban-chip-comment" title="Комментарии">{{ order.comments_count }}</span>
                                                     {% endif %}
-                                                </div>
-
-                                                <div class="text-muted mb-1 text-truncate" title="{{ order.phone_display or order.phone or '' }} {{ order.email or '' }}">
-                                                    {% if order.phone_display or order.phone %}
-                                                        <i class="fas fa-phone-alt me-1 text-primary"></i>
-                                                        <span class="text-truncate">{{ order.phone_display or order.phone }}</span>
+                                                    {% if order.debt and order.debt|float > 0.009 %}
+                                                    <span class="kanban-chip kanban-chip-debt">долг {{ order.debt }} {{ money_symbol }}</span>
                                                     {% endif %}
-                                                    {% if order.email %}
-                                                        <span class="d-block text-truncate mt-1">
-                                                            <i class="fas fa-envelope me-1"></i>{{ order.email }}
-                                                        </span>
-                                                    {% endif %}
-                                                </div>
-
-                                                <div class="text-muted mb-1 text-truncate" title="{{ order.device_type or '' }} {{ order.device_brand or '' }} {{ order.model or '' }}">
-                                                    <i class="fas fa-mobile-alt me-1"></i>
-                                                    {% if order.device_id and order.device_type and order.device_type != '—' %}
-                                                    <a href="/device/{{ order.device_id }}" class="text-primary text-decoration-none" onclick="event.stopPropagation();">
-                                                        {{ order.device_type }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
-                                                    </a>
-                                                    {% else %}
-                                                    {{ order.device_type or '—' }}{% if order.device_brand and order.device_brand != '—' %} {{ order.device_brand }}{% endif %}{% if order.model %} {{ order.model }}{% endif %}
-                                                    {% endif %}
-                                                </div>
-
-                                                {% if order.serial_number %}
-                                                    <div class="text-muted mb-1" style="font-size: 0.8rem;">
-                                                        <i class="fas fa-barcode me-1"></i>S/N: {{ order.serial_number }}
-                                                    </div>
-                                                {% endif %}
-
-                                                <div class="d-flex flex-column gap-0 mb-1">
-                                                    <div class="text-muted text-truncate" title="{{ order.master or '—' }}">
-                                                        <i class="fas fa-user-tie me-1"></i>{{ order.master or '—' }}
-                                                    </div>
-                                                    <div class="text-muted text-truncate" title="{{ order.manager or order.manager_name or '—' }}">
-                                                        <i class="fas fa-user-friends me-1"></i>{{ order.manager or order.manager_name or '—' }}
-                                                    </div>
-                                                </div>
-
-                                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                                    {% set prepayment_val = order.get('prepayment') if order is mapping else order.prepayment %}
                                                     {% if prepayment_val is not none and prepayment_val and prepayment_val not in ['0', '0.0', 'None', 'null', '—'] %}
-                                                        <span class="badge text-bg-success">
-                                                            <span class="nika-money-icon me-1">{{ money_icon_char }}</span>{{ prepayment_val }} {{ money_symbol }}
-                                                        </span>
+                                                    <span class="kanban-chip kanban-chip-pay">{{ prepayment_val }} {{ money_symbol }}</span>
                                                     {% endif %}
-                                                    {% set total_paid_val = order.get('total_paid', 0) if order is mapping else (order.total_paid|default(0)) %}
-                                                    {% if total_paid_val|float > 0 %}
-                                                        <span class="badge text-bg-primary">
-                                                            <i class="fas fa-coins me-1"></i>{{ total_paid_val }} {{ money_symbol }}
-                                                        </span>
+                                                    {% if order.symptom_one %}
+                                                    <span class="kanban-chip kanban-chip-symptom">{{ order.symptom_one }}</span>
                                                     {% endif %}
                                                 </div>
-
-                                                {% if order.symptom_tags %}
-                                                    <div class="symptom-tags mt-1">
-                                                        {% for t in order.symptom_tags.split(',') %}
-                                                            {% set tt = t|trim %}
-                                                            {% if tt and tt not in ['None', 'null'] %}
-                                                                <span class="symptom-tag">{{ tt }}</span>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </div>
-                                                {% endif %}
-                                            </div>
+                                            </a>
+                                            {% endfor %}
                                         </div>
+                                    </section>
                                     {% endfor %}
                                 </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% endfor %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1908,60 +1745,6 @@
             lastRegistryFiltersState = getRegistryFiltersState();
             {% endif %}
 
-            // Автоматическая отправка формы фильтров для Kanban view
-            {% if view == 'kanban' %}
-            let kanbanFiltersTimeout;
-            let lastKanbanFiltersState = '';
-            
-            function getKanbanFiltersState() {
-                const form = document.getElementById('kanbanFiltersForm');
-                if (!form) return '';
-                const formData = new FormData(form);
-                const params = new URLSearchParams();
-                for (const [key, value] of formData.entries()) {
-                    if (value) params.append(key, value);
-                }
-                return params.toString();
-            }
-            
-            function submitKanbanFilters() {
-                const form = document.getElementById('kanbanFiltersForm');
-                if (form) {
-                    const searchValue = (new URLSearchParams(window.location.search).get('q') || '').trim();
-                    const url = new URL(form.action, window.location.origin);
-                    const formData = new FormData(form);
-                    for (const [key, value] of formData.entries()) {
-                        if (value) url.searchParams.set(key, value);
-                    }
-                    if (searchValue) {
-                        url.searchParams.set('q', searchValue);
-                    }
-                    window.location.href = url.toString();
-                }
-            }
-            
-            $('#kanbanFiltersForm .filter-field').on('change', function() {
-                clearTimeout(kanbanFiltersTimeout);
-                const currentState = getKanbanFiltersState();
-                
-                // Если состояние не изменилось, не отправляем
-                if (currentState === lastKanbanFiltersState) {
-                    return;
-                }
-                
-                kanbanFiltersTimeout = setTimeout(function() {
-                    const newState = getKanbanFiltersState();
-                    if (newState !== lastKanbanFiltersState) {
-                        lastKanbanFiltersState = newState;
-                        submitKanbanFilters();
-                    }
-                }, 1000); // Задержка 1 секунда
-            });
-            
-            // Инициализируем начальное состояние
-            lastKanbanFiltersState = getKanbanFiltersState();
-            {% endif %}
-
             // Инициализация выпадающих меню Bootstrap 5
             var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle:not(.quick-status-btn)'));
             var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
@@ -2387,4 +2170,10 @@
             }
         }
     </script>
+    {% if view == 'kanban' %}
+    <script>
+        window.NIKA_KANBAN = { debounceMs: 1000 };
+    </script>
+    <script src="{{ static_url('js/orders-kanban.js') }}"></script>
+    {% endif %}
 {% endblock %}

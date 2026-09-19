@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "workshop-kanban",
+        "file": "blog/47-workshop-kanban.md",
+        "date": "2026-09-19 20:50",
+        "title": "Канбан стал доской очереди цеха — Nika CRM",
+        "description": (
+            "19 сентября 2026: канбан заявок — горизонтальная доска очереди, "
+            "сверху кто ждёт дольше, цвет карточки по возрасту."
+        ),
+        "heading": "Канбан цеха",
+        "teaser": "Канбан заявок стал доской очереди: этапы рядом, цвет по сроку ожидания.",
+    },
+    {
         "slug": "refund-voids-cash",
         "file": "blog/46-refund-voids-cash.md",
         "date": "2026-09-17 22:50",

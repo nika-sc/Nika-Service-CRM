@@ -1,0 +1,422 @@
+/* Канбан заявок: горизонтальная доска очереди цеха */
+
+.kanban-page {
+    min-width: 0;
+}
+
+.kanban-toolbar .card-body {
+    padding: 0.65rem 0.85rem;
+}
+
+.kanban-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kanban-filters .filter-field {
+    min-width: 0;
+}
+
+.kanban-filters .kanban-search {
+    flex: 1 1 180px;
+    max-width: 280px;
+}
+
+.kanban-filters .kanban-status,
+.kanban-filters .kanban-master {
+    flex: 0 1 160px;
+}
+
+.kanban-filters input[type="date"] {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 9.5rem;
+}
+
+.kanban-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.45rem;
+}
+
+.kanban-cap {
+    font-size: 0.85rem;
+}
+
+.kanban-board-wrap {
+    overflow: hidden;
+}
+
+.kanban-board {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.15rem 0.15rem 0.5rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.kanban-column {
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: 85vw;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    max-height: min(72vh, calc(100vh - 220px));
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.kanban-col-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    color: #fff;
+    min-height: 40px;
+}
+
+.kanban-col-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+    word-break: break-word;
+}
+
+.kanban-col-count {
+    flex-shrink: 0;
+    min-width: 1.5rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.kanban-col-body {
+    flex: 1 1 auto;
+    min-height: 88px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.45rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.kanban-empty {
+    margin: 0.75rem 0.25rem;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.kanban-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-left: 3px solid #94a3b8;
+    border-radius: 10px;
+    padding: 0.5rem 0.55rem 0.45rem;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.kanban-card:hover,
+.kanban-card:focus {
+    color: inherit;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+}
+
+.kanban-card.age-fresh {
+    background: #ecf8ef;
+    border-color: #b7e0c2;
+    border-left-color: #198754;
+}
+
+.kanban-card.age-warn {
+    background: #fff8e1;
+    border-color: #f0d889;
+    border-left-color: #e0a800;
+}
+
+.kanban-card.age-late {
+    background: #fff1e6;
+    border-color: #f0c2a0;
+    border-left-color: #fd7e14;
+}
+
+.kanban-card.age-overdue {
+    background: #fdecec;
+    border-color: #f1b0b7;
+    border-left-color: #dc3545;
+}
+
+.kanban-card.age-fresh .kanban-age {
+    color: #146c43;
+    font-weight: 700;
+}
+
+.kanban-card.age-warn .kanban-age {
+    color: #997404;
+    font-weight: 700;
+}
+
+.kanban-card.age-late .kanban-age {
+    color: #c45c08;
+    font-weight: 700;
+}
+
+.kanban-card.age-overdue .kanban-age {
+    color: #b02a37;
+    font-weight: 700;
+}
+
+.kanban-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.kanban-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.kanban-legend-swatch {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+}
+
+.kanban-legend-swatch.age-fresh { background: #198754; }
+.kanban-legend-swatch.age-warn { background: #e0a800; }
+.kanban-legend-swatch.age-late { background: #fd7e14; }
+.kanban-legend-swatch.age-overdue { background: #dc3545; }
+
+.kanban-card-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-bottom: 0.2rem;
+}
+
+.kanban-id {
+    font-weight: 800;
+    font-size: 0.86rem;
+    color: #0d6efd;
+}
+
+.kanban-age {
+    font-size: 0.72rem;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+.kanban-device {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 0.15rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.kanban-client {
+    font-size: 0.78rem;
+    color: #495057;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+}
+
+.kanban-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.kanban-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    max-width: 100%;
+    padding: 0.08rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.4;
+    background: #e9ecef;
+    color: #343a40;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-chip-master {
+    background: #e7f1ff;
+    color: #0b5ed7;
+}
+
+.kanban-chip-debt {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.kanban-chip-pay {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.kanban-chip-comment {
+    background: #fff3cd;
+    color: #664d03;
+}
+
+.kanban-chip-symptom {
+    background: #f1f3f5;
+    color: #495057;
+    font-weight: 500;
+}
+
+html.theme-dark .kanban-column {
+    background: #242424;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.theme-dark .kanban-col-body {
+    background: #1f1f1f;
+}
+
+html.theme-dark .kanban-card {
+    background: #2b2b2b;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e6e6e6;
+}
+
+html.theme-dark .kanban-card:hover,
+html.theme-dark .kanban-card:focus {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
+}
+
+html.theme-dark .kanban-card.age-fresh {
+    background: #1b3a28;
+    border-color: #2f6a48;
+}
+
+html.theme-dark .kanban-card.age-warn {
+    background: #3d3414;
+    border-color: #7a6418;
+}
+
+html.theme-dark .kanban-card.age-late {
+    background: #3d2a16;
+    border-color: #8a4d1c;
+}
+
+html.theme-dark .kanban-card.age-overdue {
+    background: #3a2224;
+    border-color: #8a3a42;
+}
+
+html.theme-dark .kanban-legend-item {
+    color: #ced4da;
+}
+
+html.theme-dark .kanban-card.age-fresh .kanban-age { color: #75b798; }
+html.theme-dark .kanban-card.age-warn .kanban-age { color: #ffda6a; }
+html.theme-dark .kanban-card.age-late .kanban-age { color: #ffb36b; }
+html.theme-dark .kanban-card.age-overdue .kanban-age { color: #ea868f; }
+
+html.theme-dark .kanban-id {
+    color: #6ea8fe;
+}
+
+html.theme-dark .kanban-client,
+html.theme-dark .kanban-empty,
+html.theme-dark .kanban-age {
+    color: #adb5bd;
+}
+
+html.theme-dark .kanban-chip {
+    background: #3a3a3a;
+    color: #e6e6e6;
+}
+
+html.theme-dark .kanban-chip-master {
+    background: #1b365c;
+    color: #9ec5fe;
+}
+
+html.theme-dark .kanban-chip-debt {
+    background: #5c2228;
+    color: #f1aeb5;
+}
+
+html.theme-dark .kanban-chip-pay {
+    background: #1c4d34;
+    color: #a3cfbb;
+}
+
+html.theme-dark .kanban-chip-comment {
+    background: #5c4b12;
+    color: #ffe69c;
+}
+
+html.theme-dark .kanban-chip-symptom {
+    background: #333;
+    color: #ced4da;
+}
+
+@media (max-width: 575.98px) {
+    .kanban-column {
+        flex-basis: min(280px, 86vw);
+        width: min(280px, 86vw);
+        min-width: min(280px, 86vw);
+        max-height: min(68vh, calc(100vh - 190px));
+    }
+
+    .kanban-filters .kanban-search,
+    .kanban-filters .kanban-status,
+    .kanban-filters .kanban-master,
+    .kanban-filters input[type="date"] {
+        flex: 1 1 100%;
+        max-width: none;
+        width: 100%;
+        min-width: 0;
+    }
+}

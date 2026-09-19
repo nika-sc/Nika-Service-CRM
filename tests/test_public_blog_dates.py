@@ -10,11 +10,11 @@ def test_format_blog_date_ru_time_then_day_month_year():
     assert format_blog_date_ru("") == ""
 
 
-def test_latest_blog_post_is_refund_voids_cash():
+def test_latest_blog_post_is_workshop_kanban():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "refund-voids-cash"
-    assert _POSTS[0]["file"] == "blog/46-refund-voids-cash.md"
+    assert _POSTS[0]["slug"] == "workshop-kanban"
+    assert _POSTS[0]["file"] == "blog/47-workshop-kanban.md"
 
 
 def test_post_view_keeps_iso_and_adds_display():
