@@ -549,7 +549,7 @@ class NotificationService:
                         WHERE entity_type = 'part'
                           AND entity_id = ?
                           AND title LIKE 'Низкий остаток%'
-                          AND datetime(created_at) >= datetime('now', '-1 hour')
+                          AND created_at >= NOW() - INTERVAL '1 hour'
                         ''',
                         (part_id,)
                     )

@@ -2686,14 +2686,14 @@ def api_check_duplicate():
                     SELECT COUNT(*) FROM orders 
                     WHERE customer_id = ? 
                     AND device_id IN (SELECT id FROM devices WHERE serial_number = ?)
-                    AND created_at > datetime('now', '-30 days')
+                    AND created_at > NOW() - INTERVAL '30 days'
                     AND (hidden = 0 OR hidden IS NULL)
                 ''' + not_deleted_clause, (customer_id, serial_number))
             else:
                 cursor.execute('''
                     SELECT COUNT(*) FROM orders 
                     WHERE customer_id = ? 
-                    AND created_at > datetime('now', '-30 days')
+                    AND created_at > NOW() - INTERVAL '30 days'
                     AND (hidden = 0 OR hidden IS NULL)
                 ''' + not_deleted_clause, (customer_id,))
             
@@ -2910,7 +2910,7 @@ def update_order_status_api(order_id):
                 'requires_comment': result.get('requires_comment', False)
             })
     except (ValidationError, NotFoundError) as e:
-        logger.error(f"Validation/NotFound error при обновлении статуса {order_id}: {e}")
+        logger.warning("Статус заявки не изменён: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 400
     except DatabaseError as e:
         logger.error(f"Database error при обновлении статуса {order_id}: {e}")
@@ -3433,11 +3433,11 @@ def api_price_history():
                 SELECT price, created_at
                 FROM {table}
                 WHERE {col} = ?
-                  AND created_at >= datetime('now', ?)
+                  AND created_at >= NOW() - (? * INTERVAL '1 day')
                 ORDER BY created_at DESC
                 LIMIT 1
                 """,
-                (item_id, f'-{days} days')
+                (item_id, days)
             )
             last_row = cursor.fetchone()
 
@@ -3446,9 +3446,9 @@ def api_price_history():
                 SELECT AVG(price) AS avg_price, COUNT(*) AS cnt
                 FROM {table}
                 WHERE {col} = ?
-                  AND created_at >= datetime('now', ?)
+                  AND created_at >= NOW() - (? * INTERVAL '1 day')
                 """,
-                (item_id, f'-{days} days')
+                (item_id, days)
             )
             agg = cursor.fetchone()
 

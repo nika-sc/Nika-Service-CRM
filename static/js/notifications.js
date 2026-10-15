@@ -5,6 +5,9 @@
 let notificationsSocket = null;
 let unreadCount = 0;
 let unreadPollTimer = null;
+let unreadCountInflight = false;
+let unreadCountAgain = false;
+const UNREAD_POLL_MS = 60000;
 
 function stopUnreadPolling() {
     if (unreadPollTimer) {
@@ -29,9 +32,21 @@ document.addEventListener('DOMContentLoaded', function() {
     initNotifications();
     loadUnreadCount();
     setupNotificationsDropdown();
-    
-    unreadPollTimer = setInterval(loadUnreadCount, 30000);
+    startUnreadPolling();
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            stopUnreadPolling();
+            return;
+        }
+        loadUnreadCount();
+        startUnreadPolling();
+    });
 });
+
+function startUnreadPolling() {
+    stopUnreadPolling();
+    unreadPollTimer = setInterval(loadUnreadCount, UNREAD_POLL_MS);
+}
 
 function initNotifications() {
     notificationsSocket = null;
@@ -57,7 +72,7 @@ function initNotifications() {
             }
         });
         notificationsSocket.on('connect_error', function () {
-            // Поллинг 30с остаётся запасным каналом.
+            // Polling once a minute stays as the fallback channel.
         });
     } catch (e) {
         notificationsSocket = null;
@@ -65,6 +80,11 @@ function initNotifications() {
 }
 
 function loadUnreadCount() {
+    if (unreadCountInflight) {
+        unreadCountAgain = true;
+        return;
+    }
+    unreadCountInflight = true;
     fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
         .then(res => {
             if (authLostFromResponse(res)) {
@@ -79,7 +99,14 @@ function loadUnreadCount() {
                 updateNotificationBadge();
             }
         })
-        .catch(err => console.error('Error loading unread count:', err));
+        .catch(err => console.error('Error loading unread count:', err))
+        .finally(function () {
+            unreadCountInflight = false;
+            if (unreadCountAgain) {
+                unreadCountAgain = false;
+                loadUnreadCount();
+            }
+        });
 }
 
 function updateNotificationBadge() {
