@@ -181,6 +181,57 @@ def test_upgrade_snapshots_app_files_for_rollback():
     assert "Select-Object -Skip 2" in iss
 
 
+def test_bundled_python_does_not_touch_an_existing_install():
+    bootstrap = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    iss = ISS.read_text(encoding="utf-8-sig")
+    helper = Path("packaging/windows/remove-nika-python.ps1").read_text(encoding="utf-8-sig")
+    build = Path("scripts/windows/build-offline-bundle.ps1").read_text(encoding="utf-8-sig")
+    verify = Path("scripts/windows/verify-bundle.ps1").read_text(encoding="utf-8-sig")
+    service = Path("packaging/windows/service_entry.py").read_text(encoding="utf-8")
+
+    assert "python-installer.exe" not in bootstrap
+    assert "python-installer.exe" not in iss
+    assert "python-installer.exe" not in verify
+    assert "InstallAllUsers" not in bootstrap
+    assert "PrependPath" not in bootstrap
+    assert "python-3.12.10-embed-amd64.zip" in bootstrap
+    assert "python-3.12.10-embed-amd64.zip" in iss
+    assert "python-3.12.10-embed-amd64.zip" in build
+    assert "import site" not in bootstrap
+    assert "Lib\\site-packages" in bootstrap
+    assert "--target" in bootstrap
+    assert "PYTHONNOUSERSITE" in bootstrap
+    assert "PYTHONNOUSERSITE" in service
+    assert 'os.environ.pop("PYTHONPATH", None)' in service
+    assert "Remove-NikaBundledPython" in bootstrap
+    assert "Remove-NikaBundledPython" in CLEANUP.read_text(encoding="utf-8-sig")
+    assert "Remove-NikaBundledPython" in FULL_UNINSTALL.read_text(encoding="utf-8-sig")
+    assert "function Test-NikaOwnedPath" in helper
+    assert "Leaving separately installed Python" in helper
+    assert "Uninstall-Package" not in helper
+    assert '"pip" "setuptools" "wheel"' in build
+    assert "UserWantsDataRemoved" in iss
+    assert "не удаляются" in iss
+
+    probe = (
+        ". ./packaging/windows/remove-nika-python.ps1; "
+        "$app = 'C:\\Program Files\\NikaCRM'; "
+        "$own = Test-NikaOwnedPath -Candidate '\"C:\\Program Files\\NikaCRM\\runtime\\python\\python.exe\" \"%1\"' -AppDir $app; "
+        "$sibling = Test-NikaOwnedPath -Candidate 'C:\\Program Files\\NikaCRM-extra\\python.exe' -AppDir $app; "
+        "$foreign = Test-NikaOwnedPath -Candidate 'C:\\Users\\Client\\AppData\\Local\\Programs\\Python\\Python312\\python.exe' -AppDir $app; "
+        "if (-not $own -or $sibling -or $foreign) { exit 1 }"
+    )
+    import subprocess
+
+    completed = subprocess.run(
+        ["powershell", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", probe],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
 def test_bootstrap_reports_progress_for_the_wizard():
     bootstrap = BOOTSTRAP.read_text(encoding="utf-8-sig")
     assert "function Set-SetupProgress" in bootstrap

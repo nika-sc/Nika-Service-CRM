@@ -17,9 +17,9 @@ $requirements = Join-Path $packagingDir "requirements-windows.txt"
 
 $artifacts = @(
     @{
-        Name = "python-installer.exe"
-        Url = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
-        Sha256 = "67B5635E80EA51072B87941312D00EC8927C4DB9BA18938F7AD2D27B328B95FB"
+        Name = "python-3.12.10-embed-amd64.zip"
+        Url = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip"
+        Sha256 = "4ACBED6DD1C744B0376E3B1CF57CE906F9DC9E95E68824584C8099A63025A3C3"
     },
     @{
         Name = "postgresql-installer.exe"
@@ -100,6 +100,15 @@ if (-not $SkipDownload) {
         --requirement $requirements
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build the Windows offline wheelhouse."
+    }
+    # The embeddable runtime has no pip. These wheels bootstrap it offline.
+    & python -m pip download `
+        --disable-pip-version-check `
+        --only-binary=:all: `
+        --dest $wheelhouse `
+        "pip" "setuptools" "wheel"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to download pip, setuptools and wheel into the wheelhouse."
     }
 }
 

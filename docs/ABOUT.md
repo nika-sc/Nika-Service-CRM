@@ -42,9 +42,9 @@ cd Nika-Service-CRM
 
 ### 2. Windows (офлайн SETUP)
 
-Для Windows 10/11 x64 доступен автономный установщик **1.0.9** (сборка **2026-09-14**) с PostgreSQL и службой автозапуска.  
-Ссылки: [GitHub release windows-setup-1.0.9](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.9), зеркало на [главной демо](/#windows-setup).  
-В 1.0.9: на карточке заявки снова добавляются услуги и оплаты. Подробности — [блог 1.0.9](/blog/windows-setup-1-0-9).
+Для Windows 10/11 x64 доступен автономный установщик **1.0.10** (сборка **2026-10-23**) с PostgreSQL и службой автозапуска.  
+Ссылки: [GitHub release windows-setup-1.0.10](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.10), зеркало на [главной демо](/#windows-setup).  
+В 1.0.10 установка проходит, даже если Python уже стоит на компьютере. Подробности — [блог 1.0.10](/blog/windows-setup-1-0-10).
 
 После установки демо-логины (пароль `111111`): `admin`, `manager`, `master`, `viewer`.
 

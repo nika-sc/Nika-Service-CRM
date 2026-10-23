@@ -2,7 +2,7 @@
 #define VersionFileHandle FileOpen(AddBackslash(SourcePath) + "..\..\VERSION")
 #define MyAppVersion Trim(FileRead(VersionFileHandle))
 #expr FileClose(VersionFileHandle)
-#define MyAppVersionDate "2026-09-14"
+#define MyAppVersionDate "2026-10-23"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -82,7 +82,7 @@ Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\app"; Flags: ignoreversion
 Source: "{#SourceRoot}\oh-oh-icq-sound.mp3"; DestDir: "{app}\app"; Flags: ignoreversion
 Source: "installer-hero.bmp"; Flags: dontcopy
 
-Source: "assets\python-installer.exe"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
+Source: "assets\python-3.12.10-embed-amd64.zip"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
 Source: "assets\postgresql-installer.exe"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
 Source: "assets\nssm.exe"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
 Source: "assets\wheelhouse\*"; DestDir: "{tmp}\NikaCRM-offline\wheelhouse"; Flags: deleteafterinstall recursesubdirs createallsubdirs
@@ -140,6 +140,7 @@ var
   LegalConfirmationPage: TInputOptionWizardPage;
   DocumentationPage: TWizardPage;
   KeepDataDir: Boolean;
+  UserWantsDataRemoved: Boolean;
 
 procedure OpenInstallerLink(Sender: TObject);
 var
@@ -628,15 +629,30 @@ function InitializeUninstall(): Boolean;
 begin
   Result := True;
   KeepDataDir := False;
+  UserWantsDataRemoved := True;
   if UninstallSilent then
     Exit;
 
   Result := MsgBox(
-    'Удаление Nika CRM выполняется полностью: службы, программа, база данных и настройки.' + #13#10#13#10 +
+    'Удаление Nika CRM: службы, программа и регистрация её собственного Python и PostgreSQL.' + #13#10 +
+    'Отдельно установленные Python и PostgreSQL на этом компьютере не удаляются.' + #13#10#13#10 +
     'Перед удалением база будет сохранена в резервную копию:' + #13#10 +
     ExpandConstant('{commonappdata}\NikaCRM-backup') + #13#10#13#10 +
-    'Эта папка при удалении не стирается, и повторная установка подхватит данные из неё.' + #13#10#13#10 +
+    'Эта папка при удалении не стирается.' + #13#10#13#10 +
     'Продолжить удаление?',
+    mbConfirmation,
+    MB_YESNO
+  ) = IDYES;
+  if not Result then
+    Exit;
+
+  UserWantsDataRemoved := MsgBox(
+    'Удалить базу данных и настройки Nika CRM?' + #13#10#13#10 +
+    'Да — удалить данные. Копия останется в:' + #13#10 +
+    ExpandConstant('{commonappdata}\NikaCRM-backup') + #13#10#13#10 +
+    'Нет — оставить данные в:' + #13#10 +
+    ExpandConstant('{commonappdata}\NikaCRM') + #13#10 +
+    'Повторная установка подхватит их.',
     mbConfirmation,
     MB_YESNO
   ) = IDYES;
@@ -684,6 +700,18 @@ begin
 
   if CurUninstallStep <> usPostUninstall then
     Exit;
+
+  if not UserWantsDataRemoved then
+  begin
+    if (not UninstallSilent) and DirExists(DataDir) then
+      MsgBox(
+        'База данных и настройки оставлены:' + #13#10 + DataDir + #13#10#13#10 +
+        'Резервная копия:' + #13#10 + BackupDir,
+        mbInformation,
+        MB_OK
+      );
+    Exit;
+  end;
 
   if KeepDataDir or (not DirExists(DataDir)) then
     Exit;

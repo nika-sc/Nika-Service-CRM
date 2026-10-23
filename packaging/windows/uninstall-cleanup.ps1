@@ -30,6 +30,11 @@ else {
 Stop-NikaService "NikaCRM-PostgreSQL"
 & sc.exe delete "NikaCRM-PostgreSQL" | Out-Null
 
+# Old builds registered a machine-wide Python 3.12 inside this folder and could
+# overwrite the customer's own Python 3.12 entry. Drop only paths under Nika CRM.
+. (Join-Path $PSScriptRoot "remove-nika-python.ps1")
+Remove-NikaBundledPython -AppDir $AppDir
+
 # EDB keeps a registry entry and the local "postgres" service account. Without
 # its own uninstaller they survive and the next install fails on the account
 # password check.

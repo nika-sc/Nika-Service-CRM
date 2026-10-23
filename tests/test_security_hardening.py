@@ -797,8 +797,8 @@ def test_prod_requirements_pin_direct_security_stack():
     assert "gunicorn>=21.0.0,<23" in prod
 
 
-def test_latest_blog_is_workshop_kanban():
+def test_latest_blog_is_windows_setup_1_0_10():
     from app.routes.public_blog import _POSTS
 
-    assert _POSTS[0]["slug"] == "workshop-kanban"
-    assert _POSTS[0]["file"] == "blog/47-workshop-kanban.md"
+    assert _POSTS[0]["slug"] == "windows-setup-1-0-10"
+    assert _POSTS[0]["file"] == "blog/48-windows-setup-1-0-10.md"

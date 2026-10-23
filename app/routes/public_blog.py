@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 # date — хранение ISO «YYYY-MM-DD HH:MM» (МСК); на сайте: «11:30 22.08.2026»
 _POSTS = [
     {
+        "slug": "windows-setup-1-0-10",
+        "file": "blog/48-windows-setup-1-0-10.md",
+        "date": "2026-10-23 13:10",
+        "title": "Windows SETUP 1.0.10: установка рядом с уже стоящим Python — Nika CRM",
+        "description": (
+            "23 октября 2026: офлайн-установщик 1.0.10 ставится, даже если Python "
+            "уже есть на компьютере, и не удаляет чужой Python."
+        ),
+        "heading": "Windows SETUP 1.0.10",
+        "teaser": "Windows SETUP 1.0.10 ставится рядом с уже установленным Python.",
+    },
+    {
         "slug": "workshop-kanban",
         "file": "blog/47-workshop-kanban.md",
         "date": "2026-09-19 20:50",

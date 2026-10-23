@@ -30,6 +30,10 @@ def load_service_environment() -> None:
 
 def main() -> None:
     load_service_environment()
+    # The Windows service must not import a Python the customer installed themselves.
+    os.environ["PYTHONNOUSERSITE"] = "1"
+    os.environ.pop("PYTHONHOME", None)
+    os.environ.pop("PYTHONPATH", None)
     os.chdir(APP_ROOT)
 
     from waitress import serve

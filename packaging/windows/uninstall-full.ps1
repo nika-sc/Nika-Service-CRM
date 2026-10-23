@@ -87,6 +87,10 @@ if ((Test-Path -LiteralPath $backupScript) -and (Test-Path -LiteralPath $DataDir
 Remove-NikaService "NikaCRM-Web"
 Remove-NikaService "NikaCRM-PostgreSQL"
 
+Write-Step "Снимаю регистрацию Python Nika CRM. Отдельно установленный Python не удаляется."
+. (Join-Path $PSScriptRoot "remove-nika-python.ps1")
+Remove-NikaBundledPython -AppDir $AppDir -Log { param($Message) Write-Step $Message }
+
 # EDB-инсталлятор PostgreSQL держит свою запись в реестре и локальную учётную
 # запись службы; штатный деинсталлятор убирает их корректно.
 $pgUninstaller = Join-Path $AppDir "runtime\postgresql\uninstall-postgresql.exe"

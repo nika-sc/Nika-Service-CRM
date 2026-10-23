@@ -35,7 +35,7 @@ foreach ($entry in $manifest.files) {
 }
 
 foreach ($required in @(
-    "python-installer.exe",
+    "python-3.12.10-embed-amd64.zip",
     "postgresql-installer.exe",
     "nssm.exe",
     "wheelhouse"

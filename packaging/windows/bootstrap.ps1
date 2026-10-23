@@ -87,7 +87,7 @@ $backupDir = Join-Path (Split-Path -Parent $DataDir) "NikaCRM-backup"
 $installerDir = Join-Path $DataDir "installer"
 $envFile = Join-Path $DataDir ".env"
 $stateFile = Join-Path $installerDir "install-state.json"
-$pythonInstaller = Join-Path $AssetsDir "python-installer.exe"
+$pythonZip = Join-Path $AssetsDir "python-3.12.10-embed-amd64.zip"
 $postgresInstaller = Join-Path $AssetsDir "postgresql-installer.exe"
 $wheelhouse = Join-Path $AssetsDir "wheelhouse"
 $nssmSource = Join-Path $AssetsDir "nssm.exe"
@@ -626,7 +626,7 @@ try {
         throw "Setup must run with administrator privileges."
     }
 
-    foreach ($required in @($pythonInstaller, $postgresInstaller, $wheelhouse, $nssmSource)) {
+    foreach ($required in @($pythonZip, $postgresInstaller, $wheelhouse, $nssmSource)) {
         if (-not (Test-Path -LiteralPath $required)) {
             throw "Offline bundle component is missing: $required"
         }
@@ -659,32 +659,67 @@ try {
     $script:SecretValues.Add($postgresSuperPassword) | Out-Null
     $script:SecretValues.Add($appDbPassword) | Out-Null
 
-    if (-not (Test-Path -LiteralPath $pythonExe)) {
-        Set-SetupProgress 12 "Установка Python 3.12" "Один раз, занимает около минуты."
-        Invoke-Native $pythonInstaller @(
-            "/quiet",
-            "InstallAllUsers=1",
-            "TargetDir=`"$pythonRoot`"",
-            "Include_pip=1",
-            "Include_launcher=0",
-            "Include_test=0",
-            "Shortcuts=0",
-            "PrependPath=0",
-            "CompileAll=0"
-        ) @(0)
+    # Embeddable CPython, private to Nika CRM. The python.org executable installer
+    # registers a machine-wide Python 3.12 and, when one is already present, either
+    # repairs that install or ignores TargetDir. Do not switch back to it.
+    # The ._pth file stays isolated: do not uncomment the site import line, or the
+    # customer's PYTHONPATH and PythonCore registry leak into this interpreter.
+    Set-SetupProgress 12 "Установка Python 3.12" "Свой Python Nika CRM, рядом с уже установленным. Чужой Python не удаляется."
+    . (Join-Path $PSScriptRoot "remove-nika-python.ps1")
+    Remove-NikaBundledPython -AppDir $AppDir -Log { param($Message) Write-Step $Message }
+
+    $embedMarker = Join-Path $pythonRoot "nika-embed.txt"
+    $expectedMarker = "embed-3.12.10-isolated"
+    $markerText = ""
+    if (Test-Path -LiteralPath $embedMarker) {
+        $markerText = (Get-Content -LiteralPath $embedMarker -Raw -ErrorAction SilentlyContinue)
+        if ($null -eq $markerText) { $markerText = "" }
+    }
+    $needsPythonExtract = (-not (Test-Path -LiteralPath $pythonExe)) -or ($markerText.Trim() -ne $expectedMarker)
+    if ($needsPythonExtract) {
+        if (Test-Path -LiteralPath $pythonRoot) {
+            Remove-Item -LiteralPath $pythonRoot -Recurse -Force
+        }
+        New-Item -ItemType Directory -Force -Path $pythonRoot | Out-Null
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($pythonZip, $pythonRoot)
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText(
+            (Join-Path $pythonRoot "python312._pth"),
+            "python312.zip`r`n.`r`nLib\site-packages`r`n",
+            $utf8NoBom
+        )
+        [System.IO.File]::WriteAllText($embedMarker, $expectedMarker, $utf8NoBom)
     }
     if (-not (Test-Path -LiteralPath $pythonExe)) {
         throw "Python installation did not create $pythonExe"
     }
 
+    $env:PYTHONNOUSERSITE = "1"
+    Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+    Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+    $sitePackages = Join-Path $pythonRoot "Lib\site-packages"
+    New-Item -ItemType Directory -Force -Path $sitePackages | Out-Null
+    $pipWheel = Get-ChildItem -LiteralPath $wheelhouse -Filter "pip-*.whl" -File | Select-Object -First 1
+    if (-not $pipWheel) {
+        throw "Offline wheelhouse does not contain a pip wheel. Rebuild the Windows bundle."
+    }
+    $bootstrapPy = Join-Path $stableDir "bootstrap-pip.py"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($bootstrapPy, "import sys`r`nsys.path.insert(0, sys.argv[1])`r`nfrom pip._internal.cli.main import main`r`nraise SystemExit(main(sys.argv[2:]))`r`n", $utf8NoBom)
+    $requirementsFile = Join-Path $appRoot "packaging\windows\requirements-windows.txt"
     Set-SetupProgress 25 "Установка библиотек приложения" "Ставятся из локальной папки, интернет не нужен."
-    Invoke-Native $pythonExe @(
-        "-m", "pip", "install",
-        "--disable-pip-version-check",
-        "--no-index",
-        "--find-links", "`"$wheelhouse`"",
-        "-r", "`"$(Join-Path $appRoot 'packaging\windows\requirements-windows.txt')`""
-    ) @(0) -CaptureOutput
+    $pipArgs = @(
+        $bootstrapPy,
+        $pipWheel.FullName,
+        "install", "--isolated", "--disable-pip-version-check",
+        "--no-index", "--find-links", $wheelhouse,
+        "--target", $sitePackages,
+        "--upgrade",
+        "-r", $requirementsFile,
+        "pip", "setuptools", "wheel"
+    ) | ForEach-Object { Format-NativeArgument $_ }
+    Invoke-Native $pythonExe $pipArgs @(0) -CaptureOutput
 
     if (-not (Test-Path -LiteralPath (Join-Path $pgBin "psql.exe"))) {
         # Binaries are missing, so PostgreSQL has to be installed again. Three
@@ -1033,6 +1068,7 @@ END
     Invoke-Nssm @("set", $serviceName, "AppExit", "Default", "Restart")
     Invoke-Nssm @("set", $serviceName, "AppRestartDelay", "5000")
     Invoke-Nssm @("set", $serviceName, "AppNoConsole", "1")
+    Invoke-Nssm @("set", $serviceName, "AppEnvironmentExtra", "PYTHONNOUSERSITE=1")
     Invoke-Nssm @("set", $serviceName, "AppStdout", (Join-Path $logsDir "web-stdout.log"))
     Invoke-Nssm @("set", $serviceName, "AppStderr", (Join-Path $logsDir "web-stderr.log"))
     Invoke-Nssm @("set", $serviceName, "AppRotateFiles", "1")
