@@ -33,7 +33,7 @@
   <a href="mailto:nika-sc@bk.ru?subject=Nika-CRM%20%D0%9F%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%20%D0%BF%D0%BE%20%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B5"><b>Связаться</b></a>
 </p>
 
-**Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) (хаб) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо Service) · соседний продукт Fitness — [fitness.nika-crm.ru](https://fitness.nika-crm.ru/) / [Nika-Fitness-CRM](https://github.com/nika-sc/Nika-Fitness-CRM)
+**Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо)
 
 > **Не хотите читать длинную инструкцию?**  
 > **Бесплатно** установлю и помогу поддерживать CRM, если вы возьмёте VPS у партнёра **FirstVDS** по [реферальной ссылке](https://firstvds.ru/?from=528402) и промокоду **`648528402`**.  
@@ -52,7 +52,7 @@ CRM может работать:
 - на VPS с вашим доменом;
 - без зависимости от SaaS-платформ.
 
-Это **не** CRM фитнес-клуба. Абонементы, ресепшен и расписание — отдельный продукт: [Nika Fitness CRM](https://github.com/nika-sc/Nika-Fitness-CRM) · демо [fitness.nika-crm.ru](https://fitness.nika-crm.ru/). Бренд: [www.nika-crm.ru](https://www.nika-crm.ru/).
+Это CRM сервисного центра. Сайт продукта: [www.nika-crm.ru](https://www.nika-crm.ru/).
 
 Если вы заметили баг или хотите предложить улучшение, пишите на `nika-sc@bk.ru` с темой `Nika Service CRM`.  
 Если нужна помощь по установке, интеграции или **переносу данных из другой CRM** — с темой `Nika-CRM Помощь по установке`.
