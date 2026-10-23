@@ -38,7 +38,7 @@ _PAGES = {
         "file": "ABOUT.md",
         "title": "О проекте и установка бесплатной Nika CRM — Windows, Docker, демо",
         "description": (
-            "Что умеет бесплатная open-source CRM для сервисных центров: Windows SETUP, "
+            "Что умеет бесплатная CRM для сервисных центров: Windows SETUP, "
             "Docker, быстрый старт и контакты поддержки."
         ),
         "keywords": (

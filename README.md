@@ -5,7 +5,7 @@
 <h1 align="center">Nika Service CRM</h1>
 
 <p align="center">
-  <strong>Бесплатная open-source CRM для сервисных центров</strong><br>
+  <strong>Бесплатная CRM для сервисных центров</strong><br>
   Заявки на ремонт · склад · касса · зарплата · отчёты · портал клиента
 </p>
 
@@ -13,7 +13,7 @@
   <a href="https://www.nika-crm.ru/"><img src="https://img.shields.io/badge/Hub-nika--crm.ru-ff5a3c?style=for-the-badge" alt="Nika CRM hub"></a>
   <a href="https://service.nika-crm.ru/"><img src="https://img.shields.io/badge/Demo-Service-2bb8a6?style=for-the-badge" alt="Live demo Service"></a>
   <a href="https://firstvds.ru/?from=528402"><img src="https://img.shields.io/badge/Бесплатная%20установка-FirstVDS%20VPS-e8b86d?style=for-the-badge" alt="Free install via FirstVDS"></a>
-  <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-0f1c24?style=for-the-badge" alt="MIT License"></a>
+  <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/Лицензия-только%20использование-0f1c24?style=for-the-badge" alt="Лицензия: только использование"></a>
   <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
 </p>
 
@@ -2107,7 +2107,7 @@ pytest --cov=app
 
 ## Лицензия
 
-[Укажите лицензию]
+Бесплатное использование. Копировать программу и изменять её нельзя. Текст: [LICENSE](LICENSE).
 
 ## Авторы
 

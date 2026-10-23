@@ -1,21 +1,36 @@
-MIT License
+Лицензия на использование Nika CRM
+
+Copyright (c) 2026 Alexander Smelkov (Александр Смелков)
+
+Программа бесплатная для использования. Можно установить Nika CRM и работать
+в ней в своём сервисном центре. Копия, которая нужна только чтобы установить
+и запустить программу на своих компьютерах, разрешена.
+
+Не разрешается:
+- копировать программу и передавать копии другим лицам;
+- изменять программу;
+- публиковать изменённую версию или выдавать программу за свой продукт.
+
+Программа предоставляется «как есть», без гарантий. Автор не отвечает за
+потерю данных, простой и другой ущерб от использования.
+
+Версии, которые уже были опубликованы с файлом LICENSE «MIT License»,
+остаются под MIT. Эта лицензия действует для выпусков, где в LICENSE
+указан этот текст.
+
+Nika CRM Use License
 
 Copyright (c) 2026 Alexander Smelkov
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The software is free to use. You may install and run it for your own
+service center. A copy made only to install and run it on your own
+computers is allowed.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+You may not copy the software for others, modify it, publish a modified
+version, or present it as your own product.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE
+AUTHOR IS NOT LIABLE FOR ANY CLAIM OR DAMAGES ARISING FROM USE.
+
+Releases already published with an MIT License file remain under MIT.
+This license applies to releases whose LICENSE file contains this text.
