@@ -49,15 +49,15 @@ SHA256: `E548A135C58D61A02BF815A26E0D357CCC74A205E46BDFC58874A70488AF1652`
 - три ярлыка на рабочем столе и десять в меню «Пуск»;
 - перезапуск службы и удаление.
 
-![Завершение установки](/docs/assets/walkthrough/windows-1.0.11/01-install-finish.png)
+![Завершение установки](/docs/assets/walkthrough/windows-1.0.11-01-install-finish.png)
 
-![Сводный отчёт после входа](/docs/assets/walkthrough/windows-1.0.11/02-dashboard.png)
+![Сводный отчёт после входа](/docs/assets/walkthrough/windows-1.0.11-02-dashboard.png)
 
-![Новая заявка](/docs/assets/walkthrough/windows-1.0.11/03-add-order.png)
+![Новая заявка](/docs/assets/walkthrough/windows-1.0.11-03-add-order.png)
 
-![Реестр заявок](/docs/assets/walkthrough/windows-1.0.11/04-orders.png)
+![Реестр заявок](/docs/assets/walkthrough/windows-1.0.11-04-orders.png)
 
-![Карточка заявки](/docs/assets/walkthrough/windows-1.0.11/05-order-detail.png)
+![Карточка заявки](/docs/assets/walkthrough/windows-1.0.11-05-order-detail.png)
 
 ## Установка
 
