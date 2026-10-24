@@ -20,7 +20,7 @@ SHA256 is written after the EXE is built (`WINDOWS_SETUP_SHA256` in `app/version
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.10-x64.exe`.
+1. Download `NikaCRM-Offline-Setup-1.0.11-x64.exe`.
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change
