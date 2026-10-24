@@ -91,8 +91,8 @@ UTC+3 (в Москве нет перехода на летнее время с 2
 ### Скачать
 
 - [GitHub release `windows-setup-1.0.11`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
-- [Зеркало на демо](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Зеркало на демо](https://nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 ### Документация
 
-- Руководство: https://service.nika-crm.ru/docs/guide (§ 2.3)
+- Руководство: https://nika-crm.ru/docs/guide (§ 2.3)

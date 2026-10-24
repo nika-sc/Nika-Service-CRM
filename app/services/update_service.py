@@ -250,6 +250,7 @@ def status(force: bool = False) -> dict:
             "sha256": manifest.get("sha256"),
             "filename": manifest.get("filename"),
             "github_download_url": manifest.get("github_download_url"),
+            "mirror_download_url": manifest.get("mirror_download_url"),
             "demo_download_url": manifest.get("demo_download_url"),
             "github_release_url": manifest.get("github_release_url"),
             "blog_url": manifest.get("blog_url"),

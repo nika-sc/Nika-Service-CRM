@@ -6,7 +6,7 @@
 
 - [NikaCRM-Offline-Setup-1.0.11-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 - [Страница релиза `windows-setup-1.0.11`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
-- [Зеркало на демо](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Зеркало на демо](https://nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 SHA256: `E548A135C58D61A02BF815A26E0D357CCC74A205E46BDFC58874A70488AF1652`
 (412 861 025 байт, 394 МБ, сборка 2026-10-24).

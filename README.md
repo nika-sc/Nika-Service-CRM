@@ -377,7 +377,7 @@ cd Nika-Service-CRM
 
 - [NikaCRM-Offline-Setup-1.0.11-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 - [Страница релиза `windows-setup-1.0.11`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
-- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Зеркало на демо-сайте](https://nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 SHA256 публикуется на странице релиза вместе с EXE.
 
@@ -1614,7 +1614,7 @@ pytest --cov=app
 
 ### 2026-08-15 — диагностика, кабинет клиента, чат и уведомления
 
-Новая версия руководства пользователя **3.4** (`docs/USER_GUIDE.md`, на сайте [/docs/guide](https://service.nika-crm.ru/docs/guide)).
+Новая версия руководства пользователя **3.4** (`docs/USER_GUIDE.md`, на сайте [/docs/guide](https://nika-crm.ru/docs/guide)).
 
 **Диагностика заявки**
 

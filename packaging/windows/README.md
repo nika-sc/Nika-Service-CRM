@@ -12,7 +12,7 @@ See `RELEASE_NOTES_1.0.11.md`.
 
 - [NikaCRM-Offline-Setup-1.0.11-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 - [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Demo mirror](https://nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 SHA256 is written after the EXE is built (`WINDOWS_SETUP_SHA256` in `app/version.py`).
 

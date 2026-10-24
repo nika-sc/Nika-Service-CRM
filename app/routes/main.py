@@ -121,8 +121,9 @@ def _windows_setup_info():
         "sha256": WINDOWS_SETUP_SHA256,
         "github_release_url": f"{github_base}/releases/tag/{tag}",
         "github_download_url": f"{github_base}/releases/download/{tag}/{filename}",
-        "demo_download_url": f"https://service.nika-crm.ru/downloads/{filename}",
-        "blog_url": f"https://service.nika-crm.ru/blog/windows-setup-{slug}",
+        "mirror_download_url": f"https://nika-crm.ru/downloads/{filename}",
+        "demo_download_url": f"https://nika-crm.ru/downloads/{filename}",
+        "blog_url": f"https://nika-crm.ru/blog/windows-setup-{slug}/",
         "requires_admin": True,
     }
 

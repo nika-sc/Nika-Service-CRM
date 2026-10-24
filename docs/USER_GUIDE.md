@@ -146,7 +146,7 @@ Nika CRM — веб-система для сервисного центра: з�
 Офлайн-установщик для Windows 10/11 x64 (встроенные Python 3.12, PostgreSQL 18, демо-база), версия **1.0.11**, дата сборки **2026-10-24**:
 
 1. Скачайте [NikaCRM-Offline-Setup-1.0.11-x64.exe](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)  
-   или зеркало на [service.nika-crm.ru/downloads/…](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe).
+   или зеркало на [service.nika-crm.ru/downloads/…](https://nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe).
 2. Запустите **от имени администратора**. Уже установленный на компьютере Python удалять не нужно: CRM ставит свой.
 3. После копирования файлов мастер несколько минут настраивает Python, PostgreSQL и службу (обычно 5–10 минут). Окно не закрывать — это не зависание. При ошибке журнал копируется на рабочий стол в `NikaCRM-setup-log`.
 4. Ярлык **Nika CRM — Открыть** → `http://127.0.0.1:5000`. С другого ПК в LAN: `http://<IP-этого-ПК>:5000` (доступ из сети включён по умолчанию; смените демо-пароли).
