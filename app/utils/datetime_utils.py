@@ -61,7 +61,11 @@ def _get_app_timezone():
         try:
             from zoneinfo import ZoneInfo
             return ZoneInfo("Europe/Moscow")
-        except ImportError:
+        except (ImportError, KeyError, ValueError):
+            # Windows embeddable Python ships no tz database: without the
+            # tzdata wheel ZoneInfo raises ZoneInfoNotFoundError (KeyError) and
+            # the dashboard answered 500 after login. Moscow has been UTC+3
+            # without DST since 2014, so the fixed offset is still correct.
             pass
     return timezone(timedelta(hours=offset))
 

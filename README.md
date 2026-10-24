@@ -361,22 +361,23 @@ cd Nika-Service-CRM
 ### Windows SETUP (полный офлайн-установщик)
 
 Для Windows 10/11 x64 доступен единый автономный установщик
-`NikaCRM-Offline-Setup-1.0.10-x64.exe` (**сборка 2026-10-23**).
+`NikaCRM-Offline-Setup-1.0.11-x64.exe` (**сборка 2026-10-24**).
 Он не требует интернета и автоматически устанавливает встроенные Python 3.12
 и PostgreSQL 18, импортирует очищенную демо-базу, создаёт `.env`, применяет
 миграции и регистрирует Nika CRM как службу Windows с автозапуском.
 Уже установленный на компьютере Python установщик не меняет и не удаляет.
 
-**Что нового в 1.0.10 (2026-10-23):** установка проходит, даже если Python уже стоит
-на компьютере. Свой интерпретатор CRM лежит отдельно. При удалении программа спрашивает,
-стирать ли базу, и не трогает чужой Python. Подробности —
-[блог Windows SETUP 1.0.10](docs/blog/48-windows-setup-1-0-10.md).
+**Что нового в 1.0.11 (2026-10-24):** установка проходит в Windows Sandbox,
+после входа открывается дашборд (раньше был 500 из-за отсутствия базы часовых
+поясов), мастер всегда на русском, на рабочем столе три ярлыка — открыть CRM,
+перезапустить службу и сайт сервисного центра. Подробности —
+[блог Windows SETUP 1.0.11](docs/blog/49-windows-setup-1-0-11.md).
 
 **Скачать:**
 
-- [NikaCRM-Offline-Setup-1.0.10-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.10/NikaCRM-Offline-Setup-1.0.10-x64.exe)
-- [Страница релиза `windows-setup-1.0.10`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.10)
-- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.10-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.11-x64.exe (GitHub Releases)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Страница релиза `windows-setup-1.0.11`](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
+- [Зеркало на демо-сайте](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 SHA256 публикуется на странице релиза вместе с EXE.
 

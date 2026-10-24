@@ -17,3 +17,7 @@ xhtml2pdf>=0.2.15
 openpyxl>=3.1.0
 psycopg2-binary>=2.9.9
 waitress>=3.0.2
+# The embeddable interpreter has no system tz database, so zoneinfo needs the
+# tzdata wheel; without it ZoneInfo("Europe/Moscow") raises and every page that
+# formats a date answers 500.
+tzdata>=2024.1

@@ -23,11 +23,23 @@ if (-not $installer) {
 
 Remove-Item -LiteralPath $resultDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "smoke-test.ps1") -Destination $resultDir
+# Windows PowerShell 5.1 in the sandbox reads a BOM-less script as ANSI and
+# chokes on Cyrillic. Always hand it a copy with a UTF-8 BOM.
+$smokeText = [System.IO.File]::ReadAllText(
+    (Join-Path $PSScriptRoot "smoke-test.ps1"), [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText(
+    (Join-Path $resultDir "smoke-test.ps1"), $smokeText, (New-Object System.Text.UTF8Encoding $true))
 Copy-Item -LiteralPath $installer.FullName -Destination $resultDir
 
 $escapedResults = [Security.SecurityElement]::Escape($resultDir)
 $installerName = $installer.Name
+# The LogonCommand runs through cmd so its console output survives in
+# logon.txt even when the PowerShell script dies before writing a result.
+$launcher = @"
+@echo off
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\NikaCRM-Smoke\smoke-test.ps1 -InstallerPath "C:\NikaCRM-Smoke\$installerName" -ResultDir C:\NikaCRM-Smoke -ShutdownWhenDone > C:\NikaCRM-Smoke\logon.txt 2>&1
+"@
+$launcher | Set-Content -LiteralPath (Join-Path $resultDir "run-smoke.cmd") -Encoding ASCII
 $config = @"
 <Configuration>
   <MappedFolders>
@@ -40,7 +52,7 @@ $config = @"
   <Networking>Disable</Networking>
   <ClipboardRedirection>Disable</ClipboardRedirection>
   <LogonCommand>
-    <Command>powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\NikaCRM-Smoke\smoke-test.ps1 -InstallerPath "C:\NikaCRM-Smoke\$installerName" -ResultDir C:\NikaCRM-Smoke -ShutdownWhenDone</Command>
+    <Command>cmd.exe /c C:\NikaCRM-Smoke\run-smoke.cmd</Command>
   </LogonCommand>
 </Configuration>
 "@

@@ -203,6 +203,8 @@ def test_bundled_python_does_not_touch_an_existing_install():
     assert "PYTHONNOUSERSITE" in bootstrap
     assert "PYTHONNOUSERSITE" in service
     assert 'os.environ.pop("PYTHONPATH", None)' in service
+    assert "sys.path.insert(0, str(APP_ROOT))" in service
+    assert service.index("sys.path.insert(0, str(APP_ROOT))") < service.index("from wsgi import app")
     assert "Remove-NikaBundledPython" in bootstrap
     assert "Remove-NikaBundledPython" in CLEANUP.read_text(encoding="utf-8-sig")
     assert "Remove-NikaBundledPython" in FULL_UNINSTALL.read_text(encoding="utf-8-sig")
@@ -245,9 +247,10 @@ def test_bootstrap_reports_progress_for_the_wizard():
     assert "GetEmptyWebProxy" in bootstrap
     iss = ISS.read_text(encoding="utf-8-sig")
     assert "RunBootstrapWithProgress" in iss
-    assert "Exec(PowerShell, Params, '', SW_HIDE, ewNoWait, ResultCode)" in iss
+    assert "Exec(ExpandConstant('{cmd}'), Params, ProgressDir, SW_HIDE, ewNoWait, ResultCode)" in iss
     assert "Exec(PowerShell, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode)" not in iss
-    assert "Wait=OpenProcess+PeekMessage" in iss
+    assert "Wait=setup-progress.done" in iss
+    assert "while not FileExists(ProgressDir + '\\setup-progress.done')" in iss
     assert "PeekMessageW@user32.dll" in iss
     assert "function Invoke-Psql" in bootstrap
     assert 'pager=off' in bootstrap
@@ -259,10 +262,30 @@ def test_bootstrap_reports_progress_for_the_wizard():
     assert "'-NonInteractive" not in iss
     assert '"-NonInteractive' not in iss
     assert "run-bootstrap.cmd" not in iss
-    assert "create-desktop-icons.ps1" in iss
+    for icon in (
+        r'{commondesktop}\Nika CRM — Открыть',
+        r'{commondesktop}\Nika CRM — Перезапустить сервис',
+        r'{commondesktop}\Ника Сервис — Сайт',
+    ):
+        assert icon in iss, icon
+    assert "create-desktop-icons" not in iss
     assert "Не закрывайте окно" in iss
     assert "[Parameter(Mandatory = $true)]" not in bootstrap.split("function Write-InstallerFile")[0]
     assert 'Join-Path $env:SystemRoot "Temp\\NikaCRM-setup"' in bootstrap or "Temp\\NikaCRM-setup" in bootstrap
     assert "setup-error.txt" in iss
     assert "ReadSetupErrorHint" in iss
-    assert "скрипт настройки не стартовал" in iss
+    assert "launch-bootstrap.cmd" in iss
+    assert "type \"" in iss or 'type "' in iss
+    assert "LanguageMode=" in bootstrap
+    assert "RestrictedLanguage" in bootstrap
+
+
+def test_bundle_ships_the_timezone_database():
+    """Embeddable Python has no tz database: without tzdata every dated page is a 500."""
+    requirements = Path("packaging/windows/requirements-windows.txt").read_text(encoding="utf-8")
+    assert "tzdata" in requirements
+    utils = Path("app/utils/datetime_utils.py").read_text(encoding="utf-8")
+    assert 'ZoneInfo("Europe/Moscow")' in utils
+    # ZoneInfoNotFoundError is a KeyError subclass, so the fallback must catch it.
+    assert "except (ImportError, KeyError, ValueError)" in utils
+

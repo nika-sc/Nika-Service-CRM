@@ -2,7 +2,7 @@
 #define VersionFileHandle FileOpen(AddBackslash(SourcePath) + "..\..\VERSION")
 #define MyAppVersion Trim(FileRead(VersionFileHandle))
 #expr FileClose(VersionFileHandle)
-#define MyAppVersionDate "2026-10-23"
+#define MyAppVersionDate "2026-10-24"
 #define MyAppPublisher "Alexander Smelkov, Service Center Nika"
 #define MyAppURL "https://github.com/nika-sc/Nika-Service-CRM"
 #define MyAppEmail "smelkov2008@yandex.ru"
@@ -20,7 +20,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL=https://github.com/nika-sc/Nika-Service-CRM/issues
 AppUpdatesURL={#MyAppURL}
 AppContact={#MyAppEmail}
-AppComments=Free open-source CRM for service centers. MIT License. Build {#MyAppVersionDate}.
+AppComments=Free CRM for service centers. Use only; copying and modification are not allowed. Build {#MyAppVersionDate}.
 DefaultDirName={autopf}\NikaCRM
 DefaultGroupName=Nika CRM
 DisableProgramGroupPage=yes
@@ -31,12 +31,17 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-WizardStyle=modern
+WizardStyle=classic
 SetupLogging=yes
+; Russian is the product language: never ask, even on an English Windows.
+LanguageDetectionMethod=none
+ShowLanguageDialog=no
 InfoBeforeFile=installer-license.ru.txt
 WizardImageFile=wizard-large.bmp
-WizardSmallImageFile=wizard-small.bmp
+WizardSmallImageFile=wizard-small.png
+SetupIconFile=nika-service.ico
 UninstallDisplayName=Nika CRM
+UninstallDisplayIcon={app}\nika-service.ico
 Uninstallable=yes
 CloseApplications=yes
 RestartApplications=no
@@ -61,6 +66,13 @@ english.InstallingLabel=Copying Nika CRM files…%nPython and the database are s
 Name: "{commonappdata}\NikaCRM"; Permissions: admins-full system-full
 Name: "{commonappdata}\NikaCRM\logs"; Permissions: admins-full system-full
 
+[InstallDelete]
+; Older builds put every shortcut on the desktop; 1.0.11 keeps them in the
+; Start menu only, so an in-place upgrade must clean the old icons up.
+Type: files; Name: "{commondesktop}\Nika CRM*.url"
+Type: files; Name: "{commondesktop}\Nika CRM*.lnk"
+Type: files; Name: "{commondesktop}\Ника Сервис*.url"
+
 [Files]
 Source: "{#SourceRoot}\app\*"; DestDir: "{app}\app\app"; Excludes: "database\service_center.db,database\*.db,database\*.db-*,database\*.sqlite,database\*.sqlite3,*\__pycache__\*,*\*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\database\bootstrap\nikacrm_public_sanitized.sql"; DestDir: "{app}\app\database\bootstrap"; Flags: ignoreversion
@@ -81,6 +93,7 @@ Source: "{#SourceRoot}\README.md"; DestDir: "{app}\app"; Flags: ignoreversion
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}\app"; Flags: ignoreversion
 Source: "{#SourceRoot}\oh-oh-icq-sound.mp3"; DestDir: "{app}\app"; Flags: ignoreversion
 Source: "installer-hero.bmp"; Flags: dontcopy
+Source: "nika-service.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 Source: "assets\python-3.12.10-embed-amd64.zip"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
 Source: "assets\postgresql-installer.exe"; DestDir: "{tmp}\NikaCRM-offline"; Flags: deleteafterinstall
@@ -92,11 +105,18 @@ Name: "{group}\Nika CRM — Открыть"; Filename: "http://127.0.0.1:5000"
 Name: "{group}\Nika CRM — Перезапустить сервис"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\restart-service.ps1"""; WorkingDir: "{app}\app"
 Name: "{group}\Nika CRM — Доступ по сети (LAN)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\enable-lan-access.ps1"""; WorkingDir: "{app}\app"; Comment: "Включить/починить доступ к CRM из локальной сети"
 Name: "{group}\Nika CRM — Пароль базы данных"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\show-db-credentials.ps1"""; WorkingDir: "{app}\app"; Comment: "Показать пароли PostgreSQL для pgAdmin (нужны права администратора)"
-Name: "{group}\Nika CRM — Резервная копия базы"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\backup-database.ps1"""; WorkingDir: "{app}\app"; Comment: "Сохранить базу в %ProgramData%\NikaCRM-backup (нужны права администратора)"
+Name: "{group}\Nika CRM — Резервная копия базы"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\backup-database.ps1"""; WorkingDir: "{app}\app"; Comment: "Сохранить базу в %ProgramData%\NikaCRM-backup и показать путь к архиву (нужны права администратора)"
 Name: "{group}\Nika CRM — Журналы"; Filename: "{sys}\explorer.exe"; Parameters: """{commonappdata}\NikaCRM\logs"""
 Name: "{group}\Nika CRM — Руководство пользователя"; Filename: "{#MyGuideURL}"
 Name: "{group}\Nika CRM — Онлайн-демо"; Filename: "{#MyDemoURL}"
+Name: "{group}\Ника Сервис — Сайт"; Filename: "https://nika-sc.ru/"; Comment: "Сайт сервисного центра «Ника»"
 Name: "{group}\Nika CRM — Удалить"; Filename: "{uninstallexe}"; Comment: "Удалить Nika CRM: службы, файлы и (по вопросу) база с настройками"
+
+; Desktop: exactly three icons. Created natively by Setup (not by a script),
+; so they exist even if PowerShell is locked down on the target machine.
+Name: "{commondesktop}\Nika CRM — Открыть"; Filename: "http://127.0.0.1:5000"; IconFilename: "{app}\nika-service.ico"
+Name: "{commondesktop}\Nika CRM — Перезапустить сервис"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\app\packaging\windows\restart-service.ps1"""; WorkingDir: "{app}\app"; IconFilename: "{app}\nika-service.ico"; Comment: "Перезапустить сервис Nika CRM"
+Name: "{commondesktop}\Ника Сервис — Сайт"; Filename: "https://nika-sc.ru/"; IconFilename: "{app}\nika-service.ico"; Comment: "Сайт сервисного центра «Ника»"
 
 [Run]
 Filename: "http://127.0.0.1:5000"; Description: "Открыть Nika CRM"; Flags: shellexec postinstall skipifsilent nowait
@@ -125,22 +145,75 @@ function TranslateMessage(const lpMsg: TMsg): BOOL;
   external 'TranslateMessage@user32.dll stdcall';
 function DispatchMessage(const lpMsg: TMsg): Longint;
   external 'DispatchMessageW@user32.dll stdcall';
-function OpenProcess(dwDesiredAccess: Cardinal; bInheritHandle: BOOL; dwProcessId: Cardinal): THandle;
-  external 'OpenProcess@kernel32.dll stdcall';
-function CloseHandle(hObject: THandle): BOOL;
-  external 'CloseHandle@kernel32.dll stdcall';
-function GetExitCodeProcess(hProcess: THandle; var lpExitCode: Cardinal): BOOL;
-  external 'GetExitCodeProcess@kernel32.dll stdcall';
-function WaitForSingleObject(hHandle: THandle; dwMilliseconds: DWORD): DWORD;
-  external 'WaitForSingleObject@kernel32.dll stdcall';
 
 var
   ProductPage: TWizardPage;
   ProductImage: TBitmapImage;
+  InstallingLogo: TBitmapImage;
   LegalConfirmationPage: TInputOptionWizardPage;
   DocumentationPage: TWizardPage;
   KeepDataDir: Boolean;
   UserWantsDataRemoved: Boolean;
+
+{ WizardImageFile is drawn only on Welcome/Finished since Inno 6.6, so the
+  progress page needs its own logo. The banner goes under every visible control
+  (progress bar, status and path labels) using their real rectangles; the
+  computed geometry is logged next to setup.log for support. }
+procedure LayoutInstallingLogo;
+var
+  Page: TNewNotebookPage;
+  GaugeTop, OccupiedBottom, Free, LabelTop, LogoHeight: Integer;
+  Details: String;
+begin
+  if InstallingLogo = nil then
+    Exit;
+  Page := WizardForm.InstallingPage;
+  GaugeTop := WizardForm.ProgressGauge.Top;
+  OccupiedBottom := GaugeTop + WizardForm.ProgressGauge.Height;
+  Free := Page.Height - OccupiedBottom - ScaleY(8);
+
+  LabelTop := WizardForm.StatusLabel.Top;
+  if WizardForm.FilenameLabel.Top < LabelTop then
+    LabelTop := WizardForm.FilenameLabel.Top;
+
+  InstallingLogo.Visible := False;
+  if Free >= ScaleY(48) then
+  begin
+    LogoHeight := (Page.Width * 170) div 640;
+    if LogoHeight > Free then
+      LogoHeight := Free;
+    InstallingLogo.Height := LogoHeight;
+    InstallingLogo.Width := (LogoHeight * 640) div 170;
+    InstallingLogo.Left := (Page.Width - InstallingLogo.Width) div 2;
+    InstallingLogo.Top := OccupiedBottom + ScaleY(4);
+    InstallingLogo.Visible := True;
+  end
+  else if (GaugeTop - LabelTop) >= ScaleY(48) then
+  begin
+    LogoHeight := (Page.Width * 170) div 640;
+    if LogoHeight > (GaugeTop - LabelTop - ScaleY(8)) then
+      LogoHeight := GaugeTop - LabelTop - ScaleY(8);
+    InstallingLogo.Height := LogoHeight;
+    InstallingLogo.Width := (LogoHeight * 640) div 170;
+    InstallingLogo.Left := (Page.Width - InstallingLogo.Width) div 2;
+    InstallingLogo.Top := GaugeTop - LogoHeight - ScaleY(4);
+    InstallingLogo.Visible := True;
+  end;
+
+  Details :=
+    'page=' + IntToStr(Page.Width) + 'x' + IntToStr(Page.Height) + #13#10 +
+    'gauge=' + IntToStr(GaugeTop) + '+' + IntToStr(WizardForm.ProgressGauge.Height) + #13#10 +
+    'status=' + IntToStr(WizardForm.StatusLabel.Top) + '+' + IntToStr(WizardForm.StatusLabel.Height) +
+    ' visible=' + IntToStr(Ord(WizardForm.StatusLabel.Visible)) + #13#10 +
+    'filename=' + IntToStr(WizardForm.FilenameLabel.Top) + '+' + IntToStr(WizardForm.FilenameLabel.Height) +
+    ' visible=' + IntToStr(Ord(WizardForm.FilenameLabel.Visible)) + #13#10 +
+    'occupiedBottom=' + IntToStr(OccupiedBottom) + ' free=' + IntToStr(Free) + #13#10 +
+    'logo=' + IntToStr(InstallingLogo.Left) + ',' + IntToStr(InstallingLogo.Top) +
+    ' ' + IntToStr(InstallingLogo.Width) + 'x' + IntToStr(InstallingLogo.Height) +
+    ' visible=' + IntToStr(Ord(InstallingLogo.Visible));
+  ForceDirectories(ExpandConstant('{win}\Temp\NikaCRM-setup'));
+  SaveStringToFile(ExpandConstant('{win}\Temp\NikaCRM-setup\ui-layout.txt'), Details, False);
+end;
 
 procedure OpenInstallerLink(Sender: TObject);
 var
@@ -193,6 +266,16 @@ begin
     'Email: smelkov2008@yandex.ru';
 
   ExtractTemporaryFile('installer-hero.bmp');
+
+  InstallingLogo := TBitmapImage.Create(WizardForm.InstallingPage);
+  InstallingLogo.Parent := WizardForm.InstallingPage;
+  InstallingLogo.Left := 0;
+  InstallingLogo.Top := 0;
+  InstallingLogo.AutoSize := False;
+  InstallingLogo.Stretch := True;
+  InstallingLogo.Visible := False;
+  InstallingLogo.Bitmap.LoadFromFile(ExpandConstant('{tmp}\installer-hero.bmp'));
+
   ProductPage := CreateCustomPage(
     wpWelcome,
     'Возможности Nika CRM',
@@ -416,25 +499,40 @@ begin
     FileCopy(InnoLog, Dest + '\inno-setup.log', False);
 end;
 
-function ReadSetupErrorHint: String;
+function ReadTextTail(const Path: String; MaxLen: Integer): String;
 var
-  ErrorFile, LogFile: String;
   Content: AnsiString;
   S: String;
 begin
   Result := '';
-  ErrorFile := ExpandConstant('{win}\Temp\NikaCRM-setup\setup-error.txt');
-  LogFile := ExpandConstant('{win}\Temp\NikaCRM-setup\setup.log');
-  if LoadStringFromFile(ErrorFile, Content) then
-  begin
-    S := Trim(String(Content));
-    if Length(S) > 1200 then
-      S := Copy(S, Length(S) - 1199, 1200);
-    Result := S;
+  if not LoadStringFromFile(Path, Content) then
     Exit;
+  S := Trim(String(Content));
+  if (MaxLen > 0) and (Length(S) > MaxLen) then
+    S := Copy(S, Length(S) - MaxLen + 1, MaxLen);
+  Result := S;
+end;
+
+function ReadSetupErrorHint: String;
+var
+  Dir, Extra: String;
+begin
+  Dir := ExpandConstant('{win}\Temp\NikaCRM-setup');
+  Result := ReadTextTail(Dir + '\setup-error.txt', 1200);
+  if Result <> '' then
+    Exit;
+  Result := ReadTextTail(Dir + '\console.txt', 1200);
+  Extra := ReadTextTail(Dir + '\cmd-start.txt', 400);
+  if Extra <> '' then
+  begin
+    if Result <> '' then
+      Result := Result + #13#10;
+    Result := Result + Extra;
   end;
-  if not FileExists(LogFile) then
-    Result := 'Файл setup.log не создан — скрипт настройки не стартовал. Нужен setup-error.txt из папки журнала.';
+  if Result <> '' then
+    Exit;
+  if not FileExists(Dir + '\setup.log') then
+    Result := 'Скрипт настройки не записал setup.log. Пришлите console.txt и cmd-start.txt из папки журнала.';
 end;
 
 procedure FailBootstrap(const Msg: String);
@@ -452,7 +550,7 @@ begin
     'Журнал скопирован на рабочий стол:' + #13#10 +
     ExpandConstant('{commondesktop}\NikaCRM-setup-log') + #13#10 +
     'Также: ' + ExpandConstant('{win}\Temp\NikaCRM-setup') + #13#10 +
-    'Пришлите setup-error.txt и setup.log из этой папки.'
+    'Пришлите setup-error.txt, setup.log и console.txt из этой папки.'
   );
 end;
 
@@ -500,22 +598,47 @@ begin
     WizardForm.FilenameLabel.Caption := Hint;
 end;
 
+procedure WriteBootstrapLauncher(const ProgressDir, PowerShell, Bootstrap: String);
+var
+  Cmd: String;
+begin
+  { ASCII, CRLF. cmd stays alive for the whole script and keeps its stdout. }
+  Cmd :=
+    '@echo off' + #13#10 +
+    '(echo cmd-start %DATE% %TIME%)>"' + ProgressDir + '\cmd-start.txt"' + #13#10 +
+    '"' + PowerShell + '" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "' + Bootstrap + '"' +
+    ' -AppDir "' + ExpandConstant('{app}') + '"' +
+    ' -DataDir "' + ExpandConstant('{commonappdata}\NikaCRM') + '"' +
+    ' -AssetsDir "' + ExpandConstant('{tmp}\NikaCRM-offline') + '"' +
+    ' -ProgressDir "' + ProgressDir + '"' +
+    ' >"' + ProgressDir + '\console.txt" 2>&1' + #13#10 +
+    'set EC=%ERRORLEVEL%' + #13#10 +
+    '(echo EXIT=%EC%)>>"' + ProgressDir + '\cmd-start.txt"' + #13#10 +
+    'if exist "' + ProgressDir + '\setup-error.txt" type "' + ProgressDir + '\setup-error.txt" >>"' + ProgressDir + '\console.txt"' + #13#10 +
+    'if exist "' + ProgressDir + '\setup.log" type "' + ProgressDir + '\setup.log" >>"' + ProgressDir + '\console.txt"' + #13#10 +
+    'exit /b %EC%' + #13#10;
+  SaveStringToFile(ProgressDir + '\launch-bootstrap.cmd', Cmd, False);
+end;
+
 procedure RunBootstrapWithProgress;
 var
   ResultCode: Integer;
-  PowerShell, Bootstrap, Params, ProgressDir, PidFile: String;
+  PowerShell, Bootstrap, Params, ProgressDir: String;
   Pid, Elapsed: Integer;
-  ProcessHandle: THandle;
-  ExitCode: Cardinal;
 begin
-  // ewWaitUntilTerminated freezes the wizard (cannot drag/minimize) and hides
-  // live progress. Start PowerShell without waiting, then wait on its PID
-  // with a message pump. Fail fast if the PID file never appears.
+  { cmd.exe in Windows Sandbox exits with code 1 while PowerShell is still
+    running. Waiting on that PID aborts the wizard and rolls the files back,
+    so the site opens and then disappears. The script's setup-progress.done
+    file is the only completion signal. }
   ProgressDir := ExpandConstant('{win}\Temp\NikaCRM-setup');
-  PidFile := ProgressDir + '\setup-progress.pid';
   ForceDirectories(ProgressDir);
-  DeleteFile(PidFile);
+  DeleteFile(ProgressDir + '\setup-progress.pid');
   DeleteFile(ProgressDir + '\setup-progress.done');
+  DeleteFile(ProgressDir + '\setup-progress.txt');
+  DeleteFile(ProgressDir + '\setup-error.txt');
+  DeleteFile(ProgressDir + '\setup.log');
+  DeleteFile(ProgressDir + '\console.txt');
+  DeleteFile(ProgressDir + '\cmd-start.txt');
   SaveStringToFile(ProgressDir + '\installer-launch.log', 'preparing' + #13#10, False);
 
   WizardForm.ProgressGauge.Min := 0;
@@ -535,63 +658,40 @@ begin
   if not FileExists(Bootstrap) then
     FailBootstrap('Не найден скрипт настройки: ' + Bootstrap);
 
-  Params :=
-    '-NoLogo -NoProfile -ExecutionPolicy Bypass -File "' + Bootstrap + '"' +
-    ' -AppDir "' + ExpandConstant('{app}') + '"' +
-    ' -DataDir "' + ExpandConstant('{commonappdata}\NikaCRM') + '"' +
-    ' -AssetsDir "' + ExpandConstant('{tmp}\NikaCRM-offline') + '"' +
-    ' -ProgressDir "' + ProgressDir + '"';
+  WriteBootstrapLauncher(ProgressDir, PowerShell, Bootstrap);
+  Params := '/d /c "' + ProgressDir + '\launch-bootstrap.cmd"';
   SaveStringToFile(
     ProgressDir + '\installer-launch.log',
-    PowerShell + #13#10 + Params + #13#10 +
-    'BootstrapExists=' + Bootstrap + #13#10 +
-    'Wait=OpenProcess+PeekMessage' + #13#10,
+    ExpandConstant('{cmd}') + #13#10 + Params + #13#10 +
+    'PowerShell=' + PowerShell + #13#10 +
+    'Bootstrap=' + Bootstrap + #13#10 +
+    'Wait=setup-progress.done' + #13#10,
     False);
-  if not Exec(PowerShell, Params, '', SW_HIDE, ewNoWait, ResultCode) then
+  if not Exec(ExpandConstant('{cmd}'), Params, ProgressDir, SW_HIDE, ewNoWait, ResultCode) then
     FailBootstrap('Не удалось запустить автоматическую настройку Nika CRM.');
 
+  Pid := ResultCode;
   Elapsed := 0;
-  while not FileExists(PidFile) do
+  while not FileExists(ProgressDir + '\setup-progress.done') do
   begin
     AppProcessMessage;
+    UpdateBootstrapProgressFromFile(ProgressDir);
     WizardForm.Refresh;
     Sleep(200);
     Inc(Elapsed);
-    if Elapsed > 150 then
-      FailBootstrap('Скрипт настройки не стартовал (нет PID за 30 секунд).');
+    if (Elapsed > 300) and (not FileExists(ProgressDir + '\setup-progress.pid')) then
+      FailBootstrap('Скрипт настройки не стартовал.');
+    if Elapsed > 6000 then
+      FailBootstrap('Настройка не отвечает больше 20 минут.');
   end;
-
-  Pid := StrToIntDef(Trim(ReadFirstLine(PidFile)), 0);
-  if Pid <= 0 then
-    FailBootstrap('Некорректный PID настройки.');
-  ProcessHandle := OpenProcess($101000, False, Pid);
-  ResultCode := 1;
-  if ProcessHandle <> 0 then
-  begin
-    Elapsed := 0;
-    while WaitForSingleObject(ProcessHandle, 200) = 258 do
-    begin
-      AppProcessMessage;
-      UpdateBootstrapProgressFromFile(ProgressDir);
-      Inc(Elapsed);
-      if Elapsed > 6000 then
-      begin
-        CloseHandle(ProcessHandle);
-        FailBootstrap('Настройка не отвечает больше 20 минут.');
-      end;
-    end;
-    if GetExitCodeProcess(ProcessHandle, ExitCode) then
-      ResultCode := Integer(ExitCode);
-    CloseHandle(ProcessHandle);
-  end
-  else if FileExists(ProgressDir + '\setup-progress.done') then
-    ResultCode := StrToIntDef(Trim(ReadFirstLine(ProgressDir + '\setup-progress.done')), 1);
+  ResultCode := StrToIntDef(Trim(ReadFirstLine(ProgressDir + '\setup-progress.done')), 1);
 
   SaveStringToFile(
     ProgressDir + '\installer-launch.log',
-    PowerShell + #13#10 + Params + #13#10 +
-    'BootstrapExists=' + Bootstrap + #13#10 +
-    'Wait=OpenProcess+PeekMessage' + #13#10 +
+    ExpandConstant('{cmd}') + #13#10 + Params + #13#10 +
+    'PowerShell=' + PowerShell + #13#10 +
+    'Bootstrap=' + Bootstrap + #13#10 +
+    'Wait=setup-progress.done' + #13#10 +
     'Pid=' + IntToStr(Pid) + #13#10 +
     'ResultCode=' + IntToStr(ResultCode) + #13#10,
     False);
@@ -603,12 +703,12 @@ begin
   WizardForm.StatusLabel.Caption := '100%  Установка завершена';
   WizardForm.FilenameLabel.Caption := 'Можно открывать Nika CRM.';
   WizardForm.Update;
-  Exec(
-    PowerShell,
-    '-NoLogo -NoProfile -ExecutionPolicy Bypass -File "' +
-    ExpandConstant('{app}\app\packaging\windows\create-desktop-icons.ps1') +
-    '" -AppDir "' + ExpandConstant('{app}') + '"',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpInstalling then
+    LayoutInstallingLogo;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
