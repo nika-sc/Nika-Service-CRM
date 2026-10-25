@@ -1,4 +1,5 @@
 <!-- Шапка: бренд + поиск на всю ширину + уведомления. Разделы — в левом сайдбаре (desktop) / drawer (mobile). -->
+{% set site_base = '' if config.PUBLIC_LANDING else 'https://service.nika-crm.ru' %}
 <nav class="mac-menu-bar no-print">
     <div class="mac-menu-container">
         <button type="button" class="mac-mobile-toggle" id="macMobileToggle" aria-label="Открыть меню" aria-controls="macMobileDrawer" aria-expanded="false">
@@ -32,6 +33,23 @@
                 <span style="font-size:.8rem; white-space:nowrap;">Онлайн: <strong data-demo-online-count>{{ demo_online_count }}</strong></span>
             </a>
             {% endif %}
+            <div class="dropdown">
+                <button class="mac-action-btn" type="button" id="siteMenuBtn" data-bs-toggle="dropdown"
+                        aria-expanded="false" title="Сайт: блог, руководство, скачать">
+                    <i class="fas fa-globe"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="siteMenuBtn">
+                    <li><h6 class="dropdown-header">Сайт Nika CRM</h6></li>
+                    <li><a class="dropdown-item" href="{{ site_base }}/blog"><i class="fas fa-newspaper fa-fw me-2"></i>Блог и новости</a></li>
+                    <li><a class="dropdown-item" href="{{ site_base }}/docs/guide"><i class="fas fa-book fa-fw me-2"></i>Руководство</a></li>
+                    <li><a class="dropdown-item" href="{{ site_base }}/docs/about"><i class="fas fa-circle-info fa-fw me-2"></i>О программе</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ site_base }}/downloads/NikaCRM-Offline-Setup-{{ app_version }}-x64.exe">
+                        <i class="fab fa-windows fa-fw me-2"></i>Скачать для Windows</a></li>
+                    <li><a class="dropdown-item" href="https://github.com/nika-sc/Nika-Service-CRM/releases" target="_blank" rel="noopener">
+                        <i class="fas fa-box-archive fa-fw me-2"></i>Все версии</a></li>
+                </ul>
+            </div>
             <div class="mac-notifications-dropdown">
                 <button class="mac-action-btn" id="notificationsBtn" title="Уведомления">
                     <i class="fas fa-bell"></i>

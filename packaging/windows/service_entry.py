@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import dotenv_values
 
 
 APP_ROOT = Path(__file__).resolve().parent
+# Embeddable CPython with python312._pth is isolated: the script directory is
+# not on sys.path, so `import wsgi` fails unless the CRM root is inserted.
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 DATA_ROOT = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "NikaCRM"
 ENV_FILE = DATA_ROOT / ".env"
 

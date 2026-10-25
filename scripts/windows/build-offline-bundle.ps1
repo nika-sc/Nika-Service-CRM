@@ -142,6 +142,29 @@ if (-not $SkipCompile) {
     if (-not (Test-Path -LiteralPath $IsccPath)) {
         throw "Inno Setup compiler not found: $IsccPath"
     }
+    Write-Host "[BUILD] Checking Python syntax"
+    & python -m compileall -q -f app wsgi.py packaging\windows\service_entry.py scripts\run_migrations.py
+    if ($LASTEXITCODE -ne 0) { throw "Python syntax check failed. The installer was not built." }
+
+    # Windows PowerShell 5.1 -File reads a script without a BOM as ANSI, turns
+    # Cyrillic bytes into smart quotes and refuses to parse it. That happened to
+    # smoke-test.ps1 first and would break bootstrap.ps1 the same way.
+    Write-Host "[BUILD] Checking PowerShell script encoding"
+    $scriptsToCheck = @(Get-ChildItem -LiteralPath $packagingDir -Filter "*.ps1" -File)
+    $scriptsToCheck += Get-Item -LiteralPath (Join-Path $repoRoot "scripts\Grant-LocalPostgresAppPrivileges.ps1")
+    $missingBom = @()
+    foreach ($script in $scriptsToCheck) {
+        $bytes = [System.IO.File]::ReadAllBytes($script.FullName)
+        $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+        $text = [System.IO.File]::ReadAllText($script.FullName, [System.Text.Encoding]::UTF8)
+        if (-not $hasBom -and $text -match "[\u0400-\u04FF]") {
+            $missingBom += $script.Name
+        }
+    }
+    if ($missingBom.Count -gt 0) {
+        throw "PowerShell scripts with Cyrillic must be UTF-8 with BOM: $($missingBom -join ', ')"
+    }
+
     Write-Host "[BUILD] Compiling NikaCRM.iss"
     & $IsccPath (Join-Path $packagingDir "NikaCRM.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }

@@ -27,6 +27,39 @@ function Write-Step([string] $Message) {
     }
 }
 
+# The Start menu shortcut closes its console at once, so the archive location
+# has to survive: a message box with the exact file and folder, plus an offer
+# to open the folder. -Quiet (uninstall) keeps it console-only.
+function Show-BackupResult([string] $Message, [bool] $IsError) {
+    if ($Quiet) {
+        Write-Host $Message
+        return
+    }
+    try {
+        Add-Type -AssemblyName System.Windows.Forms | Out-Null
+        if ($IsError) {
+            [System.Windows.Forms.MessageBox]::Show(
+                $Message,
+                "Nika CRM — резервная копия базы",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
+            return
+        }
+        $answer = [System.Windows.Forms.MessageBox]::Show(
+            $Message,
+            "Nika CRM — резервная копия базы",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($answer -eq [System.Windows.Forms.DialogResult]::Yes) {
+            Start-Process -FilePath (Join-Path $env:SystemRoot "explorer.exe") `
+                -ArgumentList "`"$BackupDir`""
+        }
+    }
+    catch {
+        Write-Host $Message
+    }
+}
+
 try {
     $pgDump = Join-Path $AppDir "runtime\postgresql\bin\pg_dump.exe"
     $stateFile = Join-Path $DataDir "installer\install-state.json"
@@ -95,9 +128,24 @@ try {
         Remove-Item -Force -ErrorAction SilentlyContinue
 
     Write-Step ("Готово: {0:N1} МБ" -f ($dumpInfo.Length / 1MB))
+    $message = @(
+        "Резервная копия создана."
+        ""
+        "Файл:"
+        $dumpFile
+        ("Размер: {0:N1} МБ" -f ($dumpInfo.Length / 1MB))
+        ""
+        "Папка (деинсталлятор её не удаляет):"
+        $BackupDir
+        ""
+        "Открыть папку с копиями?"
+    ) -join "`r`n"
+    Show-BackupResult $message $false
     exit 0
 }
 catch {
+    $message = "Резервная копия не создана.`r`n`r`n$($_.Exception.Message)"
+    Show-BackupResult $message $true
     Write-Host "[Nika CRM] Резервная копия не создана: $($_.Exception.Message)"
     exit 1
 }

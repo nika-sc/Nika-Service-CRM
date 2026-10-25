@@ -4,23 +4,23 @@
 It contains Python 3.12, PostgreSQL 18, NSSM, the sanitized demo database and
 all Windows Python wheels required by the application.
 
-**Current published build: 1.0.10 (2026-10-23).**
+**Current published build: 1.0.11 (2026-10-24).**
 
-See `RELEASE_NOTES_1.0.10.md`.
+See `RELEASE_NOTES_1.0.11.md`.
 
-**Published download links (1.0.10, build 2026-10-23):**
+**Published download links (1.0.11, build 2026-10-24):**
 
-- [NikaCRM-Offline-Setup-1.0.10-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.10/NikaCRM-Offline-Setup-1.0.10-x64.exe)
-- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.10)
-- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.10-x64.exe)
+- [NikaCRM-Offline-Setup-1.0.11-x64.exe (GitHub)](https://github.com/nika-sc/Nika-Service-CRM/releases/download/windows-setup-1.0.11/NikaCRM-Offline-Setup-1.0.11-x64.exe)
+- [Release page](https://github.com/nika-sc/Nika-Service-CRM/releases/tag/windows-setup-1.0.11)
+- [Demo mirror](https://service.nika-crm.ru/downloads/NikaCRM-Offline-Setup-1.0.11-x64.exe)
 
 SHA256 is written after the EXE is built (`WINDOWS_SETUP_SHA256` in `app/version.py`).
 
-**Changelog 1.0.10 (2026-10-23):** installs beside an existing Python and does not remove it. See `docs/blog/48-windows-setup-1-0-10.md`.
+**Changelog 1.0.11 (2026-10-24):** installs in Windows Sandbox, dashboard opens after login (tzdata), Russian wizard, branded artwork and three desktop shortcuts. See `docs/blog/49-windows-setup-1-0-11.md`.
 
 ## User installation
 
-1. Download `NikaCRM-Offline-Setup-1.0.10-x64.exe`.
+1. Download `NikaCRM-Offline-Setup-1.0.11-x64.exe`.
 2. Run it as an administrator and complete the short setup wizard.
 3. Open **Nika CRM - Открыть** on the desktop.
 4. Sign in with a demo account from `database/bootstrap/README.md` and change
