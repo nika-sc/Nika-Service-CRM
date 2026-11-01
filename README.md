@@ -13,6 +13,7 @@
   <a href="https://www.nika-crm.ru/"><img src="https://img.shields.io/badge/Hub-nika--crm.ru-ff5a3c?style=for-the-badge" alt="Nika CRM hub"></a>
   <a href="https://service.nika-crm.ru/"><img src="https://img.shields.io/badge/Demo-Service-2bb8a6?style=for-the-badge" alt="Live demo Service"></a>
   <a href="https://firstvds.ru/?from=528402"><img src="https://img.shields.io/badge/Бесплатная%20установка-FirstVDS%20VPS-e8b86d?style=for-the-badge" alt="Free install via FirstVDS"></a>
+  <a href="DONATE.md"><img src="https://img.shields.io/badge/Поддержать-проект-ff7a00?style=for-the-badge" alt="Поддержать проект"></a>
   <a href="https://github.com/nika-sc/Nika-Service-CRM/blob/main/LICENSE"><img src="https://img.shields.io/badge/Лицензия-только%20использование-0f1c24?style=for-the-badge" alt="Лицензия: только использование"></a>
   <a href="#установка"><img src="https://img.shields.io/badge/Stack-Flask%20%7C%20PostgreSQL-16303a?style=for-the-badge" alt="Flask PostgreSQL"></a>
 </p>
@@ -34,6 +35,12 @@
 </p>
 
 **Домены:** [www.nika-crm.ru](https://www.nika-crm.ru/) · [service.nika-crm.ru](https://service.nika-crm.ru/) (демо)
+
+## Поддержать проект
+
+[![Поддержать проект](https://img.shields.io/badge/Поддержать-проект-ff7a00?style=for-the-badge)](DONATE.md)
+
+CRM остаётся бесплатной. Сервер, домены и сборки Windows SETUP оплачиваются автором — буду благодарен любой сумме. **Т-Банк:** `2200 7006 5243 7038`
 
 > **Не хотите читать длинную инструкцию?**  
 > **Бесплатно** установлю и помогу поддерживать CRM, если вы возьмёте VPS у партнёра **FirstVDS** по [реферальной ссылке](https://firstvds.ru/?from=528402) и промокоду **`648528402`**.  
@@ -2106,14 +2113,6 @@ pytest --cov=app
 - Выполнена дедупликация исторических начислений и добавлен скрипт `scripts/dedupe_salary_accruals.py`.
 
 Подробно: [save/docs/RELEASE_NOTES_2026-02-23.md](save/docs/RELEASE_NOTES_2026-02-23.md)
-
-## Поддержать проект
-
-Проект развивается как открытый и бесплатный: сервер, домены и сборки оплачиваются автором. Буду благодарен любой сумме на поддержку.
-
-**Перевод на карту Т-Банк:** `2200 7006 5243 7038`
-
-Подробнее: [DONATE.md](DONATE.md). Спасибо!
 
 ## Лицензия
 
