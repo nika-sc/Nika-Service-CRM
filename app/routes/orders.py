@@ -1118,12 +1118,12 @@ def api_datatables_orders():
             + '</div>'
         )
 
-        # col 1: статус — меню статусов одно на страницу (подставляется при открытии)
+        # col 1: статус — меню статусов одно на страницу (подставляется при открытии).
+        # Клик обрабатывает только jQuery-обработчик в all_orders.html;
+        # inline onclick здесь дублировал его и меню закрывалось сразу после открытия.
         col_status = (
-            '<div class="dropdown" onclick="event.stopPropagation();">'
+            '<div class="dropdown">'
             f'<button class="btn btn-sm dropdown-toggle quick-status-btn" type="button" '
-            'onmousedown="event.stopPropagation();" '
-            'onclick="return window.toggleQuickStatusMenu ? window.toggleQuickStatusMenu(this, event) : false;" '
             f'aria-expanded="false" data-order-id="{_html.escape(str(order_uid))}" data-order-db-id="{oid}" '
             f'data-status-id="{status_id}" data-status-color="{_html.escape(str(status_color))}" '
             f'style="background-color: {_html.escape(str(status_color))}; border-color: {_html.escape(str(status_color))}; '
