@@ -4,7 +4,7 @@
  * переходах UI «зависает» на устаревшем ответе из cache-first.
  */
 
-const CACHE_NAME = 'nika-crm-v2-static';
+const CACHE_NAME = 'nika-crm-v4-static';
 const STATIC_URLS = [
   '/static/themes.css',
   '/static/themes.js',

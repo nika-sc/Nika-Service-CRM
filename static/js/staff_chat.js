@@ -209,7 +209,10 @@
 
     function initSocket() {
         if (typeof window.io !== "function") {
-            showStatus("Socket.IO не загружен, чат работает в ограниченном режиме");
+            state.connected = false;
+            state.hasSocketStream = false;
+            showStatus("Realtime отключён, работает авто-синхронизация");
+            restartPeriodicSync();
             return;
         }
         const socket = window.io(NS, {
